@@ -1,25 +1,33 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 XDG_CONFIG_HOME="$HOME/.config"
 swayIconDir="${XDG_CONFIG_HOME}/swaync/icons"
-#// Credits to sl1ng for the orginal script. Rewritten by Vyle.
-#// We will NOT USE set -e -u -o pipefail for this script - Avoids rewriting!
 
-ctlcheck=("pactl" "jq" "notify-send" "pamixer")
-for i in "${!ctlcheck[@]}"; do
-  if ! command -v "${ctlcheck[i]}" >/dev/null; then
-    echo "${ctlcheck[i]} does not exist, require manual parsing!"
-  fi
+#// Credits to sl1ng for the orginal script. Rewritten by Vyle.
+ctlcheck=("pactl" "jq" "notify-send" "awk" "pgrep" "hyprctl" "iconv")
+missing=()
+
+for ctl in "${ctlcheck[@]}"; do
+  command -v "${ctl}" >/dev/null || missing+=("${ctl}")
 done
 
-#// Parse .pid, .class, .title to __pid, __class, __title
-PID=$(hyprctl -j activewindow 2>/dev/null | jq -r '"\(.pid) \(.class) \(.title)"' || exit 1)
+if (( ${#missing[@]} )) 2>/dev/null; then
+  echo "Missing required dependencies: \"${missing[*]}\""
+  exit 1
+fi
+
+#// Parse .pid, .class, .title to __pid, __class, __title.
+active_json="$(hyprctl -j activewindow 2>/dev/null || { echo -e "Did hyprctl fail to run? [EXIT-CODE:-1]"; exit 1; } )"
+PID="$(jq -r '"\(.pid) \(.class) \(.title)"' <<< "${active_json}" || { echo -e "Did jq fail to run? [EXIT-CODE:-1]"; exit 1; } )"
+
 read -r __pid __class __title <<< "${PID}"
 
 [[ -z "${__pid}" ]] && { echo -e "Could not resolve PID for focused window."; exit 1; }
+sink_json="$(pactl -f json list sink-inputs 2>/dev/null | iconv -f utf-8 -t utf-8 -c || { echo -e "Did pactl or iconv fail to run? Required manual intervention."; exit 1; } )"
 
 #// Check if the __pid matches application.process.id or else verify other statements.
-mapfile -t sink_ids < <(pactl -f json list sink-inputs 2>/dev/null | iconv -f utf-8 -t utf-8 -c  | jq -r --arg pid "${__pid}" --arg class "${__class}" --arg title "${__title}" '
+mapfile -t sink_ids < <(jq -r --arg pid "${__pid}" --arg class "${__class}" --arg title "${__title}" '
 .[] |
  def lc(x): (x // "" | ascii_downcase);
   def normalize(x): x | gsub("[-_~.]+";" ") ;
@@ -33,40 +41,39 @@ mapfile -t sink_ids < <(pactl -f json list sink-inputs 2>/dev/null | iconv -f ut
   (lc(.properties["application.process.binary"]) | contains(lc($class)))
   or
   ((normalize(lc(.properties["media.name"])) | test(normalize(lc($title)))))
-  ) | .index'
+  ) | .index' <<< "${sink_json}"
 )
 
-idsJson=$(printf '%s\n' "${sink_ids[@]}" | jq -s 'map(tonumber)')
-
-#// Get the available option from pactl. (Yes|No)
-want_mute=$(
-  pactl -f json list sink-inputs | iconv -f utf-8 -t utf-8 -c | \
-  jq -r --argjson ids "$idsJson" '
-    [ .[] | select(.index as $i | $ids | index($i)) | .mute ] as $m |
-    if all($m[]; . == true) then "no"
-    else "yes"
-    end
-  '
-)
+if [[ "${#sink_ids[@]}" -eq 0 ]]; then
+  fallback_pid="$(pgrep -x "${__class}" || true)"
+  if [[ -n "${fallback_pid}" ]]; then
+    mapfile -t sink_ids < <( jq -r --arg pid "${fallback_pid}" '.[] | 
+      select(.properties["application.process.id"] == $pid) | .index' <<< "${sink_json}" )
+  fi
+fi
 
 #// Auto-Detect if the environment is on Hyprland or $HYPRLAND_INSTANCE_SIGNATURE.
 if [[ ${#sink_ids[@]} -eq 0 ]]; then
-  #// Create a Fallback_PID if nothing matches with hyprctl or pactl.
-  fallback_pid=$(pgrep -x "${__class}" || true)
-
-  if [[ -n "${fallback_pid}" ]]; then
-    mapfile -t sink_ids < <( jq -r --arg pid "${fallback_pid}" '.[] | 
-      select(.properties["application.process.id"] == $pid) | .index' <<< "$(pactl -f json list sink-inputs 2>/dev/null | iconv -f utf-8 -t utf-8 -c || exit 1)" ) 
+  if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE}" ]]; then
+    # Even if the fallback_pid remains empty, we will dispatch exit code based on $HYPRLAND_INSTANCE_SIGNATURE.
+    notify-send -a "t1" -r 91190 -t 1200 -i "${swayIconDir}/volume-low.png" "No sink input available."
+    echo "No sink input for focused window: ${__class}"
+    exit 1
   else
-    if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE}" ]]; then
-      notify-send -a "t1" -r 91190 -t 1200 -i "${swayIconDir}/volume-low.png" "No sink input for the active_window: ${__class}"
-      echo "No sink input for focused window: ${__class}"
-    else
-      echo "No sink input for focused active_window ${__class}"
-      exit 1
-    fi
+    echo "No sink input for focused active_window ${__class}"
+    exit 1
   fi
 fi
+
+idsJson=$(printf '%s\n' "${sink_ids[@]}" | jq -s 'map(tonumber)')
+
+#// Get the available option from pactl. 
+want_mute=$(jq -r --argjson ids "$idsJson" '
+    [ .[] | select(.index as $i | $ids | index($i)) | .mute ] as $m |
+    if all($m[]; . == true) then "no"
+    else "yes"
+    end' <<< "${sink_json}"
+)
 
 if [[ "${want_mute}" == "no" ]]; then
   state_msg="Unmuted"
@@ -76,10 +83,15 @@ else
   swayIcon="${swayIconDir}/volume-mute.png"
 fi
 
+[[ -f "${swayIcon}" ]] || echo -e "Missing swaync icons."
+
 for id in "${sink_ids[@]}"; do
   pactl set-sink-input-mute "$id" "$want_mute"
 done
 
-#// Append paxmier to get a nice result.
-notify-send -a "t2" -r 91190 -t 800 -i "${swayIcon}" "${state_msg} ${__class}" "$(pamixer --get-default-sink | awk -F '"' 'END{print $(NF - 1)}')"
-
+#// Append pamixer to get a nice result. Pamixer is complete optional here.
+if command -v pamixer >/dev/null; then
+  notify-send -a "t2" -r 91190 -t 800 -i "${swayIcon}" "${state_msg} ${__class}" "$(pamixer --get-default-sink | awk -F '"' 'END{print $(NF - 1)}')"
+else
+  notify-send -a "t2" -r 91190 -t 800 -i "${swayIcon}" "${state_msg} ${__class}"
+fi
