@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-XDG_CONFIG_HOME="$HOME/.config"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 swayIconDir="${XDG_CONFIG_HOME}/swaync/icons"
 
 #// Credits to sl1ng for the orginal script. Rewritten by Vyle.
@@ -19,9 +19,9 @@ fi
 
 #// Parse .pid, .class, .title to __pid, __class, __title.
 active_json="$(hyprctl -j activewindow 2>/dev/null || { echo -e "Did hyprctl fail to run? [EXIT-CODE:-1]"; exit 1; } )"
-PID="$(jq -r '"\(.pid) \(.class) \(.title)"' <<< "${active_json}" || { echo -e "Did jq fail to run? [EXIT-CODE:-1]"; exit 1; } )"
+PID="$(jq -r '"\(.pid)\t\(.class)\t\(.title)"' <<< "${active_json}" || { echo -e "Did jq fail to run? [EXIT-CODE:-1]"; exit 1; } )"
 
-read -r __pid __class __title <<< "${PID}"
+IFS=$'\t' read -r __pid __class __title <<< "${PID}"
 
 [[ -z "${__pid}" ]] && { echo -e "Could not resolve PID for focused window."; exit 1; }
 sink_json="$(pactl -f json list sink-inputs 2>/dev/null | iconv -f utf-8 -t utf-8 -c || { echo -e "Did pactl or iconv fail to run? Required manual intervention."; exit 1; } )"
@@ -45,7 +45,7 @@ mapfile -t sink_ids < <(jq -r --arg pid "${__pid}" --arg class "${__class}" --ar
 )
 
 if [[ "${#sink_ids[@]}" -eq 0 ]]; then
-  fallback_pid="$(pgrep -x "${__class}" || true)"
+  fallback_pid="$(pgrep -x "${__class}" | head -n 1 || true)"
   if [[ -n "${fallback_pid}" ]]; then
     mapfile -t sink_ids < <( jq -r --arg pid "${fallback_pid}" '.[] | 
       select(.properties["application.process.id"] == $pid) | .index' <<< "${sink_json}" )
@@ -56,7 +56,7 @@ fi
 if [[ ${#sink_ids[@]} -eq 0 ]]; then
   if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE}" ]]; then
     # Even if the fallback_pid remains empty, we will dispatch exit code based on $HYPRLAND_INSTANCE_SIGNATURE.
-    notify-send -a "t1" -r 91190 -t 1200 -i "${swayIconDir}/volume-low.png" "No sink input available."
+    notify-send -a "t1" -r 91190 -t 1200 -i "${swayIconDir}/volume-low.png" "No sink input for the active_window: ${__class}"
     echo "No sink input for focused window: ${__class}"
     exit 1
   else
