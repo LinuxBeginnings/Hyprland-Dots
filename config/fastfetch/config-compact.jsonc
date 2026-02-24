@@ -59,7 +59,7 @@
           "key": " ",
           "keyColor": "36",
           "shell": "/bin/bash",
-          "text": "echo \"Jak's dotfiles: v$DOTS_VERSION\""
+          "text": "echo \"KoolDots: v$DOTS_VERSION\""
       },
         "break"
     ]
