@@ -5,7 +5,7 @@
 #  License: GNU GPLv3
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
-# for changing Hyprland Layouts (Master or Dwindle) on the fly
+# for changing Hyprland Layouts (Master, Dwindle, scrolling, monocle) on the fly
 
 notif="$HOME/.config/swaync/images/ja.png"
 
@@ -17,6 +17,7 @@ if [ "$1" = "init" ]; then
   "master") LAYOUT="scrolling" ;;
   "dwindle") LAYOUT="master" ;;
   "scrolling") LAYOUT="dwindle" ;;
+  "monocle") LAYOUT="scrolling" ;;
   esac
 fi
 
@@ -26,6 +27,7 @@ case $LAYOUT in
   hyprctl keyword unbind SUPER,J
   hyprctl keyword unbind SUPER,K
   hyprctl keyword unbind SUPER,O
+  hyprctl keyword unbind SUPER_SHIFT,M
   hyprctl keyword bind SUPER,J,cyclenext
   hyprctl keyword bind SUPER,K,cyclenext,prev
   hyprctl keyword bind SUPER,O,layoutmsg,togglesplit
@@ -36,15 +38,28 @@ case $LAYOUT in
   hyprctl keyword unbind SUPER,J
   hyprctl keyword unbind SUPER,K
   hyprctl keyword unbind SUPER,O
+  hyprctl keyword unbind SUPER_SHIFT,M
   hyprctl keyword bind SUPER,J,layoutmsg,cyclenext
   hyprctl keyword bind SUPER,K,layoutmsg,cycleprev
   notify-send -e -u low -i "$notif" " Scrolling Layout"
   ;;
 "scrolling")
+  hyprctl keyword general:layout monocle
+  hyprctl keyword unbind SUPER,J
+  hyprctl keyword unbind SUPER,K
+  hyprctl keyword unbind SUPER,O
+  hyprctl keyword unbind SUPER_SHIFT,M
+  hyprctl keyword bind SUPER,J,layoutmsg,cyclenext
+  hyprctl keyword bind SUPER,K,layoutmsg,cycleprev
+  hyprctl keyword bind SUPER_SHIFT,M,layoutmsg,swapnext
+  notify-send -e -u low -i "$notif" " Monocle Layout"
+  ;;
+"monocle")
   hyprctl keyword general:layout master
   hyprctl keyword unbind SUPER,J
   hyprctl keyword unbind SUPER,K
   hyprctl keyword unbind SUPER,O
+  hyprctl keyword unbind SUPER_SHIFT,M
   hyprctl keyword bind SUPER,J,layoutmsg,focus l
   hyprctl keyword bind SUPER,K,layoutmsg,focus r
   notify-send -e -u low -i "$notif" " Master Layout"
