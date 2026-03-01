@@ -2,6 +2,8 @@
 
 ## v2.3.22
 
+- Added `monocle` layout
+- Experimenting with some additional layerrules
 - Improving wallpaper based theming
   - More consistent results
   - Reducing the time to make change effective
@@ -18,7 +20,7 @@
     - No errors just doesn't work
 - Fixed many of the WALLUST based waybars color issues
   - Foreground/background colors were same light color
-- Kitty now has a "No color" theme option
+- Kitty now has a "No color/no theme" option
 - Updated the Headers in the scripts to:
   - KoolDots
   - Added Project name and URL
