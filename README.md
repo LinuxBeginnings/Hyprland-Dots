@@ -15,7 +15,7 @@
 
 <div align="center">
 <br>
-  <a href="#-installationupdate-instructions-"><kbd> <br> Installation <br> </kbd></a>&ensp;&ensp;
+  <a href="#-installationupdate-instructions"><kbd> <br> Installation <br> </kbd></a>&ensp;&ensp;
   <a href="https://github.com/LinuxBeginnings/Hyprland-Dots/wiki"><kbd> <br> Wiki <br> </kbd></a>&ensp;&ensp;
   <a href="https://www.youtube.com/playlist?list=PLDtGd5Fw5_GjXCznR0BzCJJDIQSZJRbxx"><kbd> <br> Youtube <br> </kbd></a>&ensp;&ensp;
   <a href="https://discord.gg/RZJgC7KAKm"><kbd> <br> Discord <br> </kbd></a>
@@ -52,9 +52,9 @@ sh <(curl -L https://raw.githubusercontent.com/LinuxBeginnings/Hyprland-Dots/mai
 ```
 
 - You can use the above command to automatically clone the `Distro-Hyprland` install scripts
-- It will clone the install script and start the `install.sh` 😎
+- It will clone the install script and start the `install.sh`
 
-### 👁️‍🗨️ My Hyprland install Scripts 👁️‍🗨️
+### 👁️‍🗨️ My Hyprland install Scripts
 
 - Automated Hyprland Scripts for Distro of choice which will pull this dotfiles if opted to install these configurations
 
@@ -75,13 +75,13 @@ sh <(curl -L https://raw.githubusercontent.com/LinuxBeginnings/Hyprland-Dots/mai
 
 ---
 
-### 🪧 Attention 🪧
+### 🪧 Attention
 
 - This repo does NOT contain or will NOT install any packages. These are only pre-configured-hyprland configs or dotfiles
 - refer to install scripts what packages needed to install... but at least, Hyprland packages are required
 - This repo will be pulled by the Distro-Hyprland install scripts above if you opt to download pre-configured dots
 
-### 👀 Screenshots 👀
+### 👀 Screenshots
 
 - All screenshots are collected here [Screenshots](https://github.com/LinuxBeginnings/screenshots/tree/main/Hyprland-ScreenShots)
 
@@ -89,7 +89,7 @@ sh <(curl -L https://raw.githubusercontent.com/LinuxBeginnings/Hyprland-Dots/mai
 
 - To easily track changes, I will be updating the [CHANGELOGS](https://github.com/LinuxBeginnings/Hyprland-Dots/wiki/Changelogs) Screenshots will be included if worth mentioning the changes!
 
-### 💥 Installation/Update instructions 💥
+### 💥 Installation/Update instructions
 
 - [`MORE INFO HERE`](https://github.com/LinuxBeginnings/Hyprland-Dots/wiki/Install_&_Update)
   > [!Note]
@@ -117,7 +117,7 @@ chmod +x copy.sh
 ./copy.sh
 ```
 
-#### ⚠️⚠️⚠️ BACKUPS CREATED by SCRIPT
+#### ⚠️ BACKUPS CREATED by SCRIPT
 
 > [!CAUTION]
 > `copy.sh` creates a backup!
@@ -128,13 +128,13 @@ chmod +x copy.sh
 
 - by default, only few wallpapers will be copied (1 each dark and light plus 3 more). You will be offered to download more wallpapers. You can preview/check the additional wallpapers from this [`LINK`](https://github.com/LinuxBeginnings/Wallpaper-Bank/tree/main/wallpapers)
 
-#### ⚠️⚠️⚠️ after installing these dots
+#### ⚠️ after installing these dots
 
 - Nvidia Owners. Make sure to edit your `~/.config/hypr/UserConfigs/ENVariables.conf` (highly recommended).
 - NVIDIA users / owners, after installation, check [`THIS`](https://github.com/LinuxBeginnings/Hyprland-Dots/wiki/Notes_to_remember#--for-nvidia-gpu-users)
 - If you have already set your own keybinds, monitors, etc.... Just copy over from backup created before log-out or reboot. (recommended)
 
-#### 🙋 QUESTIONS ?!?! ⁉️
+#### 🙋 QUESTIONS ?
 
 - FAQ! Yes you can use these dotfiles to other distro! Just ensure to install proper packages first! If it makes you feel better, I use same config on my Gentoo:)
 - QUICK HINT! Click the HINT! Waybar module (only available on some layouts). Also can be launched by keybind `SUPER + H`
