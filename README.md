@@ -57,7 +57,7 @@ sh <(curl -L https://raw.githubusercontent.com/LinuxBeginnings/Hyprland-Dots/mai
 
 ### 👁️‍🗨️ My Hyprland install Scripts
 
-- Automated Hyprland Scripts for Distro of choice which will pull this dotfiles if opted to install these configurations
+Automated Hyprland Scripts for Distro of choice which will pull this dotfiles if opted to install these configurations
 
 - [Arch-Linux](https://github.com/LinuxBeginnings/Arch-Hyprland)
 
