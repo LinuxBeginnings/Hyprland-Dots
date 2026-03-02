@@ -40,7 +40,7 @@
 
 [![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=700&size=22&pause=1000&color=F7077E&vCenter=true&width=435&height=30&lines=INSTALLATION)](https://git.io/typing-svg)
 
-### 🚩 🏁 Auto Distro-Hyprland install scripts cloning and starting 🇵🇭
+### 🏁 Auto Distro-Hyprland install scripts cloning and starting
 
 > [!CAUTION]
 > If you are using FISH SHELL, DO NOT use this function. Clone the Distro-Hyprland and ran install.sh instead
