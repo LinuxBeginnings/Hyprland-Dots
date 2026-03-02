@@ -19,6 +19,7 @@
   <a href="https://github.com/LinuxBeginnings/Hyprland-Dots/wiki"><kbd> <br> Wiki <br> </kbd></a>&ensp;&ensp;
   <a href="https://www.youtube.com/@LinuxBeginnings"><kbd> <br> Youtube <br> </kbd></a>&ensp;&ensp;
   <a href="https://discord.gg/RZJgC7KAKm"><kbd> <br> Discord <br> </kbd></a>
+  <a href="https://www.youtube.com/playlist?list=PLDtGd5Fw5_GjXCznR0BzCJJDIQSZJRbxx"><kbd> <br> Legacy Jak Videos <br> </kbd></a>
 </div><br>
 
 <div align="center">
