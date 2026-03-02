@@ -222,15 +222,15 @@ cleanup_duplicate_userconfigs() {
     return
   fi
 
-  # Run de-dupe only for existing installs up to and including v2.3.19.
-  # For v2.3.20 and newer, the underlying duplication bug is fixed and
-  # this cleanup is no longer needed (and might mask future issues).
-  if version_gte "$current_version" "2.3.20"; then
-    echo "${INFO:-[INFO]} Skipping UserConfigs duplicate cleanup for detected version v$current_version (>= 2.3.20)." 2>&1 | tee -a "$log"
+  # Run de-dupe only for existing installs up to and including v2.3.18.
+  # For v2.3.19 and newer, UserConfigs should be left as-is to avoid
+  # removing user modifications.
+  if version_gte "$current_version" "2.3.19"; then
+    echo "${INFO:-[INFO]} Skipping UserConfigs duplicate cleanup for detected version v$current_version (>= 2.3.19)." 2>&1 | tee -a "$log"
     return
   fi
 
-  echo "${INFO:-[INFO]} Running UserConfigs duplicate cleanup for detected version v$current_version (<= 2.3.19)." 2>&1 | tee -a "$log"
+  echo "${INFO:-[INFO]} Running UserConfigs duplicate cleanup for detected version v$current_version (<= 2.3.18)." 2>&1 | tee -a "$log"
 
   local HYPR_DIR="$HOME/.config/hypr"
   local BASE_DIR="$HYPR_DIR/configs"
