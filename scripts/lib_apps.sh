@@ -147,13 +147,13 @@ install_waybar_weather_binary() {
   fi
 
   if grep -qi '^ID=arch' /etc/os-release 2>/dev/null; then
-    if command -v pacman >/dev/null 2>&1 && pacman -Qi weather-waybar >/dev/null 2>&1; then
-      _log "weather-waybar already installed via pacman."
+    if command -v pacman >/dev/null 2>&1 && pacman -Qi waybar-weather >/dev/null 2>&1; then
+      _log "waybar-weather already installed via pacman."
       return 0
     fi
     if command -v yay >/dev/null 2>&1; then
-      _log "Attempting to install AUR package 'weather-waybar' via yay"
-      if yay -S --noconfirm weather-waybar; then
+      _log "Attempting to install AUR package 'waybar-weather' via yay"
+      if yay -S --noconfirm waybar-weather; then
         _log "AUR install succeeded."
         return 0
       else
