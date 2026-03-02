@@ -146,11 +146,29 @@ install_waybar_weather_binary() {
     return 0
   fi
 
+  # Sudo handling for /usr/bin and /usr/local/bin
+  local SUDO=""
+  if [[ $EUID -ne 0 ]]; then
+    if command -v sudo >/dev/null 2>&1; then
+      SUDO="sudo"
+    else
+      _err "sudo not available; cannot write to ${INSTALL_PATH} as non-root"
+      return 1
+    fi
+  fi
+
   if grep -qi '^ID=arch' /etc/os-release 2>/dev/null; then
     if command -v pacman >/dev/null 2>&1 && pacman -Qi waybar-weather >/dev/null 2>&1; then
       _log "waybar-weather already installed via pacman."
       return 0
     fi
+
+    # If no package is installed but a static binary exists, remove it before AUR install
+    if [ -x /usr/bin/waybar-weather ] || [ -x /usr/local/bin/waybar-weather ]; then
+      _log "Removing waybar-weather static binary"
+      ${SUDO} rm -f /usr/bin/waybar-weather /usr/local/bin/waybar-weather || _warn "Failed to remove existing waybar-weather binary."
+    fi
+
     if command -v yay >/dev/null 2>&1; then
       _log "Attempting to install AUR package 'waybar-weather' via yay"
       if yay -S --noconfirm waybar-weather; then
@@ -174,16 +192,6 @@ install_waybar_weather_binary() {
     return 1
   fi
 
-  # Sudo handling for /usr/bin
-  local SUDO=""
-  if [[ $EUID -ne 0 ]]; then
-    if command -v sudo >/dev/null 2>&1; then
-      SUDO="sudo"
-    else
-      _err "sudo not available; cannot write to ${INSTALL_PATH} as non-root"
-      return 1
-    fi
-  fi
 
   _log "Installing prebuilt binary to ${INSTALL_PATH} from ${ASSET}"
   if ${SUDO} sh -c "tmp=\$(mktemp '${INSTALL_PATH}.XXXXXX') && gzip -dc '$ASSET' > \"\$tmp\" && chmod 0755 \"\$tmp\" && mv -f \"\$tmp\" '${INSTALL_PATH}'"; then
