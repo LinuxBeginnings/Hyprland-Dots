@@ -2,6 +2,7 @@
 
 ## v2.3.22
 
+- Fixed Package name for `waybar-weather`
 - Added `monocle` layout
 - Experimenting with some additional layerrules
 - Improving wallpaper based theming
