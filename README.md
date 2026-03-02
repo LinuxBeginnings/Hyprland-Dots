@@ -18,7 +18,7 @@
   <a href="#-installationupdate-instructions"><kbd> <br> Installation <br> </kbd></a>&ensp;&ensp;
   <a href="https://github.com/LinuxBeginnings/Hyprland-Dots/wiki"><kbd> <br> Wiki <br> </kbd></a>&ensp;&ensp;
   <a href="https://www.youtube.com/@LinuxBeginnings"><kbd> <br> Youtube <br> </kbd></a>&ensp;&ensp;
-  <a href="https://discord.gg/hxGTt7ar"><kbd> <br> Discord <br> </kbd></a>
+  <a href="https://discord.gg/RZJgC7KAKm"><kbd> <br> Discord <br> </kbd></a>
 </div><br>
 
 <div align="center">
