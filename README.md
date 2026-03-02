@@ -18,7 +18,7 @@
   <a href="#-installationupdate-instructions"><kbd> <br> Installation <br> </kbd></a>&ensp;&ensp;
   <a href="https://github.com/LinuxBeginnings/Hyprland-Dots/wiki"><kbd> <br> Wiki <br> </kbd></a>&ensp;&ensp;
   <a href="https://www.youtube.com/playlist?list=PLDtGd5Fw5_GjXCznR0BzCJJDIQSZJRbxx"><kbd> <br> Youtube <br> </kbd></a>&ensp;&ensp;
-  <a href="https://discord.gg/RZJgC7KAKm"><kbd> <br> Discord <br> </kbd></a>
+  <a href="https://discord.gg/hxGTt7ar"><kbd> <br> Discord <br> </kbd></a>
 </div><br>
 
 <div align="center">
@@ -154,13 +154,12 @@ chmod +x copy.sh
 
 ### 🔮 Discord Server
 
-- kindly join my [Discord](https://discord.com/invite/kool-tech-world)
+- kindly join my [Discord](https://discord.gg/RZJgC7KAKm)
 
 ### 💖 Support
 
 - a Star on my Github repos would be nice 🌟
 - Subscribe to my Youtube Channel [YouTube](https://www.youtube.com/@Ja.KooLit)
-- you can also give support through coffee's or btc 😊
 
 ## 🫰 Thank you for the stars 🩷
 
