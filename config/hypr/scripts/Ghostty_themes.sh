@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
-# /* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */ #
+# ==================================================
+#  KoolDots (2026)
+#  Project URL: https://github.com/LinuxBeginnings
+#  License: GNU GPLv3
+#  SPDX-License-Identifier: GPL-3.0-or-later
+# ==================================================
 # Ghostty theme selector
 
 config_file="$HOME/.config/ghostty/config"
 iDIR="$HOME/.config/swaync/images"
-rofi_theme_primary="$HOME/.config/rofi/config-kitty-theme.rasi"
+rofi_theme_primary="$HOME/.config/rofi/config-ghostty-theme.rasi"
 rofi_theme_fallback="$HOME/.config/rofi/config-edit.rasi"
 
 notify_user() {
