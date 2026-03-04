@@ -461,14 +461,16 @@ if terminal_exists; then
         # Animate slide up first
         animate_slide_up "$TERMINAL_ADDR" "$curr_x" "$curr_y" "$curr_width" "$curr_height"
 
-        # Small delay then move to special workspace and unpin
+        # Small delay then move to special workspace and unpin (order matters)
         sleep 0.1
-        ensure_unpinned "$TERMINAL_ADDR"
         hyprctl dispatch movetoworkspacesilent "$SPECIAL_WS,address:$TERMINAL_ADDR"
+        sleep 0.05
+        ensure_unpinned "$TERMINAL_ADDR"
       else
         debug_echo "Could not get window geometry, moving to scratchpad without animation"
-        ensure_unpinned "$TERMINAL_ADDR"
         hyprctl dispatch movetoworkspacesilent "$SPECIAL_WS,address:$TERMINAL_ADDR"
+        sleep 0.05
+        ensure_unpinned "$TERMINAL_ADDR"
       fi
     fi
   fi
