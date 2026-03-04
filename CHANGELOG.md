@@ -2,6 +2,10 @@
 
 ## v2.3.22
 
+- Rewrote core logic of `DropDownterminal.sh`
+  - Doesn't use `specialworkspace` anymore
+  - Updates to Hyprland seem to break old logic
+  - The Dropdown would flash on hide
 - Fixed all float toggle
   - Old command drepreciated
   - Replaced with a script `Float-All-Windows.sh` in `Keybinds.conf` file
