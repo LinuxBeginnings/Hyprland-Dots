@@ -123,6 +123,17 @@ get_window_geometry() {
   hyprctl clients -j | jq -r --arg ADDR "$addr" '.[] | select(.address == $ADDR) | "\(.at[0]) \(.at[1]) \(.size[0]) \(.size[1])"'
 }
 
+# Function to check if window is currently hidden off-screen
+window_is_hidden() {
+  local addr="$1"
+  local y
+  y=$(hyprctl clients -j 2>/dev/null | jq -r --arg ADDR "$addr" '.[] | select(.address == $ADDR) | .at[1]' 2>/dev/null)
+  if [[ "$y" =~ ^-?[0-9]+$ ]] && [ "$y" -lt 0 ]; then
+    return 0
+  fi
+  return 1
+}
+
 # Function to animate window slide down (show)
 animate_slide_down() {
   local addr="$1"
@@ -332,15 +343,6 @@ window_exists() {
   fi
 }
 
-# Function to check if terminal is in special workspace
-terminal_in_special() {
-  local addr=$(get_terminal_address)
-  if [ -n "$addr" ]; then
-    hyprctl clients -j | jq -e --arg ADDR "$addr" 'any(.[]; .address == $ADDR and .workspace.name == "special:scratchpad")' >/dev/null 2>&1
-  else
-    return 1
-  fi
-}
 
 # Function to check if window is pinned
 window_is_pinned() {
@@ -458,8 +460,8 @@ if [ -n "$TERMINAL_ADDR" ]; then
     echo "$TERMINAL_ADDR $monitor_name" >"$ADDR_FILE"
   fi
 
-  if terminal_in_special; then
-    debug_echo "Bringing terminal from scratchpad with slide down animation"
+  if window_is_hidden "$TERMINAL_ADDR"; then
+    debug_echo "Bringing terminal from hidden position with slide down animation"
 
     # Calculate target position
     pos_info=$(calculate_dropdown_position)
@@ -468,8 +470,6 @@ if [ -n "$TERMINAL_ADDR" ]; then
     width=$(echo $pos_info | cut -d' ' -f3)
     height=$(echo $pos_info | cut -d' ' -f4)
 
-    # Use movetoworkspacesilent to avoid affecting workspace history
-    hyprctl dispatch movetoworkspacesilent "$CURRENT_WS,address:$TERMINAL_ADDR"
     ensure_pinned "$TERMINAL_ADDR"
 
     # Set size and animate slide down
@@ -478,7 +478,7 @@ if [ -n "$TERMINAL_ADDR" ]; then
 
     hyprctl dispatch focuswindow "address:$TERMINAL_ADDR"
   else
-    debug_echo "Hiding terminal to scratchpad with slide up animation"
+    debug_echo "Hiding terminal off-screen with slide up animation"
 
     # Get current geometry for animation
     geometry=$(get_window_geometry "$TERMINAL_ADDR")
@@ -493,18 +493,14 @@ if [ -n "$TERMINAL_ADDR" ]; then
       # Animate slide up first
       animate_slide_up "$TERMINAL_ADDR" "$curr_x" "$curr_y" "$curr_width" "$curr_height"
 
-      # Small delay then move to special workspace and unpin (order matters)
-      sleep 0.1
-      hyprctl dispatch movetoworkspacesilent "$SPECIAL_WS,address:$TERMINAL_ADDR"
-      sleep 0.05
+      # Move off-screen after animation
+      local off_y=$((curr_y - curr_height - 200))
+      hyprctl dispatch movewindowpixel "exact $curr_x $off_y,address:$TERMINAL_ADDR" >/dev/null 2>&1
       ensure_unpinned "$TERMINAL_ADDR"
-      hyprctl dispatch togglespecialworkspace "$SPECIAL_NAME"
     else
-      debug_echo "Could not get window geometry, moving to scratchpad without animation"
-      hyprctl dispatch movetoworkspacesilent "$SPECIAL_WS,address:$TERMINAL_ADDR"
-      sleep 0.05
+      debug_echo "Could not get window geometry, moving off-screen without animation"
+      hyprctl dispatch movewindowpixel "exact 0 -1000,address:$TERMINAL_ADDR" >/dev/null 2>&1
       ensure_unpinned "$TERMINAL_ADDR"
-      hyprctl dispatch togglespecialworkspace "$SPECIAL_NAME"
     fi
   fi
 else
