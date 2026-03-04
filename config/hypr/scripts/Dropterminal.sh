@@ -423,11 +423,12 @@ spawn_terminal() {
 
     # Small delay to ensure it's properly in special workspace
     sleep 0.2
-
-    # Now bring it back with the same animation as subsequent shows
-    # Use movetoworkspacesilent to avoid affecting workspace history
+    # Move to current workspace but start hidden off-screen
     hyprctl dispatch movetoworkspacesilent "$CURRENT_WS,address:$new_addr"
     ensure_pinned "$new_addr"
+    hyprctl dispatch resizewindowpixel "exact $width $height,address:$new_addr" >/dev/null 2>&1
+    local off_y=$((target_y - height - 200))
+    hyprctl dispatch movewindowpixel "exact $target_x $off_y,address:$new_addr" >/dev/null 2>&1
     animate_slide_down "$new_addr" "$target_x" "$target_y" "$width" "$height"
 
     return 0
