@@ -17,6 +17,7 @@
 
 DEBUG=false
 SPECIAL_WS="special:scratchpad"
+SPECIAL_NAME="${SPECIAL_WS#special:}"
 ADDR_FILE="/tmp/dropdown_terminal_addr"
 LOCK_FILE="/tmp/dropdown_terminal_lock"
 LAST_TOGGLE_FILE="/tmp/dropdown_terminal_last_toggle"
@@ -183,6 +184,12 @@ get_monitor_info() {
     return 1
   fi
   echo "$monitor_data"
+}
+
+# Function to check if special workspace is visible on focused monitor
+special_visible() {
+  hyprctl monitors -j 2>/dev/null | jq -e --arg NAME "$SPECIAL_WS" \
+    'map(select(.focused == true)) | .[0].specialWorkspace.name == $NAME' >/dev/null 2>&1
 }
 
 # Function to calculate dropdown position with proper scaling and centering
@@ -466,11 +473,17 @@ if terminal_exists; then
         hyprctl dispatch movetoworkspacesilent "$SPECIAL_WS,address:$TERMINAL_ADDR"
         sleep 0.05
         ensure_unpinned "$TERMINAL_ADDR"
+        if special_visible; then
+          hyprctl dispatch togglespecialworkspace "$SPECIAL_NAME"
+        fi
       else
         debug_echo "Could not get window geometry, moving to scratchpad without animation"
         hyprctl dispatch movetoworkspacesilent "$SPECIAL_WS,address:$TERMINAL_ADDR"
         sleep 0.05
         ensure_unpinned "$TERMINAL_ADDR"
+        if special_visible; then
+          hyprctl dispatch togglespecialworkspace "$SPECIAL_NAME"
+        fi
       fi
     fi
   fi
