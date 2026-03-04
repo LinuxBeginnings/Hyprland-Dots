@@ -57,7 +57,7 @@ if [ -f "$LAST_TOGGLE_FILE" ]; then
     delta_ms=$((now_ms - last_ms))
     if [ "$delta_ms" -lt "$MIN_TOGGLE_INTERVAL_MS" ] 2>/dev/null; then
       if [ "$DEBUG" = true ]; then
-        echo "Toggle debounced (${delta_ms}ms < ${MIN_TOGGLE_INTERVAL_MS}ms)"
+        echo "Toggle debounced (${delta_ms}ms < ${MIN_TOGGLE_INTERVAL_MS}ms)" >&2
       fi
       exit 0
     fi
@@ -68,7 +68,7 @@ echo "$now_ms" >"$LAST_TOGGLE_FILE"
 # Debug echo function
 debug_echo() {
   if [ "$DEBUG" = true ]; then
-    echo "$@"
+    echo "$@" >&2
   fi
 }
 
@@ -156,6 +156,28 @@ animate_slide_up() {
 get_monitor_info() {
   local monitor_data
   monitor_data=$(hyprctl monitors -j 2>/dev/null | jq -er 'map(select(.focused == true)) | .[0] | "\(.x) \(.y) \(.width) \(.height) \(.scale) \(.name)"' 2>/dev/null) || monitor_data=""
+  if [ -z "$monitor_data" ]; then
+    # Fallback for older Hyprland without -j support
+    monitor_data=$(hyprctl monitors 2>/dev/null | awk '
+      /^Monitor / {name=$2; sub(/\(.*/, "", name); x=y=w=h=scale=""; focused="no"}
+      / at / {
+        # e.g. "1920x1080@74.97300 at 0x0"
+        split($1, res, "x"); w=res[1]; split(res[2], tmp, "@"); h=tmp[1]
+        split($4, pos, "x"); x=pos[1]; y=pos[2]
+      }
+      /scale:/ {scale=$2}
+      /focused:/ {focused=$2}
+      /^$/ {
+        if (focused=="yes" && x!="" && y!="" && w!="" && h!="" && scale!="" && name!="") {
+          print x, y, w, h, scale, name; exit
+        }
+      }
+      END {
+        if (focused=="yes" && x!="" && y!="" && w!="" && h!="" && scale!="" && name!="") {
+          print x, y, w, h, scale, name
+        }
+      }')
+  fi
   if [ -z "$monitor_data" ] || [[ "$monitor_data" =~ ^null ]]; then
     debug_echo "Error: Could not get focused monitor information"
     return 1
