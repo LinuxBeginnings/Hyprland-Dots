@@ -239,6 +239,31 @@ terminal_in_special() {
   fi
 }
 
+# Function to check if window is pinned
+window_is_pinned() {
+  local addr="$1"
+  if [ -n "$addr" ]; then
+    hyprctl clients -j | jq -e --arg ADDR "$addr" '.[] | select(.address == $ADDR) | .pinned == true' >/dev/null 2>&1
+  else
+    return 1
+  fi
+}
+
+# Ensure pin state without toggling unexpectedly
+ensure_pinned() {
+  local addr="$1"
+  if ! window_is_pinned "$addr"; then
+    hyprctl dispatch pin "address:$addr" >/dev/null 2>&1
+  fi
+}
+
+ensure_unpinned() {
+  local addr="$1"
+  if window_is_pinned "$addr"; then
+    hyprctl dispatch pin "address:$addr" >/dev/null 2>&1
+  fi
+}
+
 # Function to spawn terminal and capture its address
 spawn_terminal() {
   debug_echo "Creating new dropdown terminal with command: $TERMINAL_CMD"
@@ -297,7 +322,7 @@ spawn_terminal() {
     # Now bring it back with the same animation as subsequent shows
     # Use movetoworkspacesilent to avoid affecting workspace history
     hyprctl dispatch movetoworkspacesilent "$CURRENT_WS,address:$new_addr"
-    hyprctl dispatch pin "address:$new_addr"
+    ensure_pinned "$new_addr"
     animate_slide_down "$new_addr" "$target_x" "$target_y" "$width" "$height"
 
     return 0
@@ -341,7 +366,7 @@ if terminal_exists; then
 
     # Use movetoworkspacesilent to avoid affecting workspace history
     hyprctl dispatch movetoworkspacesilent "$CURRENT_WS,address:$TERMINAL_ADDR"
-    hyprctl dispatch pin "address:$TERMINAL_ADDR"
+    ensure_pinned "$TERMINAL_ADDR"
 
     # Set size and animate slide down
     hyprctl dispatch resizewindowpixel "exact $width $height,address:$TERMINAL_ADDR"
@@ -366,11 +391,11 @@ if terminal_exists; then
 
       # Small delay then move to special workspace and unpin
       sleep 0.1
-      hyprctl dispatch pin "address:$TERMINAL_ADDR" # Unpin (toggle)
+      ensure_unpinned "$TERMINAL_ADDR"
       hyprctl dispatch movetoworkspacesilent "$SPECIAL_WS,address:$TERMINAL_ADDR"
     else
       debug_echo "Could not get window geometry, moving to scratchpad without animation"
-      hyprctl dispatch pin "address:$TERMINAL_ADDR"
+      ensure_unpinned "$TERMINAL_ADDR"
       hyprctl dispatch movetoworkspacesilent "$SPECIAL_WS,address:$TERMINAL_ADDR"
     fi
   fi
