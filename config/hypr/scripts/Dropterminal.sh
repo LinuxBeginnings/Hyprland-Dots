@@ -154,7 +154,8 @@ animate_slide_up() {
 
 # Function to get monitor info including scale and name of focused monitor
 get_monitor_info() {
-  local monitor_data=$(hyprctl monitors -j | jq -r '.[] | select(.focused == true) | "\(.x) \(.y) \(.width) \(.height) \(.scale) \(.name)"')
+  local monitor_data
+  monitor_data=$(hyprctl monitors -j 2>/dev/null | jq -er 'map(select(.focused == true)) | .[0] | "\(.x) \(.y) \(.width) \(.height) \(.scale) \(.name)"' 2>/dev/null) || monitor_data=""
   if [ -z "$monitor_data" ] || [[ "$monitor_data" =~ ^null ]]; then
     debug_echo "Error: Could not get focused monitor information"
     return 1
@@ -180,6 +181,13 @@ calculate_dropdown_position() {
   local mon_name=$(echo $monitor_info | cut -d' ' -f6)
 
   debug_echo "Monitor info: x=$mon_x, y=$mon_y, width=$mon_width, height=$mon_height, scale=$mon_scale"
+
+  # Validate numeric fields
+  if ! [[ "$mon_x" =~ ^-?[0-9]+$ && "$mon_y" =~ ^-?[0-9]+$ && "$mon_width" =~ ^[0-9]+$ && "$mon_height" =~ ^[0-9]+$ ]]; then
+    debug_echo "Invalid monitor info format, using fallback values"
+    echo "100 100 800 600 fallback-monitor"
+    return 1
+  fi
 
   # Validate scale value and provide fallback
   if [ -z "$mon_scale" ] || [ "$mon_scale" = "null" ] || [ "$mon_scale" = "0" ]; then
@@ -251,7 +259,17 @@ get_terminal_monitor() {
 terminal_exists() {
   local addr=$(get_terminal_address)
   if [ -n "$addr" ]; then
-    hyprctl clients -j | jq -e --arg ADDR "$addr" 'any(.[]; .address == $ADDR)' >/dev/null 2>&1
+    hyprctl clients -j 2>/dev/null | jq -e --arg ADDR "$addr" 'any(.[]; .address == $ADDR)' >/dev/null 2>&1
+  else
+    return 1
+  fi
+}
+
+# Function to check if a window address exists
+window_exists() {
+  local addr="$1"
+  if [ -n "$addr" ]; then
+    hyprctl clients -j 2>/dev/null | jq -e --arg ADDR "$addr" 'any(.[]; .address == $ADDR)' >/dev/null 2>&1
   else
     return 1
   fi
@@ -271,7 +289,7 @@ terminal_in_special() {
 window_is_pinned() {
   local addr="$1"
   if [ -n "$addr" ]; then
-    hyprctl clients -j | jq -e --arg ADDR "$addr" '.[] | select(.address == $ADDR) | .pinned == true' >/dev/null 2>&1
+    hyprctl clients -j 2>/dev/null | jq -e --arg ADDR "$addr" '.[] | select(.address == $ADDR) | .pinned == true' >/dev/null 2>&1
   else
     return 1
   fi
@@ -363,71 +381,78 @@ spawn_terminal() {
 # Main logic
 if terminal_exists; then
   TERMINAL_ADDR=$(get_terminal_address)
-  debug_echo "Found existing terminal: $TERMINAL_ADDR"
-  focused_monitor=$(get_monitor_info | awk '{print $6}')
-  dropdown_monitor=$(get_terminal_monitor)
-  if [ "$focused_monitor" != "$dropdown_monitor" ]; then
-    debug_echo "Monitor focus changed: moving dropdown to $focused_monitor"
-    # Calculate new position for focused monitor
-    pos_info=$(calculate_dropdown_position)
-    target_x=$(echo $pos_info | cut -d' ' -f1)
-    target_y=$(echo $pos_info | cut -d' ' -f2)
-    width=$(echo $pos_info | cut -d' ' -f3)
-    height=$(echo $pos_info | cut -d' ' -f4)
-    monitor_name=$(echo $pos_info | cut -d' ' -f5)
-    # Move and resize window
-    hyprctl dispatch movewindowpixel "exact $target_x $target_y,address:$TERMINAL_ADDR"
-    hyprctl dispatch resizewindowpixel "exact $width $height,address:$TERMINAL_ADDR"
-    # Update ADDR_FILE
-    echo "$TERMINAL_ADDR $monitor_name" >"$ADDR_FILE"
-  fi
-
-  if terminal_in_special; then
-    debug_echo "Bringing terminal from scratchpad with slide down animation"
-
-    # Calculate target position
-    pos_info=$(calculate_dropdown_position)
-    target_x=$(echo $pos_info | cut -d' ' -f1)
-    target_y=$(echo $pos_info | cut -d' ' -f2)
-    width=$(echo $pos_info | cut -d' ' -f3)
-    height=$(echo $pos_info | cut -d' ' -f4)
-
-    # Use movetoworkspacesilent to avoid affecting workspace history
-    hyprctl dispatch movetoworkspacesilent "$CURRENT_WS,address:$TERMINAL_ADDR"
-    ensure_pinned "$TERMINAL_ADDR"
-
-    # Set size and animate slide down
-    hyprctl dispatch resizewindowpixel "exact $width $height,address:$TERMINAL_ADDR"
-    animate_slide_down "$TERMINAL_ADDR" "$target_x" "$target_y" "$width" "$height"
-
-    hyprctl dispatch focuswindow "address:$TERMINAL_ADDR"
+  if ! window_exists "$TERMINAL_ADDR"; then
+    debug_echo "Stored terminal address is stale, respawning"
+    rm -f "$ADDR_FILE"
   else
-    debug_echo "Hiding terminal to scratchpad with slide up animation"
+    debug_echo "Found existing terminal: $TERMINAL_ADDR"
+    focused_monitor=$(get_monitor_info | awk '{print $6}')
+    dropdown_monitor=$(get_terminal_monitor)
+    if [ "$focused_monitor" != "$dropdown_monitor" ]; then
+      debug_echo "Monitor focus changed: moving dropdown to $focused_monitor"
+      # Calculate new position for focused monitor
+      pos_info=$(calculate_dropdown_position)
+      target_x=$(echo $pos_info | cut -d' ' -f1)
+      target_y=$(echo $pos_info | cut -d' ' -f2)
+      width=$(echo $pos_info | cut -d' ' -f3)
+      height=$(echo $pos_info | cut -d' ' -f4)
+      monitor_name=$(echo $pos_info | cut -d' ' -f5)
+      # Move and resize window
+      hyprctl dispatch movewindowpixel "exact $target_x $target_y,address:$TERMINAL_ADDR"
+      hyprctl dispatch resizewindowpixel "exact $width $height,address:$TERMINAL_ADDR"
+      # Update ADDR_FILE
+      echo "$TERMINAL_ADDR $monitor_name" >"$ADDR_FILE"
+    fi
 
-    # Get current geometry for animation
-    geometry=$(get_window_geometry "$TERMINAL_ADDR")
-    if [ -n "$geometry" ]; then
-      curr_x=$(echo $geometry | cut -d' ' -f1)
-      curr_y=$(echo $geometry | cut -d' ' -f2)
-      curr_width=$(echo $geometry | cut -d' ' -f3)
-      curr_height=$(echo $geometry | cut -d' ' -f4)
+    if terminal_in_special; then
+      debug_echo "Bringing terminal from scratchpad with slide down animation"
 
-      debug_echo "Current geometry: ${curr_x},${curr_y} ${curr_width}x${curr_height}"
+      # Calculate target position
+      pos_info=$(calculate_dropdown_position)
+      target_x=$(echo $pos_info | cut -d' ' -f1)
+      target_y=$(echo $pos_info | cut -d' ' -f2)
+      width=$(echo $pos_info | cut -d' ' -f3)
+      height=$(echo $pos_info | cut -d' ' -f4)
 
-      # Animate slide up first
-      animate_slide_up "$TERMINAL_ADDR" "$curr_x" "$curr_y" "$curr_width" "$curr_height"
+      # Use movetoworkspacesilent to avoid affecting workspace history
+      hyprctl dispatch movetoworkspacesilent "$CURRENT_WS,address:$TERMINAL_ADDR"
+      ensure_pinned "$TERMINAL_ADDR"
 
-      # Small delay then move to special workspace and unpin
-      sleep 0.1
-      ensure_unpinned "$TERMINAL_ADDR"
-      hyprctl dispatch movetoworkspacesilent "$SPECIAL_WS,address:$TERMINAL_ADDR"
+      # Set size and animate slide down
+      hyprctl dispatch resizewindowpixel "exact $width $height,address:$TERMINAL_ADDR"
+      animate_slide_down "$TERMINAL_ADDR" "$target_x" "$target_y" "$width" "$height"
+
+      hyprctl dispatch focuswindow "address:$TERMINAL_ADDR"
     else
-      debug_echo "Could not get window geometry, moving to scratchpad without animation"
-      ensure_unpinned "$TERMINAL_ADDR"
-      hyprctl dispatch movetoworkspacesilent "$SPECIAL_WS,address:$TERMINAL_ADDR"
+      debug_echo "Hiding terminal to scratchpad with slide up animation"
+
+      # Get current geometry for animation
+      geometry=$(get_window_geometry "$TERMINAL_ADDR")
+      if [ -n "$geometry" ]; then
+        curr_x=$(echo $geometry | cut -d' ' -f1)
+        curr_y=$(echo $geometry | cut -d' ' -f2)
+        curr_width=$(echo $geometry | cut -d' ' -f3)
+        curr_height=$(echo $geometry | cut -d' ' -f4)
+
+        debug_echo "Current geometry: ${curr_x},${curr_y} ${curr_width}x${curr_height}"
+
+        # Animate slide up first
+        animate_slide_up "$TERMINAL_ADDR" "$curr_x" "$curr_y" "$curr_width" "$curr_height"
+
+        # Small delay then move to special workspace and unpin
+        sleep 0.1
+        ensure_unpinned "$TERMINAL_ADDR"
+        hyprctl dispatch movetoworkspacesilent "$SPECIAL_WS,address:$TERMINAL_ADDR"
+      else
+        debug_echo "Could not get window geometry, moving to scratchpad without animation"
+        ensure_unpinned "$TERMINAL_ADDR"
+        hyprctl dispatch movetoworkspacesilent "$SPECIAL_WS,address:$TERMINAL_ADDR"
+      fi
     fi
   fi
-else
+fi
+
+if ! terminal_exists; then
   debug_echo "No existing terminal found, creating new one"
   if spawn_terminal; then
     TERMINAL_ADDR=$(get_terminal_address)
