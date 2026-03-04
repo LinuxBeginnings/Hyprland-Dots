@@ -494,7 +494,7 @@ if [ -n "$TERMINAL_ADDR" ]; then
       animate_slide_up "$TERMINAL_ADDR" "$curr_x" "$curr_y" "$curr_width" "$curr_height"
 
       # Move off-screen after animation
-      local off_y=$((curr_y - curr_height - 200))
+      off_y=$((curr_y - curr_height - 200))
       hyprctl dispatch movewindowpixel "exact $curr_x $off_y,address:$TERMINAL_ADDR" >/dev/null 2>&1
       ensure_unpinned "$TERMINAL_ADDR"
     else
