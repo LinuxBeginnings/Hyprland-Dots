@@ -19,6 +19,7 @@ DEBUG=false
 SPECIAL_WS="special:scratchpad"
 SPECIAL_NAME="${SPECIAL_WS#special:}"
 ADDR_FILE="/tmp/dropdown_terminal_addr"
+STATE_FILE="/tmp/dropdown_terminal_state"
 LOCK_FILE="/tmp/dropdown_terminal_lock"
 LAST_TOGGLE_FILE="/tmp/dropdown_terminal_last_toggle"
 MIN_TOGGLE_INTERVAL_MS=250
@@ -132,6 +133,17 @@ window_is_hidden() {
     return 0
   fi
   return 1
+}
+
+# State helpers
+get_hidden_state() {
+  if [ -f "$STATE_FILE" ]; then
+    cat "$STATE_FILE" 2>/dev/null
+  fi
+}
+
+set_hidden_state() {
+  echo "$1" >"$STATE_FILE"
 }
 
 # Function to animate window slide down (show)
@@ -429,7 +441,7 @@ spawn_terminal() {
     hyprctl dispatch resizewindowpixel "exact $width $height,address:$new_addr" >/dev/null 2>&1
     local off_y=$((target_y - height - 200))
     hyprctl dispatch movewindowpixel "exact $target_x $off_y,address:$new_addr" >/dev/null 2>&1
-    animate_slide_down "$new_addr" "$target_x" "$target_y" "$width" "$height"
+    set_hidden_state "hidden"
 
     return 0
   fi
@@ -461,7 +473,8 @@ if [ -n "$TERMINAL_ADDR" ]; then
     echo "$TERMINAL_ADDR $monitor_name" >"$ADDR_FILE"
   fi
 
-  if window_is_hidden "$TERMINAL_ADDR"; then
+  hidden_state=$(get_hidden_state)
+  if [ "$hidden_state" = "hidden" ] || [ -z "$hidden_state" ] || window_is_hidden "$TERMINAL_ADDR"; then
     debug_echo "Bringing terminal from hidden position with slide down animation"
 
     # Calculate target position
@@ -478,6 +491,7 @@ if [ -n "$TERMINAL_ADDR" ]; then
     animate_slide_down "$TERMINAL_ADDR" "$target_x" "$target_y" "$width" "$height"
 
     hyprctl dispatch focuswindow "address:$TERMINAL_ADDR"
+    set_hidden_state "shown"
   else
     debug_echo "Hiding terminal off-screen with slide up animation"
 
@@ -498,10 +512,12 @@ if [ -n "$TERMINAL_ADDR" ]; then
       off_y=$((curr_y - curr_height - 200))
       hyprctl dispatch movewindowpixel "exact $curr_x $off_y,address:$TERMINAL_ADDR" >/dev/null 2>&1
       ensure_unpinned "$TERMINAL_ADDR"
+      set_hidden_state "hidden"
     else
       debug_echo "Could not get window geometry, moving off-screen without animation"
       hyprctl dispatch movewindowpixel "exact 0 -1000,address:$TERMINAL_ADDR" >/dev/null 2>&1
       ensure_unpinned "$TERMINAL_ADDR"
+      set_hidden_state "hidden"
     fi
   fi
 else
