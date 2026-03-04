@@ -4,7 +4,7 @@
 
 - Fixed all float toggle
   - Old command drepreciated
-  - Replaced with a command sequence in the `Keybinds.conf` file
+  - Replaced with a script `Float-All-Windows.sh` in `Keybinds.conf` file
 - Fixed Package name for `waybar-weather`
 - Added `monocle` layout
 - Experimenting with some additional layerrules
