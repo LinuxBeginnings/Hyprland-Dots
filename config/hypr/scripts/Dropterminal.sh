@@ -215,8 +215,8 @@ get_monitor_info() {
 
 # Function to check if special workspace is visible on focused monitor
 special_visible() {
-  hyprctl monitors -j 2>/dev/null | jq -e --arg NAME "$SPECIAL_WS" \
-    'map(select(.focused == true)) | .[0].specialWorkspace.name == $NAME' >/dev/null 2>&1
+  hyprctl monitors -j 2>/dev/null | jq -e --arg NAME "$SPECIAL_WS" --arg NAME2 "$SPECIAL_NAME" \
+    'map(select(.focused == true)) | .[0].specialWorkspace.name as $n | ($n == $NAME or $n == $NAME2)' >/dev/null 2>&1
 }
 
 # Function to calculate dropdown position with proper scaling and centering
