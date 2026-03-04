@@ -18,6 +18,9 @@
 DEBUG=false
 SPECIAL_WS="special:scratchpad"
 ADDR_FILE="/tmp/dropdown_terminal_addr"
+LOCK_FILE="/tmp/dropdown_terminal_lock"
+LAST_TOGGLE_FILE="/tmp/dropdown_terminal_last_toggle"
+MIN_TOGGLE_INTERVAL_MS=250
 
 # Dropdown size and position configuration (percentages)
 WIDTH_PERCENT=65  # Width as percentage of screen width
@@ -36,6 +39,31 @@ if [ "$1" = "-d" ]; then
 fi
 
 TERMINAL_CMD="$1"
+
+# Ensure only one instance runs at a time (prevents overlapping animations)
+exec 9>"$LOCK_FILE"
+flock -n 9 || exit 0
+
+# Debounce rapid toggles
+now_ms=""
+if date +%s%3N >/dev/null 2>&1; then
+  now_ms=$(date +%s%3N)
+else
+  now_ms=$(( $(date +%s) * 1000 ))
+fi
+if [ -f "$LAST_TOGGLE_FILE" ]; then
+  last_ms=$(cat "$LAST_TOGGLE_FILE" 2>/dev/null || echo 0)
+  if [ -n "$last_ms" ] && [ "$last_ms" -ge 0 ] 2>/dev/null; then
+    delta_ms=$((now_ms - last_ms))
+    if [ "$delta_ms" -lt "$MIN_TOGGLE_INTERVAL_MS" ] 2>/dev/null; then
+      if [ "$DEBUG" = true ]; then
+        echo "Toggle debounced (${delta_ms}ms < ${MIN_TOGGLE_INTERVAL_MS}ms)"
+      fi
+      exit 0
+    fi
+  fi
+fi
+echo "$now_ms" >"$LAST_TOGGLE_FILE"
 
 # Debug echo function
 debug_echo() {
