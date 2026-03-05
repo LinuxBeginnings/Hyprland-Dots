@@ -31,8 +31,6 @@ set_layout() {
   local target="$1"
 
   hyprctl keyword general:layout "$target"
-  hyprctl keyword unbind SUPER,J
-  hyprctl keyword unbind SUPER,K
   hyprctl keyword unbind SUPER,O
   hyprctl keyword unbind SUPER_SHIFT,M
 

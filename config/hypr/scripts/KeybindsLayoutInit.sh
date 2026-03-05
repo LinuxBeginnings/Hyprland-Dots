@@ -14,6 +14,6 @@ set -euo pipefail
 hyprctl keyword unbind SUPER,J || true
 hyprctl keyword unbind SUPER,K || true
 
-# Cycle windows globally (layout-aware)
-hyprctl keyword bind SUPER,J,exec,$scriptsDir/HyprlandCycleWindow.sh next
-hyprctl keyword bind SUPER,K,exec,$scriptsDir/HyprlandCycleWindow.sh prev
+# Cycle windows globally
+hyprctl keyword bind SUPER,J,layoutmsg,cyclenext
+hyprctl keyword bind SUPER,K,layoutmsg,cycleprev
