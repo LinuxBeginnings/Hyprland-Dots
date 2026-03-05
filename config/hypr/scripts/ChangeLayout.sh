@@ -31,6 +31,10 @@ set_layout() {
   local target="$1"
 
   hyprctl keyword general:layout "$target"
+  hyprctl keyword unbind SUPER,left
+  hyprctl keyword unbind SUPER,right
+  hyprctl keyword unbind SUPER,up
+  hyprctl keyword unbind SUPER,down
   hyprctl keyword unbind SUPER,O
   hyprctl keyword unbind SUPER_SHIFT,M
 
@@ -43,13 +47,25 @@ set_layout() {
     notify-send -e -u low -i "$notif" " Scrolling Layout"
     ;;
   "monocle")
+    hyprctl keyword bind SUPER,left,layoutmsg,cycleprev
+    hyprctl keyword bind SUPER,up,layoutmsg,cycleprev
+    hyprctl keyword bind SUPER,right,layoutmsg,cyclenext
+    hyprctl keyword bind SUPER,down,layoutmsg,cyclenext
     hyprctl keyword bind SUPER_SHIFT,M,layoutmsg,swapnext
     notify-send -e -u low -i "$notif" " Monocle Layout"
     ;;
   "master")
+    hyprctl keyword bind SUPER,left,movefocus,l
+    hyprctl keyword bind SUPER,right,movefocus,r
+    hyprctl keyword bind SUPER,up,movefocus,u
+    hyprctl keyword bind SUPER,down,movefocus,d
     notify-send -e -u low -i "$notif" " Master Layout"
     ;;
   *)
+    hyprctl keyword bind SUPER,left,movefocus,l
+    hyprctl keyword bind SUPER,right,movefocus,r
+    hyprctl keyword bind SUPER,up,movefocus,u
+    hyprctl keyword bind SUPER,down,movefocus,d
     echo "Unknown layout: $target" >&2
     return 1
     ;;
