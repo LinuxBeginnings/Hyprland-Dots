@@ -15,5 +15,5 @@ hyprctl keyword unbind SUPER,J || true
 hyprctl keyword unbind SUPER,K || true
 
 # Cycle windows globally: J = next, K = previous
-hyprctl keyword bind SUPER,J,cyclenext
-hyprctl keyword bind SUPER,K,cyclenext,prev
+hyprctl keyword bind SUPER,J,layoutmsg,cyclenext
+hyprctl keyword bind SUPER,K,layoutmsg,cycleprev
