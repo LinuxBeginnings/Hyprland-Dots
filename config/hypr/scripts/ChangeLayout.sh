@@ -38,25 +38,17 @@ set_layout() {
 
   case "$target" in
   "dwindle")
-    hyprctl keyword bind SUPER,J,layoutmsg,cyclenext
-    hyprctl keyword bind SUPER,K,layoutmsg,cycleprev
     hyprctl keyword bind SUPER,O,layoutmsg,togglesplit
     notify-send -e -u low -i "$notif" " Dwindle Layout"
     ;;
   "scrolling")
-    hyprctl keyword bind SUPER,J,layoutmsg,cyclenext
-    hyprctl keyword bind SUPER,K,layoutmsg,cycleprev
     notify-send -e -u low -i "$notif" " Scrolling Layout"
     ;;
   "monocle")
-    hyprctl keyword bind SUPER,J,layoutmsg,cyclenext
-    hyprctl keyword bind SUPER,K,layoutmsg,cycleprev
     hyprctl keyword bind SUPER_SHIFT,M,layoutmsg,swapnext
     notify-send -e -u low -i "$notif" " Monocle Layout"
     ;;
   "master")
-    hyprctl keyword bind SUPER,J,layoutmsg,cyclenext
-    hyprctl keyword bind SUPER,K,layoutmsg,cycleprev
     notify-send -e -u low -i "$notif" " Master Layout"
     ;;
   *)
