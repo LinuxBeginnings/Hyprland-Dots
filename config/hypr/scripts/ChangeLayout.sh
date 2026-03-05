@@ -31,6 +31,8 @@ set_layout() {
   local target="$1"
 
   hyprctl keyword general:layout "$target"
+  hyprctl keyword unbind SUPER,j
+  hyprctl keyword unbind SUPER,k
   hyprctl keyword unbind SUPER,left
   hyprctl keyword unbind SUPER,right
   hyprctl keyword unbind SUPER,up
@@ -40,13 +42,27 @@ set_layout() {
 
   case "$target" in
   "dwindle")
+    hyprctl keyword bind SUPER,j,cyclenext
+    hyprctl keyword bind SUPER,k,cyclenext,prev
+    hyprctl keyword bind SUPER,left,cyclenext,prev
+    hyprctl keyword bind SUPER,up,cyclenext,prev
+    hyprctl keyword bind SUPER,right,cyclenext
+    hyprctl keyword bind SUPER,down,cyclenext
     hyprctl keyword bind SUPER,O,layoutmsg,togglesplit
     notify-send -e -u low -i "$notif" " Dwindle Layout"
     ;;
   "scrolling")
+    hyprctl keyword bind SUPER,j,cyclenext
+    hyprctl keyword bind SUPER,k,cyclenext,prev
+    hyprctl keyword bind SUPER,left,cyclenext,prev
+    hyprctl keyword bind SUPER,up,cyclenext,prev
+    hyprctl keyword bind SUPER,right,cyclenext
+    hyprctl keyword bind SUPER,down,cyclenext
     notify-send -e -u low -i "$notif" " Scrolling Layout"
     ;;
   "monocle")
+    hyprctl keyword bind SUPER,j,layoutmsg,cyclenext
+    hyprctl keyword bind SUPER,k,layoutmsg,cycleprev
     hyprctl keyword bind SUPER,left,layoutmsg,cycleprev
     hyprctl keyword bind SUPER,up,layoutmsg,cycleprev
     hyprctl keyword bind SUPER,right,layoutmsg,cyclenext
@@ -55,6 +71,8 @@ set_layout() {
     notify-send -e -u low -i "$notif" " Monocle Layout"
     ;;
   "master")
+    hyprctl keyword bind SUPER,j,layoutmsg,cyclenext
+    hyprctl keyword bind SUPER,k,layoutmsg,cycleprev
     hyprctl keyword bind SUPER,left,movefocus,l
     hyprctl keyword bind SUPER,right,movefocus,r
     hyprctl keyword bind SUPER,up,movefocus,u
@@ -62,6 +80,8 @@ set_layout() {
     notify-send -e -u low -i "$notif" " Master Layout"
     ;;
   *)
+    hyprctl keyword bind SUPER,j,layoutmsg,cyclenext
+    hyprctl keyword bind SUPER,k,layoutmsg,cycleprev
     hyprctl keyword bind SUPER,left,movefocus,l
     hyprctl keyword bind SUPER,right,movefocus,r
     hyprctl keyword bind SUPER,up,movefocus,u
