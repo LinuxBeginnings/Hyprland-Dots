@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -u
+set -o pipefail
+
+ROFI_CONFIG="${HOME}/.config/rofi/config-emacs-keybinds.rasi"
+CACHE_FILE="${HOME}/.cache/rofi-emacs-keybinds.txt"
+
+if [[ ! -s "${CACHE_FILE}" ]]; then
+  notify-send "Rofi Emacs Keybinds" "Keybind cache missing. In Emacs, run: M-x rofi-emacs-keybinds-refresh"
+  exit 1
+fi
+
+rofi -dmenu -i -p "Emacs Keybinds" -config "${ROFI_CONFIG}" < "${CACHE_FILE}"
