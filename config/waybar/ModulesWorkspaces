@@ -255,6 +255,7 @@
 		"title<.*figma.*>": " ",
 		"title<.*jira.*>": " ",
 		"class<jetbrains-idea>": " ",
+		"class<emacs|Emacs>": " ",
 
 		"class<obs|com.obsproject.Studio>": " ",
 
