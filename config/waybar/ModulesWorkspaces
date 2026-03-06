@@ -240,6 +240,8 @@
 		"class<remmina|org.remmina.Remmina>": "🖥️ ",
 
 		"class<VSCode|code|code-url-handler|code-oss|codium|codium-url-handler|VSCodium>": "󰨞 ",
+		"class<[Aa]ntigravity>": "󰨞 ",
+		"title<.*[Aa]ntigravity.*>": "󰨞 ",
 		"class<dev.zed.Zed>": "󰵁",
 		"class<codeblocks>": "󰅩 ",
 		"title<.*github.*>": " ",
