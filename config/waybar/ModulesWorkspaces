@@ -180,7 +180,7 @@
 	  },
 	"format": "{icon} {windows}",
 	"format-window-separator": " ",
-	"window-rewrite-default": " ",
+	"window-rewrite-default": " <span foreground='#ff0000'>✘</span> ",
 	"window-rewrite": {		
 		"title<.*amazon.*>": " ",
 		"title<.*reddit.*>": " ",
