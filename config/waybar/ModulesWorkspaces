@@ -264,7 +264,7 @@
 		"class<nwg-displays>": " ",
 		"class<[Pp]avucontrol|org.pulseaudio.pavucontrol>": "󱡫 ",
 		"class<steam>": " ",
-		"class<thunar|nemo>": "󰝰 ",	
+		"class<thunar|nemo|org.gnome.Nautilus>": "󰝰 ",	
 		"class<Gparted>":"",
 		"class<gimp>": " ",
 		"class<emulator>": "📱 ",
