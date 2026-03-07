@@ -10,6 +10,7 @@
 
 theme="freedesktop" # Set the theme for the system sounds.
 mute=false          # Set to true to mute the system sounds.
+directSoundDir="$HOME/.config/hypr/sounds"
 
 # Mute individual sounds here.
 muteScreenshots=false
@@ -25,16 +26,19 @@ if [[ "$1" == "--screenshot" ]]; then
     if [[ "$muteScreenshots" = true ]]; then
         exit 0
     fi
+    directSound="$directSoundDir/screenshot.ogg"
     soundoption="screen-capture.*"
 elif [[ "$1" == "--volume" ]]; then
     if [[ "$muteVolume" = true ]]; then
         exit 0
     fi
+    directSound="$directSoundDir/volume.ogg"
     soundoption="audio-volume-change.*"
 elif [[ "$1" == "--error" ]]; then
     if [[ "$muteScreenshots" = true ]]; then
         exit 0
     fi
+    directSound="$directSoundDir/error.ogg"
     soundoption="dialog-error.*"
 else
     echo -e "Available sounds: --screenshot, --volume, --error"
@@ -62,6 +66,29 @@ fi
 iTheme=$(cat "$sDIR/index.theme" | grep -i "inherits" | cut -d "=" -f 2)
 iDIR="$sDIR/../$iTheme"
 
+# Helper to play in the background (fast return).
+play_sound() {
+    if command -v paplay >/dev/null 2>&1; then
+        paplay "$1" >/dev/null 2>&1 &
+        exit 0
+    fi
+    if command -v pw-play >/dev/null 2>&1; then
+        pw-play "$1" >/dev/null 2>&1 &
+        exit 0
+    fi
+    if command -v aplay >/dev/null 2>&1; then
+        aplay "$1" >/dev/null 2>&1 &
+        exit 0
+    fi
+    echo "Error: No suitable audio player found. Install paplay (pulseaudio-utils) or PipeWire/ALSA tools."
+    exit 1
+}
+
+# If a direct sound file exists, play it immediately to avoid lookup delay.
+if [[ -n "$directSound" && -f "$directSound" ]]; then
+    play_sound "$directSound"
+fi
+
 # Find the sound file and play it.
 sound_file=$(find -L $sDIR/stereo -name "$soundoption" -print -quit)
 if ! test -f "$sound_file"; then
@@ -77,19 +104,5 @@ if ! test -f "$sound_file"; then
         fi
     fi
 fi
-
-# Play the sound: prefer PipeWire, then PulseAudio, then ALSA
-if command -v pw-play >/dev/null 2>&1; then
-    pw-play "$sound_file" && exit 0
-fi
-
-if command -v paplay >/dev/null 2>&1; then
-    paplay "$sound_file" && exit 0
-fi
-
-if command -v aplay >/dev/null 2>&1; then
-    aplay "$sound_file" && exit 0
-fi
-
-echo "Error: No suitable audio player (pw-play/paplay/aplay) found."
-exit 1
+# Play the sound (background for quick return).
+play_sound "$sound_file"

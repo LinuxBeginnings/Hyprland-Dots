@@ -158,10 +158,10 @@ elif [[ "$1" == "--area" ]]; then
 	shotarea
 elif [[ "$1" == "--active" ]]; then
 	shotactive
-elif [[ "$1" == "--swappy" ]]; then
+elif [[ "$1" == "--swappy" || "$1" == "--swapp" || "$1" == "--swap" ]]; then
 	shotswappy
 else
-	echo -e "Available Options : --now --in5 --in10 --win --area --active --swappy"
+	echo -e "Available Options : --now --in5 --in10 --win --area --active --swappy (--swapp/--swap)"
 fi
 
 exit 0

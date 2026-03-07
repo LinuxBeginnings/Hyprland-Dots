@@ -2,6 +2,14 @@
 
 ## v2.3.22
 
+- Added more app icons for `WaybarWorkspaces`
+  - emacs
+  - Nautilus
+  - Set new default icon to terminal with red X if no icon is available
+- Fixed delay is `ScreenShot.sh` script
+  - Removed existing `sleep` commands
+  - Moved audio `Sound.sh` to background
+  - This relates to `pipwire` [issue](https://gitlab.freedesktop.org/pipewire/pipewire/-/issues/5155)
 - Rewrote core logic of `DropDownterminal.sh`
   - Doesn't use `specialworkspace` anymore
   - Updates to Hyprland seem to break old logic
