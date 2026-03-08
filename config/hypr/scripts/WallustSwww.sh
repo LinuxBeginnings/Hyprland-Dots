@@ -149,41 +149,42 @@ run_wallust_with_config() {
 }
 
 kitty_cfg="$HOME/.config/wallust/wallust-kitty.toml"
-if [ -f "$kitty_cfg" ]; then
-  kitty_ts=$(date +%s)
-  run_wallust_with_config "$kitty_cfg"
-  wait_for_templates "$kitty_ts" "$HOME/.config/kitty/kitty-themes/01-Wallust.conf" || true
-fi
-
-# Reload kitty colors when wallpaper-based theme is active
-kitty_wallust_theme="$HOME/.config/kitty/kitty-themes/01-Wallust.conf"
-if [ -s "$kitty_wallust_theme" ]; then
-  if command -v kitty >/dev/null 2>&1; then
-    kitty @ load-config >/dev/null 2>&1 || true
-    kitty @ set-colors --all --configured "$kitty_wallust_theme" >/dev/null 2>&1 || true
+(
+  if [ -f "$kitty_cfg" ]; then
+    kitty_ts=$(date +%s)
+    run_wallust_with_config "$kitty_cfg"
+    wait_for_templates "$kitty_ts" "$HOME/.config/kitty/kitty-themes/01-Wallust.conf" || true
   fi
-  if pidof kitty >/dev/null 2>&1; then
-    for pid in $(pidof kitty); do
-      kill -SIGUSR1 "$pid" 2>/dev/null || true
-    done
+
+  # Reload kitty colors when wallpaper-based theme is active
+  kitty_wallust_theme="$HOME/.config/kitty/kitty-themes/01-Wallust.conf"
+  if [ -s "$kitty_wallust_theme" ]; then
+    if command -v kitty >/dev/null 2>&1; then
+      kitty @ load-config >/dev/null 2>&1 || true
+      kitty @ set-colors --all --configured "$kitty_wallust_theme" >/dev/null 2>&1 || true
+    fi
+    if pidof kitty >/dev/null 2>&1; then
+      for pid in $(pidof kitty); do
+        kill -SIGUSR1 "$pid" 2>/dev/null || true
+      done
+    fi
   fi
-fi
 
-# Normalize Ghostty palette syntax in case ':' was used by older files
-if [ -f "$HOME/.config/ghostty/wallust.conf" ]; then
-  sed -i -E 's/^(\s*palette\s*=\s*)([0-9]{1,2}):/\1\2=/' "$HOME/.config/ghostty/wallust.conf" 2>/dev/null || true
-fi
+  # Normalize Ghostty palette syntax in case ':' was used by older files
+  if [ -f "$HOME/.config/ghostty/wallust.conf" ]; then
+    sed -i -E 's/^(\s*palette\s*=\s*)([0-9]{1,2}):/\1\2=/' "$HOME/.config/ghostty/wallust.conf" 2>/dev/null || true
+  fi
 
-# Light wait for Ghostty colors file to be present then signal Ghostty to reload (SIGUSR2)
-for _ in 1 2 3; do
-  [ -s "$HOME/.config/ghostty/wallust.conf" ] && break
-  sleep 0.1
-done
-if pidof ghostty >/dev/null; then
-  for pid in $(pidof ghostty); do kill -SIGUSR2 "$pid" 2>/dev/null || true; done
-fi
-# Reload Hyprland so new border colors from wallust-hyprland.conf take effect
-if command -v hyprctl >/dev/null 2>&1; then
-  hyprctl reload >/dev/null 2>&1 || true
-fi
-fi
+  # Light wait for Ghostty colors file to be present then signal Ghostty to reload (SIGUSR2)
+  for _ in 1 2 3; do
+    [ -s "$HOME/.config/ghostty/wallust.conf" ] && break
+    sleep 0.1
+  done
+  if pidof ghostty >/dev/null; then
+    for pid in $(pidof ghostty); do kill -SIGUSR2 "$pid" 2>/dev/null || true; done
+  fi
+  # Reload Hyprland so new border colors from wallust-hyprland.conf take effect
+  if command -v hyprctl >/dev/null 2>&1; then
+    hyprctl reload >/dev/null 2>&1 || true
+  fi
+) >/dev/null 2>&1 &
