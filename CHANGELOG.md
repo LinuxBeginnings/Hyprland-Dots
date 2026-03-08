@@ -2,6 +2,7 @@
 
 ## v2.3.22
 
+- FIXED: Long delay updating colors after wallpaper change
 - Added more app icons for `WaybarWorkspaces`
   - Emacs
   - Nautilus
@@ -9,7 +10,7 @@
 - Fixed delay is `ScreenShot.sh` script
   - Removed existing `sleep` commands
   - Moved audio `Sound.sh` to background
-  - This relates to `pipwire` [issue](https://gitlab.freedesktop.org/pipewire/pipewire/-/issues/5155)
+  - This relates to `pipewire` [issue](https://gitlab.freedesktop.org/pipewire/pipewire/-/issues/5155)
 - Fixed delay in `Sounds.sh`
 - Now uses `paplay` for sounds
 - Rewrote core logic of `DropDownterminal.sh`
