@@ -84,4 +84,69 @@ sudo install -vDm644 completions/_awww -t /usr/share/zsh/site-functions/
 sudo install -vDm644 completions/awww.fish -t /usr/share/fish/vendor_completions.d/
 
 ```
+ - ubuntu (24.04 / 25.10 / 26.04)
+ ```bash
+ # Install Rust toolchain (if not already)
+ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+ source "$HOME/.cargo/env"
+ 
+ # Build from source
+ git clone https://codeberg.org/LGFae/awww.git
+ cd awww
+ cargo build --release
+ 
+ sudo install -vDm755 target/release/awww -t /usr/bin/
+ sudo install -vDm755 target/release/awww-daemon -t /usr/bin/
+ # For Zsh
+ sudo install -vDm644 completions/_awww -t /usr/share/zsh/site-functions/
+ # For Fish
+ sudo install -vDm644 completions/awww.fish -t /usr/share/fish/vendor_completions.d/
+ 
+ # If build fails, install deps:
+ # sudo apt install -y pkg-config liblz4-dev
+ ```
+ - fedora
+ ```bash
+ # Install Rust toolchain (if not already)
+ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+ source "$HOME/.cargo/env"
+ 
+ git clone https://codeberg.org/LGFae/awww.git
+ cd awww
+ cargo build --release
+ 
+ sudo install -vDm755 target/release/awww -t /usr/bin/
+ sudo install -vDm755 target/release/awww-daemon -t /usr/bin/
+ # For Zsh
+ sudo install -vDm644 completions/_awww -t /usr/share/zsh/site-functions/
+ # For Fish
+ sudo install -vDm644 completions/awww.fish -t /usr/share/fish/vendor_completions.d/
+ 
+ # If build fails, install deps:
+ # sudo dnf install -y pkgconf-pkg-config lz4-devel
+ ```
+ - openSUSE
+ ```bash
+ # Install Rust toolchain (if not already)
+ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+ source "$HOME/.cargo/env"
+ 
+ git clone https://codeberg.org/LGFae/awww.git
+ cd awww
+ cargo build --release
+ 
+ sudo install -vDm755 target/release/awww -t /usr/bin/
+ sudo install -vDm755 target/release/awww-daemon -t /usr/bin/
+ # For Zsh
+ sudo install -vDm644 completions/_awww -t /usr/share/zsh/site-functions/
+ # For Fish
+ sudo install -vDm644 completions/awww.fish -t /usr/share/fish/vendor_completions.d/
+ 
+ # If build fails, install deps:
+ # sudo zypper install -y pkg-config liblz4-devel
+ ```
+ - gentoo
+ ```bash
+ sudo emerge gui-apps/awww
+ ```
 
