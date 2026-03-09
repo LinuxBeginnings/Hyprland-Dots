@@ -2,6 +2,11 @@
 
 ## v2.3.22
 
+- Started Migration to `awww`
+  - `swww` is no longer maintained
+  - `awww` is a direct fork of it
+  - Created wrapper scripts to try `awww` first
+  - If not installed it will fall back to `swww`
 - Added more app icons for `WaybarWorkspaces`
   - Emacs
   - Nautilus
