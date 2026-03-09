@@ -72,6 +72,8 @@ Check:
 ## Phase 2  Add awww-daemon and awww to Distro-Hyprland installers 
 - debian 
 ```bash 
+# Deps:
+# sudo apt install -y pkg-config liblz4-dev
 git clone https://codeberg.org/LGFae/awww.git
 cd awww
 cargo build --release
@@ -102,8 +104,8 @@ sudo install -vDm644 completions/awww.fish -t /usr/share/fish/vendor_completions
  # For Fish
  sudo install -vDm644 completions/awww.fish -t /usr/share/fish/vendor_completions.d/
  
- # If build fails, install deps:
- # sudo apt install -y pkg-config liblz4-dev
+# Deps:
+# sudo apt install -y pkg-config liblz4-dev
  ```
  - fedora
  ```bash
@@ -122,8 +124,8 @@ sudo install -vDm644 completions/awww.fish -t /usr/share/fish/vendor_completions
  # For Fish
  sudo install -vDm644 completions/awww.fish -t /usr/share/fish/vendor_completions.d/
  
- # If build fails, install deps:
- # sudo dnf install -y pkgconf-pkg-config lz4-devel
+# Deps:
+# sudo dnf install -y pkgconf-pkg-config lz4-devel
  ```
  - openSUSE
  ```bash
@@ -142,8 +144,8 @@ sudo install -vDm644 completions/awww.fish -t /usr/share/fish/vendor_completions
  # For Fish
  sudo install -vDm644 completions/awww.fish -t /usr/share/fish/vendor_completions.d/
  
- # If build fails, install deps:
- # sudo zypper install -y pkg-config liblz4-devel
+# Deps:
+# sudo zypper install -y pkg-config liblz4-devel
  ```
  - gentoo
  ```bash
