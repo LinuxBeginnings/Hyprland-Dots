@@ -69,3 +69,19 @@ Check:
 - `exec-once = $scriptsDir/WallpaperDaemon.sh` is active in `~/.config/hypr/configs/Startup_Apps.conf`.
 - AWWW binaries exist: `command -v awww` and `awww-daemon`.
 
+## Phase 2  Add awww-daemon and awww to Distro-Hyprland installers 
+- debian 
+```bash 
+git clone https://codeberg.org/LGFae/awww.git
+cd awww
+cargo build --release
+
+sudo install -vDm755 target/release/awww -t /usr/bin/
+sudo install -vDm755 target/release/awww-daemon -t /usr/bin/
+# For Zsh
+sudo install -vDm644 completions/_awww -t /usr/share/zsh/site-functions/
+# For Fish
+sudo install -vDm644 completions/awww.fish -t /usr/share/fish/vendor_completions.d/
+
+```
+
