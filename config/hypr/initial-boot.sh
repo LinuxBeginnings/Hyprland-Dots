@@ -9,6 +9,8 @@
 
 # Variables
 scriptsDir=$HOME/.config/hypr/scripts
+ # shellcheck source=/dev/null
+ . "$scriptsDir/WallpaperCmd.sh"
 wallpaper=$HOME/.config/hypr/wallpaper_effects/.wallpaper_current
 waybar_style="$HOME/.config/waybar/style/[Extra] Neon Circuit.css"
 kvantum_theme="catppuccin-mocha-blue"
@@ -17,7 +19,7 @@ gtk_theme="Flat-Remix-GTK-Blue-Dark"
 icon_theme="Flat-Remix-Blue-Dark"
 cursor_theme="Bibata-Modern-Ice"
 
-swww="swww img"
+swww="$WWW_CMD img"
 effect="--transition-bezier .43,1.19,1,.4 --transition-fps 30 --transition-type grow --transition-pos 0.925,0.977 --transition-duration 2"
 
 # Check if a marker file exists.
@@ -26,7 +28,7 @@ if [ ! -f "$HOME/.config/hypr/.initial_startup_done" ]; then
     # Initialize wallust and wallpaper
 	if [ -f "$wallpaper" ]; then
 		wallust run -s $wallpaper > /dev/null 
-		swww query || swww-daemon && $swww $wallpaper $effect
+		"$WWW_CMD" query || "$WWW_DAEMON" && $swww $wallpaper $effect
 	    "$scriptsDir/WallustSwww.sh" > /dev/null 2>&1 & 
 	fi
      

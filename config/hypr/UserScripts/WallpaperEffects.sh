@@ -12,6 +12,8 @@ terminal=kitty
 wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
 wallpaper_output="$HOME/.config/hypr/wallpaper_effects/.wallpaper_modified"
 SCRIPTSDIR="$HOME/.config/hypr/scripts"
+# shellcheck source=/dev/null
+. "$SCRIPTSDIR/WallpaperCmd.sh"
 focused_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
 rofi_theme="$HOME/.config/rofi/config-wallpaper-effect.rasi"
 
@@ -50,7 +52,7 @@ declare -A effects=(
 
 # Function to apply no effects
 no-effects() {
-    swww img -o "$focused_monitor" "$wallpaper_current" $SWWW_PARAMS &&
+    "$WWW_CMD" img -o "$focused_monitor" "$wallpaper_current" $SWWW_PARAMS &&
     wait $!
     wallust run "$wallpaper_current" -s &&
     wait $!
@@ -88,7 +90,7 @@ main() {
             done
 
             sleep 1
-            swww img -o "$focused_monitor" "$wallpaper_output" $SWWW_PARAMS &
+            "$WWW_CMD" img -o "$focused_monitor" "$wallpaper_output" $SWWW_PARAMS &
 
             sleep 2
   
