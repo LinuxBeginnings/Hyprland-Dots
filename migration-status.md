@@ -73,7 +73,7 @@ Check:
 - debian 
 ```bash 
 # Deps:
-# sudo apt install -y pkg-config liblz4-dev
+sudo apt install -y pkg-config liblz4-dev
 git clone https://codeberg.org/LGFae/awww.git
 cd awww
 cargo build --release
@@ -92,6 +92,8 @@ sudo install -vDm644 completions/awww.fish -t /usr/share/fish/vendor_completions
  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
  source "$HOME/.cargo/env"
  
+ # Deps:
+ sudo apt install -y pkg-config liblz4-dev
  # Build from source
  git clone https://codeberg.org/LGFae/awww.git
  cd awww
@@ -104,11 +106,10 @@ sudo install -vDm644 completions/awww.fish -t /usr/share/fish/vendor_completions
  # For Fish
  sudo install -vDm644 completions/awww.fish -t /usr/share/fish/vendor_completions.d/
  
-# Deps:
-# sudo apt install -y pkg-config liblz4-dev
  ```
  - fedora
  ```bash
+  sudo dnf install wayland-protocols lz4-devel wayland-devel
  # Install Rust toolchain (if not already)
  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
  source "$HOME/.cargo/env"
