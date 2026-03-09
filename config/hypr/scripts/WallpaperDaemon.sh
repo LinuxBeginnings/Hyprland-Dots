@@ -8,7 +8,29 @@
 # Start wallpaper daemon, preferring awww with swww fallback
 
 if command -v awww-daemon >/dev/null 2>&1 && command -v awww >/dev/null 2>&1; then
-  awww-daemon --format xrgb
+  WWW="awww"
+  DAEMON="awww-daemon"
 elif command -v swww-daemon >/dev/null 2>&1 && command -v swww >/dev/null 2>&1; then
-  swww-daemon --format xrgb
+  WWW="swww"
+  DAEMON="swww-daemon"
+else
+  exit 0
+fi
+
+$DAEMON --format xrgb &
+
+wallpaper_link="$HOME/.config/rofi/.current_wallpaper"
+wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
+wallpaper_path=""
+
+if [ -L "$wallpaper_link" ]; then
+  wallpaper_path="$(readlink -f "$wallpaper_link")"
+elif [ -f "$wallpaper_link" ]; then
+  wallpaper_path="$wallpaper_link"
+elif [ -f "$wallpaper_current" ]; then
+  wallpaper_path="$wallpaper_current"
+fi
+
+if [ -n "$wallpaper_path" ] && [ -f "$wallpaper_path" ]; then
+  $WWW img "$wallpaper_path" >/dev/null 2>&1 &
 fi

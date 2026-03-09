@@ -37,10 +37,18 @@ done
 
 
 # Initialize swww if needed
-swww query || swww-daemon --format xrgb
+if command -v awww >/dev/null 2>&1; then
+    WWW="awww"
+    DAEMON="awww-daemon"
+else
+    WWW="swww"
+    DAEMON="swww-daemon"
+fi
+
+$WWW query || $DAEMON --format xrgb
 
 # Set swww options
-swww="swww img"
+swww="$WWW img"
 effect="--transition-bezier .43,1.19,1,.4 --transition-fps 60 --transition-type grow --transition-pos 0.925,0.977 --transition-duration 2"
 
 # Determine current theme mode

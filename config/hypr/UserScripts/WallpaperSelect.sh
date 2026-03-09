@@ -13,6 +13,13 @@ PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
 wallDIR="$PICTURES_DIR/wallpapers"
 SCRIPTSDIR="$HOME/.config/hypr/scripts"
 wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
+if command -v awww >/dev/null 2>&1; then
+  WWW="awww"
+  DAEMON_BIN="awww-daemon"
+else
+  WWW="swww"
+  DAEMON_BIN="swww-daemon"
+fi
 
 # Directory for swaync
 iDIR="$HOME/.config/swaync/images"
@@ -51,7 +58,7 @@ rofi_override="element-icon{size:${adjusted_icon_size}%;}"
 
 # Kill existing wallpaper daemons for video
 kill_wallpaper_for_video() {
-  swww kill 2>/dev/null
+  $WWW kill 2>/dev/null
   pkill mpvpaper 2>/dev/null
   pkill swaybg 2>/dev/null
   pkill hyprpaper 2>/dev/null
@@ -112,6 +119,7 @@ modify_startup_config() {
   # Check if it's a live wallpaper (video)
   if [[ "$selected_file" =~ \.(mp4|mkv|mov|webm)$ ]]; then
     # For video wallpapers:
+    sed -i '/^\s*exec-once\s*=\s*\$scriptsDir\/WallpaperDaemon\.sh\s*$/s/^/\#/' "$startup_config"
     sed -i '/^\s*exec-once\s*=\s*swww-daemon\s*--format\s*xrgb\s*$/s/^/\#/' "$startup_config"
     sed -i '/^\s*#\s*exec-once\s*=\s*mpvpaper\s*.*$/s/^#\s*//;' "$startup_config"
 
@@ -122,6 +130,7 @@ modify_startup_config() {
     echo "Configured for live wallpaper (video)."
   else
     # For image wallpapers:
+    sed -i '/^\s*#\s*exec-once\s*=\s*\$scriptsDir\/WallpaperDaemon\.sh\s*$/s/^\s*#\s*//;' "$startup_config"
     sed -i '/^\s*#\s*exec-once\s*=\s*swww-daemon\s*--format\s*xrgb\s*$/s/^\s*#\s*//;' "$startup_config"
 
     sed -i '/^\s*exec-once\s*=\s*mpvpaper\s*.*$/s/^/\#/' "$startup_config"
@@ -136,12 +145,12 @@ apply_image_wallpaper() {
 
   kill_wallpaper_for_image
 
-  if ! pgrep -x "swww-daemon" >/dev/null; then
-    echo "Starting swww-daemon..."
-    swww-daemon --format xrgb &
+  if ! pgrep -x "$DAEMON_BIN" >/dev/null; then
+    echo "Starting $DAEMON_BIN..."
+    $DAEMON_BIN --format xrgb &
   fi
 
-  swww img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
+  $WWW img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
 
   # Run additional scripts (pass the image path to avoid cache race conditions)
   "$SCRIPTSDIR/WallustSwww.sh" "$image_path"

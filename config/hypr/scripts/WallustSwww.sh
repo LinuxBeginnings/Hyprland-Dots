@@ -12,7 +12,15 @@ set -euo pipefail
 
 # Inputs and paths
 passed_path="${1:-}"
-cache_dir="$HOME/.cache/swww/"
+if command -v awww >/dev/null 2>&1; then
+  WWW="awww"
+  cache_dir="$HOME/.cache/awww/"
+  cache_dir_fallback="$HOME/.cache/swww/"
+else
+  WWW="swww"
+  cache_dir="$HOME/.cache/swww/"
+  cache_dir_fallback="$HOME/.cache/awww/"
+fi
 rofi_link="$HOME/.config/rofi/.current_wallpaper"
 wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
 read_cached_wallpaper() {
@@ -24,7 +32,7 @@ read_cached_wallpaper() {
 
 read_wallpaper_from_query() {
   local monitor="$1"
-  swww query | awk -v mon="$monitor" '
+  $WWW query | awk -v mon="$monitor" '
     /^Monitor/ {
       cur=$2
       gsub(":", "", cur)
@@ -51,17 +59,21 @@ wallpaper_path=""
 if [[ -n "$passed_path" && -f "$passed_path" ]]; then
   wallpaper_path="$passed_path"
 else
-  # Try to read from swww cache for the focused monitor, with a short retry loop
+  # Try to read from awww/swww cache for the focused monitor, with a short retry loop
   current_monitor="$(get_focused_monitor)"
   cache_file="$cache_dir$current_monitor"
+  alt_cache_file="${cache_dir_fallback}${current_monitor}"
 
-  # Wait briefly for swww to write its cache after an image change
+  # Wait briefly for awww/swww to write its cache after an image change
   for i in {1..10}; do
-    if [[ -f "$cache_file" ]]; then
+    if [[ -f "$cache_file" || -f "$alt_cache_file" ]]; then
       break
     fi
     sleep 0.1
   done
+  if [[ ! -f "$cache_file" && -f "$alt_cache_file" ]]; then
+    cache_file="$alt_cache_file"
+  fi
 
   if [[ -f "$cache_file" ]]; then
     # The first non-filter line is the original wallpaper path
