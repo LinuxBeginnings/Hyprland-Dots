@@ -2,6 +2,12 @@
 
 ## v2.3.22
 
+- `SWWW` project is archived moving to `AWWW`
+  - It's feature, syntax compatible
+  - Already has some fixes added
+  - Created a startup script to check for `awww-daemon` or fallback to `swww-daemon`
+  - Suggest everyone remove `swww` and replace with `awww`
+    - This has been done in `NixOS-Hyprland` but you have to update to current build in main branch
 - FIXED: Long delay updating colors after wallpaper change
 - Added more app icons for `WaybarWorkspaces`
   - Emacs
