@@ -239,6 +239,7 @@
 		"class<virtualbox manager>": "💽 ",
 		"title<virtualbox>": "💽 ",
 		"class<remmina|org.remmina.Remmina>": "🖥️ ",
+		"class<mainline-gtk>": " ",
 
 		"class<VSCode|code|code-url-handler|code-oss|codium|codium-url-handler|VSCodium>": "󰨞 ",
 		"class<[Aa]ntigravity>": "󰨞 ",
