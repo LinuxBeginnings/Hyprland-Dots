@@ -200,8 +200,8 @@
 		"class<org.wezfurlong.wezterm>": " ",
 		"class<Warp|warp|dev.warp.Warp|warp-terminal>": "󰰭 ",
 
-		"class<[Tt]hunderbird|[Tt]hunderbird-esr>": " ",
-		"class<eu.betterbird.Betterbird>": " ",
+    "class<[Tt]hunderbird|[Tt]hunderbird-esr>": "󰊫 ",
+		"class<org.mozilla.Thunderbird|eu.betterbird.Betterbird>": "󰊫 ",
 		"title<.*gmail.*>": "󰊫 ",
 
 		"class<[Tt]elegram-desktop|org.telegram.desktop|io.github.tdesktop_x64.TDesktop>": " ",
@@ -217,6 +217,7 @@
 		"title<.*ChatGPT.*>": "󰚩 ",
 		"title<.*deepseek.*>": "󰚩 ",
 		"title<.*qwen.*>": "󰚩 ",
+		"title<.*gemini.*>": "󰚩 ",
 		"class<subl>": "󰅳 ",
 		"class<slack>": " ",
 
