@@ -66,7 +66,10 @@ mapfile -d '' PICS < <(find -L "${wallDIR}" -type f \( \
   -iname "*.mp4" -o -iname "*.mkv" -o -iname "*.mov" -o -iname "*.webm" \) -print0)
 
 RANDOM_PIC="${PICS[$((RANDOM % ${#PICS[@]}))]}"
-RANDOM_PIC_NAME=". random"
+RANDOM_PIC_NAME="$(basename "$RANDOM_PIC")"
+
+CURRENT_MON_PIC_PATH=$(swww query | grep "$focused_monitor" | awk '{print $NF}')
+CURRENT_MON_PIC_NAME=$(basename "$CURRENT_MON_PIC_PATH")
 
 # Rofi command
 rofi_command="rofi -i -show -dmenu -config $rofi_theme -theme-str $rofi_override"
@@ -74,8 +77,9 @@ rofi_command="rofi -i -show -dmenu -config $rofi_theme -theme-str $rofi_override
 # Sorting Wallpapers
 menu() {
   IFS=$'\n' sorted_options=($(sort <<<"${PICS[*]}"))
-
-  printf "%s\x00icon\x1f%s\n" "$RANDOM_PIC_NAME" "$RANDOM_PIC"
+  
+  printf "%s\x00icon\x1f%s\n" "Random: $RANDOM_PIC_NAME" "$RANDOM_PIC"
+  printf "%s\x00icon\x1f%s\n" "Current: $CURRENT_MON_PIC_NAME" "$CURRENT_MON_PIC_PATH"
 
   for pic_path in "${sorted_options[@]}"; do
     pic_name=$(basename "$pic_path")
@@ -166,6 +170,9 @@ main() {
   choice=$(echo "$choice" | xargs)
   RANDOM_PIC_NAME=$(echo "$RANDOM_PIC_NAME" | xargs)
 
+  choice="${choice#Random: }"
+  choice="${choice#Current: }"
+
   if [[ -z "$choice" ]]; then
     echo "No choice selected. Exiting."
     exit 0
@@ -176,7 +183,7 @@ main() {
     choice=$(basename "$RANDOM_PIC")
   fi
 
-  choice_basename=$(basename "$choice" | sed 's/\(.*\)\.[^.]*$/\1/')
+  choice_basename="${choice%.*}"
 
   # Search for the selected file in the wallpapers directory, including subdirectories
   selected_file=$(find "$wallDIR" -iname "$choice_basename.*" -print -quit)
