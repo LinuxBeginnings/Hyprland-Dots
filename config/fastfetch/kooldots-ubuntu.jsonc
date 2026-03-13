@@ -1,0 +1,150 @@
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+
+    "logo": {
+        "type": "kitty-direct",
+        "source": "$HOME/.config/fastfetch/images/ubuntu.png",
+        // "type": "small",
+        "width": 20,
+        "height": 10,
+        "padding": {
+            "top": 4,
+            "right": 4,
+            "left": 2
+        }
+    },
+
+    "display": {
+        "separator": "   ",
+        "color": {
+            "keys": "white"
+        },
+        "key": {
+            "width": 18
+        },
+        "brightColor": false
+    },
+
+    "modules": [
+        "break",
+        "break",
+
+        // ── Identity header ────────────────────────────────────────────
+        // {
+        //     "type": "custom",
+        //     "format": "\u001b[1m\u001b[38;5;197m   <---- KoolDots ---->\u001b[0m"
+        // },
+        // "break",
+
+        "break",
+        // ── System ─────────────────────────────────────────────────────
+        {
+            "type": "custom",
+            "format": "\u001b[38;5;197m── \u001b[1m\u001b[38;5;231mSYSTEM\u001b[0m \u001b[38;5;197m──────────────────────────\u001b[0m"
+        },
+        {
+            "type": "os",
+            "key": "  {icon}  OS"
+        },
+        {
+            "type": "kernel",
+            "key": "  {icon}  Kernel"
+        },
+        {
+            "type": "command",
+            "key": "  {icon}  Hostname",
+            "text": "printf '%s@%s' \"$USER\" \"$(hostname)\""
+        },
+        {
+            "type": "uptime",
+            "key": "  {icon}  Uptime"
+        },
+        {
+            "type": "packages",
+            "key": "  {icon}  Packages"
+        },
+        {
+            "type": "disk",
+            "key": "  {icon}  OS Age",
+            "folders": "/",
+            "format": "installed {create-time:10}  ({days} days ago)"
+        },
+        "break",
+
+        // ── Hardware ───────────────────────────────────────────────────
+        {
+            "type": "custom",
+            "format": "\u001b[38;5;197m── \u001b[1m\u001b[38;5;231mHARDWARE\u001b[0m \u001b[38;5;197m────────────────────────\u001b[0m"
+        },
+        {
+            "type": "host",
+            "key": "  {icon}  Machine",
+            "format": "{name}"
+        },
+        {
+            "type": "cpu",
+            "key": "  {icon}  CPU",
+            "showPeCoreCount": true
+        },
+        {
+            "type": "gpu",
+            "key": "  {icon}  GPU"
+        },
+        {
+            "type": "memory",
+            "key": "  {icon}  RAM",
+            "percent": {
+                "type": 3,
+                "green": 40,
+                "yellow": 75
+            }
+        },
+        {
+            "type": "disk",
+            "key": "  {icon}  Disk",
+            "format": "{size-used} / {size-total} ({size-percentage})"
+        },
+        "break",
+
+        // ── Desktop ────────────────────────────────────────────────────
+        {
+            "type": "custom",
+            "format": "\u001b[38;5;197m── \u001b[1m\u001b[38;5;231mDESKTOP\u001b[0m \u001b[38;5;197m─────────────────────────\u001b[0m"
+        },
+        {
+            "type": "wm",
+            "key": "  {icon}  WM"
+        },
+        {
+            "type": "command",
+            "key": "    KoolDots",
+            "text": "echo v${DOTS_VERSION}"
+        },
+        {
+            "type": "display",
+            "key": "  {icon}  Display",
+            "compactType": "original-with-refresh-rate"
+        },
+        {
+            "type": "shell",
+            "key": "  {icon}  Shell"
+        },
+        {
+            "type": "terminal",
+            "key": "  {icon}  Terminal"
+        },
+        {
+            "type": "editor",
+            "key": "  {icon}  Editor"
+        },
+        "break",
+
+        // ── Footer ─────────────────────────────────────────────────────
+        // {
+            // black → dark pink → hot pink → light pink → white
+        //     "type": "custom",
+        //     "format": " \u001b[48;5;232m  \u001b[48;5;53m  \u001b[48;5;89m  \u001b[48;5;125m  \u001b[48;5;161m  \u001b[48;5;197m  \u001b[48;5;198m  \u001b[48;5;199m  \u001b[48;5;205m  \u001b[48;5;211m  \u001b[48;5;224m  \u001b[48;5;231m  \u001b[0m"
+        // },
+        "break"
+    ]
+}
