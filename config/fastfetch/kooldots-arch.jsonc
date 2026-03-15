@@ -3,7 +3,7 @@
 
   "logo": {
     "type": "kitty-direct",
-    "source": "$HOME/.config/fastfetch/images/Arch-Logo-1.png",
+    "source": "$HOME/.config/fastfetch/images/Arch-Logo-2.png",
     // "type": "small",
     "width": 20,
     "height": 10,
