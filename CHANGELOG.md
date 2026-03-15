@@ -2,6 +2,9 @@
 
 ## v2.3.22
 
+- [S3cBar0n](https://github.com/S3cBar0n) updated `WallpaperSelect.sh`
+  - It shows filename for the random image, and current wallpaper
+  - Thanks for support Kooldots!
 - `SWWW` project is archived moving to `AWWW`
   - It's feature, syntax compatible
   - Already has some fixes added

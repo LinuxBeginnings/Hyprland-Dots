@@ -78,7 +78,13 @@ mapfile -d '' PICS < <(find -L "${wallDIR}" -type f \( \
   -iname "*.mp4" -o -iname "*.mkv" -o -iname "*.mov" -o -iname "*.webm" \) -print0)
 
 RANDOM_PIC="${PICS[$((RANDOM % ${#PICS[@]}))]}"
-RANDOM_PIC_NAME=". random"
+RANDOM_PIC_NAME="$(basename "$RANDOM_PIC")"
+
+CURRENT_MON_PIC_PATH=$($WWW query 2>/dev/null | grep "$focused_monitor" | awk '{print $NF}')
+if [[ -z "$CURRENT_MON_PIC_PATH" && -f "$wallpaper_current" ]]; then
+  CURRENT_MON_PIC_PATH=$(head -n 1 "$wallpaper_current")
+fi
+CURRENT_MON_PIC_NAME=$(basename "$CURRENT_MON_PIC_PATH")
 
 # Rofi command
 rofi_command="rofi -i -show -dmenu -config $rofi_theme -theme-str $rofi_override"
@@ -87,7 +93,10 @@ rofi_command="rofi -i -show -dmenu -config $rofi_theme -theme-str $rofi_override
 menu() {
   IFS=$'\n' sorted_options=($(sort <<<"${PICS[*]}"))
 
-  printf "%s\x00icon\x1f%s\n" "$RANDOM_PIC_NAME" "$RANDOM_PIC"
+  printf "%s\x00icon\x1f%s\n" "Random: $RANDOM_PIC_NAME" "$RANDOM_PIC"
+  if [[ -n "$CURRENT_MON_PIC_PATH" ]]; then
+    printf "%s\x00icon\x1f%s\n" "Current: $CURRENT_MON_PIC_NAME" "$CURRENT_MON_PIC_PATH"
+  fi
 
   for pic_path in "${sorted_options[@]}"; do
     pic_name=$(basename "$pic_path")
@@ -179,6 +188,8 @@ main() {
   choice=$(menu | $rofi_command)
   choice=$(echo "$choice" | xargs)
   RANDOM_PIC_NAME=$(echo "$RANDOM_PIC_NAME" | xargs)
+  choice="${choice#Random: }"
+  choice="${choice#Current: }"
 
   if [[ -z "$choice" ]]; then
     echo "No choice selected. Exiting."
