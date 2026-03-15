@@ -188,6 +188,7 @@ main() {
   choice=$(menu | $rofi_command)
   choice=$(echo "$choice" | xargs)
   RANDOM_PIC_NAME=$(echo "$RANDOM_PIC_NAME" | xargs)
+  raw_choice="$choice"
   choice="${choice#Random: }"
   choice="${choice#Current: }"
 
@@ -196,15 +197,23 @@ main() {
     exit 0
   fi
 
-  # Handle random selection correctly
-  if [[ "$choice" == "$RANDOM_PIC_NAME" ]]; then
-    choice=$(basename "$RANDOM_PIC")
+  # Resolve selection directly when using Random/Current entries
+  if [[ "$raw_choice" == Random:\ * ]]; then
+    selected_file="$RANDOM_PIC"
+  elif [[ "$raw_choice" == Current:\ * && -n "$CURRENT_MON_PIC_PATH" ]]; then
+    selected_file="$CURRENT_MON_PIC_PATH"
+  elif [[ -f "$choice" ]]; then
+    selected_file="$choice"
+  else
+    # Handle random selection by name when needed
+    if [[ "$choice" == "$RANDOM_PIC_NAME" ]]; then
+      choice=$(basename "$RANDOM_PIC")
+    fi
+    choice_basename=$(basename "$choice" | sed 's/\(.*\)\.[^.]*$/\1/')
+
+    # Search for the selected file in the wallpapers directory, including subdirectories
+    selected_file=$(find "$wallDIR" -iname "$choice_basename.*" -print -quit)
   fi
-
-  choice_basename=$(basename "$choice" | sed 's/\(.*\)\.[^.]*$/\1/')
-
-  # Search for the selected file in the wallpapers directory, including subdirectories
-  selected_file=$(find "$wallDIR" -iname "$choice_basename.*" -print -quit)
 
   if [[ -z "$selected_file" ]]; then
     echo "File not found. Selected choice: $choice"
