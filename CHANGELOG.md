@@ -2,6 +2,9 @@
 
 ## v2.3.22
 
+- Updated `copy.sh` to support `ghostty`
+- The ghostty config directory is now backed up
+- Restore ghostty config added to restore options
 - [S3cBar0n](https://github.com/S3cBar0n) updated `WallpaperSelect.sh`
   - It shows filename for the random image, and current wallpaper
   - Thanks for support Kooldots!
