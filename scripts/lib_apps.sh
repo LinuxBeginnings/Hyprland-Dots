@@ -73,10 +73,18 @@ install_terminal_configs() {
   local base="${DOTFILES_DIR:-.}"
 
   # Ghostty
-  local GHOSTTY_SRC="$base/config/ghostty/ghostty.config"
+  local GHOSTTY_SRC="$base/config/ghostty/config"
   local GHOSTTY_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty"
   local GHOSTTY_DEST="$GHOSTTY_DIR/config"
   if [ -f "$GHOSTTY_SRC" ]; then
+    if [ -d "$GHOSTTY_DIR" ]; then
+      BACKUP_DIR=$(get_backup_dirname)
+      local GHOSTTY_BACKUP="$GHOSTTY_DIR-backup-$BACKUP_DIR"
+      if [ ! -d "$GHOSTTY_BACKUP" ]; then
+        cp -a "$GHOSTTY_DIR" "$GHOSTTY_BACKUP" 2>&1 | tee -a "$log"
+        echo "${NOTE:-[NOTE]} - Backed up Ghostty config to $GHOSTTY_BACKUP." 2>&1 | tee -a "$log"
+      fi
+    fi
     mkdir -p "$GHOSTTY_DIR"
     install -m 0644 "$GHOSTTY_SRC" "$GHOSTTY_DEST" 2>&1 | tee -a "$log"
     if [ -f "$GHOSTTY_DIR/wallust.conf" ]; then

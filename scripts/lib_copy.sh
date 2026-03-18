@@ -507,6 +507,32 @@ restore_user_scripts() {
   fi
 }
 
+restore_terminal_configs() {
+  local log="$1"
+  local express_mode="$2"
+
+  local GHOSTTY_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty"
+  local BACKUP_DIR
+  BACKUP_DIR=$(get_backup_dirname)
+  local GHOSTTY_BACKUP="$GHOSTTY_DIR-backup-$BACKUP_DIR"
+
+  if [ -d "$GHOSTTY_BACKUP" ] && [ "$express_mode" -eq 1 ]; then
+    echo "${NOTE:-[NOTE]} Express mode: skipping Ghostty restore prompt." 2>&1 | tee -a "$log"
+    return
+  fi
+
+  if [ -d "$GHOSTTY_BACKUP" ] && [ "$express_mode" -eq 0 ]; then
+    echo -e "${NOTE:-[NOTE]} Restore previous ${MAGENTA:-}Ghostty${RESET:-} config?" 2>&1 | tee -a "$log"
+    read -r -p "${CAT:-[ACTION]} Do you want to restore Ghostty config from backup? (y/N): " restore_ghostty
+    if [[ "$restore_ghostty" == [Yy]* ]]; then
+      rm -rf "$GHOSTTY_DIR"
+      cp -a "$GHOSTTY_BACKUP" "$GHOSTTY_DIR" 2>&1 | tee -a "$log"
+      echo "${OK:-[OK]} - Ghostty config restored." 2>&1 | tee -a "$log"
+    else
+      echo "${NOTE:-[NOTE]} - Skipped restoring Ghostty config." 2>&1 | tee -a "$log"
+    fi
+  fi
+}
 restore_hypr_files() {
   local log="$1"
   local express_mode="$2"

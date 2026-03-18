@@ -598,6 +598,8 @@ printf "\\n%.0s" {1..1}
 
 restore_user_scripts "$LOG" "$EXPRESS_MODE"
 printf "\n%.0s" {1..1}
+restore_terminal_configs "$LOG" "$EXPRESS_MODE"
+printf "\\n%.0s" {1..1}
 
 restore_hypr_files "$LOG" "$EXPRESS_MODE"
 printf "\n%.0s" {1..1}
