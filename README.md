@@ -131,8 +131,9 @@ chmod +x copy.sh
 
 #### ⚠️ after installing these dots
 
-- Nvidia Owners. Make sure to edit your `~/.config/hypr/UserConfigs/ENVariables.conf` (highly recommended).
-- NVIDIA users / owners, after installation, check [`THIS`](https://github.com/LinuxBeginnings/Hyprland-Dots/wiki/Notes_to_remember#--for-nvidia-gpu-users)
+- NVIDIA Owners.
+  - After installation, check [`THIS`](https://github.com/LinuxBeginnings/Hyprland-Dots/wiki/FAQ_NVIDIA)
+  - Make sure to edit your `~/.config/hypr/UserConfigs/ENVariables.conf` (highly recommended).
 - If you have already set your own keybinds, monitors, etc.... Just copy over from backup created before log-out or reboot. (recommended)
 
 #### 🙋 QUESTIONS ?
