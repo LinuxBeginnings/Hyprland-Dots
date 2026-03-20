@@ -2,6 +2,7 @@
 
 ## v2.3.22
 
+- Enabled `touch on tablet` in `hypr/configs/SystemSettings.conf`
 - Updated `copy.sh` to support `ghostty`
 - The ghostty config directory is now backed up
 - Restore ghostty config added to restore options
