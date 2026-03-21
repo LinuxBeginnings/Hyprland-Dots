@@ -247,6 +247,8 @@
 		"class<dev.zed.Zed>": "󰵁",
 		"class<codeblocks>": "󰅩 ",
 		"title<.*github.*>": " ",
+		"class<com-jetpackduba-gitnuro-MainKt>": " ",
+		"title<.*Gitnuro.*>": " ",
 		"class<mousepad>": " ",
 		"class<libreoffice-writer>": " ",
 		"class<libreoffice-startcenter>": "󰏆 ",
