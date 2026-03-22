@@ -29,12 +29,36 @@ wallpaper_link="$HOME/.config/rofi/.current_wallpaper"
 wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
 wallpaper_path=""
 
+# Prefer the symlink target if it's valid
 if [ -L "$wallpaper_link" ]; then
-  wallpaper_path="$(readlink -f "$wallpaper_link")"
-elif [ -f "$wallpaper_link" ]; then
+  resolved="$(readlink -f "$wallpaper_link")"
+  if [ -n "$resolved" ] && [ -f "$resolved" ]; then
+    wallpaper_path="$resolved"
+  fi
+fi
+
+# Fall back to link file or copied current wallpaper
+if [ -z "$wallpaper_path" ] && [ -f "$wallpaper_link" ]; then
   wallpaper_path="$wallpaper_link"
-elif [ -f "$wallpaper_current" ]; then
+fi
+if [ -z "$wallpaper_path" ] && [ -f "$wallpaper_current" ]; then
   wallpaper_path="$wallpaper_current"
+fi
+
+# Last resort: use cached swww/awww wallpaper paths
+if [ -z "$wallpaper_path" ]; then
+  for cache_dir in "$HOME/.cache/awww" "$HOME/.cache/swww"; do
+    [ -d "$cache_dir" ] || continue
+    for cache_file in "$cache_dir"/*; do
+      [ -f "$cache_file" ] || continue
+      candidate="$(awk 'NF && $0 !~ /^filter/ {print; exit}' "$cache_file")"
+      if [ -n "$candidate" ] && [ -f "$candidate" ]; then
+        wallpaper_path="$candidate"
+        break
+      fi
+    done
+    [ -n "$wallpaper_path" ] && break
+  done
 fi
 
 if [ -n "$wallpaper_path" ] && [ -f "$wallpaper_path" ]; then
