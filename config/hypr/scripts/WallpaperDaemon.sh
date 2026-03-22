@@ -62,5 +62,9 @@ if [ -z "$wallpaper_path" ]; then
 fi
 
 if [ -n "$wallpaper_path" ] && [ -f "$wallpaper_path" ]; then
-  $WWW img "$wallpaper_path" >/dev/null 2>&1 &
+  if ! $WWW img "$wallpaper_path" >/dev/null 2>&1; then
+    # Retry once after a short delay
+    sleep 0.3
+    $WWW img "$wallpaper_path" >/dev/null 2>&1 &
+  fi
 fi

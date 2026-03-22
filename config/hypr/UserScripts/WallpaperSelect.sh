@@ -165,7 +165,16 @@ apply_image_wallpaper() {
     echo "Starting $DAEMON_BIN..."
     $DAEMON_BIN --format xrgb &
   fi
+  # Wait for daemon to be ready before applying
+  for _ in {1..20}; do
+    $WWW query >/dev/null 2>&1 && break
+    sleep 0.1
+  done
 
+  $WWW img -o "$focused_monitor" "$image_path" $SWWW_PARAMS || {
+    sleep 0.2
+    $WWW img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
+  }
   $WWW img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
 
   # Run additional scripts (pass the image path to avoid cache race conditions)
