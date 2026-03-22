@@ -13,6 +13,7 @@ PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
 wallDIR="$PICTURES_DIR/wallpapers"
 SCRIPTSDIR="$HOME/.config/hypr/scripts"
 wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
+wallpaper_link="$HOME/.config/rofi/.current_wallpaper"
 if command -v awww >/dev/null 2>&1; then
   WWW="awww"
   DAEMON_BIN="awww-daemon"
@@ -81,8 +82,14 @@ RANDOM_PIC="${PICS[$((RANDOM % ${#PICS[@]}))]}"
 RANDOM_PIC_NAME="$(basename "$RANDOM_PIC")"
 
 CURRENT_MON_PIC_PATH=$($WWW query 2>/dev/null | grep "$focused_monitor" | awk '{print $NF}')
-if [[ -z "$CURRENT_MON_PIC_PATH" && -f "$wallpaper_current" ]]; then
-  CURRENT_MON_PIC_PATH=$(head -n 1 "$wallpaper_current")
+if [[ -z "$CURRENT_MON_PIC_PATH" ]]; then
+  if [[ -L "$wallpaper_link" ]]; then
+    CURRENT_MON_PIC_PATH="$(readlink -f "$wallpaper_link")"
+  elif [[ -f "$wallpaper_link" ]]; then
+    CURRENT_MON_PIC_PATH="$wallpaper_link"
+  elif [[ -f "$wallpaper_current" ]]; then
+    CURRENT_MON_PIC_PATH="$wallpaper_current"
+  fi
 fi
 CURRENT_MON_PIC_NAME=$(basename "$CURRENT_MON_PIC_PATH")
 

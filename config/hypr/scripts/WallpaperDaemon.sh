@@ -19,6 +19,12 @@ fi
 
 $DAEMON --format xrgb &
 
+# Give the daemon a moment to become ready
+for _ in {1..20}; do
+  $WWW query >/dev/null 2>&1 && break
+  sleep 0.1
+done
+
 wallpaper_link="$HOME/.config/rofi/.current_wallpaper"
 wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
 wallpaper_path=""
