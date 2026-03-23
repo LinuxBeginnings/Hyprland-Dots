@@ -198,6 +198,7 @@
 		"class<kitty-dropterm>": " ",
 		"class<com.mitchellh.ghostty>": " ",
 		"class<org.wezfurlong.wezterm>": " ",
+		"class<play.mii.Boxxy>": " ",
 		"class<Warp|warp|dev.warp.Warp|warp-terminal>": "󰰭 ",
 
     "class<[Tt]hunderbird|[Tt]hunderbird-esr>": "󰊫 ",
