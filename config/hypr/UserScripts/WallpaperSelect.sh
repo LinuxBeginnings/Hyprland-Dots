@@ -165,11 +165,10 @@ apply_image_wallpaper() {
     "$WWW_CMD" query >/dev/null 2>&1 && break
     sleep 0.1
   done
-
-  $WWW img -o "$focused_monitor" "$image_path" $SWWW_PARAMS || {
+  "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS || {
     sleep 0.2
     "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
-  "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS || {
+  }
   "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
 
   # Run additional scripts (pass the image path to avoid cache race conditions)
