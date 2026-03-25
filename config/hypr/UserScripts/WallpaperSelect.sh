@@ -12,15 +12,10 @@ terminal=kitty
 PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
 wallDIR="$PICTURES_DIR/wallpapers"
 SCRIPTSDIR="$HOME/.config/hypr/scripts"
+# shellcheck source=/dev/null
+. "$SCRIPTSDIR/WallpaperCmd.sh"
 wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
 wallpaper_link="$HOME/.config/rofi/.current_wallpaper"
-if command -v awww >/dev/null 2>&1; then
-  WWW="awww"
-  DAEMON_BIN="awww-daemon"
-else
-  WWW="swww"
-  DAEMON_BIN="swww-daemon"
-fi
 
 # Directory for swaync
 iDIR="$HOME/.config/swaync/images"
@@ -59,7 +54,7 @@ rofi_override="element-icon{size:${adjusted_icon_size}%;}"
 
 # Kill existing wallpaper daemons for video
 kill_wallpaper_for_video() {
-  $WWW kill 2>/dev/null
+  "$WWW_CMD" kill 2>/dev/null
   pkill mpvpaper 2>/dev/null
   pkill swaybg 2>/dev/null
   pkill hyprpaper 2>/dev/null
@@ -81,7 +76,7 @@ mapfile -d '' PICS < <(find -L "${wallDIR}" -type f \( \
 RANDOM_PIC="${PICS[$((RANDOM % ${#PICS[@]}))]}"
 RANDOM_PIC_NAME="$(basename "$RANDOM_PIC")"
 
-CURRENT_MON_PIC_PATH=$($WWW query 2>/dev/null | grep "$focused_monitor" | awk '{print $NF}')
+CURRENT_MON_PIC_PATH=$("$WWW_CMD" query 2>/dev/null | grep "$focused_monitor" | awk '{print $NF}')
 if [[ -z "$CURRENT_MON_PIC_PATH" ]]; then
   if [[ -L "$wallpaper_link" ]]; then
     CURRENT_MON_PIC_PATH="$(readlink -f "$wallpaper_link")"
@@ -161,21 +156,21 @@ apply_image_wallpaper() {
 
   kill_wallpaper_for_image
 
-  if ! pgrep -x "$DAEMON_BIN" >/dev/null; then
-    echo "Starting $DAEMON_BIN..."
-    $DAEMON_BIN --format xrgb &
+  if ! pgrep -x "$WWW_DAEMON" >/dev/null; then
+    echo "Starting $WWW_DAEMON..."
+    "$WWW_DAEMON" "${WWW_DAEMON_ARGS[@]}" &
   fi
   # Wait for daemon to be ready before applying
   for _ in {1..20}; do
-    $WWW query >/dev/null 2>&1 && break
+    "$WWW_CMD" query >/dev/null 2>&1 && break
     sleep 0.1
   done
 
   $WWW img -o "$focused_monitor" "$image_path" $SWWW_PARAMS || {
     sleep 0.2
-    $WWW img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
-  }
-  $WWW img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
+    "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
+  "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS || {
+  "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
 
   # Run additional scripts (pass the image path to avoid cache race conditions)
   "$SCRIPTSDIR/WallustSwww.sh" "$image_path"

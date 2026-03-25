@@ -17,6 +17,8 @@ hypr_config_path="$HOME/.config/hypr"
 swaync_style="$HOME/.config/swaync/style.css"
 ags_style="$HOME/.config/ags/user/style.css"
 SCRIPTSDIR="$HOME/.config/hypr/scripts"
+# shellcheck source=/dev/null
+. "$SCRIPTSDIR/WallpaperCmd.sh"
 notif="$HOME/.config/swaync/images/bell.png"
 wallust_rofi="$HOME/.config/wallust/templates/colors-rofi.rasi"
 
@@ -36,19 +38,11 @@ for pid in waybar rofi swaync ags swaybg; do
 done
 
 
-# Initialize swww if needed
-if command -v awww >/dev/null 2>&1; then
-    WWW="awww"
-    DAEMON="awww-daemon"
-else
-    WWW="swww"
-    DAEMON="swww-daemon"
-fi
-
-$WWW query || $DAEMON --format xrgb
+# Initialize wallpaper daemon if needed
+"$WWW_CMD" query || "$WWW_DAEMON" "${WWW_DAEMON_ARGS[@]}"
 
 # Set swww options
-swww="$WWW img"
+swww="$WWW_CMD img"
 effect="--transition-bezier .43,1.19,1,.4 --transition-fps 60 --transition-type grow --transition-pos 0.925,0.977 --transition-duration 2"
 
 # Determine current theme mode

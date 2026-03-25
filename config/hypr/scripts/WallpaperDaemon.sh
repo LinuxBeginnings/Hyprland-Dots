@@ -7,21 +7,17 @@
 # ==================================================
 # Start wallpaper daemon, preferring awww with swww fallback
 
-if command -v awww-daemon >/dev/null 2>&1 && command -v awww >/dev/null 2>&1; then
-  WWW="awww"
-  DAEMON="awww-daemon"
-elif command -v swww-daemon >/dev/null 2>&1 && command -v swww >/dev/null 2>&1; then
-  WWW="swww"
-  DAEMON="swww-daemon"
-else
-  exit 0
-fi
+SCRIPTSDIR="$HOME/.config/hypr/scripts"
+# shellcheck source=/dev/null
+. "$SCRIPTSDIR/WallpaperCmd.sh"
 
-$DAEMON --format xrgb &
+if command -v "$WWW_DAEMON" >/dev/null 2>&1 && command -v "$WWW_CMD" >/dev/null 2>&1; then
+  "$WWW_DAEMON" "${WWW_DAEMON_ARGS[@]}" &
+fi
 
 # Give the daemon a moment to become ready
 for _ in {1..20}; do
-  $WWW query >/dev/null 2>&1 && break
+  "$WWW_CMD" query >/dev/null 2>&1 && break
   sleep 0.1
 done
 
@@ -62,9 +58,9 @@ if [ -z "$wallpaper_path" ]; then
 fi
 
 if [ -n "$wallpaper_path" ] && [ -f "$wallpaper_path" ]; then
-  if ! $WWW img "$wallpaper_path" >/dev/null 2>&1; then
+  if ! "$WWW_CMD" img "$wallpaper_path" >/dev/null 2>&1; then
     # Retry once after a short delay
     sleep 0.3
-    $WWW img "$wallpaper_path" >/dev/null 2>&1 &
+    "$WWW_CMD" img "$wallpaper_path" >/dev/null 2>&1 &
   fi
 fi
