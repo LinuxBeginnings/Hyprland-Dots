@@ -60,7 +60,7 @@ prompt_confirm_distro() {
   local detected="$1"
   local choice=""
   if [[ -n "$detected" ]]; then
-    info "Detected distro: ${detected}"
+    printf "${BLUE}${ICON_INFO} Detected distro: %s${NC}\n" "$detected" >/dev/tty
     printf "Confirm? (Y/y to confirm, N/n to choose, Q/q to quit): " >/dev/tty
     read -r choice </dev/tty
     case "$choice" in
