@@ -19,12 +19,16 @@ PICS=($(find -L "${wallDIR}" -type f \( -name "*.jpg" -o -name "*.jpeg" -o -name
 RANDOMPICS=${PICS[ $RANDOM % ${#PICS[@]} ]}
 
 
-# Transition config
+# Transition config (only when using swww)
 FPS=30
 TYPE="random"
 DURATION=1
 BEZIER=".43,1.19,1,.4"
-SWWW_PARAMS="--transition-fps $FPS --transition-type $TYPE --transition-duration $DURATION --transition-bezier $BEZIER"
+if [[ "$WWW_CMD" == "swww" ]]; then
+  SWWW_PARAMS="--transition-fps $FPS --transition-type $TYPE --transition-duration $DURATION --transition-bezier $BEZIER"
+else
+  SWWW_PARAMS=""
+fi
 if ! "$WWW_CMD" query >/dev/null 2>&1; then
   "$WWW_DAEMON" "${WWW_DAEMON_ARGS[@]}" &
 fi
