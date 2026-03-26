@@ -31,6 +31,12 @@ ok() {
 
 trap 'fail "Script failed at line $LINENO."' ERR
 
+if [[ ! -t 0 ]]; then
+  fail "This script requires an interactive terminal. Run it directly in a terminal (e.g. ./build-awww.sh)."
+fi
+
+info "Starting awww installer..."
+
 if command -v awww >/dev/null 2>&1; then
   ok "awww is already installed. Nothing to do."
   exit 0
@@ -55,8 +61,8 @@ prompt_confirm_distro() {
   local choice=""
   if [[ -n "$detected" ]]; then
     info "Detected distro: ${detected}"
-    printf "Confirm? (Y/y to confirm, N/n to choose, Q/q to quit): "
-    read -r choice
+    printf "Confirm? (Y/y to confirm, N/n to choose, Q/q to quit): " >/dev/tty
+    read -r choice </dev/tty
     case "$choice" in
       [Yy]) echo "$detected"; return ;;
       [Qq]) exit 0 ;;
@@ -64,7 +70,6 @@ prompt_confirm_distro() {
       *) warn "Invalid choice, continuing to manual selection." ;;
     esac
   fi
-
   echo "Supported distros:"
   echo "  1) debian"
   echo "  2) ubuntu"
@@ -72,7 +77,8 @@ prompt_confirm_distro() {
   echo "  4) opensuse"
   echo "  5) fedora"
   echo "  6) gentoo"
-  printf "Select your distro (1-6) or Q/q to quit: "
+  printf "Select your distro (1-6) or Q/q to quit: " >/dev/tty
+  read -r choice </dev/tty
   read -r choice
   case "$choice" in
     1) echo "debian" ;;
