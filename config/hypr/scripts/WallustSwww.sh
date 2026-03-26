@@ -7,7 +7,7 @@ set -euo pipefail
 
 # Inputs and paths
 passed_path="${1:-}"
-cache_dir="$HOME/.cache/swww/"
+cache_dir="$HOME/.cache/awww/"
 rofi_link="$HOME/.config/rofi/.current_wallpaper"
 wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
 read_cached_wallpaper() {
@@ -19,7 +19,7 @@ read_cached_wallpaper() {
 
 read_wallpaper_from_query() {
   local monitor="$1"
-  swww query | awk -v mon="$monitor" '
+  awww query | awk -v mon="$monitor" '
     /^Monitor/ {
       cur=$2
       gsub(":", "", cur)
@@ -46,11 +46,11 @@ wallpaper_path=""
 if [[ -n "$passed_path" && -f "$passed_path" ]]; then
   wallpaper_path="$passed_path"
 else
-  # Try to read from swww cache for the focused monitor, with a short retry loop
+  # Try to read from awww cache for the focused monitor, with a short retry loop
   current_monitor="$(get_focused_monitor)"
   cache_file="$cache_dir$current_monitor"
 
-  # Wait briefly for swww to write its cache after an image change
+  # Wait briefly for awww to write its cache after an image change
   for i in {1..10}; do
     if [[ -f "$cache_file" ]]; then
       break
