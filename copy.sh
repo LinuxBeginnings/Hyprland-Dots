@@ -640,6 +640,27 @@ chmod +x "$HOME/.config/hypr/UserScripts/"* 2>&1 | tee -a "$LOG"
 # Set executable for initial-boot.sh
 chmod +x "$HOME/.config/hypr/initial-boot.sh" 2>&1 | tee -a "$LOG"
 
+# Copy systemd user overrides (e.g., hyprpolkitagent)
+SYSTEMD_SRC="$DOTFILES_DIR/config/systemd"
+SYSTEMD_DEST="$HOME/.config/systemd"
+if [ -d "$SYSTEMD_SRC" ]; then
+  mkdir -p "$SYSTEMD_DEST"
+  cp -r "$SYSTEMD_SRC/." "$SYSTEMD_DEST/" 2>&1 | tee -a "$LOG"
+fi
+
+# Reload user systemd and ensure hyprpolkitagent is enabled/running
+if command -v systemctl >/dev/null 2>&1; then
+  if systemctl --user list-unit-files 2>/dev/null | grep -q '^hyprpolkitagent\.service'; then
+    if ! pgrep -u "$UID" -f 'xfce-polkit|polkit-gnome-authentication-agent-1|polkit-kde-authentication-agent-1|hyprpolkitagent' >/dev/null 2>&1; then
+      systemctl --user daemon-reload 2>&1 | tee -a "$LOG" || true
+      systemctl --user enable hyprpolkitagent 2>&1 | tee -a "$LOG" || true
+      systemctl --user start hyprpolkitagent 2>&1 | tee -a "$LOG" || true
+    else
+      echo "${NOTE} Polkit agent already running. Skipping hyprpolkitagent enable/start." | tee -a "$LOG"
+    fi
+  fi
+fi
+
 chassis_type=$(detect_waybar_config)
 if [ "$chassis_type" = "desktop" ]; then
   config_file="$waybar_config"
