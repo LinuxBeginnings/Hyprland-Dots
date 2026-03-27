@@ -7,18 +7,30 @@
 # ==================================================
 # This script starts the first available Polkit agent from a list of possible locations
 
-# List of potential Polkit agent file paths
+# Ensure Qt apps default to Wayland in a Wayland session
+if [ -n "${WAYLAND_DISPLAY:-}" ] && [ -z "${QT_QPA_PLATFORM:-}" ]; then
+  export QT_QPA_PLATFORM=wayland
+fi
+
+# Avoid KDE polkit agent crashing if Kvantum QML module is missing
+if [ -z "${QT_QUICK_CONTROLS_STYLE:-}" ]; then
+  export QT_QUICK_CONTROLS_STYLE=Basic
+fi
+if [ -z "${QT_STYLE_OVERRIDE:-}" ]; then
+  export QT_STYLE_OVERRIDE=Fusion
+fi
+
+# List of potential Polkit agent file paths (preferred order)
 polkit=(
+  "/usr/libexec/xfce-polkit"
   "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
-  "/usr/libexec/hyprpolkitagent"
-  "/usr/lib/hyprpolkitagent"
-  "/usr/lib/hyprpolkitagent/hyprpolkitagent"
-  "/usr/lib/polkit-kde-authentication-agent-1"
   "/usr/lib/polkit-gnome-authentication-agent-1"
   "/usr/libexec/polkit-gnome-authentication-agent-1"
   "/usr/libexec/polkit-mate-authentication-agent-1"
-  "/usr/lib/x86_64-linux-gnu/libexec/polkit-kde-authentication-agent-1"
   "/usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1"
+  "/usr/libexec/hyprpolkitagent"
+  "/usr/lib/hyprpolkitagent"
+  "/usr/lib/hyprpolkitagent/hyprpolkitagent"
 )
 
 executed=false
