@@ -7,7 +7,7 @@
 # ==================================================
 # This script starts the first available Polkit agent from a list of possible locations
 # Avoid duplicate agents (common with UWSM/session autostart)
-if pgrep -u "$UID" -f 'xfce-polkit|polkit-gnome-authentication-agent-1|polkit-kde-authentication-agent-1|hyprpolkitagent' >/dev/null 2>&1; then
+if pgrep -u "$UID" -f 'xfce-polkit|polkit-gnome-authentication-agent-1|polkit-kde-authentication-agent-1|polkit-mate-authentication-agent-1|mate-polkit|hyprpolkitagent' >/dev/null 2>&1; then
   echo "Polkit agent already running. Skipping start."
   exit 0
 fi
@@ -34,6 +34,8 @@ polkit=(
   "/usr/lib/polkit-gnome-authentication-agent-1"
   "/usr/libexec/polkit-gnome-authentication-agent-1"
   "/usr/libexec/polkit-mate-authentication-agent-1"
+  "/usr/lib/polkit-mate/polkit-mate-authentication-agent-1"
+  "/usr/bin/polkit-mate-authentication-agent-1"
   "/usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1"
   "/usr/lib/polkit-kde-authentication-agent-1"
   "/usr/libexec/polkit-kde-authentication-agent-1"
