@@ -6,6 +6,11 @@
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
 # This script starts the first available Polkit agent from a list of possible locations
+# Avoid duplicate agents (common with UWSM/session autostart)
+if pgrep -u "$UID" -f 'xfce-polkit|polkit-gnome-authentication-agent-1|polkit-kde-authentication-agent-1|hyprpolkitagent' >/dev/null 2>&1; then
+  echo "Polkit agent already running. Skipping start."
+  exit 0
+fi
 
 # Ensure Qt apps default to Wayland in a Wayland session
 if [ -n "${WAYLAND_DISPLAY:-}" ] && [ -z "${QT_QPA_PLATFORM:-}" ]; then
@@ -22,12 +27,16 @@ fi
 
 # List of potential Polkit agent file paths (preferred order)
 polkit=(
+  "/usr/bin/xfce-polkit"
+  "/usr/lib/xfce4/polkit-agent/xfce-polkit"
   "/usr/libexec/xfce-polkit"
   "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
   "/usr/lib/polkit-gnome-authentication-agent-1"
   "/usr/libexec/polkit-gnome-authentication-agent-1"
   "/usr/libexec/polkit-mate-authentication-agent-1"
   "/usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1"
+  "/usr/lib/polkit-kde-authentication-agent-1"
+  "/usr/libexec/polkit-kde-authentication-agent-1"
   "/usr/libexec/hyprpolkitagent"
   "/usr/lib/hyprpolkitagent"
   "/usr/lib/hyprpolkitagent/hyprpolkitagent"
