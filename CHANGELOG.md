@@ -2,6 +2,8 @@
 
 ## v2.3.22
 
+- Fixed: Kitty font issue
+  - Thank you `@JasonNero` for the fix
 - Enabled `touch on tablet` in `hypr/configs/SystemSettings.conf`
 - Updated `copy.sh` to support `ghostty`
 - The ghostty config directory is now backed up
