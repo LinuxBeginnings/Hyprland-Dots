@@ -97,8 +97,15 @@ Automated Hyprland Scripts for Distro of choice which will pull this dotfiles if
   > The auto copy script `copy.sh` will create backups of intended directories to be copied.
   > However, it's still a good idea to manually backup just incase script fails to backup your configuration.
   > If you already have a hyprland configuration, uninstall it first, or create a new user, and install it with that user
-  
+
 > To download from main branch
+- Clone this repo by using `git`.
+- Change directory, i.e. `cd Arch-Hyprland`
+- Make `install.sh` executable `chmod +x ./install.sh`
+- Run the script `./install.sh`
+
+> To download from Master branch
+> Note: Ubuntu is exception, it has version specific branches
 
 ```bash
 git clone --depth=1 https://github.com/LinuxBeginnings/Hyprland-Dots.git && cd Hyprland-Dots
@@ -155,6 +162,8 @@ chmod +x copy.sh
 > Thanks to all who have contributed code, or support on the Discord server. Your efforts are greatly appreciated
 
 ### 🔮 Discord Server
+- Want to contribute? Click [`HERE`](https://github.com/LinuxBeginnings/Hyprland-Dots/blob/main/CONTRIBUTING.md) for a guide how to contribute
+  > Thanks to all who have contributed code, or support on the Discord server. You efforts are greatly appreciated
 
 - kindly join my [Discord](https://discord.gg/RZJgC7KAKm)
 
