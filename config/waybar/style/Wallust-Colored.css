@@ -8,12 +8,15 @@
     font-weight: bold;
 	min-height: 0;	
      /* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
+    /* NOTE: Waybar v14+ ignores % font-size values */
     font-size: 96%;
     font-feature-settings: '"zero", "ss01", "ss02", "ss03", "ss04", "ss05", "cv31"';
 }
 
 window#waybar.hidden {
     opacity: 0.5;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 
 window#waybar,
@@ -21,6 +24,8 @@ window#waybar.empty #window {
     padding: 0px;
     border: 0px;
     background-color: transparent;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 
 

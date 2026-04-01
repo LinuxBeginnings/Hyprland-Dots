@@ -19,6 +19,7 @@ General
   /* Extra tweaks */
   min-height: 0;
   /* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
+  /* NOTE: Waybar v14+ ignores % font-size values */
   font-size: 99%;
   font-feature-settings: '"zero", "ss01", "ss02", "ss03", "ss04", "ss05", "cv31"';
   margin-top: 3px;
@@ -27,6 +28,8 @@ General
 
 window#waybar {
   background: transparent;
+  /* Waybar scaling: adjust font-size to scale the bar */
+  font-size: 14px;
 }
 
 .modules-left {
@@ -134,6 +137,8 @@ tooltip {
 
 window#waybar.empty #window {
   background-color: transparent;
+  /* Waybar scaling: adjust font-size to scale the bar */
+  font-size: 14px;
 }
 
 /* -----------------------------------------------------

@@ -18,6 +18,7 @@
 	font-weight: bold;
 	min-height: 0;
 	/* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
+	/* NOTE: Waybar v14+ ignores % font-size values */
 	font-size: 99%;
 	/* note: different modules have different font sizes */
 	font-feature-settings: '"zero", "ss01", "ss02", "ss03", "ss04", "ss05", "cv31"';
@@ -30,6 +31,8 @@ border-bottom: 0px solid @foreground;
     background: transparent;
     transition-property: background-color;
     transition-duration: .5s;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 
 #taskbar,
@@ -83,8 +86,11 @@ tooltip {
     margin:0px;
 }
 
+/* Waybar scaling: adjust tooltip label font-size to scale the bar */
 tooltip label {
     color: @textcolor2;
+    /* Waybar scaling: adjust tooltip label font-size to scale the bar */
+    font-size: 14px;
 }
 
 #window {
@@ -98,6 +104,8 @@ tooltip label {
 
 window#waybar.empty #window {
     background-color:transparent;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 
 #taskbar.empty {
@@ -179,6 +187,7 @@ window#waybar.empty #window {
 	padding: 2px;
     margin-right: 8px;
 	margin-left: 6px;
+    /* NOTE: Waybar v14+ ignores % font-size values */
     font-size: 100%;
     opacity: 0.8;
     color: @iconcolor;
@@ -190,6 +199,7 @@ window#waybar.empty #window {
 
 #idle_inhibitor {
     margin-right: 15px;
+    /* NOTE: Waybar v14+ ignores % font-size values */
     font-size: 102%;
     font-weight: bold;
     opacity: 0.8;
@@ -199,6 +209,7 @@ window#waybar.empty #window {
 
 #idle_inhibitor.activated {
     margin-right: 15px;
+    /* NOTE: Waybar v14+ ignores % font-size values */
     font-size: 100%;
     font-weight: bold;
     opacity: 0.8;

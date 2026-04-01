@@ -8,6 +8,7 @@
 	font-family: "JetBrainsMono Nerd Font";
 	font-weight: bold;
 	/* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
+	/* NOTE: Waybar v14+ ignores % font-size values */
 	font-size: 99%;
     min-height: 0;
 }
@@ -25,6 +26,8 @@ window#waybar {
     color: @foreground;
     padding-left: 15px;
     padding-right: 15px;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 
 window#waybar.empty,
@@ -32,6 +35,8 @@ window#waybar.empty #window {
     background-color: transparent;
     padding: 0px;
     border: 0px;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 
 tooltip {
