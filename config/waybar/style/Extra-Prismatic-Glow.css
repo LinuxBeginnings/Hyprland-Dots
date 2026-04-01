@@ -20,6 +20,7 @@
 .module {
     padding: 2px 4px;
     margin: 1px 1px;
+    font-size: 14px;
 }
 
 .modules-left>widget:first-child .module {
@@ -35,6 +36,7 @@
 window#waybar {
     background-color: transparent;
     color: black;
+    font-size: 14px;
     transition: background-color 0.5s;
 }
 
