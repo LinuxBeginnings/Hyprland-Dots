@@ -1,0 +1,33 @@
+Goal
+- Use Hyprland lua config entrypoint while retaining working keybinds on the lua-lua-lua branch.
+- Prefer Lua keybinds generated from existing Keybinds.conf/UserKeybinds.conf.
+
+Current state
+- Hyprland branch: lua-lua-lua-lua-lua-lua-lua (0.54.0, commit 5dced9c8d0f...).
+- hyprland.lua is the entrypoint and requires lua.keybinds.
+- keybinds.lua is auto-generated from Keybinds.conf/UserKeybinds.conf.
+- keybinds.lua currently builds binds using Lua closures (exec_cmd/dispatch functions) and hl.bind(mods, key, fn, opts).
+- Config still errors: “hl.bind: dispatcher must be a function (e.g. hl.window.close()) or a lua function”.
+
+What we tried
+- Converted conf binds to hl.bind with various dispatcher styles:
+  - hl.bind(mods, key, hl.dispatch(...)) → failed (hl.dispatch not available/invalid).
+  - hl.bind(mods, key, hl.dispatcher(...)) → failed (nil).
+  - hl.bind(mods, key, hl.exec_cmd(...)) → failed (dispatcher not accepted).
+  - hl.bind(mods, key, function() hl.exec_cmd(...) end) → still failing in config load.
+- Tried hybrid loading of .conf keybinds from lua using hyprctl keyword source and hyprctl eval.
+  - keyword source blocked in non-legacy parser.
+  - eval runs Lua, not config; requires quoted paths but still won’t load binds at startup.
+- .conf-only mode (disable hyprland.lua) works but defeats Lua testing.
+
+Next steps
+1) Confirm Lua keybind API for this branch from source (config/lua manager) and match required function signatures.
+   - Check Hyprland source for hl.bind implementation and expected dispatcher types.
+   - Find how hl.exec_cmd and dispatcher helpers are intended to be used (see PR #13817 sample).
+2) Adjust generator to emit exactly the expected dispatcher functions (hl.window.*, hl.layout, hl.focus, hl.workspace, hl.exec_cmd, etc.).
+   - Map conf dispatchers to these functions where possible.
+   - For unsupported dispatchers, consider wrapping via a Lua helper if allowed by API.
+3) Add a “strict” mode that fails the generator if any dispatcher cannot be mapped.
+
+Additional task for later
+- Preserve commented-out configuration lines when converting to Lua (e.g., ENV variables for NVIDIA in env.lua). Users need to uncomment options later. Ensure Lua conversion keeps commented lines (or stores them as commented Lua equivalents).
