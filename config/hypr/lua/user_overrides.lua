@@ -1,0 +1,6 @@
+-- Placeholder for user overrides previously spread across:
+-- - config/hypr/UserConfigs/UserSettings.conf
+-- - config/hypr/UserConfigs/UserKeybinds.conf
+-- - config/hypr/UserConfigs/WindowRules.conf
+--
+-- Keep user-only Lua overrides in this file during migration.

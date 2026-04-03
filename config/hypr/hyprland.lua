@@ -1,6 +1,5 @@
--- Updated Lua migration entry (reference copy).
--- Working config lives in ~/.config/hypr/hyprland.lua with modules under ~/.config/hypr/lua/.
--- This file mirrors that module load order.
+-- KoolDots Hyprland Lua config entrypoint.
+-- Mirrors hyprland.conf include order for features currently supported by Lua config.
 
 require("lua.keybinds")
 require("lua.startup")

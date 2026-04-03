@@ -1,0 +1,6 @@
+-- Placeholder for conversion from:
+-- - config/hypr/configs/Keybinds.conf
+-- - config/hypr/UserConfigs/UserKeybinds.conf
+--
+-- Kept as a stub until bind variant parity (bindd/bindld/bindlnd/binded/bindmd) is validated
+-- against the current Lua API branch.

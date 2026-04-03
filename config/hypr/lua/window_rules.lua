@@ -1,0 +1,6 @@
+-- Placeholder for conversion from:
+-- - config/hypr/configs/WindowRules.conf
+-- - config/hypr/UserConfigs/WindowRules.conf
+--
+-- Kept as a stub until full windowrule/layerrule parity and named-rule semantics
+-- are validated in the current Lua API branch.
