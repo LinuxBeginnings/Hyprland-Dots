@@ -278,6 +278,7 @@
 		"class<localsend>":"",
 		"class<PrusaSlicer|UltiMaker-Cura|OrcaSlicer>": "󰹛",
 		"class<nvidia-settings>": "󰢮 ",
+		"class<com.shellyorg.shelly>": "󰏗 ",
 
 		"class<io.github.kolunmi.Bazaar>": " ",
 		"title<^Bazaar$>": " ",
