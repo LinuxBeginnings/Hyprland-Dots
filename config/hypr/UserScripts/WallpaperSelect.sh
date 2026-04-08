@@ -21,12 +21,12 @@ wallpaper_link="$HOME/.config/rofi/.current_wallpaper"
 iDIR="$HOME/.config/swaync/images"
 iDIRi="$HOME/.config/swaync/icons"
 
-# swww transition config (only when using swww)
+# swww/awww transition config
 FPS=60
 TYPE="any"
 DURATION=2
 BEZIER=".43,1.19,1,.4"
-if [[ "$WWW_CMD" == "swww" ]]; then
+if [[ "$WWW_CMD" == "swww" || "$WWW_CMD" == "awww" ]]; then
   SWWW_PARAMS="--transition-fps $FPS --transition-type $TYPE --transition-duration $DURATION --transition-bezier $BEZIER"
 else
   SWWW_PARAMS=""

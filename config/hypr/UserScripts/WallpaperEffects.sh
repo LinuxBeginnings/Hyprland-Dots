@@ -24,12 +24,12 @@ fi
 iDIR="$HOME/.config/swaync/images"
 iDIRi="$HOME/.config/swaync/icons"
 
-# swww transition config (only when using swww)
+# swww/awww transition config
 FPS=60
 TYPE="wipe"
 DURATION=2
 BEZIER=".43,1.19,1,.4"
-if [[ "$WWW" == "swww" ]]; then
+if [[ "$WWW" == "swww" || "$WWW" == "awww" ]]; then
     SWWW_PARAMS="--transition-fps $FPS --transition-type $TYPE --transition-duration $DURATION --transition-bezier $BEZIER"
 else
     SWWW_PARAMS=""
