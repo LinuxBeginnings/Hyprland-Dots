@@ -32,6 +32,9 @@ else
   SWWW_PARAMS=""
 fi
 
+per_monitor_wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current_${focused_monitor}"
+per_monitor_wallpaper_link="$HOME/.config/rofi/.current_wallpaper_${focused_monitor}"
+
 # Check if package bc exists
 if ! command -v bc &>/dev/null; then
   notify-send -i "$iDIR/error.png" "bc missing" "Install package bc first"
@@ -174,6 +177,11 @@ apply_image_wallpaper() {
     "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
   }
   "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
+
+  # Persist per-monitor wallpaper selection
+  mkdir -p "$(dirname "$per_monitor_wallpaper_current")" "$(dirname "$per_monitor_wallpaper_link")"
+  ln -sf "$image_path" "$per_monitor_wallpaper_link" || true
+  cp -f "$image_path" "$per_monitor_wallpaper_current" || true
 
   # Run additional scripts (pass the image path to avoid cache race conditions)
   "$SCRIPTSDIR/WallustSwww.sh" "$image_path"

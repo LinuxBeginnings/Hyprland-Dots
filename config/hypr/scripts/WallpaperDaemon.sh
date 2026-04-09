@@ -23,44 +23,83 @@ done
 
 wallpaper_link="$HOME/.config/rofi/.current_wallpaper"
 wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
-wallpaper_path=""
 
-# Prefer the symlink target if it's valid
-if [ -L "$wallpaper_link" ]; then
-  resolved="$(readlink -f "$wallpaper_link")"
-  if [ -n "$resolved" ] && [ -f "$resolved" ]; then
-    wallpaper_path="$resolved"
+read_cached_wallpaper() {
+  local cache_file="$1"
+  [ -f "$cache_file" ] || return 1
+  awk 'NF && $0 !~ /^filter/ {print; exit}' "$cache_file"
+}
+
+get_monitors() {
+  if command -v jq >/dev/null 2>&1; then
+    hyprctl monitors -j | jq -r '.[].name'
+  else
+    hyprctl monitors | awk '/^Monitor/{print $2}'
   fi
-fi
+}
 
-# Fall back to link file or copied current wallpaper
-if [ -z "$wallpaper_path" ] && [ -f "$wallpaper_link" ]; then
-  wallpaper_path="$wallpaper_link"
-fi
-if [ -z "$wallpaper_path" ] && [ -f "$wallpaper_current" ]; then
-  wallpaper_path="$wallpaper_current"
-fi
+apply_wallpaper_for_monitor() {
+  local monitor="$1"
+  local per_monitor_link="$HOME/.config/rofi/.current_wallpaper_${monitor}"
+  local per_monitor_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current_${monitor}"
+  local wallpaper_path=""
 
-# Last resort: use cached swww/awww wallpaper paths
-if [ -z "$wallpaper_path" ]; then
-  for cache_dir in "$HOME/.cache/awww" "$HOME/.cache/swww"; do
-    [ -d "$cache_dir" ] || continue
-    for cache_file in "$cache_dir"/*; do
-      [ -f "$cache_file" ] || continue
-      candidate="$(awk 'NF && $0 !~ /^filter/ {print; exit}' "$cache_file")"
-      if [ -n "$candidate" ] && [ -f "$candidate" ]; then
-        wallpaper_path="$candidate"
-        break
-      fi
-    done
-    [ -n "$wallpaper_path" ] && break
-  done
-fi
-
-if [ -n "$wallpaper_path" ] && [ -f "$wallpaper_path" ]; then
-  if ! "$WWW_CMD" img "$wallpaper_path" >/dev/null 2>&1; then
-    # Retry once after a short delay
-    sleep 0.3
-    "$WWW_CMD" img "$wallpaper_path" >/dev/null 2>&1 &
+  # Prefer per-monitor symlink target if valid
+  if [ -L "$per_monitor_link" ]; then
+    local resolved
+    resolved="$(readlink -f "$per_monitor_link")"
+    if [ -n "$resolved" ] && [ -f "$resolved" ]; then
+      wallpaper_path="$resolved"
+    fi
   fi
-fi
+
+  # Fall back to per-monitor files
+  if [ -z "$wallpaper_path" ] && [ -f "$per_monitor_link" ]; then
+    wallpaper_path="$per_monitor_link"
+  fi
+  if [ -z "$wallpaper_path" ] && [ -f "$per_monitor_current" ]; then
+    wallpaper_path="$per_monitor_current"
+  fi
+
+  # Fall back to global files
+  if [ -z "$wallpaper_path" ] && [ -L "$wallpaper_link" ]; then
+    local resolved_global
+    resolved_global="$(readlink -f "$wallpaper_link")"
+    if [ -n "$resolved_global" ] && [ -f "$resolved_global" ]; then
+      wallpaper_path="$resolved_global"
+    fi
+  fi
+  if [ -z "$wallpaper_path" ] && [ -f "$wallpaper_link" ]; then
+    wallpaper_path="$wallpaper_link"
+  fi
+  if [ -z "$wallpaper_path" ] && [ -f "$wallpaper_current" ]; then
+    wallpaper_path="$wallpaper_current"
+  fi
+
+  # Last resort: use per-monitor cache
+  if [ -z "$wallpaper_path" ]; then
+    local cache_file="$WWW_CACHE_DIR/$monitor"
+    local cache_fallback=""
+    if [ "$WWW_CACHE_DIR" = "$HOME/.cache/awww" ]; then
+      cache_fallback="$HOME/.cache/swww/$monitor"
+    else
+      cache_fallback="$HOME/.cache/awww/$monitor"
+    fi
+    wallpaper_path="$(read_cached_wallpaper "$cache_file")"
+    if [ -z "$wallpaper_path" ] && [ -n "$cache_fallback" ]; then
+      wallpaper_path="$(read_cached_wallpaper "$cache_fallback")"
+    fi
+  fi
+
+  if [ -n "$wallpaper_path" ] && [ -f "$wallpaper_path" ]; then
+    if ! "$WWW_CMD" img -o "$monitor" "$wallpaper_path" >/dev/null 2>&1; then
+      sleep 0.3
+      "$WWW_CMD" img -o "$monitor" "$wallpaper_path" >/dev/null 2>&1 &
+    fi
+  fi
+}
+
+while read -r monitor; do
+  [ -n "$monitor" ] || continue
+  apply_wallpaper_for_monitor "$monitor"
+done < <(get_monitors)
