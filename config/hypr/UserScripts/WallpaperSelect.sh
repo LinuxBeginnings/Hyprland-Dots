@@ -32,8 +32,6 @@ else
   SWWW_PARAMS=""
 fi
 
-per_monitor_wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current_${focused_monitor}"
-per_monitor_wallpaper_link="$HOME/.config/rofi/.current_wallpaper_${focused_monitor}"
 
 # Check if package bc exists
 if ! command -v bc &>/dev/null; then
@@ -44,6 +42,9 @@ fi
 # Variables
 rofi_theme="$HOME/.config/rofi/config-wallpaper.rasi"
 focused_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
+
+per_monitor_wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current_${focused_monitor}"
+per_monitor_wallpaper_link="$HOME/.config/rofi/.current_wallpaper_${focused_monitor}"
 
 # Ensure focused_monitor is detected
 if [[ -z "$focused_monitor" ]]; then
