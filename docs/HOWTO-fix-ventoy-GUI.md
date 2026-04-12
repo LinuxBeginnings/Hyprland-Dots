@@ -3,13 +3,14 @@
 If you are using Wayland (such as Hyprland, Sway, or Wayfire) and have passwordless root privileges (e.g., your user is in the `wheel` group with NOPASSWD configured in sudo/polkit), you might encounter an issue where the Ventoy GUI app crashes silently or returns to the command line immediately when launched.
 
 ## The Problem
-When `pkexec` elevates your privileges to root, it aggressively strips out environment variables for security reasons. On X11 this is sometimes fine, but on Wayland, GUI applications require specific environment variables to know how to connect to the display server. 
+
+When `pkexec` elevates your privileges to root, it aggressively strips out environment variables for security reasons. On X11 this is sometimes fine, but on Wayland, GUI applications require specific environment variables to know how to connect to the display server.
 
 Because `pkexec` drops variables like `WAYLAND_DISPLAY` and `XDG_RUNTIME_DIR`, the Ventoy GUI (`ventoygui`) starts as root, cannot find a display server, and crashes immediately.
 
 ## The Solution
 
-To fix this, we need to explicitly pass the necessary display variables back into the `pkexec` environment when launching Ventoy. 
+To fix this, we need to explicitly pass the necessary display variables back into the `pkexec` environment when launching Ventoy.
 
 There are two main ways you launch apps: from a GUI app launcher (like Rofi, Wofi, or your desktop environment's menu) and from the command line (Terminal). Here are the fixes for both.
 
@@ -29,7 +30,7 @@ Create the wrapper script using your favorite text editor (e.g., `nano ~/.local/
 
 ```sh path=null start=null
 #!/bin/sh
-pkexec env DISPLAY=$DISPLAY WAYLAND_DISPLAY=$WAYLAND_DISPLAY XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR /usr/bin/ventoygui "$@"
+pkexec env DISPLAY=$DISPLAY WAYLAND_DISPLAY=$WAYLAND_DISPLAY XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR GTK_THEME=Adwaita:dark /usr/bin/ventoygui "$@"
 ```
 
 Make the script executable:
@@ -77,6 +78,7 @@ If you type `ventoygui` into your terminal, it will still use the original faili
 Add the appropriate snippet below to your shell's configuration file.
 
 #### For Bash or Zsh
+
 Add this to the bottom of `~/.bashrc` (for Bash) or `~/.zshrc` (for Zsh):
 
 ```bash path=null start=null
@@ -85,6 +87,7 @@ alias ventoygui='pkexec env DISPLAY=$DISPLAY WAYLAND_DISPLAY=$WAYLAND_DISPLAY XD
 ```
 
 Apply the changes:
+
 ```bash path=null start=null
 # For Bash
 source ~/.bashrc
@@ -94,6 +97,7 @@ source ~/.zshrc
 ```
 
 #### For Fish
+
 Add this to the bottom of `~/.config/fish/config.fish`:
 
 ```fish path=null start=null
@@ -104,9 +108,12 @@ end
 ```
 
 Apply the changes:
+
 ```fish path=null start=null
 source ~/.config/fish/config.fish
 ```
 
 ## Success!
+
 You should now be able to launch Ventoy GUI from your terminal or your application launcher seamlessly under Wayland.
+
