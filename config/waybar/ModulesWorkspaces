@@ -230,6 +230,7 @@
 		"class<vlc>": "󰕼 ",
 		"class<[Kk]denlive|org.kde.kdenlive>": "🎬 ",
 		"title<.*Kdenlive.*>": "🎬 ",
+		"class<com.github.wwmm.easyeffects>": " ",
 		"title<.*cmus.*>": " ",
 		"class<[Ss]potify>": " ",
 		"class<Plex>": "󰚺 ",
