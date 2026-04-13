@@ -26,13 +26,12 @@ GDK_BACKEND=$BACKEND yad \
   --list \
   --column=Key: \
   --column=Description: \
-  --column=Command: \
+  --column=Comment: \
   --timeout-indicator=bottom \
   "ESC" "close this app" "" " = " "SUPER KEY (Windows Key Button)" "(SUPER KEY)" \
   " SHIFT K" "Searchable Keybinds" "(Search all Keybinds via rofi)" \
-  " SHIFT E" "KooL Hyprland Settings Menu" "" \
-  "" "" "" \
-  " enter" "Terminal" "(kitty)" \
+  " SHIFT E" "KooL Hyprland Settings Menu" "WindowRules,themes,defaults, etc" \
+  " enter" "Terminal" "(Default:kitty)" \
   " SHIFT enter" "DropDown Terminal" " Q to close" \
   " B" "Launch Browser" "(Default browser)" \
   " A" "Desktop Overview" "Shows open apps in workspaces" \
