@@ -2,6 +2,10 @@
 
 ## v2.3.23
 
+- Removed `grace` timeout from `hyprlock*.conf` files
+  - It's now only supported on the command line
+  - Also updated out the `#image` and `#label`
+    - They require a space after the `#`
 - Fixed: Setting wallpaper per monitor on restore both has same wallpaper
   - `WallpaperDaemon` only tracked one wallpaper
   - Added per monitor current wallpaper
