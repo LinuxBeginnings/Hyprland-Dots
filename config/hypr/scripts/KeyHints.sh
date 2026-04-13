@@ -35,7 +35,7 @@ GDK_BACKEND=$BACKEND yad \
   " enter" "Terminal" "(kitty)" \
   " SHIFT enter" "DropDown Terminal" " Q to close" \
   " B" "Launch Browser" "(Default browser)" \
-  " A" "Desktop Overview" \
+  " A" "Desktop Overview" "Shows open apps in workspaces" \
   " D" "Application Launcher" "(rofi-wayland)" \
   " E" "Open File Manager" "(Thunar)" \
   " S" "Google Search using rofi" "(rofi)" \
@@ -63,7 +63,7 @@ GDK_BACKEND=$BACKEND yad \
   "CTRL ALT Del" "Hyprland Exit" "(NOTE: Hyprland Will exit immediately)" \
   " SHIFT F" "Fullscreen" "Toggles to full screen" \
   " CTL F" "Fake Fullscreen" "Toggles to fake full screen" \
-  " ALT L" "Toggle through Dwindle, Floating, Monocle, Master layouts" "Hyprland Layout" \
+  " ALT L" "Toggle Dwindle|Floating|Monocle|Master layouts" "Hyprland Layouts" \
   " SPACEBAR" "Toggle float" "single window" \
   " ALT SPACEBAR" "Toggle all windows to float" "all windows" \
   " ALT O" "Toggle Blur" "normal or less blur" \
