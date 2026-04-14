@@ -21,7 +21,15 @@ fi
 if [ -z "${QT_QUICK_CONTROLS_STYLE:-}" ]; then
   export QT_QUICK_CONTROLS_STYLE=Basic
 fi
-if [ -z "${QT_STYLE_OVERRIDE:-}" ]; then
+
+# Check if kvantum is specified globally but the QML module is missing
+if [[ "${QT_STYLE_OVERRIDE:-}" == "kvantum" ]] || [[ "${QT_STYLE_OVERRIDE:-}" == "kvantum-dark" ]]; then
+  # Check common Qt5/Qt6 QML directories for the Kvantum module
+  if ! find /usr/lib /usr/lib64 /usr/share -type d -path "*/qml/*/kvantum" -print -quit 2>/dev/null | grep -q .; then
+    echo "Kvantum QML module not found. Overriding QT_STYLE_OVERRIDE for Polkit to prevent crash."
+    export QT_STYLE_OVERRIDE=Fusion
+  fi
+elif [ -z "${QT_STYLE_OVERRIDE:-}" ]; then
   export QT_STYLE_OVERRIDE=Fusion
 fi
 
