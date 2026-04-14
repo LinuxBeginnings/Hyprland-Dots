@@ -2,6 +2,10 @@
 
 ## v2.3.23
 
+- Fixed issue with long pause starting lockscreen
+  - In `~/.config/hypr/UserScripts/WeatherWrap.sh`
+    - I put the weather cache check in the background
+    - Shortened network timeouts for ping and curl
 - Changed `ERROR` to `NOTE` when first installing dotfiles
   - The backup directory isn't there but reports as error
   - Thank you `@moukhtar22` for finding and reporting this
