@@ -1,0 +1,35 @@
+[34m[INFO][m Nvidia GPU detected. Setting up proper env's and configs
+[34m[INFO][m Bibata-Hyprcursor directory detected. Activating Hyprcursor....
+[33m[NOTE][m kb_layout [35mfr[m configured in settings.
+[32m[OK][m You have chosen < 1440p resolution.
+[33m[NOTE][m You chose not to change to 12H format.
+[33m[NOTE][m No changes made. Rainbow borders remain enabled.
+[32m[OK][m - Copy completed for [33mags[m
+[32m[OK][m - Copy completed for [33mfastfetch[m
+[32m[OK][m - Copy completed for [33mkitty[m
+[32m[OK][m - Copy completed for [33mrofi[m
+[32m[OK][m - Copy completed for [33mswaync[m
+[32m[OK][m - Copy completed for [33mwaybar[m
+[32m[OK][m Some [35mwallpapers[m copied successfully!
+[33m[NOTE][m Current wallpaper applied as default SDDM background
+[32m[OK][m Wallpapers downloaded successfully.
+[32m[OK][m Wallpapers copied successfully.
+[[1m[34mI[39m[0m] [1m[35mimage[39m[0m: .wallpaper_current
+[[1m[34mI[39m[0m] [1m[35mimage parser[39m[0m: Using [94m[1mKmeans[0m[39m backend parser
+[[1m[34mI[39m[0m] [1m[35mthreshold[39m[0m: Using a threshold of 11 in between colors.
+[[1m[34mI[39m[0m] [1m[35mcolorspace[39m[0m: Using [32m[1mLabMixed[0m[39m colorspace variation
+[[1m[34mI[39m[0m] [1m[35mscheme palette[39m[0m: Using [94m[1mDark16[0m[39m palette
+▐⠂       ▌     0.000 s	Generating color scheme..▐⠈       ▌     0.080 s	Generating color scheme..▐ ⠂      ▌     0.160 s	Generating color scheme..▐ ⠠      ▌     0.240 s	Generating color scheme..▐  ⡀     ▌     0.321 s	Generating color scheme..▐  ⠠     ▌     0.401 s	Generating color scheme..▐   ⠂    ▌     0.481 s	Generating color scheme..▐   ⠈    ▌     0.561 s	Generating color scheme..▐    ⠂   ▌     0.641 s	Generating color scheme..▐    ⠠   ▌     0.721 s	Generating color scheme..▐     ⡀  ▌     0.801 s	Generating color scheme..▐     ⠠  ▌     0.882 s	Generating color scheme..▐      ⠂ ▌     0.962 s	Generating color scheme..[    🗸    ]     0.973 s	Generating color scheme..
+[[1m[34mI[39m[0m] Color scheme palette generated!
+[48;2;59;57;60m    [49m[48;2;19;10;22m    [49m[48;2;49;40;113m    [49m[48;2;85;44;50m    [49m[48;2;74;50;122m    [49m[48;2;157;75;111m    [49m[48;2;179;133;122m    [49m[48;2;239;208;201m    [49m
+[48;2;167;145;140m    [49m[48;2;25;13;29m    [49m[48;2;65;53;150m    [49m[48;2;114;58;67m    [49m[48;2;98;67;163m    [49m[48;2;209;100;148m    [49m[48;2;239;177;163m    [49m[48;2;239;208;201m    [49m
+
+[[1m[34mI[39m[0m] [1m[35mtemplates[39m[0m: Writing templates..
+  * Templated [1mcava[0m to '[3m/home/Farmeurimmo/.config/cava/config[0m'
+  * Templated [1mrofi[0m to '[3m/home/Farmeurimmo/.config/rofi/wallust/colors-rofi.rasi[0m'
+  * Templated [1mhypr[0m to '[3m/home/Farmeurimmo/.config/hypr/wallust/wallust-hyprland.conf[0m'
+  * Templated [1mwaybar[0m to '[3m/home/Farmeurimmo/.config/waybar/wallust/colors-waybar.css[0m'
+  * Templated [1mkitty[0m to '[3m/home/Farmeurimmo/.config/kitty/kitty-themes/01-Wallust.conf[0m'
+[[1m[34mI[39m[0m] [1m[35mcache[39m[0m: Saving scheme to cache.
+
+[5m[1m[38;2;239;208;201mE [39m[0m[0m[5m[1m[38;2;239;177;163mN [39m[0m[0m[5m[1m[38;2;209;100;148mJ [39m[0m[0m[5m[1m[38;2;98;67;163mO [39m[0m[0m[5m[1m[38;2;114;58;67mY [39m[0m[0m[9m  [0m[5m[1m[38;2;65;53;150mT [39m[0m[0m[5m[1m[38;2;25;13;29mH [39m[0m[0m[5m[1m[38;2;167;145;140mE [39m[0m[0m[9m  [0m[5m[1m[38;2;239;208;201mP [39m[0m[0m[5m[1m[38;2;179;133;122mA [39m[0m[0m[5m[1m[38;2;157;75;111mL [39m[0m[0m[5m[1m[38;2;74;50;122mE [39m[0m[0m[5m[1m[38;2;85;44;50mT [39m[0m[0m[5m[1m[38;2;49;40;113mT [39m[0m[0m[5m[1m[38;2;19;10;22mE [39m[0m[0m[5m[1m[38;2;249;228;223m! [39m[0m[0m

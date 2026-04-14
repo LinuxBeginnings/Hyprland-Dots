@@ -1,0 +1,54 @@
+[34m[INFO](B[m Nvidia GPU detected. Setting up proper env's and configs
+[34m[INFO](B[m Bibata-Hyprcursor directory detected. Activating Hyprcursor....
+[33m[NOTE](B[m kb_layout [35mfr(B[m configured in settings.
+[32m[OK](B[m You have chosen ≥ 1440p resolution.
+[33m[NOTE](B[m You chose not to change to 12H format.
+[32m[OK](B[m Rainbow borders are now disabled.
+[33m[NOTE](B[m - Skipping [33mfastfetch(B[m
+[33m[NOTE](B[m - Backed up kitty to /home/Farmeurimmo/.config/kitty-backup-back-up_1115_1451.
+[32m[OK](B[m - Replaced kitty with new configuration.
+[33m[NOTE](B[m - Skipping [33mrofi(B[m
+[33m[NOTE](B[m - Backed up swaync to /home/Farmeurimmo/.config/swaync-backup-back-up_1115_1452.
+[32m[OK](B[m - Replaced swaync with new configuration.
+[33m[NOTE](B[m - Skipping [33mwaybar(B[m config replacement.
+[32m[OK](B[m - Restored directory: [35mMonitor_Profiles(B[m
+[32m[OK](B[m - Restored directory: [35manimations(B[m
+[32m[OK](B[m - Restored directory: [35mwallpaper_effects(B[m
+[32m[OK](B[m - Restored file: [35mmonitors.conf(B[m
+[32m[OK](B[m - Restored file: [35mworkspaces.conf(B[m
+[32m[OK](B[m - 01-UserDefaults.conf restored!
+[32m[OK](B[m - ENVariables.conf restored!
+[32m[OK](B[m - LaptopDisplay.conf restored!
+[32m[OK](B[m - Laptops.conf restored!
+[32m[OK](B[m - Startup_Apps.conf restored!
+[32m[OK](B[m - UserDecorations.conf restored!
+[32m[OK](B[m - UserAnimations.conf restored!
+[32m[OK](B[m - UserKeybinds.conf restored!
+[32m[OK](B[m - UserSettings.conf restored!
+[32m[OK](B[m - WindowRules.conf restored!
+[32m[OK](B[m - RofiBeats.sh restored!
+[33m[NOTE](B[m - Skipped restoring Weather.py.
+[33m[NOTE](B[m - Skipped restoring Weather.sh.
+[32m[OK](B[m Some [35mwallpapers(B[m copied successfully!
+[32m[OK](B[m Wallpapers downloaded successfully.
+[32m[OK](B[m Wallpapers copied successfully.
+[[1m[34mI[39m[0m] [1m[35mimage[39m[0m: .wallpaper_current
+[[1m[34mI[39m[0m] [1m[35mimage parser[39m[0m: Using [94m[1mKmeans[0m[39m backend parser
+[[1m[34mI[39m[0m] [1m[35mthreshold[39m[0m: Using a threshold of 11 in between colors.
+[[1m[34mI[39m[0m] [1m[35mcolorspace[39m[0m: Using [32m[1mLabMixed[0m[39m colorspace variation
+[[1m[34mI[39m[0m] [1m[35mscheme palette[39m[0m: Using [94m[1mDark16[0m[39m palette
+▐⠂       ▌     0.001 s	Generating color scheme..▐⠈       ▌     0.082 s	Generating color scheme..▐ ⠂      ▌     0.162 s	Generating color scheme..▐ ⠠      ▌     0.242 s	Generating color scheme..▐  ⡀     ▌     0.322 s	Generating color scheme..▐  ⠠     ▌     0.402 s	Generating color scheme..▐   ⠂    ▌     0.482 s	Generating color scheme..▐   ⠈    ▌     0.562 s	Generating color scheme..▐    ⠂   ▌     0.642 s	Generating color scheme..▐    ⠠   ▌     0.722 s	Generating color scheme..▐     ⡀  ▌     0.802 s	Generating color scheme..▐     ⠠  ▌     0.883 s	Generating color scheme..▐      ⠂ ▌     0.963 s	Generating color scheme..▐      ⠈ ▌     1.043 s	Generating color scheme..▐       ⠂▌     1.123 s	Generating color scheme..▐       ⠠▌     1.203 s	Generating color scheme..▐       ⡀▌     1.283 s	Generating color scheme..▐      ⠠ ▌     1.363 s	Generating color scheme..▐      ⠂ ▌     1.443 s	Generating color scheme..▐     ⠈  ▌     1.523 s	Generating color scheme..▐     ⠂  ▌     1.603 s	Generating color scheme..▐    ⠠   ▌     1.683 s	Generating color scheme..▐    ⡀   ▌     1.763 s	Generating color scheme..▐   ⠠    ▌     1.843 s	Generating color scheme..▐   ⠂    ▌     1.924 s	Generating color scheme..▐  ⠈     ▌     2.004 s	Generating color scheme..▐  ⠂     ▌     2.084 s	Generating color scheme..▐ ⠠      ▌     2.164 s	Generating color scheme..▐ ⡀      ▌     2.244 s	Generating color scheme..▐⠠       ▌     2.324 s	Generating color scheme..▐⠂       ▌     2.404 s	Generating color scheme..▐⠈       ▌     2.484 s	Generating color scheme..▐ ⠂      ▌     2.564 s	Generating color scheme..▐ ⠠      ▌     2.644 s	Generating color scheme..▐  ⡀     ▌     2.724 s	Generating color scheme..▐  ⠠     ▌     2.805 s	Generating color scheme..▐   ⠂    ▌     2.885 s	Generating color scheme..▐   ⠈    ▌     2.965 s	Generating color scheme..▐    ⠂   ▌     3.045 s	Generating color scheme..▐    ⠠   ▌     3.125 s	Generating color scheme..▐     ⡀  ▌     3.205 s	Generating color scheme..▐     ⠠  ▌     3.285 s	Generating color scheme..▐      ⠂ ▌     3.365 s	Generating color scheme..▐      ⠈ ▌     3.445 s	Generating color scheme..▐       ⠂▌     3.525 s	Generating color scheme..▐       ⠠▌     3.605 s	Generating color scheme..▐       ⡀▌     3.685 s	Generating color scheme..▐      ⠠ ▌     3.765 s	Generating color scheme..[    🗸    ]     3.822 s	Generating color scheme..
+[[1m[34mI[39m[0m] Color scheme palette generated!
+[48;2;70;72;76m    [49m[48;2;16;25;39m    [49m[48;2;63;66;96m    [49m[48;2;63;66;96m    [49m[48;2;134;91;114m    [49m[48;2;134;91;114m    [49m[48;2;122;128;163m    [49m[48;2;200;204;228m    [49m
+[48;2;140;143;159m    [49m[48;2;21;34;52m    [49m[48;2;84;88;128m    [49m[48;2;84;88;128m    [49m[48;2;179;121;152m    [49m[48;2;179;121;152m    [49m[48;2;163;170;217m    [49m[48;2;200;204;228m    [49m
+
+[[1m[34mI[39m[0m] [1m[35mtemplates[39m[0m: Writing templates..
+  * Templated [1mcava[0m to '[3m/home/Farmeurimmo/.config/cava/config[0m'
+  * Templated [1mkitty[0m to '[3m/home/Farmeurimmo/.config/kitty/kitty-themes/01-Wallust.conf[0m'
+  * Templated [1mquickshell[0m to '[3m/home/Farmeurimmo/.config/quickshell/qml_color.json[0m'
+  * Templated [1mrofi[0m to '[3m/home/Farmeurimmo/.config/rofi/wallust/colors-rofi.rasi[0m'
+  * Templated [1mhypr[0m to '[3m/home/Farmeurimmo/.config/hypr/wallust/wallust-hyprland.conf[0m'
+  * Templated [1mwaybar[0m to '[3m/home/Farmeurimmo/.config/waybar/wallust/colors-waybar.css[0m'
+[[1m[34mI[39m[0m] [1m[35mcache[39m[0m: Saving scheme to cache.
+
+[5m[1m[38;2;200;204;228mE [39m[0m[0m[5m[1m[38;2;163;170;217mN [39m[0m[0m[5m[1m[38;2;179;121;152mJ [39m[0m[0m[5m[1m[38;2;179;121;152mO [39m[0m[0m[5m[1m[38;2;84;88;128mY [39m[0m[0m[9m  [0m[5m[1m[38;2;84;88;128mT [39m[0m[0m[5m[1m[38;2;21;34;52mH [39m[0m[0m[5m[1m[38;2;140;143;159mE [39m[0m[0m[9m  [0m[5m[1m[38;2;200;204;228mP [39m[0m[0m[5m[1m[38;2;122;128;163mA [39m[0m[0m[5m[1m[38;2;134;91;114mL [39m[0m[0m[5m[1m[38;2;134;91;114mE [39m[0m[0m[5m[1m[38;2;63;66;96mT [39m[0m[0m[5m[1m[38;2;63;66;96mT [39m[0m[0m[5m[1m[38;2;16;25;39mE [39m[0m[0m[5m[1m[38;2;223;225;242m! [39m[0m[0m
