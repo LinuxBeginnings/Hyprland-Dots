@@ -567,7 +567,7 @@ restore_hypr_files() {
           echo "${NOTE:-[NOTE]} - Skipped restoring $FILE_RESTORE." 2>&1 | tee -a "$log"
         fi
       else
-        echo "${ERROR:-[ERROR]} - Backup file $BACKUP_FILE does not exist." 2>&1 | tee -a "$log"
+        echo "${NOTE:-[NOTE]} - Backup file $BACKUP_FILE does not exist. Skipping." 2>&1 | tee -a "$log"
       fi
     done
   fi

@@ -2,6 +2,9 @@
 
 ## v2.3.23
 
+- Changed `ERROR` to `NOTE` when first installing dotfiles
+  - The backup directory isn't there but reports as error
+  - Thank you `@moukhtar22` for finding and reporting this
 - Removed `grace` timeout from `hyprlock*.conf` files
   - It's now only supported on the command line
   - Also updated out the `#image` and `#label`
