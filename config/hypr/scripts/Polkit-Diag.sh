@@ -147,7 +147,6 @@ gather_arch_info() {
         "qt5-declarative"
         "qt5-quickcontrols2"
         "qt6-declarative"
-        "qt6-quickcontrols2"
         "hyprpolkitagent"
         "polkit"
         "xfce-polkit"
