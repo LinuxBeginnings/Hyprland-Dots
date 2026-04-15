@@ -168,7 +168,43 @@ gather_general_info() {
     systemctl --user status hyprpolkitagent.service --no-pager >&3 2>&1 || true
     
     echo -e "\n--- Running Polkit Processes ---" >&3
-    ps aux | grep -i '[p]olkit' >&3 || echo "No polkit processes found running." >&3
+    local polkit_procs
+    polkit_procs=$(ps aux | grep -i '[p]olkit')
+    if [[ -n "$polkit_procs" ]]; then
+        echo "$polkit_procs" >&3
+        
+        # Check for conflicting agents
+        local kde_agent_running=0
+        local gnome_agent_running=0
+        local hypr_agent_running=0
+        
+        if echo "$polkit_procs" | grep -q "polkit-kde-authentication-agent-1"; then
+            kde_agent_running=1
+        fi
+        if echo "$polkit_procs" | grep -q "polkit-gnome-authentication-agent-1"; then
+            gnome_agent_running=1
+        fi
+        if echo "$polkit_procs" | grep -q "hyprpolkitagent"; then
+            hypr_agent_running=1
+        fi
+        
+        if [[ $hypr_agent_running -eq 1 && ($kde_agent_running -eq 1 || $gnome_agent_running -eq 1) ]]; then
+            echo -e "\n[!] CONFLICT DETECTED: Multiple polkit agents are running!" >&3
+            echo "    Hyprpolkitagent is running alongside another desktop environment's agent." >&3
+            echo "    Only ONE polkit agent can be registered at a time." >&3
+            if [[ $kde_agent_running -eq 1 ]]; then
+                echo "    -> Found KDE polkit agent. You may need to disable it in Hyprland by adding 'NotShowIn=Hyprland;' to its autostart .desktop file." >&3
+            fi
+            if [[ $gnome_agent_running -eq 1 ]]; then
+                echo "    -> Found GNOME polkit agent. You may need to disable it in Hyprland." >&3
+            fi
+        elif [[ $kde_agent_running -eq 1 && $hypr_agent_running -eq 0 ]]; then
+            echo -e "\n[!] WARNING: KDE polkit agent is running instead of hyprpolkitagent." >&3
+            echo "    This can cause 'authentication agent already exists' errors if hyprpolkitagent tries to start later." >&3
+        fi
+    else
+        echo "No polkit processes found running." >&3
+    fi
     
     echo -e "\n=======================================" >&3
     echo -e "            Recent Logs" >&3
