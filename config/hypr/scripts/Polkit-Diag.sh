@@ -241,6 +241,44 @@ gather_arch_info() {
         echo -e "\nSUCCESS: All expected packages are installed." >&3
     fi
 }
+gather_debian_info() {
+    echo -e "\n=======================================" >&3
+    echo -e "     Package Info (Debian/Ubuntu)" >&3
+    echo -e "=======================================" >&3
+    
+    # Essential packages required for polkit & related UI
+    local pkgs=(
+        "qml-module-qtqml"
+        "qml-module-qtquick2"
+        "qml-module-qtquick-controls"
+        "qml-module-qtquick-controls2"
+        "qml-module-qtquick-layouts"
+        "qml6-module-qtqml"
+        "qml6-module-qtquick"
+        "qml6-module-qtquick-controls"
+        "hyprpolkitagent"
+        "polkit"
+    )
+    
+    local extra_pkgs=(
+        "xfce4-polkit"
+        "lxqt-policykit"
+        "polkit-kde-agent-1"
+        "mate-polkit"
+    )
+    
+    local missing_any=0
+    
+    echo -e "\n--- Official Repositories ---" >&3
+    check_packages "dpkg -s" "Install packages by running: sudo apt install" "${pkgs[@]}" || missing_any=1
+    
+    echo -e "\n--- Extra/Alternative ---" >&3
+    check_packages "dpkg -s" "Install extra packages by running: sudo apt install" "${extra_pkgs[@]}" || missing_any=1
+    
+    if [[ $missing_any -eq 0 ]]; then
+        echo -e "\nSUCCESS: All expected packages are installed." >&3
+    fi
+}
 
 gather_fedora_info() {
     echo -e "\n=======================================" >&3
@@ -340,10 +378,7 @@ case "$OS" in
         gather_arch_info
         ;;
     debian|ubuntu|pop|linuxmint)
-        echo -e "\n=======================================" >&3
-        echo -e "        Package Info ($OS)" >&3
-        echo -e "=======================================" >&3
-        echo "Debian/Ubuntu-based package check is pending implementation." >&3
+        gather_debian_info
         ;;
     fedora)
         gather_fedora_info
