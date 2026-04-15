@@ -181,12 +181,42 @@ gather_general_info() {
     journalctl --user -u hyprpolkitagent.service -n 50 --no-pager >&3 2>&1 || echo "Could not fetch user hyprpolkitagent logs." >&3
 }
 
+# --- Modular Package Checking System ---
+check_packages() {
+    local check_cmd="$1"
+    local install_msg="$2"
+    shift 2
+    local pkgs=("$@")
+    
+    local missing_pkgs=()
+    for pkg in "${pkgs[@]}"; do
+        local out
+        if out=$(eval "$check_cmd \"$pkg\"" 2>/dev/null); then
+            # Print the first line of output as the installed info
+            echo "[INSTALLED] $(echo "$out" | head -n 1)" >&3
+        else
+            echo "[MISSING]   $pkg" >&3
+            missing_pkgs+=("$pkg")
+        fi
+    done
+    
+    if [[ ${#missing_pkgs[@]} -gt 0 ]]; then
+        echo -e "\nWARNING: The following packages are missing:" >&3
+        for mpkg in "${missing_pkgs[@]}"; do
+            echo "  - $mpkg" >&3
+        done
+        echo "$install_msg ${missing_pkgs[*]}" >&3
+        return 1
+    fi
+    return 0
+}
+
 gather_arch_info() {
     echo -e "\n=======================================" >&3
     echo -e "        Package Info (Arch Linux)" >&3
     echo -e "=======================================" >&3
     
-    # Essential packages required for polkit & related UI (from 01-hypr-pkgs.sh)
+    # Essential packages required for polkit & related UI
     local pkgs=(
         "qt5-declarative"
         "qt5-quickcontrols2"
@@ -199,44 +229,46 @@ gather_arch_info() {
         "xfce-polkit"
     )
     
-    local missing_pkgs=()
-    local missing_aur=()
+    local missing_any=0
     
-    for pkg in "${pkgs[@]}"; do
-        if pacman -Q "$pkg" >/dev/null 2>&1; then
-            echo "[INSTALLED] $(pacman -Q "$pkg")" >&3
-        else
-            echo "[MISSING]   $pkg (Official Repo)" >&3
-            missing_pkgs+=("$pkg")
-        fi
-    done
+    echo -e "\n--- Official Repositories ---" >&3
+    check_packages "pacman -Q" "Install official packages by running: sudo pacman -S" "${pkgs[@]}" || missing_any=1
     
-    for pkg in "${aur_pkgs[@]}"; do
-        if pacman -Q "$pkg" >/dev/null 2>&1; then
-            echo "[INSTALLED] $(pacman -Q "$pkg")" >&3
-        else
-            echo "[MISSING]   $pkg (AUR)" >&3
-            missing_aur+=("$pkg")
-        fi
-    done
+    echo -e "\n--- AUR ---" >&3
+    check_packages "pacman -Q" "Install AUR packages by running: yay -S" "${aur_pkgs[@]}" || missing_any=1
     
-    if [[ ${#missing_pkgs[@]} -gt 0 || ${#missing_aur[@]} -gt 0 ]]; then
-        echo -e "\nWARNING: The following required packages are missing:" >&3
-        
-        if [[ ${#missing_pkgs[@]} -gt 0 ]]; then
-            for mpkg in "${missing_pkgs[@]}"; do
-                echo "  - $mpkg" >&3
-            done
-            echo "Install official packages by running: sudo pacman -S ${missing_pkgs[*]}" >&3
-        fi
-        
-        if [[ ${#missing_aur[@]} -gt 0 ]]; then
-            for mpkg in "${missing_aur[@]}"; do
-                echo "  - $mpkg" >&3
-            done
-            echo "Install AUR packages by running: yay -S ${missing_aur[*]}   # (or use paru)" >&3
-        fi
-    else
+    if [[ $missing_any -eq 0 ]]; then
+        echo -e "\nSUCCESS: All expected packages are installed." >&3
+    fi
+}
+
+gather_fedora_info() {
+    echo -e "\n=======================================" >&3
+    echo -e "        Package Info (Fedora)" >&3
+    echo -e "=======================================" >&3
+    
+    # Essential packages required for polkit & related UI
+    local pkgs=(
+        "qt5-qtdeclarative"
+        "qt5-qtquickcontrols2"
+        "qt6-qtdeclarative"
+        "hyprpolkitagent"
+        "polkit"
+    )
+    
+    local extra_pkgs=(
+        "xfce-polkit"
+    )
+    
+    local missing_any=0
+    
+    echo -e "\n--- Official Repositories ---" >&3
+    check_packages "rpm -q" "Install packages by running: sudo dnf install" "${pkgs[@]}" || missing_any=1
+    
+    echo -e "\n--- Extra/Alternative ---" >&3
+    check_packages "rpm -q" "Install extra packages by running: sudo dnf install" "${extra_pkgs[@]}" || missing_any=1
+    
+    if [[ $missing_any -eq 0 ]]; then
         echo -e "\nSUCCESS: All expected packages are installed." >&3
     fi
 }
@@ -314,10 +346,7 @@ case "$OS" in
         echo "Debian/Ubuntu-based package check is pending implementation." >&3
         ;;
     fedora)
-        echo -e "\n=======================================" >&3
-        echo -e "        Package Info ($OS)" >&3
-        echo -e "=======================================" >&3
-        echo "Fedora package check is pending implementation." >&3
+        gather_fedora_info
         ;;
     opensuse*)
         echo -e "\n=======================================" >&3
