@@ -196,7 +196,7 @@ tooltip {
 }
 
 #custom-hint {
-	color: @peach;
+    color: @peach;
 	padding-right: 6px;
 	padding-left: 6px;
 }
@@ -210,7 +210,7 @@ tooltip {
 }
 
 #battery.critical:not(.charging) {
-	color: #f53c3c;
+    color: #f53c3c;
 	animation-name: blink;
 	animation-duration: 3.0s;
 	animation-timing-function: steps(12);
@@ -220,7 +220,7 @@ tooltip {
 
 #pulseaudio-slider,
 #pulseaudio {
-	color: @foreground;
+    color: @foreground;
 }
 
 #backlight-slider slider,
@@ -265,7 +265,7 @@ tooltip {
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay {
-	color: @lavender;
+    color: @lavender;
 	padding-right: 6px;
 	padding-left: 6px;
 }
@@ -273,12 +273,12 @@ tooltip {
 /*-----Indicators----*/
 #custom-hypridle.notactive,
 #idle_inhibitor.activated {
-	color: #39FF14;
+    color: #39FF14;
     border-bottom: 8px solid rgba(0, 0, 0, 0.2);
 }
 
 #clock {
-	color: @sapphire;
+    color: @sapphire;
     border-radius: 15px;
 }
 
