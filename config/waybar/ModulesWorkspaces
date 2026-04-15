@@ -266,8 +266,9 @@
 		"class<obs|com.obsproject.Studio>": " ",
 
 		"class<polkit-gnome-authentication-agent-1>": "󰒃 ",
-		"class<nwg-look>": " ",
 		"class<com.github.hyprmod>": " ",
+		"class<nwg-look>": " ",
+		"class<vswaybar-studio>": "󰛼 ",
 		"class<nwg-displays>": " ",
 		"class<[Pp]avucontrol|org.pulseaudio.pavucontrol>": "󱡫 ",
 		"class<steam>": " ",
