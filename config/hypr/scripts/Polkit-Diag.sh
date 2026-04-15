@@ -71,32 +71,76 @@ setup_output() {
 
 apply_override() {
     if [[ $INSTALL_OVERRIDE -eq 1 ]]; then
-        echo -e "\n=== Systemd Override for hyprpolkitagent ===" >&3
+        local msg="\n=== Systemd Override for hyprpolkitagent ==="
+        [[ $DRY_RUN -eq 0 ]] && echo -e "$msg" >&3
+        echo -e "$msg"
         
+        local out
         if systemctl --user is-enabled hyprpolkitagent.service >/dev/null 2>&1; then
-            echo "hyprpolkitagent.service is currently enabled." >&3
+            msg="[STATUS] hyprpolkitagent.service is currently enabled."
         else
-            echo "hyprpolkitagent.service is NOT enabled. You may need to enable it." >&3
+            msg="[STATUS] hyprpolkitagent.service is NOT enabled. You may need to enable it."
         fi
+        [[ $DRY_RUN -eq 0 ]] && echo "$msg" >&3
+        echo "$msg"
 
         if [[ -f "$OVERRIDE_FILE" && $FORCE_OVERRIDE -eq 0 ]]; then
-            echo "Override already exists at $OVERRIDE_FILE." >&3
-            echo "Use --force-override to overwrite it." >&3
+            msg="[INFO]   Override already exists at $OVERRIDE_FILE."
+            [[ $DRY_RUN -eq 0 ]] && echo "$msg" >&3; echo "$msg"
+            msg="[ACTION] Use --force-override to overwrite it."
+            [[ $DRY_RUN -eq 0 ]] && echo "$msg" >&3; echo "$msg"
         else
-            echo "Installing override to $OVERRIDE_FILE..." >&3
+            if [[ -f "$OVERRIDE_FILE" && $FORCE_OVERRIDE -eq 1 ]]; then
+                msg="[CONFIRM] Force override requested. Overwriting existing override..."
+                [[ $DRY_RUN -eq 0 ]] && echo "$msg" >&3; echo "$msg"
+            fi
+            
+            msg="[ACTION] Installing override to $OVERRIDE_FILE..."
+            [[ $DRY_RUN -eq 0 ]] && echo "$msg" >&3; echo "$msg"
+            
             if [[ $DRY_RUN -eq 0 ]]; then
-                mkdir -p "$OVERRIDE_DIR"
-                echo "$OVERRIDE_CONTENT" > "$OVERRIDE_FILE"
-                systemctl --user daemon-reload
-                echo "Systemd daemon reloaded." >&3
+                # Capture dir creation
+                if out=$(mkdir -p "$OVERRIDE_DIR" 2>&1); then
+                    msg="  [OK] Created/verified directory $OVERRIDE_DIR."
+                else
+                    msg="  [ERROR] Failed to create directory $OVERRIDE_DIR.\n  Details: $out"
+                fi
+                echo -e "$msg" >&3; echo -e "$msg"
                 
-                # Optionally attempt to restart the service to apply changes
+                # Capture file write
+                if out=$(echo "$OVERRIDE_CONTENT" > "$OVERRIDE_FILE" 2>&1); then
+                    msg="  [OK] Successfully wrote override file."
+                else
+                    msg="  [ERROR] Failed to write override file.\n  Details: $out"
+                fi
+                echo -e "$msg" >&3; echo -e "$msg"
+                
+                # Capture daemon-reload
+                if out=$(systemctl --user daemon-reload 2>&1); then
+                    msg="  [OK] Systemd daemon reloaded."
+                else
+                    msg="  [ERROR] Failed to reload systemd daemon.\n  Details: $out"
+                fi
+                echo -e "$msg" >&3; echo -e "$msg"
+                
+                # Capture restart
                 if systemctl --user is-active --quiet hyprpolkitagent.service; then
-                    echo "Restarting hyprpolkitagent.service..." >&3
-                    systemctl --user restart hyprpolkitagent.service || echo "Failed to restart service." >&3
+                    msg="[ACTION] Restarting hyprpolkitagent.service..."
+                    [[ $DRY_RUN -eq 0 ]] && echo "$msg" >&3; echo "$msg"
+                    
+                    if out=$(systemctl --user restart hyprpolkitagent.service 2>&1); then
+                        msg="  [OK] Service restarted successfully."
+                    else
+                        msg="  [ERROR] Failed to restart service.\n  Details: $out"
+                    fi
+                    echo -e "$msg" >&3; echo -e "$msg"
+                else
+                    msg="[INFO]   Service is not currently active, skipping restart step."
+                    [[ $DRY_RUN -eq 0 ]] && echo "$msg" >&3; echo "$msg"
                 fi
             else
-                echo "[Dry Run] Would create $OVERRIDE_FILE and reload systemd daemon." >&3
+                msg="[Dry Run] Would create $OVERRIDE_FILE and reload systemd daemon."
+                echo "$msg"
             fi
         fi
     fi
