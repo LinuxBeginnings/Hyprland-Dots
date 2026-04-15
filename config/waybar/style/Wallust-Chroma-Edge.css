@@ -63,7 +63,7 @@ tooltip label{
 
 #workspaces button.active {
     background-color: transparent;
-\tcolor: @color15;
+    color: @color15;
 
     padding-left: 8px;
     padding-right: 8px;
@@ -144,7 +144,7 @@ tooltip label{
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay {
-\tcolor: @color15;
+	color: @color15;
 	/* color: #bf616a; */
 	border-radius: 12px;
 	background-color: rgba(50, 50, 50, 0.1);
