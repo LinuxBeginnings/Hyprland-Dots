@@ -149,26 +149,49 @@ gather_arch_info() {
         "qt6-declarative"
         "hyprpolkitagent"
         "polkit"
+    )
+    
+    local aur_pkgs=(
         "xfce-polkit"
     )
     
     local missing_pkgs=()
+    local missing_aur=()
     
     for pkg in "${pkgs[@]}"; do
         if pacman -Q "$pkg" >/dev/null 2>&1; then
             echo "[INSTALLED] $(pacman -Q "$pkg")" >&3
         else
-            echo "[MISSING]   $pkg" >&3
+            echo "[MISSING]   $pkg (Official Repo)" >&3
             missing_pkgs+=("$pkg")
         fi
     done
     
-    if [[ ${#missing_pkgs[@]} -gt 0 ]]; then
+    for pkg in "${aur_pkgs[@]}"; do
+        if pacman -Q "$pkg" >/dev/null 2>&1; then
+            echo "[INSTALLED] $(pacman -Q "$pkg")" >&3
+        else
+            echo "[MISSING]   $pkg (AUR)" >&3
+            missing_aur+=("$pkg")
+        fi
+    done
+    
+    if [[ ${#missing_pkgs[@]} -gt 0 || ${#missing_aur[@]} -gt 0 ]]; then
         echo -e "\nWARNING: The following required packages are missing:" >&3
-        for mpkg in "${missing_pkgs[@]}"; do
-            echo "  - $mpkg" >&3
-        done
-        echo "You can install them by running: sudo pacman -S ${missing_pkgs[*]}" >&3
+        
+        if [[ ${#missing_pkgs[@]} -gt 0 ]]; then
+            for mpkg in "${missing_pkgs[@]}"; do
+                echo "  - $mpkg" >&3
+            done
+            echo "Install official packages by running: sudo pacman -S ${missing_pkgs[*]}" >&3
+        fi
+        
+        if [[ ${#missing_aur[@]} -gt 0 ]]; then
+            for mpkg in "${missing_aur[@]}"; do
+                echo "  - $mpkg" >&3
+            done
+            echo "Install AUR packages by running: yay -S ${missing_aur[*]}   # (or use paru)" >&3
+        fi
     else
         echo -e "\nSUCCESS: All expected packages are installed." >&3
     fi
