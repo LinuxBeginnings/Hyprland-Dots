@@ -210,6 +210,24 @@ check_packages() {
     fi
     return 0
 }
+check_source_binaries() {
+    local bin_dir="$1"
+    shift
+    local bins=("$@")
+    local found_any=0
+    
+    echo -e "\n--- Source Builds (${bin_dir}) ---" >&3
+    for bin in "${bins[@]}"; do
+        if [[ -x "${bin_dir}/${bin}" ]]; then
+            echo "[SOURCE]    ${bin_dir}/${bin}" >&3
+            found_any=1
+        else
+            echo "[MISSING]   ${bin_dir}/${bin}" >&3
+        fi
+    done
+    
+    return $found_any
+}
 
 gather_arch_info() {
     echo -e "\n=======================================" >&3
@@ -241,9 +259,9 @@ gather_arch_info() {
         echo -e "\nSUCCESS: All expected packages are installed." >&3
     fi
 }
-gather_debian_info() {
+gather_ubuntu_info() {
     echo -e "\n=======================================" >&3
-    echo -e "     Package Info (Debian/Ubuntu)" >&3
+    echo -e "        Package Info (Ubuntu/PPA)" >&3
     echo -e "=======================================" >&3
     
     # Essential packages required for polkit & related UI
@@ -261,6 +279,52 @@ gather_debian_info() {
     )
     
     local extra_pkgs=(
+        "xfce-polkit"
+        "polkit-kde-agent-1"
+        "mate-polkit"
+    )
+    
+    local missing_any=0
+    
+    echo -e "\n--- Official Repositories / PPA ---" >&3
+    check_packages "dpkg -s" "Install packages by running: sudo apt install" "${pkgs[@]}" || missing_any=1
+    
+    echo -e "\n--- Extra/Alternative ---" >&3
+    check_packages "dpkg -s" "Install extra packages by running: sudo apt install" "${extra_pkgs[@]}" || missing_any=1
+    echo "[INFO]   lxqt-polkit (optional) — large dependency set." >&3
+    
+    if [[ $missing_any -eq 0 ]]; then
+        echo -e "\nSUCCESS: All expected packages are installed." >&3
+    fi
+}
+gather_debian_info() {
+    echo -e "\n=======================================" >&3
+    echo -e "     Package Info (Debian/Ubuntu)" >&3
+    echo -e "=======================================" >&3
+    
+    local source_bins=(
+        "hyprpolkitagent"
+    )
+    
+    local source_found=0
+    if check_source_binaries "/usr/local/bin" "${source_bins[@]}"; then
+        source_found=1
+    fi
+    
+    # Essential packages required for polkit & related UI
+    local pkgs=(
+        "qml-module-qtqml"
+        "qml-module-qtquick2"
+        "qml-module-qtquick-controls"
+        "qml-module-qtquick-controls2"
+        "qml-module-qtquick-layouts"
+        "qml6-module-qtqml"
+        "qml6-module-qtquick"
+        "qml6-module-qtquick-controls"
+        "polkit"
+    )
+    
+    local extra_pkgs=(
         "xfce4-polkit"
         "lxqt-policykit"
         "polkit-kde-agent-1"
@@ -270,6 +334,11 @@ gather_debian_info() {
     local missing_any=0
     
     echo -e "\n--- Official Repositories ---" >&3
+    if [[ $source_found -eq 0 ]]; then
+        pkgs+=("hyprpolkitagent")
+    else
+        echo "[INFO]   hyprpolkitagent found in /usr/local/bin (source build). Skipping dpkg check for it." >&3
+    fi
     check_packages "dpkg -s" "Install packages by running: sudo apt install" "${pkgs[@]}" || missing_any=1
     
     echo -e "\n--- Extra/Alternative ---" >&3
@@ -377,8 +446,11 @@ case "$OS" in
     arch|artix|manjaro|endeavouros|cachyos)
         gather_arch_info
         ;;
-    debian|ubuntu|pop|linuxmint)
+    debian)
         gather_debian_info
+        ;;
+    ubuntu|pop|linuxmint)
+        gather_ubuntu_info
         ;;
     fedora)
         gather_fedora_info
