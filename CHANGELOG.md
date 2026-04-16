@@ -2,6 +2,26 @@
 
 ## v2.3.23
 
+- Minimum Hyprland version is now v0.54.x
+  - The addtion of scrolling and monocle require 0.54 or greater
+  - Updated warning banner when you run `copy.sh`
+- Added check for `kde-polkit`
+  - With KDE installed users reported escalation fails
+  - `kde-polkit` is crashing preventng privledge escalation
+- Added `.config/hyprland/scripts/Polkit-Diag.sh`
+  - This runs a series of Read Only commands to triage polkit issues
+- Fixed syntax errors in a few waybar CSS files
+  - What should have been `<TAB> color`
+  - Was `\tcode` Caused by bad search and replace
+  - It caused waybar to crash
+- Updated `Keyhints.sh`
+  - Was missing `scrolling` and `monocle` layouts
+- Fixed display order for layout change binding
+  - It showed `master` after `dwindle`
+  - Correct order is `dwindle`, `scrolling`. `monocle`, `master`
+- Added doc on how get `ventoy` GUI to run properly
+  - Seems to be a known bug
+  - `https://github.com/ventoy/Ventoy/issues/3570`
 - Fixed issue with long pause starting lockscreen
   - In `~/.config/hypr/UserScripts/WeatherWrap.sh`
     - I put the weather cache check in the background
