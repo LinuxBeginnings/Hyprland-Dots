@@ -266,6 +266,7 @@
 		"class<obs|com.obsproject.Studio>": " ",
 
 		"class<polkit-gnome-authentication-agent-1>": "󰒃 ",
+		"class<hyprpolkitagent>": "󰒃 ",
 		"class<com.github.hyprmod>": " ",
 		"class<nwg-look>": " ",
 		"class<vswaybar-studio>": "󰛼 ",
