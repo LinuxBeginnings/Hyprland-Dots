@@ -275,6 +275,7 @@
 		"class<steam>": " ",
 		"class<thunar|nemo|org.gnome.Nautilus>": "󰝰 ",	
 		"class<Gparted>":"",
+		"class<timeshift-gtk>":"󰁯",
 		"class<gimp>": " ",
 		"class<emulator>": "📱 ",
 		"class<android-studio>": " ",
