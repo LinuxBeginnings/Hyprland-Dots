@@ -276,6 +276,7 @@
 		"class<thunar|nemo|org.gnome.Nautilus>": "󰝰 ",	
 		"class<Gparted>":"",
 		"class<timeshift-gtk>":"󰁯",
+		"class<btrfs-assistant>":"󰁯",
 		"class<gimp>": " ",
 		"class<emulator>": "📱 ",
 		"class<android-studio>": " ",
