@@ -2,6 +2,9 @@
 
 ## v2.3.23
 
+- `OverviewToggle.sh` wasn't checking properly for quickshell service
+  - Found by `@TeaJhay`
+  - Changed script to look for `qs` not `quickshell`
 - Minimum Hyprland version is now v0.54.x
   - The addtion of scrolling and monocle require 0.54 or greater
   - Updated warning banner when you run `copy.sh`
