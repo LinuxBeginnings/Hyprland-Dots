@@ -2,8 +2,26 @@
 local function trim(value)
   return (value or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
+local dsp = hl.dsp or hl
+local window_api = (dsp and dsp.window) or hl.window or {}
+local workspace_api = (dsp and dsp.workspace) or {}
+local group_api = (dsp and dsp.group) or {}
+
 local function exec_cmd(cmd)
+  if dsp and dsp.exec_cmd then
+    return dsp.exec_cmd(cmd)
+  end
   return function() hl.exec_cmd(cmd) end
+end
+
+local function workspace_dispatch(value)
+  if dsp and dsp.focus then
+    return dsp.focus({ workspace = value })
+  end
+  if hl.workspace then
+    return hl.workspace(value)
+  end
+  return exec_cmd("hyprctl dispatch workspace " .. tostring(value))
 end
 
 local known_dispatchers = {
@@ -61,35 +79,77 @@ local function dispatch(name, args)
   end
 
   if known_dispatchers[args] and not known_dispatchers[name] then
-    if args == "movewindow" then
-      return hl.window.drag()
+    if args == "movewindow" and window_api.drag then
+      return window_api.drag()
     end
-    if args == "resizewindow" then
-      return hl.window.resize()
+    if args == "resizewindow" and window_api.resize then
+      return window_api.resize()
     end
     return exec_cmd("hyprctl dispatch " .. args)
   end
 
-  if name == "killactive" then
-    return hl.window.close()
+  if name == "killactive" and window_api.close then
+    return window_api.close()
   end
-  if name == "togglefloating" then
-    return hl.window.float({ action = "toggle" })
+  if name == "togglefloating" and window_api.float then
+    return window_api.float({ action = "toggle" })
   end
-  if name == "pseudo" then
-    return hl.window.pseudo()
+  if name == "fullscreen" and window_api.fullscreen then
+    if args == "1" then
+      return window_api.fullscreen({ mode = "maximized" })
+    end
+    return window_api.fullscreen({ mode = "fullscreen" })
+  end
+  if name == "pseudo" and window_api.pseudo then
+    return window_api.pseudo()
   end
   if name == "workspace" then
-    return hl.workspace(workspace_value(args))
+    return workspace_dispatch(workspace_value(args))
   end
-  if name == "movetoworkspace" then
-    return hl.window.move({ workspace = workspace_value(args) })
+  if name == "movetoworkspace" and window_api.move then
+    return window_api.move({ workspace = workspace_value(args) })
   end
-  if name == "movefocus" then
-    return hl.focus({ direction = direction(args) })
+  if name == "movetoworkspacesilent" and window_api.move then
+    return window_api.move({ workspace = workspace_value(args), follow = false })
   end
-  if name == "layoutmsg" then
-    return hl.layout(args)
+  if name == "movecurrentworkspacetomonitor" and workspace_api.move then
+    return workspace_api.move({ monitor = direction(args) })
+  end
+  if name == "movefocus" and dsp and dsp.focus then
+    return dsp.focus({ direction = direction(args) })
+  end
+  if name == "movewindow" and window_api.move then
+    return window_api.move({ direction = direction(args) })
+  end
+  if name == "swapwindow" and window_api.swap then
+    return window_api.swap({ direction = direction(args) })
+  end
+  if name == "togglegroup" and group_api.toggle then
+    return group_api.toggle()
+  end
+  if name == "changegroupactive" and group_api.next and group_api.prev then
+    if args == "b" or args == "prev" or args == "-1" then
+      return group_api.prev()
+    end
+    return group_api.next()
+  end
+  if name == "moveintogroup" and window_api.move then
+    return window_api.move({ into_group = direction(args) })
+  end
+  if name == "moveoutofgroup" and window_api.move then
+    return window_api.move({ out_of_group = true })
+  end
+  if name == "layoutmsg" and dsp and dsp.layout then
+    return dsp.layout(args)
+  end
+  if name == "bringactivetotop" and window_api.bring_to_top then
+    return window_api.bring_to_top()
+  end
+  if name == "setprop" and window_api.set_prop then
+    local prop, value = args:match("^(%S+)%s+(.+)$")
+    if prop and value then
+      return window_api.set_prop({ prop = prop, value = value })
+    end
   end
 
   if args ~= "" then
@@ -110,16 +170,35 @@ local function chord(mods, key)
     XF86audiostop = "XF86AudioStop",
   }
   key = key_aliases[key] or key
-  key = key:gsub("^code:10$", "1")
-  key = key:gsub("^code:11$", "2")
-  key = key:gsub("^code:12$", "3")
-  key = key:gsub("^code:13$", "4")
-  key = key:gsub("^code:14$", "5")
-  key = key:gsub("^code:15$", "6")
-  key = key:gsub("^code:16$", "7")
-  key = key:gsub("^code:17$", "8")
-  key = key:gsub("^code:18$", "9")
-  key = key:gsub("^code:19$", "0")
+  local shifted_number_keys = {
+    ["code:10"] = "exclam",
+    ["code:11"] = "at",
+    ["code:12"] = "numbersign",
+    ["code:13"] = "dollar",
+    ["code:14"] = "percent",
+    ["code:15"] = "asciicircum",
+    ["code:16"] = "ampersand",
+    ["code:17"] = "asterisk",
+    ["code:18"] = "parenleft",
+    ["code:19"] = "parenright",
+  }
+  local number_keys = {
+    ["code:10"] = "1",
+    ["code:11"] = "2",
+    ["code:12"] = "3",
+    ["code:13"] = "4",
+    ["code:14"] = "5",
+    ["code:15"] = "6",
+    ["code:16"] = "7",
+    ["code:17"] = "8",
+    ["code:18"] = "9",
+    ["code:19"] = "0",
+  }
+  if mods:match("SHIFT") and shifted_number_keys[key] then
+    key = shifted_number_keys[key]
+  else
+    key = number_keys[key] or key
+  end
   if mods == "" then
     return key
   end

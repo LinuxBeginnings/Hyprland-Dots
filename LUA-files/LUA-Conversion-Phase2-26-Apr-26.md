@@ -4,6 +4,9 @@ Branch: LUA-conversion
 ## Scope
 Phase 2 focused on making the Lua entrypoint usable on the current Hyprland Lua-enabled build and adding an opt-in migration helper for installed configs.
 The normal `hyprland.conf` path remains available as fallback. This phase does not make Lua the default installer path.
+## References
+- Hyprland Lua branch source: https://github.com/vaxerski/Hyprland/tree/lua-lua-lua-lua-lua-lua-lua
+- Hyprland Lua utilities wiki: https://wiki.hypr.land/Configuring/Advanced-and-Cool/Expanding-functionality/#lua-utilities
 ## Files updated
 - `config/hypr/hyprland.lua`
 - `config/hypr/lua/keybinds.lua`
@@ -27,7 +30,8 @@ Fixes applied:
   - old generated shape: `hl.bind(mods, key, fn, opts)`
   - new wrapped shape: `hl.bind("MOD + key", fn, opts)`
 - Normalizes modifier strings such as `SUPER CTRL SHIFT` to `SUPER + CTRL + SHIFT`.
-- Converts `code:10` through `code:19` to `1` through `0` because Lua key parsing rejected `code:*` names.
+- Converts unshifted `code:10` through `code:19` to `1` through `0` because Lua key parsing rejected `code:*` names.
+- Converts shifted number-row workspace move binds to shifted XKB keysyms so `SUPER SHIFT 3` maps to `numbersign` instead of unshifted `3`.
 - Normalizes common XF86 key casing.
 - Maps `XF86AudioPlayPause` to `XF86AudioPlay` because the current Lua key parser rejected `XF86AudioPlayPause`.
 - Converts generated `exec, ...` dispatcher arguments into command execution.
@@ -38,18 +42,34 @@ Follow-up after runtime testing:
 - A direct `exec_cmd(cmd) -> hl.exec_cmd(cmd)` helper was tested and reverted because it destabilized Hyprland during config load.
 - The safer callback form is retained for command fallback paths:
   - `return function() hl.exec_cmd(cmd) end`
+- Confirmed current dispatcher API is under `hl.dsp`.
 - Known Lua-native helpers are now used for core non-shell actions instead of routing those through `hyprctl dispatch`:
-  - `killactive` -> `hl.window.close()`
-  - `togglefloating` -> `hl.window.float({ action = "toggle" })`
-  - `pseudo` -> `hl.window.pseudo()`
-  - `workspace` -> `hl.workspace(...)`
-  - `movetoworkspace` -> `hl.window.move({ workspace = ... })`
-  - `movefocus` -> `hl.focus({ direction = ... })`
-  - `layoutmsg` -> `hl.layout(...)`
-  - mouse `movewindow` -> `hl.window.drag()`
-  - mouse `resizewindow` -> `hl.window.resize()`
-- `fullscreen`, `movetoworkspacesilent`, `swapwindow`, group actions, and other less certain dispatchers remain fallback paths until their Lua API equivalents are confirmed.
+  - `killactive` -> `hl.dsp.window.close()`
+  - `togglefloating` -> `hl.dsp.window.float({ action = "toggle" })`
+  - `fullscreen` -> `hl.dsp.window.fullscreen({ mode = "fullscreen" })`
+  - `pseudo` -> `hl.dsp.window.pseudo()`
+  - `workspace` -> `hl.dsp.focus({ workspace = ... })`
+  - `movetoworkspace` -> `hl.dsp.window.move({ workspace = ... })`
+  - `movetoworkspacesilent` -> `hl.dsp.window.move({ workspace = ..., follow = false })`
+  - `movefocus` -> `hl.dsp.focus({ direction = ... })`
+  - `layoutmsg` -> `hl.dsp.layout(...)`
+  - mouse `movewindow` -> `hl.dsp.window.drag()`
+  - mouse `resizewindow` -> `hl.dsp.window.resize()`
+- `swapwindow`, group actions, and monitor workspace moves have Lua helper mappings in the wrapper but still need runtime smoke testing before treating Lua parity as complete.
 - Runtime testing should keep `~/.config/hypr/hyprland.lua` disabled by default and only enable Lua inside a disposable VM snapshot.
+Follow-up after shifted workspace bind testing:
+- `SUPER SHIFT 3` failed when generated `code:12` was converted to unshifted `3`; the Lua key parser matches XKB keysyms, so shifted number-row binds must use shifted keysyms.
+- Current shifted code map is:
+  - `code:10` -> `exclam`
+  - `code:11` -> `at`
+  - `code:12` -> `numbersign`
+  - `code:13` -> `dollar`
+  - `code:14` -> `percent`
+  - `code:15` -> `asciicircum`
+  - `code:16` -> `ampersand`
+  - `code:17` -> `asterisk`
+  - `code:18` -> `parenleft`
+  - `code:19` -> `parenright`
 ## Startup fixes
 `config/hypr/lua/startup.lua` no longer assumes `hl.exec_once` exists.
 Fixes applied:
@@ -105,11 +125,16 @@ Validation commands used during phase 2:
 Observed result after syncing to the active config and reloading:
 - `hyprctl reload` returned `ok`.
 - `hyprctl configerrors` returned no errors.
+Runtime caveat:
+- A later diagnostic session showed `hyprctl binds` output matching `hyprland.conf` descriptions, meaning that session appeared to be using the hyprlang config manager rather than proving Lua entrypoint behavior.
+- `hyprctl version` may still report `0.54.0` for a source build because `0.55` has not been released yet; do not treat the version string alone as proof that Lua support is missing.
+- On the Lua branch source, regular config discovery should use `hyprland.lua` when present. If `hyprctl binds` continues to show legacy descriptions after installing Lua files, confirm the session was launched after `hyprland.lua` existed and that the binary was built from the Lua-enabled source branch.
 ## Current status
 Lua config can now load without the startup errors seen in phase 2 testing:
 - no `require("lua.*")` module lookup errors
 - no `XF86AudioPlayPause` parse error
 - no `code:10` through `code:19` parse errors
+- shifted number-row workspace move binds now map to shifted keysyms for Lua matching
 - no missing `hl.exec_once` crash
 - no `tap-to-click` unknown key error
 - no `enable_swallow` type error
