@@ -137,6 +137,10 @@ Behavior:
 - Copies:
   - `config/hypr/hyprland.lua`
   - `config/hypr/lua/`
+- When present, converts user-local config files into `lua/user_overrides.lua` after copying the Lua module directory:
+  - `UserConfigs/WindowRules.conf`
+  - `UserConfigs/UserKeybinds.conf`
+- The user conversion currently handles common one-line and simple named `windowrule` / `layerrule` entries plus `bind*` and `unbind` keybind entries. Converted layer rules are guarded behind `hl.layer_rule` so the generated file remains safe if the tested Lua build does not expose that helper yet.
 - Preserves `hyprland.conf` as fallback.
 - Supports:
   - `--yes`
