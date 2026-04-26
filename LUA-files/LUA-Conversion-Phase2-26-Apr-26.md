@@ -13,6 +13,7 @@ The normal `hyprland.conf` path remains available as fallback. This phase does n
 - `config/hypr/lua/startup.lua`
 - `config/hypr/lua/settings.lua`
 - `config/hypr/lua/animations.lua`
+- `config/hypr/scripts/LuaFullscreenMaximized.sh`
 - `config/waybar/ModulesWorkspaces`
 - `scripts/migrate-hypr-to-lua.sh`
 ## Entrypoint fix
@@ -86,6 +87,15 @@ Keyboard resize fix:
   - `resizeactive, 50 0` -> `hl.dsp.window.resize({ x = 50, y = 0, relative = true })`
   - `resizeactive, 0 -50` -> `hl.dsp.window.resize({ x = 0, y = -50, relative = true })`
   - `resizeactive, 0 50` -> `hl.dsp.window.resize({ x = 0, y = 50, relative = true })`
+User maximized fullscreen override:
+- User-local `SUPER+F` from `UserConfigs/UserKeybinds.conf` maps legacy `fullscreen, 1` to maximized fullscreen.
+- Native Lua fullscreen helpers were able to handle normal fullscreen but maximized fullscreen did not reliably apply from generated binds on the tested Lua branch.
+- The migration helper now converts `fullscreen, 1` to `exec_cmd((os.getenv("HOME") or "") .. "/.config/hypr/scripts/LuaFullscreenMaximized.sh")`.
+- `config/hypr/scripts/LuaFullscreenMaximized.sh` runs a short detached helper:
+  - `setsid -f sh -c 'sleep 0.2; hyprctl dispatch "hl.dsp.window.fullscreen({ mode = 1 })"' >/dev/null 2>&1`
+- Duplicate letter key variants were removed from generated user overrides. Binding both `F` and `f` caused one physical `SUPER+F` press to fire twice and toggle maximized fullscreen back off.
+- Runtime validation showed only one `SUPER+F` user override after duplicate removal, while `SUPER+SHIFT+F` remained the default normal fullscreen binding.
+- `SUPER+F` was verified by `hyprctl activewindow -j` setting the active window to maximized fullscreen state (`fullscreen=1`, `fullscreenClient=1`).
 ## Startup fixes
 `config/hypr/lua/startup.lua` no longer assumes `hl.exec_once` exists.
 Fixes applied:
@@ -98,6 +108,12 @@ Reason:
 - Reboot testing showed Waybar did not start because `hl.exec_cmd(cmd)` returns a dispatcher function on the current Lua branch; it does not execute the command unless dispatched.
 Known limitation:
 - The marker-file fallback approximates `exec-once` semantics for the current Hyprland session. Revisit this when the upstream Lua API exposes a native once-only startup helper.
+Waybar startup race fix:
+- After reboot, Waybar did not stay running even though the `/tmp/hypr-lua-exec-once-*waybar` marker existed.
+- Manual foreground startup of `waybar` succeeded, so the issue was treated as a login timing race rather than a Waybar config error.
+- The active and repo Lua startup files now launch Waybar with a delayed guarded command:
+  - `sh -c "sleep 2; pgrep -x waybar >/dev/null || exec waybar"`
+- Validation after `hyprctl reload` showed Waybar and `waybar-weather` running with no config errors.
 ## Waybar workspace dispatch caveat
 Under the Lua config manager, old external dispatch commands such as `hyprctl dispatch workspace 2` are parsed as Lua and fail with syntax errors.
 Confirmed working external syntax:
@@ -110,6 +126,18 @@ Fix applied:
 Known limitation:
 - Waybar 0.15's `hyprland/workspaces` button click handler is hardcoded in Waybar and sends Hyprland IPC requests such as `dispatch workspace <id>` directly; it does not use the `on-click` string for individual workspace buttons.
 - Because that internal Waybar path still emits legacy dispatcher syntax, workspace clicks can fail under the Lua config manager until Waybar is patched to send Lua dispatcher strings or Hyprland adds a compatibility path for legacy external dispatch syntax.
+## Monitor runtime note
+Manual runtime monitor changes under the Lua config manager require Lua eval syntax rather than legacy `hyprctl keyword monitor ...`.
+Commands tested:
+- `hyprctl eval 'hl.monitor({ output = "Virtual-1", mode = "1920x1080@60", position = "auto", scale = 1 })'`
+- `hyprctl eval 'hl.monitor({ output = "Virtual-1", mode = "1920x1080@60.00Hz", position = "0x0", scale = "1" })'`
+Observed behavior:
+- `hyprctl monitors all -j` showed `Virtual-1` advertised `1920x1080@60.00Hz`.
+- `hl.monitor(...)` eval and `hyprctl reload` returned `ok`, but the live session stayed at `1280x800@74.99`.
+- A reboot applied the configured `Virtual-1` resolution.
+Follow-up:
+- Track this as a Lua runtime/live-apply gap or backend modeset timing issue.
+- Prefer config-file monitor changes plus restart/reboot for now when testing monitor rules.
 ## Settings fixes
 `config/hypr/lua/settings.lua` was adjusted for Lua config validation.
 Fixes applied:
@@ -159,6 +187,8 @@ Validation commands used during phase 2:
 Observed result after syncing to the active config and reloading:
 - `hyprctl reload` returned `ok`.
 - `hyprctl configerrors` returned no errors.
+- Waybar started after reload using the delayed guarded startup command.
+- `SUPER+F` was verified to set maximized fullscreen after removing duplicate letter bind variants.
 Runtime caveat:
 - A later diagnostic session showed `hyprctl binds` output matching `hyprland.conf` descriptions, meaning that session appeared to be using the hyprlang config manager rather than proving Lua entrypoint behavior.
 - `hyprctl version` may still report `0.54.0` for a source build because `0.55` has not been released yet; do not treat the version string alone as proof that Lua support is missing.
@@ -171,34 +201,51 @@ Lua config can now load without the startup errors seen in phase 2 testing:
 - shifted number-row workspace move binds now map to shifted keysyms for Lua matching
 - shifted number-row workspace move binds also register unshifted digit fallbacks for runtime matching
 - no missing `hl.exec_once` crash
-- Waybar starts from the Lua startup fallback
+- Waybar starts from the Lua startup fallback, including the delayed guarded startup command added after reboot testing
 - mouse move/resize binds run the native Lua mouse dispatchers on button press
 - keyboard resize binds use native relative Lua resize calls
+- user-local `WindowRules.conf` and `UserKeybinds.conf` can be converted into `user_overrides.lua`
+- `SUPER+F` user maximized fullscreen override works through the helper script
+- Waybar workspace scroll actions use Lua-compatible dispatch syntax
+- `Virtual-1` monitor resolution applied after reboot when live Lua eval/reload did not apply it
 - no `tap-to-click` unknown key error
 - no `enable_swallow` type error
 - no `borderangle` speed validation error
 ## Remaining work
 The Lua conversion is still partial. Recommended next steps:
-1. Convert window and layer rules.
+1. Reboot once more and confirm Waybar starts without manual intervention.
+   - The fix targets login timing, so reload validation is necessary but not sufficient.
+2. Regression-test user override migration.
+   - Run the migration script from a clean pre-Lua backup.
+   - Verify `user_overrides.lua` is generated correctly for both `WindowRules.conf` and `UserKeybinds.conf`.
+   - Add a focused check that single-letter keybind conversion does not generate both uppercase and lowercase variants.
+3. Decide how to handle Waybar workspace clicks.
+   - Patch/rebuild Waybar so the built-in `hyprland/workspaces` module emits Lua dispatcher strings.
+   - Or replace the built-in workspace module with custom click handlers/scripts.
+4. Finish converting window and layer rules.
    - Fill out `config/hypr/lua/window_rules.lua`.
    - Confirm Lua API parity for `windowrule`, `layerrule`, and named rule blocks.
-2. Convert Wallust color integration.
+5. Convert Wallust color integration.
    - Replace the current static color fallback in `decorations.lua`.
    - Prefer a Lua-generated Wallust file if the template flow supports it.
-3. Convert dynamic Hyprland config writers.
+6. Convert dynamic Hyprland config writers.
    - `config/hypr/scripts/MonitorProfiles.sh`
    - `config/hypr/scripts/Animations.sh`
    - `config/hypr/scripts/update_WindowRules.sh`
    - `config/hypr/UserScripts/WallpaperSelect.sh`
    - `config/hypr/scripts/ThemeChanger.sh`
    - `config/hypr/scripts/WallustSwww.sh`
-4. Improve keybind generation.
+7. Improve keybind generation.
    - Move key aliases and dispatcher mapping into the generator instead of only the generated file.
    - Add strict mode so unsupported key names or dispatchers are detected before startup.
    - Confirm native Lua helpers for fullscreen, silent workspace moves, swap window, group actions, and monitor workspace moves before enabling those by default.
-5. Decide installer integration.
+8. Track Lua API gaps separately from repo conversion bugs.
+   - Monitor live-apply behavior after `hl.monitor(...)` eval/reload.
+   - Mouse resize limitations under Lua `__lua` dispatch.
+   - Helper/script fallbacks that are only needed because Lua helpers are incomplete or no-op in the tested branch.
+9. Decide installer integration.
    - Keep Lua migration opt-in until parity is complete.
    - Later add a `copy.sh` prompt such as `Use experimental Hyprland Lua config? [y/N]`.
-6. Add runtime smoke tests.
+10. Add runtime smoke tests.
    - Reload Hyprland and check `hyprctl configerrors`.
    - Test core binds: app launcher, terminal, close active window, workspace switching, media keys, screenshot keys, and mouse move/resize binds.
