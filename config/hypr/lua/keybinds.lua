@@ -1,18 +1,135 @@
 -- Auto-generated from Keybinds.conf/UserKeybinds.conf for Lua testing
+local function trim(value)
+  return (value or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
 local function exec_cmd(cmd)
   return function() hl.exec_cmd(cmd) end
 end
+
+local known_dispatchers = {
+  bringactivetotop = true,
+  changegroupactive = true,
+  cyclenext = true,
+  fullscreen = true,
+  killactive = true,
+  layoutmsg = true,
+  movefocus = true,
+  moveintogroup = true,
+  moveoutofgroup = true,
+  movecurrentworkspacetomonitor = true,
+  movetoworkspace = true,
+  movetoworkspacesilent = true,
+  movewindow = true,
+  pseudo = true,
+  resizeactive = true,
+  setprop = true,
+  swapwindow = true,
+  togglegroup = true,
+  togglefloating = true,
+  togglespecialworkspace = true,
+  workspace = true,
+}
+local function direction(value)
+  local directions = {
+    l = "left",
+    r = "right",
+    u = "up",
+    d = "down",
+    left = "left",
+    right = "right",
+    up = "up",
+    down = "down",
+  }
+  return directions[trim(value)] or trim(value)
+end
+
+local function workspace_value(value)
+  value = trim(value)
+  return tonumber(value) or value
+end
+
 local function dispatch(name, args)
-  if args and args ~= "" then
+  name = trim(name)
+  args = trim(args)
+
+  if args:match("^exec%s*,") then
+    return exec_cmd(trim(args:gsub("^exec%s*,", "", 1)))
+  end
+
+  if name == "exec" then
+    return exec_cmd(args)
+  end
+
+  if known_dispatchers[args] and not known_dispatchers[name] then
+    if args == "movewindow" then
+      return hl.window.drag()
+    end
+    if args == "resizewindow" then
+      return hl.window.resize()
+    end
+    return exec_cmd("hyprctl dispatch " .. args)
+  end
+
+  if name == "killactive" then
+    return hl.window.close()
+  end
+  if name == "togglefloating" then
+    return hl.window.float({ action = "toggle" })
+  end
+  if name == "pseudo" then
+    return hl.window.pseudo()
+  end
+  if name == "workspace" then
+    return hl.workspace(workspace_value(args))
+  end
+  if name == "movetoworkspace" then
+    return hl.window.move({ workspace = workspace_value(args) })
+  end
+  if name == "movefocus" then
+    return hl.focus({ direction = direction(args) })
+  end
+  if name == "layoutmsg" then
+    return hl.layout(args)
+  end
+
+  if args ~= "" then
     return exec_cmd("hyprctl dispatch " .. name .. " " .. args)
   end
   return exec_cmd("hyprctl dispatch " .. name)
 end
+
+local function chord(mods, key)
+  mods = trim(mods):gsub("%s+", " + ")
+  key = trim(key)
+  key = key:gsub("^xf86", "XF86")
+  local key_aliases = {
+    XF86AudioPlayPause = "XF86AudioPlay",
+    XF86audiolowervolume = "XF86AudioLowerVolume",
+    XF86audiomute = "XF86AudioMute",
+    XF86audioraisevolume = "XF86AudioRaiseVolume",
+    XF86audiostop = "XF86AudioStop",
+  }
+  key = key_aliases[key] or key
+  key = key:gsub("^code:10$", "1")
+  key = key:gsub("^code:11$", "2")
+  key = key:gsub("^code:12$", "3")
+  key = key:gsub("^code:13$", "4")
+  key = key:gsub("^code:14$", "5")
+  key = key:gsub("^code:15$", "6")
+  key = key:gsub("^code:16$", "7")
+  key = key:gsub("^code:17$", "8")
+  key = key:gsub("^code:18$", "9")
+  key = key:gsub("^code:19$", "0")
+  if mods == "" then
+    return key
+  end
+  return mods .. " + " .. key
+end
 local function bind(mods, key, fn, opts)
   if opts then
-    hl.bind(mods, key, fn, opts)
+    hl.bind(chord(mods, key), fn, opts)
   else
-    hl.bind(mods, key, fn)
+    hl.bind(chord(mods, key), fn)
   end
 end
 bind("SUPER", "D", exec_cmd("pkill rofi || true && rofi -show drun -modi drun,filebrowser,run,window"))
