@@ -13,6 +13,7 @@ The normal `hyprland.conf` path remains available as fallback. This phase does n
 - `config/hypr/lua/startup.lua`
 - `config/hypr/lua/settings.lua`
 - `config/hypr/lua/animations.lua`
+- `config/waybar/ModulesWorkspaces`
 - `scripts/migrate-hypr-to-lua.sh`
 ## Entrypoint fix
 `config/hypr/hyprland.lua` now loads modules with `dofile()` from the active config directory instead of `require("lua.*")`.
@@ -97,6 +98,18 @@ Reason:
 - Reboot testing showed Waybar did not start because `hl.exec_cmd(cmd)` returns a dispatcher function on the current Lua branch; it does not execute the command unless dispatched.
 Known limitation:
 - The marker-file fallback approximates `exec-once` semantics for the current Hyprland session. Revisit this when the upstream Lua API exposes a native once-only startup helper.
+## Waybar workspace dispatch caveat
+Under the Lua config manager, old external dispatch commands such as `hyprctl dispatch workspace 2` are parsed as Lua and fail with syntax errors.
+Confirmed working external syntax:
+- `hyprctl dispatch 'hl.dsp.focus({ workspace = "2" })'`
+- `hyprctl dispatch 'hl.dsp.focus({ workspace = "e+1" })'`
+Fix applied:
+- `config/waybar/ModulesWorkspaces` now uses Lua-compatible scroll commands:
+  - `on-scroll-up` -> `hyprctl dispatch 'hl.dsp.focus({ workspace = "e+1" })'`
+  - `on-scroll-down` -> `hyprctl dispatch 'hl.dsp.focus({ workspace = "e-1" })'`
+Known limitation:
+- Waybar 0.15's `hyprland/workspaces` button click handler is hardcoded in Waybar and sends Hyprland IPC requests such as `dispatch workspace <id>` directly; it does not use the `on-click` string for individual workspace buttons.
+- Because that internal Waybar path still emits legacy dispatcher syntax, workspace clicks can fail under the Lua config manager until Waybar is patched to send Lua dispatcher strings or Hyprland adds a compatibility path for legacy external dispatch syntax.
 ## Settings fixes
 `config/hypr/lua/settings.lua` was adjusted for Lua config validation.
 Fixes applied:
