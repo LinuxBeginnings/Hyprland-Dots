@@ -14,6 +14,16 @@ local function exec_cmd(cmd)
   return function() hl.exec_cmd(cmd) end
 end
 
+local function exec_now(cmd)
+  if dsp and dsp.exec_cmd and hl.dispatch then
+    hl.dispatch(dsp.exec_cmd(cmd))
+  elseif hl.dispatch and hl.exec_cmd then
+    hl.dispatch(hl.exec_cmd(cmd))
+  elseif hl.exec_cmd then
+    hl.exec_cmd(cmd)
+  end
+end
+
 local function workspace_dispatch(value)
   if dsp and dsp.focus then
     return dsp.focus({ workspace = value })
@@ -112,6 +122,12 @@ local function dispatch(name, args)
   if name == "movetoworkspacesilent" and window_api.move then
     return window_api.move({ workspace = workspace_value(args), follow = false })
   end
+  if name == "resizeactive" and window_api.resize then
+    local x, y = args:match("^([%-%+]?%d+)%s+([%-%+]?%d+)$")
+    if x and y then
+      return window_api.resize({ x = tonumber(x), y = tonumber(y), relative = true })
+    end
+  end
   if name == "movecurrentworkspacetomonitor" and workspace_api.move then
     return workspace_api.move({ monitor = direction(args) })
   end
@@ -205,11 +221,38 @@ local function chord(mods, key)
   return mods .. " + " .. key
 end
 local function bind(mods, key, fn, opts)
+  if opts and opts.mouse then
+    return
+  end
   if opts then
     hl.bind(chord(mods, key), fn, opts)
   else
     hl.bind(chord(mods, key), fn)
   end
+  if mods:match("SHIFT") then
+    local number_key = ({
+      ["code:10"] = "1",
+      ["code:11"] = "2",
+      ["code:12"] = "3",
+      ["code:13"] = "4",
+      ["code:14"] = "5",
+      ["code:15"] = "6",
+      ["code:16"] = "7",
+      ["code:17"] = "8",
+      ["code:18"] = "9",
+      ["code:19"] = "0",
+    })[key]
+    if number_key then
+      if opts then
+        hl.bind(chord(mods, number_key), fn, opts)
+      else
+        hl.bind(chord(mods, number_key), fn)
+      end
+    end
+  end
+end
+local function bindm(mods, key, dispatcher)
+  bind(mods, key, dispatch("mouse " .. dispatcher, dispatcher))
 end
 bind("SUPER", "D", exec_cmd("pkill rofi || true && rofi -show drun -modi drun,filebrowser,run,window"))
 bind("SUPER", "B", exec_cmd("xdg-open \"https://\""))
@@ -372,5 +415,5 @@ bind("SUPER", "mouse_down", dispatch("workspace", "e+1"))
 bind("SUPER", "mouse_up", dispatch("workspace", "e-1"))
 bind("SUPER", "period", dispatch("workspace", "e+1"))
 bind("SUPER", "comma", dispatch("workspace", "e-1"))
-bind("SUPER", "mouse:272", dispatch("move window", "movewindow"), { mouse = true })
-bind("SUPER", "mouse:273", dispatch("resize window", "resizewindow"), { mouse = true })
+bindm("SUPER", "mouse:272", "movewindow")
+bindm("SUPER", "mouse:273", "resizewindow")

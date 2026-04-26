@@ -53,12 +53,14 @@ Follow-up after runtime testing:
   - `movetoworkspacesilent` -> `hl.dsp.window.move({ workspace = ..., follow = false })`
   - `movefocus` -> `hl.dsp.focus({ direction = ... })`
   - `layoutmsg` -> `hl.dsp.layout(...)`
+  - keyboard `resizeactive` -> `hl.dsp.window.resize({ x = ..., y = ..., relative = true })`
   - mouse `movewindow` -> `hl.dsp.window.drag()`
   - mouse `resizewindow` -> `hl.dsp.window.resize()`
 - `swapwindow`, group actions, and monitor workspace moves have Lua helper mappings in the wrapper but still need runtime smoke testing before treating Lua parity as complete.
 - Runtime testing should keep `~/.config/hypr/hyprland.lua` disabled by default and only enable Lua inside a disposable VM snapshot.
 Follow-up after shifted workspace bind testing:
 - `SUPER SHIFT 3` failed when generated `code:12` was converted to unshifted `3`; the Lua key parser matches XKB keysyms, so shifted number-row binds must use shifted keysyms.
+- After reboot testing, `SUPER SHIFT 2` still failed with only `at` registered. The wrapper now registers a second shifted number-row fallback using the unshifted digit key as well, so `SUPER SHIFT 2` has both `at` and `2` Lua bind variants.
 - Current shifted code map is:
   - `code:10` -> `exclam`
   - `code:11` -> `at`
@@ -70,16 +72,31 @@ Follow-up after shifted workspace bind testing:
   - `code:17` -> `asterisk`
   - `code:18` -> `parenleft`
   - `code:19` -> `parenright`
+Mouse bind fix:
+- The generated mouse move/resize binds originally passed `{ mouse = true }`.
+- The Lua `hl.bind` API does not read an option named `mouse`.
+- The Lua `{ drag = true }` option is not equivalent to legacy `bindm`; it delays the bind until a drag threshold is exceeded and the button is released.
+- The wrapper now strips the generated `mouse` option and lets `hl.dsp.window.drag()` / `hl.dsp.window.resize()` run on mouse-button press, which is closer to legacy `bindm` behavior for `SUPER + left mouse` move and `SUPER + right mouse` resize.
+- Runtime testing confirmed `SUPER + left mouse` moves windows, but `SUPER + right mouse` resize may still be limited by the current Lua `__lua` dispatcher not preserving the legacy mouse dispatcher press/release path.
+Keyboard resize fix:
+- `SUPER SHIFT left/right/up/down` originally fell back through shell execution of `hyprctl dispatch resizeactive ...`.
+- The wrapper now maps `resizeactive` to native relative Lua resize calls:
+  - `resizeactive, -50 0` -> `hl.dsp.window.resize({ x = -50, y = 0, relative = true })`
+  - `resizeactive, 50 0` -> `hl.dsp.window.resize({ x = 50, y = 0, relative = true })`
+  - `resizeactive, 0 -50` -> `hl.dsp.window.resize({ x = 0, y = -50, relative = true })`
+  - `resizeactive, 0 50` -> `hl.dsp.window.resize({ x = 0, y = 50, relative = true })`
 ## Startup fixes
 `config/hypr/lua/startup.lua` no longer assumes `hl.exec_once` exists.
 Fixes applied:
 - Added local `exec_once(cmd)` wrapper.
 - If `hl.exec_once` exists, it is used.
-- Otherwise startup commands fall back to `hl.exec_cmd(cmd)`.
+- Otherwise startup commands are executed with `hl.dispatch(hl.dsp.exec_cmd(cmd))`.
+- The fallback wraps commands with per-session marker files under `/tmp/hypr-lua-exec-once-*` so reloads do not repeatedly launch startup apps.
 Reason:
 - Startup failed with `attempt to call a nil value (field 'exec_once')` on the tested build.
+- Reboot testing showed Waybar did not start because `hl.exec_cmd(cmd)` returns a dispatcher function on the current Lua branch; it does not execute the command unless dispatched.
 Known limitation:
-- Falling back to `hl.exec_cmd` may not provide perfect `exec-once` semantics if the Lua API does not expose a true once-only call. This is acceptable for testing but should be revisited when the upstream Lua API stabilizes.
+- The marker-file fallback approximates `exec-once` semantics for the current Hyprland session. Revisit this when the upstream Lua API exposes a native once-only startup helper.
 ## Settings fixes
 `config/hypr/lua/settings.lua` was adjusted for Lua config validation.
 Fixes applied:
@@ -135,7 +152,11 @@ Lua config can now load without the startup errors seen in phase 2 testing:
 - no `XF86AudioPlayPause` parse error
 - no `code:10` through `code:19` parse errors
 - shifted number-row workspace move binds now map to shifted keysyms for Lua matching
+- shifted number-row workspace move binds also register unshifted digit fallbacks for runtime matching
 - no missing `hl.exec_once` crash
+- Waybar starts from the Lua startup fallback
+- mouse move/resize binds run the native Lua mouse dispatchers on button press
+- keyboard resize binds use native relative Lua resize calls
 - no `tap-to-click` unknown key error
 - no `enable_swallow` type error
 - no `borderangle` speed validation error

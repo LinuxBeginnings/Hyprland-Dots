@@ -5,11 +5,26 @@
 local scriptsDir = "$HOME/.config/hypr/scripts"
 local userScripts = "$HOME/.config/hypr/UserScripts"
 local wallDir = "$HOME/Pictures/wallpapers"
+local session = os.getenv("HYPRLAND_INSTANCE_SIGNATURE") or "default"
+local function shell_quote(value)
+  return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+end
 local function exec_once(cmd)
   if hl.exec_once then
     hl.exec_once(cmd)
-  else
-    hl.exec_cmd(cmd)
+    return
+  end
+
+  local key = cmd:gsub("[^%w_.-]", "_"):sub(1, 80)
+  local marker = "/tmp/hypr-lua-exec-once-" .. session .. "-" .. key
+  local wrapped = "sh -c " .. shell_quote("[ -e " .. shell_quote(marker) .. " ] || { touch " .. shell_quote(marker) .. " && exec " .. cmd .. "; }")
+
+  if hl.dsp and hl.dsp.exec_cmd and hl.dispatch then
+    hl.dispatch(hl.dsp.exec_cmd(wrapped))
+  elseif hl.dispatch and hl.exec_cmd then
+    hl.dispatch(hl.exec_cmd(wrapped))
+  elseif hl.exec_cmd then
+    hl.exec_cmd(wrapped)
   end
 end
 
