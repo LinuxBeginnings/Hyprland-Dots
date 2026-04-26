@@ -56,6 +56,28 @@ GREEN="$(tput setaf 2)"
 BLUE="$(tput setaf 4)"
 SKY_BLUE="$(tput setaf 6)"
 RESET="$(tput sgr0)"
+
+# Set a high-contrast whiptail theme unless the user already provided one
+if [ -z "${NEWT_COLORS:-}" ]; then
+  export NEWT_COLORS='
+root=white,black
+border=white,black
+window=white,black
+shadow=black,black
+title=yellow,black
+button=black,lightgray
+actbutton=white,blue
+compactbutton=black,lightgray
+textbox=white,black
+acttextbox=white,black
+entry=white,black
+label=white,black
+listbox=white,black
+actlistbox=black,cyan
+checkbox=white,black
+actcheckbox=black,cyan
+'
+fi
 MIN_EXPRESS_VERSION="2.3.18"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$SCRIPT_DIR"
