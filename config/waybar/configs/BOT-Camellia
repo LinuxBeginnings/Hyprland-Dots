@@ -27,6 +27,9 @@
 //"margin-right": 0,
 	
 "modules-left": [
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
 	"hyprland/workspaces#cam",
 	"custom/separator#line",
 	"mpris",

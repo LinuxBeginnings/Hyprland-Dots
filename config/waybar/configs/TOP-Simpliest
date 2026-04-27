@@ -20,6 +20,9 @@
 "margin-top": 2,
 
 "modules-left": [	 
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
 	"hyprland/workspaces",
 	"tray",
 	"mpris", 

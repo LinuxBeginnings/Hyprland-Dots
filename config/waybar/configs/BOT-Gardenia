@@ -26,6 +26,9 @@
 "width": 1000,
 	
 "modules-left": [
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
 	"clock#5", 
 	"mpris", 
 	"tray", 

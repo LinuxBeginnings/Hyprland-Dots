@@ -18,6 +18,9 @@
 "margin-bottom": 2,
 	
 "modules-left": [
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
 	"custom/menu",
 	"custom/separator#blank_2",
 	"hyprland/workspaces",
