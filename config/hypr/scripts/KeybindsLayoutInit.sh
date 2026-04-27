@@ -5,8 +5,7 @@
 #  License: GNU GPLv3
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
-# Initialize J/K keybinds so they always cycle windows globally (no layout-specific behavior)
-# This avoids double-actions when layouts change.
+# Initialize J/K keybinds so they always cycle windows globally (no layout-specific behavior).
 
 set -euo pipefail
 
@@ -15,5 +14,5 @@ hyprctl keyword unbind SUPER,j || true
 hyprctl keyword unbind SUPER,k || true
 
 # Cycle windows globally
-hyprctl keyword bind SUPER,j,layoutmsg,cyclenext
-hyprctl keyword bind SUPER,k,layoutmsg,cycleprev
+hyprctl keyword bind SUPER,j,cyclenext
+hyprctl keyword bind SUPER,k,cyclenext,prev
