@@ -81,6 +81,11 @@ local function workspace_value(value)
   value = trim(value)
   return tonumber(value) or value
 end
+local function dispatch_safely(dispatcher)
+  if dispatcher then
+    pcall(hl.dispatch, dispatcher)
+  end
+end
 
 local function dispatch(name, args)
   name = trim(name)
@@ -141,12 +146,21 @@ local function dispatch(name, args)
     return raw_dispatch_cmd("movecurrentworkspacetomonitor " .. args)
   end
   if name == "movefocus" then
+    if dsp and dsp.focus then
+      return function() dispatch_safely(dsp.focus({ direction = direction(args) })) end
+    end
     return raw_dispatch_cmd("movefocus " .. args)
   end
   if name == "movewindow" then
+    if window_api.move then
+      return function() dispatch_safely(window_api.move({ direction = direction(args) })) end
+    end
     return raw_dispatch_cmd("movewindow " .. args)
   end
   if name == "swapwindow" then
+    if window_api.swap then
+      return function() dispatch_safely(window_api.swap({ direction = direction(args) })) end
+    end
     return raw_dispatch_cmd("swapwindow " .. args)
   end
   if name == "togglegroup" and group_api.toggle then
