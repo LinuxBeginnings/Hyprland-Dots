@@ -86,6 +86,14 @@ local function dispatch_safely(dispatcher)
     pcall(hl.dispatch, dispatcher)
   end
 end
+local function dispatch_factory_safely(factory)
+  pcall(function()
+    local dispatcher = factory()
+    if dispatcher then
+      hl.dispatch(dispatcher)
+    end
+  end)
+end
 
 local function dispatch(name, args)
   name = trim(name)
@@ -147,19 +155,19 @@ local function dispatch(name, args)
   end
   if name == "movefocus" then
     if dsp and dsp.focus then
-      return function() dispatch_safely(dsp.focus({ direction = direction(args) })) end
+      return function() dispatch_factory_safely(function() return dsp.focus({ direction = direction(args) }) end) end
     end
     return raw_dispatch_cmd("movefocus " .. args)
   end
   if name == "movewindow" then
     if window_api.move then
-      return function() dispatch_safely(window_api.move({ direction = direction(args) })) end
+      return function() dispatch_factory_safely(function() return window_api.move({ direction = direction(args) }) end) end
     end
     return raw_dispatch_cmd("movewindow " .. args)
   end
   if name == "swapwindow" then
     if window_api.swap then
-      return function() dispatch_safely(window_api.swap({ direction = direction(args) })) end
+      return function() dispatch_factory_safely(function() return window_api.swap({ direction = direction(args) }) end) end
     end
     return raw_dispatch_cmd("swapwindow " .. args)
   end
