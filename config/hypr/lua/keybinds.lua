@@ -166,10 +166,11 @@ local function dispatch(name, args)
     return raw_dispatch_cmd("movewindow " .. args)
   end
   if name == "swapwindow" then
-    if window_api.swap then
-      return function() dispatch_factory_safely(function() return window_api.swap({ direction = direction(args) }) end) end
+    local swap_direction = trim(args)
+    if swap_direction == "" then
+      return nil
     end
-    return raw_dispatch_cmd("swapwindow " .. args)
+    return exec_cmd("$HOME/.config/hypr/scripts/LuaSwapWindow.sh " .. swap_direction)
   end
   if name == "togglegroup" and group_api.toggle then
     return group_api.toggle()
@@ -388,10 +389,10 @@ bind("SUPER CTRL", "left", exec_cmd("$HOME/.config/hypr/scripts/LuaMoveWindowDir
 bind("SUPER CTRL", "right", exec_cmd("$HOME/.config/hypr/scripts/LuaMoveWindowDirectional.sh right"))
 bind("SUPER CTRL", "up", dispatch("movewindow", "u"))
 bind("SUPER CTRL", "down", dispatch("movewindow", "d"))
-bind("SUPER ALT", "left", dispatch("swapwindow", "l"))
-bind("SUPER ALT", "right", dispatch("swapwindow", "r"))
-bind("SUPER ALT", "up", dispatch("swapwindow", "u"))
-bind("SUPER ALT", "down", dispatch("swapwindow", "d"))
+bind("SUPER ALT", "left", exec_cmd("$HOME/.config/hypr/scripts/LuaSwapWindow.sh l"))
+bind("SUPER ALT", "right", exec_cmd("$HOME/.config/hypr/scripts/LuaSwapWindow.sh r"))
+bind("SUPER ALT", "up", exec_cmd("$HOME/.config/hypr/scripts/LuaSwapWindow.sh u"))
+bind("SUPER ALT", "down", exec_cmd("$HOME/.config/hypr/scripts/LuaSwapWindow.sh d"))
 bind("SUPER", "G", dispatch("togglegroup", ""))
 bind("SUPER", "Tab", dispatch("changegroupactive", "f"))
 bind("SUPER CTRL", "tab", dispatch("changegroupactive", ""))
