@@ -27,7 +27,7 @@ if [[ $# -lt 1 ]] || [[ ! -d $1   ]]; then
 	exit 1
 fi
 
-# Edit below to control the images transition
+# Edit below to control the images transition (swww/awww)
 export SWWW_TRANSITION_FPS=60
 export SWWW_TRANSITION_TYPE=simple
 
@@ -47,6 +47,6 @@ while true; do
 			# Refresh UI components that depend on wallust output
 			$wallust_refresh
 			sleep $INTERVAL
-			
+
 		done
 done

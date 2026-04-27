@@ -56,6 +56,28 @@ GREEN="$(tput setaf 2)"
 BLUE="$(tput setaf 4)"
 SKY_BLUE="$(tput setaf 6)"
 RESET="$(tput sgr0)"
+
+# Set a high-contrast whiptail theme unless the user already provided one
+if [ -z "${NEWT_COLORS:-}" ]; then
+  export NEWT_COLORS='
+root=white,black
+border=white,black
+window=white,black
+shadow=black,black
+title=yellow,black
+button=black,lightgray
+actbutton=black,cyan
+compactbutton=white,black
+textbox=white,black
+acttextbox=white,black
+entry=white,black
+label=white,black
+listbox=white,black
+actlistbox=black,cyan
+checkbox=white,black
+actcheckbox=black,cyan
+'
+fi
 MIN_EXPRESS_VERSION="2.3.18"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$SCRIPT_DIR"
@@ -115,7 +137,10 @@ else
 fi
 
 # Ensure we operate from the dotfiles root so relative paths resolve.
-cd "$SCRIPT_DIR" || { echo "${ERROR} Failed to cd to $SCRIPT_DIR"; exit 1; }
+cd "$SCRIPT_DIR" || {
+  echo "${ERROR} Failed to cd to $SCRIPT_DIR"
+  exit 1
+}
 
 version_gte() {
   [ "$1" = "$(echo -e "$1\n$2" | sort -V | tail -n1)" ]
@@ -259,7 +284,7 @@ print_color() {
 # Check /etc/os-release for Ubuntu or Debian and warn about Hyprland version requirement
 if grep -iqE '^(ID_LIKE|ID)=.*(ubuntu|debian)' /etc/os-release >/dev/null 2>&1; then
   printf "\n%.0s" {1..1}
-  print_color $WARNING "\nThese Dotfiles are only supported on Hyprland v0.50 or greater. Do not install on older versions of Hyprland.\n"
+  print_color $WARNING "\nThese Dotfiles are only supported on Hyprland v0.54 or greater. Do not install on older versions of Hyprland.\n"
   while true; do
     echo -n "${CAT} Do you want to continue anyway? (y/N): "
     read _continue
@@ -458,28 +483,29 @@ if [ "$EXPRESS_MODE" -eq 0 ] && [ "$WAYBAR_WEATHER_COPIED" -eq 1 ]; then
     read -r -p "${CAT} Use Fahrenheit (F) or Celsius (C)? [C]: " WEATHER_UNITS
     WEATHER_UNITS=$(echo "${WEATHER_UNITS}" | tr '[:upper:]' '[:lower:]')
     case "$WEATHER_UNITS" in
-      f|fahrenheit)
-        WEATHER_CFG="$WAYBAR_WEATHER_DEST/config.toml"
-        if [ -f "$WEATHER_CFG" ]; then
-          if grep -qE '^[[:space:]]*units[[:space:]]*=' "$WEATHER_CFG"; then
-            sed -i 's/^[[:space:]]*units[[:space:]]*=.*/units = "imperial"/' "$WEATHER_CFG"
-          elif grep -qE '^[[:space:]]*#\s*units[[:space:]]*=' "$WEATHER_CFG"; then
-            sed -i 's/^[[:space:]]*#\s*units[[:space:]]*=.*/units = "imperial"/' "$WEATHER_CFG"
-          else
-            printf '\nunits = "imperial"\n' >> "$WEATHER_CFG"
-          fi
-          echo "${OK} - Set waybar-weather units to imperial" 2>&1 | tee -a "$LOG"
+    f | fahrenheit)
+      WEATHER_CFG="$WAYBAR_WEATHER_DEST/config.toml"
+      if [ -f "$WEATHER_CFG" ]; then
+        if grep -qE '^[[:space:]]*units[[:space:]]*=' "$WEATHER_CFG"; then
+          sed -i 's/^[[:space:]]*units[[:space:]]*=.*/units = "imperial"/' "$WEATHER_CFG"
+        elif grep -qE '^[[:space:]]*#\s*units[[:space:]]*=' "$WEATHER_CFG"; then
+          sed -i 's/^[[:space:]]*#\s*units[[:space:]]*=.*/units = "imperial"/' "$WEATHER_CFG"
         else
-          echo "${WARN} - waybar-weather config not found at $WEATHER_CFG" 2>&1 | tee -a "$LOG"
+          printf '\nunits = "imperial"\n' >>"$WEATHER_CFG"
         fi
-        break
-        ;;
-      c|celsius|"")
-        # Default config already uses metric; no change needed
-        break
-        ;;
-      *)
-        echo "${WARN} Please enter 'F' or 'C'." ;;
+        echo "${OK} - Set waybar-weather units to imperial" 2>&1 | tee -a "$LOG"
+      else
+        echo "${WARN} - waybar-weather config not found at $WEATHER_CFG" 2>&1 | tee -a "$LOG"
+      fi
+      break
+      ;;
+    c | celsius | "")
+      # Default config already uses metric; no change needed
+      break
+      ;;
+    *)
+      echo "${WARN} Please enter 'F' or 'C'."
+      ;;
     esac
   done
 fi
@@ -632,7 +658,6 @@ if cp -r "$SCRIPT_DIR/wallpapers" "$PICTURES_DIR/"; then
 else
   echo "${ERROR} Failed to copy some ${YELLOW}wallpapers${RESET}" | tee -a "$LOG"
 fi
-
 
 # Set some files as executable
 chmod +x "$HOME/.config/hypr/scripts/"* 2>&1 | tee -a "$LOG"

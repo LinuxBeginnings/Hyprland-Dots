@@ -24,6 +24,7 @@
     "return-type": "json",
     "hide-empty-text": true,
     "on-click": "pkill -USR1 waybar-weather"
+    // "on-click": "flatpak run io.github.amit9838.mousam"
 },
 
 "custom/hyprpicker": {
@@ -173,7 +174,7 @@
 	"on-scroll-down": "$HOME/.config/hypr/scripts/Volume.sh --dec",
 	"smooth-scrolling-threshold": 1,
 },
-    
+
 "custom/power": {
 	"format": " ⏻ ",
 	"on-click": "$HOME/.config/hypr/scripts/Wlogout.sh",
@@ -188,7 +189,7 @@
     "tooltip": true,
 	"tooltip-format": "Left Click: Reboot",
 },
-    
+
 "custom/quit": {
     "format": "󰗼",
     "on-click": "hyprctl dispatch exit",

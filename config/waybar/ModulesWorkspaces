@@ -111,9 +111,9 @@
 		"8":"Otto",
 		"9":"Nove",
 		"10":"Dieci"
-	}	
+	}
   },
-  
+
 //  NUMBERS and ICONS style
 "hyprland/workspaces#4": {
 	"format": "{name}",
@@ -165,7 +165,7 @@
 		"10": "10",
 	},
 },
-// NUMBERS and ICONS style with window rewrite 
+// NUMBERS and ICONS style with window rewrite
 "hyprland/workspaces#rw": {
 	"disable-scroll": true,
 	"all-outputs": true,
@@ -181,7 +181,7 @@
 	"format": "{icon} {windows}",
 	"format-window-separator": " ",
 	"window-rewrite-default": " <span foreground='#ff0000'>✘</span> ",
-	"window-rewrite": {		
+	"window-rewrite": {
 		"title<.*amazon.*>": " ",
 		"title<.*reddit.*>": " ",
 
@@ -230,6 +230,7 @@
 		"class<vlc>": "󰕼 ",
 		"class<[Kk]denlive|org.kde.kdenlive>": "🎬 ",
 		"title<.*Kdenlive.*>": "🎬 ",
+		"class<com.github.wwmm.easyeffects>": " ",
 		"title<.*cmus.*>": " ",
 		"class<[Ss]potify>": " ",
 		"class<Plex>": "󰚺 ",
@@ -265,12 +266,17 @@
 		"class<obs|com.obsproject.Studio>": " ",
 
 		"class<polkit-gnome-authentication-agent-1>": "󰒃 ",
+		"class<hyprpolkitagent>": "󰒃 ",
+		"class<com.github.hyprmod>": " ",
 		"class<nwg-look>": " ",
+		"class<vswaybar-studio>": "󰛼 ",
 		"class<nwg-displays>": " ",
 		"class<[Pp]avucontrol|org.pulseaudio.pavucontrol>": "󱡫 ",
 		"class<steam>": " ",
-		"class<thunar|nemo|org.gnome.Nautilus>": "󰝰 ",	
+		"class<thunar|nemo|org.gnome.Nautilus>": "󰝰 ",
 		"class<Gparted>":"",
+		"class<timeshift-gtk>":"󰁯",
+		"class<btrfs-assistant>":"󰁯",
 		"class<gimp>": " ",
 		"class<emulator>": "📱 ",
 		"class<android-studio>": " ",
@@ -278,6 +284,7 @@
 		"class<localsend>":"",
 		"class<PrusaSlicer|UltiMaker-Cura|OrcaSlicer>": "󰹛",
 		"class<nvidia-settings>": "󰢮 ",
+		"class<com.shellyorg.shelly>": "󰏗 ",
 
 		"class<io.github.kolunmi.Bazaar>": " ",
 		"title<^Bazaar$>": " ",

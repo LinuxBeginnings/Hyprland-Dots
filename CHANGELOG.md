@@ -1,6 +1,63 @@
 # Changelog — KoolDots
 
-## v2.3.22
+## v2.3.23
+
+- `OverviewToggle.sh` wasn't checking properly for quickshell service
+  - Found by `@TeaJhay`
+  - Changed script to look for `qs` not `quickshell`
+- Minimum Hyprland version is now v0.54.x
+  - The addtion of scrolling and monocle require 0.54 or greater
+  - Updated warning banner when you run `copy.sh`
+- Added check for `kde-polkit`
+  - With KDE installed users reported escalation fails
+  - `kde-polkit` is crashing preventng privledge escalation
+- Added `.config/hyprland/scripts/Polkit-Diag.sh`
+  - This runs a series of Read Only commands to triage polkit issues
+- Fixed syntax errors in a few waybar CSS files
+  - What should have been `<TAB> color`
+  - Was `\tcode` Caused by bad search and replace
+  - It caused waybar to crash
+- Updated `Keyhints.sh`
+  - Was missing `scrolling` and `monocle` layouts
+- Fixed display order for layout change binding
+  - It showed `master` after `dwindle`
+  - Correct order is `dwindle`, `scrolling`. `monocle`, `master`
+- Added doc on how get `ventoy` GUI to run properly
+  - Seems to be a known bug
+  - `https://github.com/ventoy/Ventoy/issues/3570`
+- Fixed issue with long pause starting lockscreen
+  - In `~/.config/hypr/UserScripts/WeatherWrap.sh`
+    - I put the weather cache check in the background
+    - Shortened network timeouts for ping and curl
+- Changed `ERROR` to `NOTE` when first installing dotfiles
+  - The backup directory isn't there but reports as error
+  - Thank you `@moukhtar22` for finding and reporting this
+- Removed `grace` timeout from `hyprlock*.conf` files
+  - It's now only supported on the command line
+  - Also updated out the `#image` and `#label`
+    - They require a space after the `#`
+- Fixed: Setting wallpaper per monitor on restore both has same wallpaper
+  - `WallpaperDaemon` only tracked one wallpaper
+  - Added per monitor current wallpaper
+- Added: Support for transistion effects with `awww`
+- Added: `rofi-ssh-menu` `SUPER + S`
+  - Reads hosts from `$HOME/.ssh/config`
+  - You can also add in SSH keys to that file
+  - Including for just local hosts and another for your repositories for example
+- Removed: Some leftover `Jakoolit` references
+- Added: WindowRule and icon for `shelly` unified app installer for arch
+- Added: WindowRule for `hyprwcenter` Audio control app
+- Updated: Waybar CSS files to use `font-size 14px`
+  - Waybar, v15.x doesn't support `font-size 99%`
+- Added: Script to disable Intel CPU Turbo feature
+  - `$HOME/.config/hypr/scripts/disable.cpu.turbo.sh`
+  - CPU turbo will often spin up the fan to max, then slowly drop back down
+  - Very noisy, happens randomly. 11th/12th gen notorious for this issue
+  - Should be added to User Startup as needed
+- Fixed: Duplicate keybinds
+- Fixed: `rofi beats` keybind not working
+
+v2.3.22
 
 - Fixed: Kitty font issue
   - Thank you `@JasonNero` for the fix
@@ -17,7 +74,7 @@
   - Created a startup script to check for `awww-daemon` or fallback to `swww-daemon`
   - Suggest everyone remove `swww` and replace with `awww`
     - This has been done in `NixOS-Hyprland` but you have to update to current build in main branch
-- FIXED: Long delay updating colors after wallpaper change
+- Fixed: Long delay updating colors after wallpaper change
 - Added more app icons for `WaybarWorkspaces`
   - Emacs
   - Nautilus
@@ -32,10 +89,11 @@
   - Doesn't use `specialworkspace` anymore
   - Updates to Hyprland seem to break old logic
   - The Dropdown would flash on hide
-- Fixed all float toggle
-  - Old command drepreciated
+- Fixed `all float` toggle
+  - Old command depreciated
   - Replaced with a script `Float-All-Windows.sh` in `Keybinds.conf` file
 - Fixed Package name for `waybar-weather`
+- Added `scrolling` layout
 - Added `monocle` layout
 - Experimenting with some additional layerrules
 - Improving wallpaper based theming
@@ -45,12 +103,12 @@
 - Updated `ChangeLayout` script for scrolling
   - Requires Hyprland v0.54+
 - Added two keybinds for scrolling layout as a start
-  - SUPERSHIFT + comma swap columns
-  - SUPERSHIFT + period move to next column
-  - SUPERALT + H Horizonal Scrolling
-  - SUPERALT + V Vertical Scrolling
+  - `SUPERSHIFT + comma` -- Swap columns
+  - `SUPERSHIFT + period` -- Move to next column
+  - `SUPERALT + H` -- Horizonal Scrolling
+  - `SUPERALT + V` -- Vertical Scrolling
 - Updated `togglesplit` to `layoutmsg,togglesplit`
-  - Has been depreciated, w/0.54 it's not supported
+  - The old format Has been depreciated, w/0.54 it's not supported
     - No errors just doesn't work
 - Fixed many of the WALLUST based waybars color issues
   - Foreground/background colors were same light color
@@ -65,10 +123,10 @@
   - TokyoNight
 - Changed `fastfetch` dotfiles name to `KoolDots`
 - ENVvariables file had both QT5CT and QT6CT variables
-  `    #Added style ENV for kvantum
-env = QT_QPA_PLATFORMTHEME,qt6ct
-env = QT_STYLE_OVERRIDE,kvantum`
-  > Note: Not sure how will this will work as I don't normally use kvantum
+  ````#Added style ENV for kvantum
+   env = QT_QPA_PLATFORMTHEME,qt6ct
+   env = QT_STYLE_OVERRIDE,kvantum```
+  ````
 
 ## v2.3.21
 

@@ -36,7 +36,7 @@
 * {
     font-family: "JetBrainsMono Nerd Font";
     font-weight: bold;
-	min-height: 0;  
+	min-height: 0;
     /* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
     /* NOTE: Waybar v14+ ignores % font-size values */
     font-size: 99%;
@@ -173,7 +173,7 @@ tooltip {
 #custom-weather.clearNight,
 #custom-weather.cloudyFoggyDay,
 #custom-weather.cloudyFoggyNight,
-#custom-weather.default, 
+#custom-weather.default,
 #custom-weather.rainyDay,
 #custom-weather.rainyNight,
 #custom-weather.severe,
@@ -196,7 +196,7 @@ tooltip {
 }
 
 #custom-hint {
-	color: @peach;
+    color: @peach;
 	padding-right: 6px;
 	padding-left: 6px;
 }
@@ -210,7 +210,7 @@ tooltip {
 }
 
 #battery.critical:not(.charging) {
-	color: #f53c3c;
+    color: #f53c3c;
 	animation-name: blink;
 	animation-duration: 3.0s;
 	animation-timing-function: steps(12);
@@ -220,7 +220,7 @@ tooltip {
 
 #pulseaudio-slider,
 #pulseaudio {
-	color: @foreground;
+    color: @foreground;
 }
 
 #backlight-slider slider,
@@ -258,14 +258,14 @@ tooltip {
 #custom-weather.clearNight,
 #custom-weather.cloudyFoggyDay,
 #custom-weather.cloudyFoggyNight,
-#custom-weather.default, 
+#custom-weather.default,
 #custom-weather.rainyDay,
 #custom-weather.rainyNight,
 #custom-weather.severe,
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay {
-	color: @lavender;
+    color: @lavender;
 	padding-right: 6px;
 	padding-left: 6px;
 }
@@ -273,12 +273,12 @@ tooltip {
 /*-----Indicators----*/
 #custom-hypridle.notactive,
 #idle_inhibitor.activated {
-	color: #39FF14;
+    color: #39FF14;
     border-bottom: 8px solid rgba(0, 0, 0, 0.2);
 }
 
 #clock {
-	color: @sapphire;
+    color: @sapphire;
     border-radius: 15px;
 }
 
