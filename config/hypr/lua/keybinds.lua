@@ -34,6 +34,9 @@ local function exec_now(cmd)
 end
 
 local function workspace_dispatch(value)
+  if dsp and dsp.focus then
+    return function() hl.dispatch(dsp.focus({ workspace = value })) end
+  end
   return raw_dispatch_cmd("workspace " .. tostring(value))
 end
 
@@ -120,9 +123,15 @@ local function dispatch(name, args)
     return workspace_dispatch(workspace_value(args))
   end
   if name == "movetoworkspace" then
+    if window_api.move then
+      return function() hl.dispatch(window_api.move({ workspace = workspace_value(args) })) end
+    end
     return raw_dispatch_cmd("movetoworkspace " .. args)
   end
   if name == "movetoworkspacesilent" then
+    if window_api.move then
+      return function() hl.dispatch(window_api.move({ workspace = workspace_value(args), follow = false })) end
+    end
     return raw_dispatch_cmd("movetoworkspacesilent " .. args)
   end
   if name == "resizeactive" then

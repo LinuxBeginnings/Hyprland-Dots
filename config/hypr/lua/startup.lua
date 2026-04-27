@@ -10,26 +10,16 @@ local function shell_quote(value)
   return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
 end
 local function exec_once(cmd)
-  if hl.exec_once then
-    hl.exec_once(cmd)
-    return
-  end
 
   local key = cmd:gsub("[^%w_.-]", "_"):sub(1, 80)
   local marker = "/tmp/hypr-lua-exec-once-" .. session .. "-" .. key
-  local wrapped = "sh -c " .. shell_quote("[ -e " .. shell_quote(marker) .. " ] || { touch " .. shell_quote(marker) .. " && exec " .. cmd .. "; }")
-
-  if hl.dsp and hl.dsp.exec_cmd and hl.dispatch then
-    hl.dispatch(hl.dsp.exec_cmd(wrapped))
-  elseif hl.dispatch and hl.exec_cmd then
-    hl.dispatch(hl.exec_cmd(wrapped))
-  elseif hl.exec_cmd then
-    hl.exec_cmd(wrapped)
-  end
+  local log = "/tmp/hypr-lua-startup-" .. key .. ".log"
+  local script = "[ -e " .. shell_quote(marker) .. " ] || { touch " .. shell_quote(marker) .. " && ( " .. cmd .. " ) >>" .. shell_quote(log) .. " 2>&1 & }"
+  os.execute("sh -lc " .. shell_quote(script))
 end
 
 exec_once("$HOME/.config/hypr/initial-boot.sh")
-exec_once(scriptsDir .. "/WallpaperDaemon.sh")
+exec_once("sh -c \"sleep 2; " .. scriptsDir .. "/WallpaperDaemon.sh\"")
 exec_once("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
 exec_once("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
 exec_once("$HOME/.config/hypr/scripts/Dropterminal.sh \"kitty --class kitty-dropterm\"")
@@ -38,7 +28,7 @@ exec_once("nm-applet --indicator")
 exec_once("nm-tray")
 exec_once("swaync")
 exec_once(scriptsDir .. "/PortalHyprlandUbuntu.sh")
-exec_once("sh -c \"sleep 2; pgrep -x waybar >/dev/null || exec waybar\"")
+exec_once("sh -c \"sleep 5; pgrep -x waybar >/dev/null || waybar\"")
 exec_once("qs -c overview")
 exec_once("hypridle")
 exec_once(scriptsDir .. "/Hyprsunset.sh init")
