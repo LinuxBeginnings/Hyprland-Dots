@@ -14,6 +14,15 @@ local function exec_cmd(cmd)
   return function() hl.exec_cmd(cmd) end
 end
 
+local function shell_quote(value)
+  return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+end
+
+local function raw_dispatch_cmd(command)
+  local expression = "hl.dsp.exec_raw(" .. string.format("%q", tostring(command)) .. ")"
+  return exec_cmd("hyprctl dispatch " .. shell_quote(expression))
+end
+
 local function exec_now(cmd)
   if dsp and dsp.exec_cmd and hl.dispatch then
     hl.dispatch(dsp.exec_cmd(cmd))
@@ -25,13 +34,7 @@ local function exec_now(cmd)
 end
 
 local function workspace_dispatch(value)
-  if dsp and dsp.focus then
-    return dsp.focus({ workspace = value })
-  end
-  if hl.workspace then
-    return hl.workspace(value)
-  end
-  return exec_cmd("hyprctl dispatch workspace " .. tostring(value))
+  return raw_dispatch_cmd("workspace " .. tostring(value))
 end
 
 local known_dispatchers = {
@@ -95,7 +98,7 @@ local function dispatch(name, args)
     if args == "resizewindow" and window_api.resize then
       return window_api.resize()
     end
-    return exec_cmd("hyprctl dispatch " .. args)
+    return raw_dispatch_cmd(args)
   end
 
   if name == "killactive" and window_api.close then
@@ -116,29 +119,26 @@ local function dispatch(name, args)
   if name == "workspace" then
     return workspace_dispatch(workspace_value(args))
   end
-  if name == "movetoworkspace" and window_api.move then
-    return window_api.move({ workspace = workspace_value(args) })
+  if name == "movetoworkspace" then
+    return raw_dispatch_cmd("movetoworkspace " .. args)
   end
-  if name == "movetoworkspacesilent" and window_api.move then
-    return window_api.move({ workspace = workspace_value(args), follow = false })
+  if name == "movetoworkspacesilent" then
+    return raw_dispatch_cmd("movetoworkspacesilent " .. args)
   end
-  if name == "resizeactive" and window_api.resize then
-    local x, y = args:match("^([%-%+]?%d+)%s+([%-%+]?%d+)$")
-    if x and y then
-      return window_api.resize({ x = tonumber(x), y = tonumber(y), relative = true })
-    end
+  if name == "resizeactive" then
+    return raw_dispatch_cmd("resizeactive " .. args)
   end
-  if name == "movecurrentworkspacetomonitor" and workspace_api.move then
-    return workspace_api.move({ monitor = direction(args) })
+  if name == "movecurrentworkspacetomonitor" then
+    return raw_dispatch_cmd("movecurrentworkspacetomonitor " .. args)
   end
-  if name == "movefocus" and dsp and dsp.focus then
-    return dsp.focus({ direction = direction(args) })
+  if name == "movefocus" then
+    return raw_dispatch_cmd("movefocus " .. args)
   end
-  if name == "movewindow" and window_api.move then
-    return window_api.move({ direction = direction(args) })
+  if name == "movewindow" then
+    return raw_dispatch_cmd("movewindow " .. args)
   end
-  if name == "swapwindow" and window_api.swap then
-    return window_api.swap({ direction = direction(args) })
+  if name == "swapwindow" then
+    return raw_dispatch_cmd("swapwindow " .. args)
   end
   if name == "togglegroup" and group_api.toggle then
     return group_api.toggle()
@@ -169,9 +169,9 @@ local function dispatch(name, args)
   end
 
   if args ~= "" then
-    return exec_cmd("hyprctl dispatch " .. name .. " " .. args)
+    return raw_dispatch_cmd(name .. " " .. args)
   end
-  return exec_cmd("hyprctl dispatch " .. name)
+  return raw_dispatch_cmd(name)
 end
 
 local function chord(mods, key)
@@ -302,7 +302,7 @@ bind("SUPER CTRL", "F9", dispatch("movecurrentworkspacetomonitor", "l"))
 bind("SUPER CTRL", "F10", dispatch("movecurrentworkspacetomonitor", "r"))
 bind("SUPER CTRL", "F11", dispatch("movecurrentworkspacetomonitor", "u"))
 bind("SUPER CTRL", "F12", dispatch("movecurrentworkspacetomonitor", "d"))
-bind("CTRL ALT", "Delete", exec_cmd("hyprctl dispatch exit 0"))
+bind("CTRL ALT", "Delete", raw_dispatch_cmd("exit 0"))
 bind("SUPER", "Q", dispatch("killactive", ""))
 bind("SUPER SHIFT", "Q", exec_cmd("$HOME/.config/hypr/scripts/KillActiveProcess.sh"))
 bind("CTRL ALT", "L", exec_cmd("$HOME/.config/hypr/scripts/LockScreen.sh"))
@@ -316,7 +316,7 @@ bind("SUPER", "k", dispatch("layoutmsg", "cycleprev"))
 bind("SUPER CTRL", "Return", dispatch("layoutmsg", "swapwithmaster"))
 bind("SUPER SHIFT", "I", dispatch("layoutmsg", "togglesplit"))
 bind("SUPER", "P", dispatch("pseudo", ""))
-bind("SUPER", "M", exec_cmd("hyprctl dispatch splitratio 0.3"))
+bind("SUPER", "M", raw_dispatch_cmd("splitratio 0.3"))
 bind("SUPER ALT", "1", exec_cmd("$HOME/.config/hypr/scripts/ChangeLayout.sh dwindle"))
 bind("SUPER ALT", "2", exec_cmd("$HOME/.config/hypr/scripts/ChangeLayout.sh master"))
 bind("SUPER ALT", "3", exec_cmd("$HOME/.config/hypr/scripts/ChangeLayout.sh scrolling"))

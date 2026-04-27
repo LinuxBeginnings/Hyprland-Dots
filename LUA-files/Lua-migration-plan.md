@@ -126,6 +126,31 @@ Phase 4:
 Phase 5:
 - remove or archive `hyprland.conf` once parity is confirmed
 
+## Phase 2 status update
+Completed fixes from the current Lua migration test cycle:
+- User-local overrides are now part of the migration path. When present, `~/.config/hypr/UserConfigs/WindowRules.conf` and `~/.config/hypr/UserConfigs/UserKeybinds.conf` are converted into `~/.config/hypr/lua/user_overrides.lua`.
+- `SUPER+F` user override now maps legacy `fullscreen, 1` to maximized fullscreen through `config/hypr/scripts/LuaFullscreenMaximized.sh`. This avoids the current Lua window fullscreen helper no-op for maximized mode.
+- Duplicate single-letter key variants were removed from the keybind conversion path. This prevents one physical `SUPER+F` press from firing both `F` and `f` bindings and immediately toggling maximized fullscreen back off.
+- `SUPER+SHIFT+F` remains the default normal fullscreen binding, while `SUPER+F` is the user maximized fullscreen override.
+- Waybar workspace scrolling was converted to Lua-compatible Hyprland dispatch commands using `hyprctl dispatch 'hl.dsp.focus({ workspace = "e+1" })'` and `e-1`.
+- Waybar workspace clicks remain blocked by Waybar's built-in `hyprland/workspaces` click dispatcher, which still sends legacy `dispatch workspace <id>` calls. Fixing clicks requires either a Waybar patch/rebuild or replacing the module with custom click handlers.
+- Waybar startup now uses a delayed guarded exec-once command: `sh -c "sleep 2; pgrep -x waybar >/dev/null || exec waybar"`. This avoids the reboot/login race where the exec-once marker was created but Waybar exited before staying resident.
+- `Virtual-1` monitor mode was verified to accept `1920x1080@60.00Hz`; a reboot resolved the mode application issue after `hl.monitor(...)` eval/reload did not live-apply the change.
+
+Validation notes:
+- `hyprctl configerrors` is clean after the latest startup changes.
+- `hyprctl reload` successfully loads the updated Lua startup file.
+- Waybar starts after reload with the delayed guarded command.
+- `SUPER+F` was verified to set the active window to maximized fullscreen state (`fullscreen=1`) after removing duplicate `F`/`f` binds.
+
+Suggested next steps:
+- Reboot once more and confirm Waybar starts without manual intervention, since the fix targets login timing.
+- Run the migration script from a clean pre-Lua backup and verify that `user_overrides.lua` is generated correctly for both `WindowRules.conf` and `UserKeybinds.conf`.
+- Add a small regression check for duplicate letter key variants so future conversion work does not reintroduce double-firing binds.
+- Decide whether Waybar workspace click support should be handled by patching Waybar or by replacing the built-in workspace module with custom scripts.
+- Continue converting and validating remaining user config files, especially `Startup_Apps.conf`, `Laptops.conf`, `LaptopDisplay.conf`, and any workspace/laptop-specific overrides.
+- Track Lua API gaps separately from repo conversion bugs, especially monitor live-apply behavior, mouse resize bindings, and any helpers that require shell fallbacks.
+
 ## Is a migration tool worth it?
 Recommendation: a full automatic converter is likely not worth the effort right now.
 Rationale:
