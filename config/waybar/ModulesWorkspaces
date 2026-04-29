@@ -207,6 +207,7 @@
 
 		"class<[Tt]elegram-desktop|org.telegram.desktop|io.github.tdesktop_x64.TDesktop>": " ",
 		"class<discord|discord-canary|[Ww]ebcord|[Vv]esktop|com.discordapp.Discord|dev.vencord.Vesktop>": " ",
+		"class<app.fluxer.Fluxer>": "󰭹 ",
 		"class<[Ss]ignal|signal-desktop|org.signal.Signal>": "󰍩 ",
 		"title<.*Signal.*>": "󰍩 ",
 		"title<.*whatsapp.*>": " ",
