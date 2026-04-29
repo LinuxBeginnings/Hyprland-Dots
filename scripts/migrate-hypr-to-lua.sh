@@ -335,8 +335,10 @@ def parse_keybinds(path):
             binder = bind.group(1)
             parts = [expand(part.strip()) for part in bind.group(2).split(",")]
             has_description = "d" in binder and binder != "bind"
+            description = ""
             if has_description and len(parts) >= 4:
                 mods, key = parts[0], parts[1]
+                description = parts[2]
                 dispatcher = parts[3]
                 args = ", ".join(part for part in parts[4:] if part)
             elif len(parts) >= 3:
@@ -347,6 +349,8 @@ def parse_keybinds(path):
                 continue
 
             opts = []
+            if description:
+                opts.append(f"description = {lua_string(description)}")
             if "l" in binder:
                 opts.append("locked = true")
             if "e" in binder or "r" in binder:
