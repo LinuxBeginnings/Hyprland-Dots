@@ -410,6 +410,13 @@ local app_binds = {
 for _, app in ipairs(app_binds) do
   bind(app[1], app[2], exec_cmd(app[3]), { description = app[4] })
 end
+--
+--
+-- These are examples of how to bind to a TUI/CLI apps
+-- The specific keybinds are just examples
+-- Do not user as-is as it will break exisitng keybinds
+--
+--
 -- TUI Apps Configuration (commented options from LUA-files/hyprland-key-bindings-example.lua).
 -- local terminal = "uwsm-app -- " .. (os.getenv("TERMINAL") or "")
 -- local browser = "omarchy-launch-browser"
@@ -433,6 +440,13 @@ end
 --   hl.bind(app[1], hl.dsp.exec_cmd(terminal .. " --title=" .. app[2] .. " " .. app[3]), { description = app[4] })
 -- end
 
+--
+--
+-- These are examples of how to bind webpages
+-- The specific keybinds are just examples
+-- Do not user as-is as it will break exisitng keybinds
+--
+--
 -- Web Apps Configuration (commented options from LUA-files/hyprland-key-bindings-example.lua).
 -- local web_apps = {
 --   { "SUPER + A", "https://gemini.google.com", "Gemini AI" },
