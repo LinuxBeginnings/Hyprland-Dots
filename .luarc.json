@@ -1,0 +1,6 @@
+{
+  "diagnostics.globals": [
+    "hl"
+  ],
+  "workspace.checkThirdParty": false
+}
