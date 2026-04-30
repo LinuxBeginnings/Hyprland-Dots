@@ -1,3 +1,10 @@
+-- ==================================================
+--  KoolDots (2026)
+--  Project URL: https://github.com/LinuxBeginnings
+--  License: GNU GPLv3
+--  SPDX-License-Identifier: GPL-3.0-or-later
+-- ==================================================
+
 -- Loads split user-editable Lua override files from ~/.config/hypr/UserConfigs.
 -- Files are loaded in this order so behavior is predictable.
 local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")

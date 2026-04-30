@@ -1,3 +1,10 @@
+-- ==================================================
+--  KoolDots (2026)
+--  Project URL: https://github.com/LinuxBeginnings
+--  License: GNU GPLv3
+--  SPDX-License-Identifier: GPL-3.0-or-later
+-- ==================================================
+
 -- Hyprland Lua entry (migration scaffold)
 -- Keep this under LUA-files/ until upstream Lua config stabilizes.
 -- Mirrors config/hypr/hyprland.conf include order.

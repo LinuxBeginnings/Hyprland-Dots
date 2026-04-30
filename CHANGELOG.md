@@ -9,6 +9,9 @@
   - Allows a revert option to restore hyprlang config files
 - Making `Kool_Quick_Settings.sh` script LUA/HYPRLANG aware
 - Broke out the `hypr/configs` and `hypr/UserConfig` LUA files
+- Added project header to all .LUA files 
+- Migration script will add that to the converted .conf files as well 
+- Updted keybinds parser to support LUA 
 
 ## v2.3.23
 

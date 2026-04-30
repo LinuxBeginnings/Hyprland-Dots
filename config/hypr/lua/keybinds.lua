@@ -1,3 +1,10 @@
+-- ==================================================
+--  KoolDots (2026)
+--  Project URL: https://github.com/LinuxBeginnings
+--  License: GNU GPLv3
+--  SPDX-License-Identifier: GPL-3.0-or-later
+-- ==================================================
+
 -- Auto-generated from Keybinds.conf/UserKeybinds.conf for Lua testing
 local function trim(value)
   return (value or ""):gsub("^%s+", ""):gsub("%s+$", "")

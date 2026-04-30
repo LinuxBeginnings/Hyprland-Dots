@@ -1,3 +1,10 @@
+-- ==================================================
+--  KoolDots (2026)
+--  Project URL: https://github.com/LinuxBeginnings
+--  License: GNU GPLv3
+--  SPDX-License-Identifier: GPL-3.0-or-later
+-- ==================================================
+
 -- Updated Lua migration entry (reference copy).
 -- Working config lives in ~/.config/hypr/hyprland.lua with modules under ~/.config/hypr/lua/.
 -- This file mirrors that module load order.

@@ -1,3 +1,10 @@
+-- ==================================================
+--  KoolDots (2026)
+--  Project URL: https://github.com/LinuxBeginnings
+--  License: GNU GPLv3
+--  SPDX-License-Identifier: GPL-3.0-or-later
+-- ==================================================
+
 -- KoolDots Hyprland Lua config entrypoint.
 -- Mirrors hyprland.conf include order for features currently supported by Lua config.
 local configHome = os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")

@@ -1,3 +1,10 @@
+-- ==================================================
+--  KoolDots (2026)
+--  Project URL: https://github.com/LinuxBeginnings
+--  License: GNU GPLv3
+--  SPDX-License-Identifier: GPL-3.0-or-later
+-- ==================================================
+
 -- Auto-generated from config/hypr/configs/WindowRules.conf for Lua testing.
 -- Edit the source WindowRules.conf and regenerate this file when vendor rules change.
 

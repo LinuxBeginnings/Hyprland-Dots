@@ -1,3 +1,10 @@
+-- ==================================================
+--  KoolDots (2026)
+--  Project URL: https://github.com/LinuxBeginnings
+--  License: GNU GPLv3
+--  SPDX-License-Identifier: GPL-3.0-or-later
+-- ==================================================
+
 -- Converted from config/hypr/UserConfigs/UserDecorations.conf.
 -- NOTE: wallust-hyprland.conf is hyprlang-sourced in the original config.
 -- Lua parity for importing that file is still evolving; using static color fallbacks here.
