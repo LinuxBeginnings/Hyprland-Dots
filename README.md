@@ -29,7 +29,7 @@
 
 <h3 align="center">
   <img src="https://github.com/LinuxBeginnings/Telegram-Animated-Emojis/blob/main/Activity/Sparkles.webp" alt="Sparkles" width="38" height="38" />
-  KooL's Hyprland Dotfiles Showcase
+  KoolDots --  Hyprland Dotfiles Showcase
   <img src="https://github.com/LinuxBeginnings/Telegram-Animated-Emojis/blob/main/Activity/Sparkles.webp" alt="Sparkles" width="38" height="38" />
 </h3>
 
@@ -99,6 +99,7 @@ Automated Hyprland Scripts for Distro of choice which will pull this dotfiles if
   > If you already have a hyprland configuration, uninstall it first, or create a new user, and install it with that user
 
 > To download from main branch
+
 - Clone this repo by using `git`.
 - Change directory, i.e. `cd Arch-Hyprland`
 - Make `install.sh` executable `chmod +x ./install.sh`
@@ -162,7 +163,9 @@ chmod +x copy.sh
 > Thanks to all who have contributed code, or support on the Discord server. Your efforts are greatly appreciated
 
 ### 🔮 Discord Server
+
 - Want to contribute? Click [`HERE`](https://github.com/LinuxBeginnings/Hyprland-Dots/blob/main/CONTRIBUTING.md) for a guide how to contribute
+
   > Thanks to all who have contributed code, or support on the Discord server. You efforts are greatly appreciated
 
 - kindly join my [Discord](https://discord.gg/RZJgC7KAKm)
