@@ -8,6 +8,7 @@
   - Backs them up in local directories
   - Allows a revert option to restore hyprlang config files
 - Making `Kool_Quick_Settings.sh` script LUA/HYPRLANG aware
+- Broke out the `hypr/configs` and `hypr/UserConfig` LUA files
 
 ## v2.3.23
 

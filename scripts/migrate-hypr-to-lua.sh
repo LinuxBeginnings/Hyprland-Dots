@@ -23,7 +23,18 @@ USER_CONFIGS_DIR="$DEST_HYPR_DIR/UserConfigs"
 CONFIGS_DIR="$DEST_HYPR_DIR/configs"
 USER_WINDOW_RULES="$USER_CONFIGS_DIR/WindowRules.conf"
 USER_KEYBINDS="$USER_CONFIGS_DIR/UserKeybinds.conf"
-USER_OVERRIDES_OUT="$USER_CONFIGS_DIR/user_overrides.lua"
+USER_ENV_VARS="$USER_CONFIGS_DIR/ENVariables.conf"
+USER_STARTUP_APPS="$USER_CONFIGS_DIR/Startup_Apps.conf"
+USER_SETTINGS="$USER_CONFIGS_DIR/UserSettings.conf"
+USER_DECORATIONS="$USER_CONFIGS_DIR/UserDecorations.conf"
+USER_ANIMATIONS="$USER_CONFIGS_DIR/UserAnimations.conf"
+USER_LAPTOPS="$USER_CONFIGS_DIR/Laptops.conf"
+SYSTEM_WINDOW_RULES="$CONFIGS_DIR/WindowRules.conf"
+SYSTEM_KEYBINDS="$CONFIGS_DIR/Keybinds.conf"
+SYSTEM_ENV_VARS="$CONFIGS_DIR/ENVariables.conf"
+SYSTEM_STARTUP_APPS="$CONFIGS_DIR/Startup_Apps.conf"
+SYSTEM_SETTINGS="$CONFIGS_DIR/SystemSettings.conf"
+SYSTEM_LAPTOPS="$CONFIGS_DIR/Laptops.conf"
 USER_CONFIGS_BACKUP_DIR="$USER_CONFIGS_DIR/backup-$MIGRATION_TS"
 CONFIGS_BACKUP_DIR="$CONFIGS_DIR/backup-$MIGRATION_TS"
 USER_OVERRIDES_SHIM="$DEST_HYPR_DIR/lua/user_overrides.lua"
@@ -148,11 +159,21 @@ if [ "$DRY_RUN" -eq 1 ]; then
     fi
     echo "[DRY-RUN] Would copy: $SRC_HYPR_DIR/hyprland.lua -> $DEST_HYPR_DIR/hyprland.lua"
     echo "[DRY-RUN] Would replace Lua module directory: $DEST_HYPR_DIR/lua"
-    if [ -f "$USER_WINDOW_RULES" ] || [ -f "$USER_KEYBINDS" ]; then
-      echo "[DRY-RUN] Would convert found UserConfigs into: $USER_OVERRIDES_OUT"
-      [ -f "$USER_WINDOW_RULES" ] && echo "[DRY-RUN]   - $USER_WINDOW_RULES"
-      [ -f "$USER_KEYBINDS" ] && echo "[DRY-RUN]   - $USER_KEYBINDS"
-    fi
+    echo "[DRY-RUN] Would generate split UserConfigs Lua overlays:"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/system_env.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/system_startup.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/system_window_rules.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/system_keybinds.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/system_settings.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/system_laptops.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_env.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_startup.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_window_rules.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_keybinds.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_settings.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_decorations.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_animations.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_laptops.lua"
     if [ -d "$USER_CONFIGS_DIR" ]; then
       echo "[DRY-RUN] Would move UserConfigs/*.conf into: $USER_CONFIGS_BACKUP_DIR"
     fi
@@ -185,15 +206,58 @@ cp -f "$SRC_HYPR_DIR/hyprland.lua" "$DEST_HYPR_DIR/hyprland.lua"
 rm -rf "$DEST_HYPR_DIR/lua"
 cp -a "$SRC_HYPR_DIR/lua" "$DEST_HYPR_DIR/lua"
 mkdir -p "$USER_CONFIGS_DIR" "$CONFIGS_DIR"
-if [ -f "$USER_WINDOW_RULES" ] || [ -f "$USER_KEYBINDS" ]; then
-  python3 - "$USER_OVERRIDES_OUT" "$USER_WINDOW_RULES" "$USER_KEYBINDS" <<'PY'
+python3 - \
+  "$USER_CONFIGS_DIR" \
+  "$SYSTEM_WINDOW_RULES" \
+  "$SYSTEM_KEYBINDS" \
+  "$SYSTEM_ENV_VARS" \
+  "$SYSTEM_STARTUP_APPS" \
+  "$SYSTEM_SETTINGS" \
+  "$SYSTEM_LAPTOPS" \
+  "$USER_WINDOW_RULES" \
+  "$USER_KEYBINDS" \
+  "$USER_ENV_VARS" \
+  "$USER_STARTUP_APPS" \
+  "$USER_SETTINGS" \
+  "$USER_DECORATIONS" \
+  "$USER_ANIMATIONS" \
+  "$USER_LAPTOPS" <<'PY'
 import re
 import sys
 from pathlib import Path
 
-out_path = Path(sys.argv[1])
-window_rules_path = Path(sys.argv[2])
-keybinds_path = Path(sys.argv[3])
+user_configs_dir = Path(sys.argv[1])
+system_window_rules_path = Path(sys.argv[2])
+system_keybinds_path = Path(sys.argv[3])
+system_env_path = Path(sys.argv[4])
+system_startup_path = Path(sys.argv[5])
+system_settings_path = Path(sys.argv[6])
+system_laptops_path = Path(sys.argv[7])
+window_rules_path = Path(sys.argv[8])
+keybinds_path = Path(sys.argv[9])
+env_path = Path(sys.argv[10])
+startup_path = Path(sys.argv[11])
+settings_path = Path(sys.argv[12])
+decorations_path = Path(sys.argv[13])
+animations_path = Path(sys.argv[14])
+laptops_path = Path(sys.argv[15])
+
+files_out = {
+    "system_env": user_configs_dir / "system_env.lua",
+    "system_startup": user_configs_dir / "system_startup.lua",
+    "system_window_rules": user_configs_dir / "system_window_rules.lua",
+    "system_keybinds": user_configs_dir / "system_keybinds.lua",
+    "system_settings": user_configs_dir / "system_settings.lua",
+    "system_laptops": user_configs_dir / "system_laptops.lua",
+    "env": user_configs_dir / "user_env.lua",
+    "startup": user_configs_dir / "user_startup.lua",
+    "window_rules": user_configs_dir / "user_window_rules.lua",
+    "keybinds": user_configs_dir / "user_keybinds.lua",
+    "settings": user_configs_dir / "user_settings.lua",
+    "decorations": user_configs_dir / "user_decorations.lua",
+    "animations": user_configs_dir / "user_animations.lua",
+    "laptops": user_configs_dir / "user_laptops.lua",
+}
 
 def strip_comment(line):
     return line.split("#", 1)[0].strip()
@@ -203,6 +267,46 @@ def split_items(value):
 
 def lua_string(value):
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+def write_file(path, lines):
+    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    print(f"[OK] Wrote {path}")
+
+def source_examples(path):
+    if not path.exists():
+        return []
+    lines = []
+    for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        lines.append(f"-- {stripped}")
+    return lines
+
+def parse_env(path):
+    entries = []
+    if not path.exists():
+        return entries
+    for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = strip_comment(raw)
+        if not line:
+            continue
+        match = re.match(r"^env\s*=\s*([^,]+)\s*,\s*(.+)$", line)
+        if match:
+            entries.append((match.group(1).strip(), match.group(2).strip()))
+    return entries
+
+def parse_startup(path):
+    entries = []
+    if not path.exists():
+        return entries
+    for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = strip_comment(raw)
+        if not line:
+            continue
+        match = re.match(r"^exec(?:-once)?\s*=\s*(.+)$", line)
+        if match:
+            entries.append(match.group(1).strip())
+    return entries
 
 def scalar(value, *, bool_words=True):
     value = value.strip()
@@ -303,7 +407,7 @@ def parse_block(lines, start_index):
         i += 1
     return rule_type, rule, i
 
-def parse_rules(path):
+def parse_rules(path, prefix):
     if not path.exists():
         return []
 
@@ -323,10 +427,10 @@ def parse_rules(path):
             if rule.get("match"):
                 if "name" not in rule:
                     if rule_type == "window":
-                        rule["name"] = lua_string(f"user-windowrule-{rule_index:03d}")
+                        rule["name"] = lua_string(f"{prefix}-windowrule-{rule_index:03d}")
                         rule_index += 1
                     else:
-                        rule["name"] = lua_string(f"user-layerrule-{layer_index:03d}")
+                        rule["name"] = lua_string(f"{prefix}-layerrule-{layer_index:03d}")
                         layer_index += 1
                 parsed.append((rule_type, rule))
             i += 1
@@ -340,10 +444,10 @@ def parse_rules(path):
                 parse_rule_item(item, rule)
             if rule.get("match"):
                 if rule_type == "window":
-                    rule["name"] = lua_string(f"user-windowrule-{rule_index:03d}")
+                    rule["name"] = lua_string(f"{prefix}-windowrule-{rule_index:03d}")
                     rule_index += 1
                 else:
-                    rule["name"] = lua_string(f"user-layerrule-{layer_index:03d}")
+                    rule["name"] = lua_string(f"{prefix}-layerrule-{layer_index:03d}")
                     layer_index += 1
                 parsed.append((rule_type, rule))
         i += 1
@@ -434,31 +538,102 @@ def parse_keybinds(path):
 
     return converted
 
-rules = parse_rules(window_rules_path)
+system_rules = parse_rules(system_window_rules_path, "system")
+rules = parse_rules(window_rules_path, "user")
+system_keybinds = parse_keybinds(system_keybinds_path)
 keybinds = parse_keybinds(keybinds_path)
+system_env_entries = parse_env(system_env_path)
+env_entries = parse_env(env_path)
+system_startup_entries = parse_startup(system_startup_path)
+startup_entries = parse_startup(startup_path)
 
-content = [
-    "-- Auto-generated by scripts/migrate-hypr-to-lua.sh from UserConfigs.",
-    "-- Edit the source files under UserConfigs and re-run the migration helper to regenerate.",
+system_env_lines = [
+    "-- System defaults migrated from configs/ENVariables.conf (auto-generated).",
+    "-- Edit this file to keep your previous configs/ ENVariables customizations in Lua mode.",
+    "-- Example:",
+    "-- hl.env(\"QT_QPA_PLATFORMTHEME\", \"qt6ct\")",
+    "",
+]
+if system_env_entries:
+    system_env_lines.append("-- Converted from configs/ENVariables.conf")
+    for key, value in system_env_entries:
+        system_env_lines.append(f"hl.env({lua_string(key)}, {lua_string(value)})")
+else:
+    system_env_lines.append("-- No active env entries were found in configs/ENVariables.conf.")
+write_file(files_out["system_env"], system_env_lines)
+
+system_startup_lines = [
+    "-- System defaults migrated from configs/Startup_Apps.conf (auto-generated).",
+    "-- Add commands with exec_once(\"your command\")",
+    "-- Example:",
+    "-- exec_once(\"swaync\")",
+    "",
+    "local function shell_quote(value)",
+    "  return \"'\" .. tostring(value):gsub(\"'\", \"'\\\\''\") .. \"'\"",
+    "end",
+    "",
+    "local function exec_once(cmd)",
+    "  local session = os.getenv(\"HYPRLAND_INSTANCE_SIGNATURE\") or \"default\"",
+    "  local key = cmd:gsub(\"[^%w_.-]\", \"_\"):sub(1, 80)",
+    "  local marker = \"/tmp/hypr-lua-system-exec-once-\" .. session .. \"-\" .. key",
+    "  local script = \"[ -e \" .. shell_quote(marker) .. \" ] || { touch \" .. shell_quote(marker) .. \" && sh -lc \" .. shell_quote(cmd) .. \" >/dev/null 2>&1 & }\"",
+    "  os.execute(\"sh -lc \" .. shell_quote(script))",
+    "end",
+    "",
+]
+if system_startup_entries:
+    system_startup_lines.append("-- Converted from configs/Startup_Apps.conf")
+    for cmd in system_startup_entries:
+        system_startup_lines.append(f"exec_once({lua_string(cmd)})")
+else:
+    system_startup_lines.append("-- No active startup entries were found in configs/Startup_Apps.conf.")
+write_file(files_out["system_startup"], system_startup_lines)
+
+system_window_lines = [
+    "-- System defaults migrated from configs/WindowRules.conf (auto-generated).",
+    "-- Add additional rules with apply_window_rule({...}) / apply_layer_rule({...}).",
+    "-- Example:",
+    "-- apply_window_rule({",
+    "--   name = \"My System Rule\",",
+    "--   match = { class = \"^pavucontrol$\" },",
+    "--   float = true,",
+    "-- })",
+    "",
+    "local function apply_window_rule(rule)",
+    "  if hl.window_rule then",
+    "    hl.window_rule(rule)",
+    "  end",
+    "end",
+    "",
+    "local function apply_layer_rule(rule)",
+    "  if hl.layer_rule then",
+    "    hl.layer_rule(rule)",
+    "  end",
+    "end",
+    "",
+]
+if system_rules:
+    system_window_lines.append("-- Converted from configs/WindowRules.conf")
+    for rule_type, rule in system_rules:
+        system_window_lines.append(emit_rule(rule_type, rule))
+        system_window_lines.append("")
+else:
+    system_window_lines.append("-- No active window/layer rules were found in configs/WindowRules.conf.")
+write_file(files_out["system_window_rules"], system_window_lines)
+
+system_keybind_lines = [
+    "-- System defaults migrated from configs/Keybinds.conf (auto-generated).",
+    "-- Add keybinds with bind(\"MODS\", \"KEY\", fn, opts).",
+    "-- Example:",
+    "-- bind(\"SUPER\", \"Z\", exec_cmd(\"thunar\"), { description = \"Open file manager\" })",
     "",
     "local dsp = hl.dsp or hl",
-    "local window_api = (dsp and dsp.window) or hl.window or {}",
     "",
     "local function exec_cmd(cmd)",
     "  if dsp and dsp.exec_cmd then",
     "    return dsp.exec_cmd(cmd)",
     "  end",
     "  return function() hl.exec_cmd(cmd) end",
-    "end",
-    "",
-    "local function exec_now(cmd)",
-    "  if dsp and dsp.exec_cmd and hl.dispatch then",
-    "    hl.dispatch(dsp.exec_cmd(cmd))",
-    "  elseif hl.dispatch and hl.exec_cmd then",
-    "    hl.dispatch(hl.exec_cmd(cmd))",
-    "  elseif hl.exec_cmd then",
-    "    hl.exec_cmd(cmd)",
-    "  end",
     "end",
     "",
     "local function trim(value)",
@@ -485,6 +660,7 @@ content = [
     "end",
     "",
     "local function dispatch(name, args)",
+    "  local window_api = (dsp and dsp.window) or hl.window or {}",
     "  name = trim(name)",
     "  args = trim(args)",
     "  if name == \"exec\" then",
@@ -498,12 +674,6 @@ content = [
     "  end",
     "  if name == \"movetoworkspacesilent\" and window_api.move then",
     "    return function() hl.dispatch(window_api.move({ workspace = workspace_value(args), follow = false })) end",
-    "  end",
-    "  if name == \"fullscreen\" and window_api.fullscreen then",
-    "    if args == \"1\" then",
-    "      return exec_cmd((os.getenv(\"HOME\") or \"\") .. \"/.config/hypr/scripts/LuaFullscreenMaximized.sh\")",
-    "    end",
-    "    return window_api.fullscreen({ mode = \"fullscreen\" })",
     "  end",
     "  if name == \"togglefloating\" and window_api.float then",
     "    return function() hl.dispatch(window_api.float({ action = \"toggle\" })) end",
@@ -545,6 +715,98 @@ content = [
     "  end",
     "end",
     "",
+]
+if system_keybinds:
+    system_keybind_lines.append("-- Converted from configs/Keybinds.conf")
+    system_keybind_lines.extend(system_keybinds)
+else:
+    system_keybind_lines.append("-- No active keybind entries were found in configs/Keybinds.conf.")
+write_file(files_out["system_keybinds"], system_keybind_lines)
+
+for name, source in [
+    ("system_settings", system_settings_path),
+    ("system_laptops", system_laptops_path),
+]:
+    title = f"-- {name.replace('_', ' ').title()} (auto-generated)."
+    lines = [
+        title,
+        "-- This file keeps migrated settings split from user overrides.",
+        "-- Add only Lua entries here.",
+        "-- Example:",
+        "-- hl.config({ general = { gaps_in = 4, gaps_out = 8 } })",
+        "",
+    ]
+    reference = source_examples(source)
+    if reference:
+        lines.extend([
+            f"-- Source reference from {source.name} (hyprlang):",
+            *reference,
+        ])
+    else:
+        lines.append(f"-- No active entries were found in {source.name}.")
+    write_file(files_out[name], lines)
+
+env_lines = [
+    "-- User ENV overrides (auto-generated).",
+    "-- Add values using: hl.env(\"KEY\", \"VALUE\")",
+    "-- Example:",
+    "-- hl.env(\"MOZ_ENABLE_WAYLAND\", \"1\")",
+    "",
+]
+if env_entries:
+    env_lines.append("-- Converted from ENVariables.conf")
+    for key, value in env_entries:
+        env_lines.append(f"hl.env({lua_string(key)}, {lua_string(value)})")
+else:
+    env_lines.extend([
+        "-- No active env entries were found in ENVariables.conf.",
+        "-- Uncomment and customize examples below:",
+        "-- hl.env(\"GDK_SCALE\", \"1\")",
+        "-- hl.env(\"QT_SCALE_FACTOR\", \"1\")",
+    ])
+write_file(files_out["env"], env_lines)
+
+startup_lines = [
+    "-- User startup overrides (auto-generated).",
+    "-- Add commands with exec_once(\"your command\")",
+    "-- Example:",
+    "-- exec_once(\"$HOME/.config/hypr/UserScripts/MyStartup.sh\")",
+    "",
+    "local function shell_quote(value)",
+    "  return \"'\" .. tostring(value):gsub(\"'\", \"'\\\\''\") .. \"'\"",
+    "end",
+    "",
+    "local function exec_once(cmd)",
+    "  local session = os.getenv(\"HYPRLAND_INSTANCE_SIGNATURE\") or \"default\"",
+    "  local key = cmd:gsub(\"[^%w_.-]\", \"_\"):sub(1, 80)",
+    "  local marker = \"/tmp/hypr-lua-user-exec-once-\" .. session .. \"-\" .. key",
+    "  local script = \"[ -e \" .. shell_quote(marker) .. \" ] || { touch \" .. shell_quote(marker) .. \" && sh -lc \" .. shell_quote(cmd) .. \" >/dev/null 2>&1 & }\"",
+    "  os.execute(\"sh -lc \" .. shell_quote(script))",
+    "end",
+    "",
+]
+if startup_entries:
+    startup_lines.append("-- Converted from Startup_Apps.conf")
+    for cmd in startup_entries:
+        startup_lines.append(f"exec_once({lua_string(cmd)})")
+else:
+    startup_lines.extend([
+        "-- No active startup entries were found in Startup_Apps.conf.",
+        "-- exec_once(\"nm-applet --indicator\")",
+    ])
+write_file(files_out["startup"], startup_lines)
+
+window_lines = [
+    "-- User window/layer rule overrides (auto-generated).",
+    "-- Add your own rules with apply_window_rule({...}) / apply_layer_rule({...})",
+    "-- Example:",
+    "-- apply_window_rule({",
+    "--   name = \"My Float Rule\",",
+    "--   match = { class = \"^pavucontrol$\" },",
+    "--   float = true,",
+    "--   center = true,",
+    "-- })",
+    "",
     "local function apply_window_rule(rule)",
     "  if hl.window_rule then",
     "    hl.window_rule(rule)",
@@ -558,31 +820,174 @@ content = [
     "end",
     "",
 ]
-
 if rules:
-    content.append("-- Converted from UserConfigs/WindowRules.conf")
+    window_lines.append("-- Converted from WindowRules.conf")
     for rule_type, rule in rules:
-        content.append(emit_rule(rule_type, rule))
-        content.append("")
+        window_lines.append(emit_rule(rule_type, rule))
+        window_lines.append("")
+else:
+    window_lines.append("-- No active window/layer rules were found in WindowRules.conf.")
+write_file(files_out["window_rules"], window_lines)
 
+keybind_lines = [
+    "-- User keybind overrides (auto-generated).",
+    "-- Add keybinds with bind(\"MODS\", \"KEY\", fn, opts).",
+    "-- Example:",
+    "-- bind(\"SUPER\", \"Z\", exec_cmd(\"ghostty\"), { description = \"Launch ghostty\" })",
+    "",
+    "local dsp = hl.dsp or hl",
+    "",
+    "local function exec_cmd(cmd)",
+    "  if dsp and dsp.exec_cmd then",
+    "    return dsp.exec_cmd(cmd)",
+    "  end",
+    "  return function() hl.exec_cmd(cmd) end",
+    "end",
+    "",
+    "local function trim(value)",
+    "  return (value or \"\"):gsub(\"^%s+\", \"\"):gsub(\"%s+$\", \"\")",
+    "end",
+    "",
+    "local function chord(mods, key)",
+    "  mods = trim(mods):gsub(\"%s+\", \" + \")",
+    "  key = trim(key)",
+    "  if mods == \"\" then",
+    "    return key",
+    "  end",
+    "  return mods .. \" + \" .. key",
+    "end",
+    "",
+    "local function key_variants(key)",
+    "  key = trim(key)",
+    "  return { key }",
+    "end",
+    "",
+    "local function workspace_value(value)",
+    "  value = trim(value)",
+    "  return tonumber(value) or value",
+    "end",
+    "",
+    "local function dispatch(name, args)",
+    "  local window_api = (dsp and dsp.window) or hl.window or {}",
+    "  name = trim(name)",
+    "  args = trim(args)",
+    "  if name == \"exec\" then",
+    "    return exec_cmd(args)",
+    "  end",
+    "  if name == \"workspace\" and dsp and dsp.focus then",
+    "    return function() hl.dispatch(dsp.focus({ workspace = workspace_value(args) })) end",
+    "  end",
+    "  if name == \"movetoworkspace\" and window_api.move then",
+    "    return function() hl.dispatch(window_api.move({ workspace = workspace_value(args) })) end",
+    "  end",
+    "  if name == \"movetoworkspacesilent\" and window_api.move then",
+    "    return function() hl.dispatch(window_api.move({ workspace = workspace_value(args), follow = false })) end",
+    "  end",
+    "  if name == \"togglefloating\" and window_api.float then",
+    "    return function() hl.dispatch(window_api.float({ action = \"toggle\" })) end",
+    "  end",
+    "  if args ~= \"\" then",
+    "    return exec_cmd(\"hyprctl dispatch \" .. name .. \" \" .. args)",
+    "  end",
+    "  return exec_cmd(\"hyprctl dispatch \" .. name)",
+    "end",
+    "",
+    "local function bind(mods, key, fn, opts)",
+    "  local seen = {}",
+    "  for _, key_variant in ipairs(key_variants(key)) do",
+    "    local key_chord = chord(mods, key_variant)",
+    "    if not seen[key_chord] then",
+    "      seen[key_chord] = true",
+    "      if opts then",
+    "        hl.bind(key_chord, fn, opts)",
+    "      else",
+    "        hl.bind(key_chord, fn)",
+    "      end",
+    "    end",
+    "  end",
+    "end",
+    "",
+    "local function unbind(mods, key)",
+    "  if hl.unbind then",
+    "    local seen = {}",
+    "    for _, key_variant in ipairs(key_variants(key)) do",
+    "      local key_chord = chord(mods, key_variant)",
+    "      if not seen[key_chord] then",
+    "        seen[key_chord] = true",
+    "        local ok = pcall(hl.unbind, mods, key_variant)",
+    "        if not ok then",
+    "          pcall(hl.unbind, key_chord)",
+    "        end",
+    "      end",
+    "    end",
+    "  end",
+    "end",
+    "",
+]
 if keybinds:
-    content.append("-- Converted from UserConfigs/UserKeybinds.conf")
-    content.extend(keybinds)
-    content.append("")
+    keybind_lines.append("-- Converted from UserKeybinds.conf")
+    keybind_lines.extend(keybinds)
+else:
+    keybind_lines.extend([
+        "-- No active keybind entries were found in UserKeybinds.conf.",
+        "-- bind(\"SUPER\", \"Z\", exec_cmd(\"thunar\"), { description = \"Open file manager\" })",
+    ])
+write_file(files_out["keybinds"], keybind_lines)
 
-out_path.write_text("\n".join(content), encoding="utf-8")
-print(f"[OK] UserConfigs converted into {out_path}")
+for name, source in [
+    ("settings", settings_path),
+    ("decorations", decorations_path),
+    ("animations", animations_path),
+    ("laptops", laptops_path),
+]:
+    title = f"-- User {name} overrides (auto-generated)."
+    lines = [
+        title,
+        "-- This file is intentionally split from other user overrides.",
+        "-- Add only user-specific Lua overrides here.",
+        "-- Example:",
+        "-- hl.config({ general = { gaps_in = 4, gaps_out = 8 } })",
+        "",
+    ]
+    reference = source_examples(source)
+    if reference:
+        lines.extend([
+            f"-- Source reference from {source.name} (hyprlang):",
+            *reference,
+        ])
+    else:
+        lines.append(f"-- No active entries were found in {source.name}.")
+    write_file(files_out[name], lines)
 PY
-fi
 
 cat > "$USER_OVERRIDES_SHIM" <<'LUA'
 -- Auto-generated by scripts/migrate-hypr-to-lua.sh.
--- Keeps user-editable overrides in ~/.config/hypr/UserConfigs/user_overrides.lua.
+-- Loads split user-editable Lua files from ~/.config/hypr/UserConfigs.
 local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")
-local path = configHome .. "/hypr/UserConfigs/user_overrides.lua"
-local ok, err = pcall(dofile, path)
-if not ok and err then
-  print("[WARN] Unable to load user overrides from " .. path .. ": " .. tostring(err))
+local userDir = configHome .. "/hypr/UserConfigs"
+local files = {
+  "system_env.lua",
+  "system_startup.lua",
+  "system_window_rules.lua",
+  "system_keybinds.lua",
+  "system_settings.lua",
+  "system_laptops.lua",
+  "user_env.lua",
+  "user_startup.lua",
+  "user_window_rules.lua",
+  "user_keybinds.lua",
+  "user_settings.lua",
+  "user_decorations.lua",
+  "user_animations.lua",
+  "user_laptops.lua",
+  "user_overrides.lua", -- backward compatibility with older single-file overrides
+}
+for _, file in ipairs(files) do
+  local path = userDir .. "/" .. file
+  local ok, err = pcall(dofile, path)
+  if not ok and err and tostring(err):find("No such file or directory", 1, true) == nil then
+    print("[WARN] Unable to load user override file " .. path .. ": " .. tostring(err))
+  end
 end
 LUA
 
