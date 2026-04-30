@@ -2,6 +2,13 @@
 
 ## v2.3.23
 
+- Changed `whiptail` GUI to dark colors
+  - Some terminals rendered incorrectly made menu unreadable
+- Added more icons to `ModulesWorkpaces`
+- Removed the following from hyprland settings:
+  - `vfr` -- Been enabled by default
+  - `psuedotile` -- In `dwindle` layout
+  - As of Hyprland v0.55 they will generate confiuration errors
 - `OverviewToggle.sh` wasn't checking properly for quickshell service
   - Found by `@TeaJhay`
   - Changed script to look for `qs` not `quickshell`
