@@ -65,6 +65,7 @@
 - Fixed: `rofi beats` keybind not working
 
 v2.3.22
+## v2.3.22
 
 - Fixed: Kitty font issue
   - Thank you `@JasonNero` for the fix
@@ -101,6 +102,10 @@ v2.3.22
   - Replaced with a script `Float-All-Windows.sh` in `Keybinds.conf` file
 - Fixed Package name for `waybar-weather`
 - Added `scrolling` layout
+- Fixed all float toggle
+  - Old command drepreciated
+  - Replaced with a script `Float-All-Windows.sh` in `Keybinds.conf` file
+- Fixed Package name for `waybar-weather`
 - Added `monocle` layout
 - Experimenting with some additional layerrules
 - Improving wallpaper based theming
