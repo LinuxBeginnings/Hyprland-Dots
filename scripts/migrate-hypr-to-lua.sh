@@ -118,7 +118,7 @@ restore_latest_conf_backup() {
   latest_backup="${backups[${#backups[@]}-1]}"
 
   while IFS= read -r -d '' file; do
-    mv "$file" "$target_dir/"
+    cp -a "$file" "$target_dir/"
     moved=1
   done < <(find "$latest_backup" -maxdepth 1 -type f -name '*.conf' -print0)
 
@@ -175,10 +175,10 @@ if [ "$DRY_RUN" -eq 1 ]; then
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_animations.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_laptops.lua"
     if [ -d "$USER_CONFIGS_DIR" ]; then
-      echo "[DRY-RUN] Would move UserConfigs/*.conf into: $USER_CONFIGS_BACKUP_DIR"
+      echo "[DRY-RUN] Would copy UserConfigs/*.conf into: $USER_CONFIGS_BACKUP_DIR"
     fi
     if [ -d "$CONFIGS_DIR" ]; then
-      echo "[DRY-RUN] Would move configs/*.conf into: $CONFIGS_BACKUP_DIR"
+      echo "[DRY-RUN] Would copy configs/*.conf into: $CONFIGS_BACKUP_DIR"
     fi
   fi
   exit 0
@@ -221,7 +221,9 @@ python3 - \
   "$USER_SETTINGS" \
   "$USER_DECORATIONS" \
   "$USER_ANIMATIONS" \
-  "$USER_LAPTOPS" <<'PY'
+  "$USER_LAPTOPS" \
+  "$USER_CONFIGS_DIR/01-UserDefaults.conf" <<'PY'
+import os
 import re
 import sys
 from pathlib import Path
@@ -241,6 +243,7 @@ settings_path = Path(sys.argv[12])
 decorations_path = Path(sys.argv[13])
 animations_path = Path(sys.argv[14])
 laptops_path = Path(sys.argv[15])
+user_defaults_path = Path(sys.argv[16])
 
 files_out = {
     "system_env": user_configs_dir / "system_env.lua",
@@ -470,11 +473,24 @@ def emit_rule(rule_type, rule):
     lines.append("})")
     return "\n".join(lines)
 
-def parse_keybinds(path):
+def parse_keybinds(path, *, variables=None, visited=None):
     if not path.exists():
         return []
 
-    variables = {}
+    if variables is None:
+        variables = {}
+    if visited is None:
+        visited = set()
+
+    try:
+        resolved = path.resolve()
+    except FileNotFoundError:
+        resolved = path
+
+    if resolved in visited:
+        return []
+    visited.add(resolved)
+
     converted = []
 
     def expand(value):
@@ -490,6 +506,14 @@ def parse_keybinds(path):
     for raw_line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
         line = strip_comment(raw_line)
         if not line:
+            continue
+
+        source_match = re.match(r"^source\s*=\s*(.+)$", line)
+        if source_match:
+            source_value = expand(source_match.group(1).strip())
+            source_value = os.path.expandvars(source_value)
+            source_path = Path(source_value).expanduser()
+            converted.extend(parse_keybinds(source_path, variables=variables, visited=visited))
             continue
 
         variable = re.match(r"^\$([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$", line)
@@ -540,8 +564,10 @@ def parse_keybinds(path):
 
 system_rules = parse_rules(system_window_rules_path, "system")
 rules = parse_rules(window_rules_path, "user")
-system_keybinds = parse_keybinds(system_keybinds_path)
-keybinds = parse_keybinds(keybinds_path)
+base_keybind_vars = {}
+parse_keybinds(user_defaults_path, variables=base_keybind_vars)
+system_keybinds = parse_keybinds(system_keybinds_path, variables=dict(base_keybind_vars))
+keybinds = parse_keybinds(keybinds_path, variables=dict(base_keybind_vars))
 system_env_entries = parse_env(system_env_path)
 env_entries = parse_env(env_path)
 system_startup_entries = parse_startup(system_startup_path)
@@ -1004,12 +1030,12 @@ backup_conf_files() {
     if [ "$moved" -eq 0 ]; then
       mkdir -p "$backup_dir"
     fi
-    mv "$file" "$backup_dir/"
+    cp -a "$file" "$backup_dir/"
     moved=1
   done < <(find "$source_dir" -maxdepth 1 -type f -name '*.conf' -print0)
 
   if [ "$moved" -eq 1 ]; then
-    echo "[OK] Moved $label/*.conf -> $backup_dir"
+    echo "[OK] Copied $label/*.conf -> $backup_dir"
   fi
 }
 
