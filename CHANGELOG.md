@@ -7,6 +7,7 @@
   - Script converts `configs` and `UserConfigs` to LUA
   - Backs them up in local directories
   - Allows a revert option to restore hyprlang config files
+- Making `Kool_Quick_Settings.sh` script LUA/HYPRLANG aware
 
 ## v2.3.23
 

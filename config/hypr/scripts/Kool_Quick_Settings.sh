@@ -8,22 +8,44 @@
 # Rofi menu for KooL Hyprland Quick Settings (SUPER SHIFT E)
 # Updated for UserConfigs/configs separation
 
-# Modify this config file for default terminal and EDITOR
-config_file="$HOME/.config/hypr/UserConfigs/01-UserDefaults.conf"
+# Detect active Hyprland config mode (Lua entrypoint vs legacy .conf includes)
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+hypr_dir="$config_home/hypr"
+lua_entry="$hypr_dir/hyprland.lua"
+legacy_lua_entry="$config_home/hyprland.lua"
+if [[ -f "$lua_entry" || -f "$legacy_lua_entry" ]]; then
+    hypr_config_mode="lua"
+else
+    hypr_config_mode="conf"
+fi
 
-tmp_config_file=$(mktemp)
-sed 's/^\$//g; s/ = /=/g' "$config_file" > "$tmp_config_file"
-source "$tmp_config_file"
+# Resolve defaults file used to get terminal/editor values
+config_file="$hypr_dir/UserConfigs/01-UserDefaults.conf"
+lua_defaults_file="$hypr_dir/lua/user_defaults.lua"
+term="${term:-${TERM:-kitty}}"
+edit="${edit:-${EDITOR:-nano}}"
+
+if [[ "$hypr_config_mode" == "conf" && -f "$config_file" ]]; then
+    tmp_config_file=$(mktemp)
+    sed 's/^\$//g; s/ = /=/g' "$config_file" > "$tmp_config_file"
+    source "$tmp_config_file"
+elif [[ "$hypr_config_mode" == "lua" && -f "$lua_defaults_file" ]]; then
+    lua_term=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.term[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
+    lua_edit=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.edit[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
+    [[ -n "$lua_term" ]] && term="$lua_term"
+    [[ -n "$lua_edit" ]] && edit="$lua_edit"
+fi
 # ##################################### #
 
 # variables
-configs="$HOME/.config/hypr/configs"
-UserConfigs="$HOME/.config/hypr/UserConfigs"
+configs="$hypr_dir/configs"
+UserConfigs="$hypr_dir/UserConfigs"
+lua_configs="$hypr_dir/lua"
 rofi_theme="$HOME/.config/rofi/config-edit.rasi"
 msg=' ⁉️ Choose what to do ⁉️'
 iDIR="$HOME/.config/swaync/images"
-scriptsDir="$HOME/.config/hypr/scripts"
-UserScripts="$HOME/.config/hypr/UserScripts"
+scriptsDir="$hypr_dir/scripts"
+UserScripts="$hypr_dir/UserScripts"
 
 # Function to show info notification
 show_info() {
@@ -221,19 +243,38 @@ main() {
     
     # Map choices to corresponding files
     case "$choice" in
-    	"Edit User Defaults") file="$UserConfigs/01-UserDefaults.conf" ;;
-        "Edit User ENV variables") file="$UserConfigs/ENVariables.conf" ;;
-        "Edit User Keybinds") file="$UserConfigs/UserKeybinds.conf" ;;
-        "Edit User Startup Apps (overlay)") file="$UserConfigs/Startup_Apps.conf" ;;
-        "Edit User Window Rules (overlay)") file="$UserConfigs/WindowRules.conf" ;;
-        "Edit User Settings") file="$configs/SystemSettings.conf"; show_info "Editing default settings. Copy to UserConfigs/UserSettings.conf to override." ;;
-        "Edit User Decorations") file="$UserConfigs/UserDecorations.conf" ;;
-        "Edit User Animations") file="$UserConfigs/UserAnimations.conf" ;;
-        "Edit User Laptop Settings") file="$UserConfigs/Laptops.conf" ;;
-        "Edit System Default Keybinds") file="$configs/Keybinds.conf" ;;
-        "Edit System Default Startup Apps") file="$configs/Startup_Apps.conf" ;;
-        "Edit System Default Window Rules") file="$configs/WindowRules.conf" ;;
-        "Edit System Default Settings") file="$configs/SystemSettings.conf" ;;
+    	"Edit User Defaults")
+            if [[ "$hypr_config_mode" == "lua" ]]; then file="$lua_configs/user_defaults.lua"; else file="$UserConfigs/01-UserDefaults.conf"; fi ;;
+        "Edit User ENV variables")
+            if [[ "$hypr_config_mode" == "lua" ]]; then file="$lua_configs/env.lua"; else file="$UserConfigs/ENVariables.conf"; fi ;;
+        "Edit User Keybinds")
+            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_overrides.lua"; else file="$UserConfigs/UserKeybinds.conf"; fi ;;
+        "Edit User Startup Apps (overlay)")
+            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_overrides.lua"; else file="$UserConfigs/Startup_Apps.conf"; fi ;;
+        "Edit User Window Rules (overlay)")
+            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_overrides.lua"; else file="$UserConfigs/WindowRules.conf"; fi ;;
+        "Edit User Settings")
+            if [[ "$hypr_config_mode" == "lua" ]]; then
+                file="$UserConfigs/user_overrides.lua"
+                show_info "Lua mode detected. Edit user overrides in UserConfigs/user_overrides.lua."
+            else
+                file="$configs/SystemSettings.conf"
+                show_info "Editing default settings. Copy to UserConfigs/UserSettings.conf to override."
+            fi ;;
+        "Edit User Decorations")
+            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_overrides.lua"; else file="$UserConfigs/UserDecorations.conf"; fi ;;
+        "Edit User Animations")
+            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_overrides.lua"; else file="$UserConfigs/UserAnimations.conf"; fi ;;
+        "Edit User Laptop Settings")
+            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_overrides.lua"; else file="$UserConfigs/Laptops.conf"; fi ;;
+        "Edit System Default Keybinds")
+            if [[ "$hypr_config_mode" == "lua" ]]; then file="$lua_configs/keybinds.lua"; else file="$configs/Keybinds.conf"; fi ;;
+        "Edit System Default Startup Apps")
+            if [[ "$hypr_config_mode" == "lua" ]]; then file="$lua_configs/startup.lua"; else file="$configs/Startup_Apps.conf"; fi ;;
+        "Edit System Default Window Rules")
+            if [[ "$hypr_config_mode" == "lua" ]]; then file="$lua_configs/window_rules.lua"; else file="$configs/WindowRules.conf"; fi ;;
+        "Edit System Default Settings")
+            if [[ "$hypr_config_mode" == "lua" ]]; then file="$lua_configs/settings.lua"; else file="$configs/SystemSettings.conf"; fi ;;
         "Set SDDM Wallpaper") $scriptsDir/sddm_wallpaper.sh --normal ;;
         "Choose Kitty Terminal Theme") $scriptsDir/Kitty_themes.sh ;;
         "Choose Ghostty Terminal Theme") $scriptsDir/Ghostty_themes.sh ;;
