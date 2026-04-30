@@ -14,16 +14,23 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SRC_HYPR_DIR="$REPO_DIR/config/hypr"
 DEST_HYPR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
 BACKUP_DIR="${DEST_HYPR_DIR}-backup-lua-$(date +%Y%m%d-%H%M%S)"
+MIGRATION_TS="$(date +%Y%m%d-%H%M%S)"
 DRY_RUN=0
 YES=0
+REVERT=0
 
-USER_WINDOW_RULES="$DEST_HYPR_DIR/UserConfigs/WindowRules.conf"
-USER_KEYBINDS="$DEST_HYPR_DIR/UserConfigs/UserKeybinds.conf"
-USER_OVERRIDES_OUT="$DEST_HYPR_DIR/lua/user_overrides.lua"
+USER_CONFIGS_DIR="$DEST_HYPR_DIR/UserConfigs"
+CONFIGS_DIR="$DEST_HYPR_DIR/configs"
+USER_WINDOW_RULES="$USER_CONFIGS_DIR/WindowRules.conf"
+USER_KEYBINDS="$USER_CONFIGS_DIR/UserKeybinds.conf"
+USER_OVERRIDES_OUT="$USER_CONFIGS_DIR/user_overrides.lua"
+USER_CONFIGS_BACKUP_DIR="$USER_CONFIGS_DIR/backup-$MIGRATION_TS"
+CONFIGS_BACKUP_DIR="$CONFIGS_DIR/backup-$MIGRATION_TS"
+USER_OVERRIDES_SHIM="$DEST_HYPR_DIR/lua/user_overrides.lua"
 
 usage() {
   cat <<USAGE
-Usage: $(basename "$0") [--yes] [--dry-run]
+Usage: $(basename "$0") [--yes] [--dry-run] [--revert]
 
 Copies the repo's Hyprland Lua entrypoint into:
   $DEST_HYPR_DIR
@@ -34,6 +41,7 @@ current Hyprland config directory before changing files.
 Options:
   -y, --yes      Run without confirmation prompts.
   -n, --dry-run  Show what would change without copying files.
+  -r, --revert   Revert migration by restoring latest backup-*/.conf files.
   -h, --help     Show this help.
 USAGE
 }
@@ -45,6 +53,9 @@ while [ "$#" -gt 0 ]; do
       ;;
     -n|--dry-run)
       DRY_RUN=1
+      ;;
+    -r|--revert)
+      REVERT=1
       ;;
     -h|--help)
       usage
@@ -59,7 +70,7 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-if [ ! -f "$SRC_HYPR_DIR/hyprland.lua" ] || [ ! -d "$SRC_HYPR_DIR/lua" ]; then
+if [ "$REVERT" -eq 0 ] && { [ ! -f "$SRC_HYPR_DIR/hyprland.lua" ] || [ ! -d "$SRC_HYPR_DIR/lua" ]; }; then
   echo "[ERROR] Lua config source files were not found under $SRC_HYPR_DIR" >&2
   exit 1
 fi
@@ -74,11 +85,45 @@ fi
 echo "[INFO] Source: $SRC_HYPR_DIR"
 echo "[INFO] Target: $DEST_HYPR_DIR"
 echo "[INFO] Backup: $BACKUP_DIR"
-echo "[WARN] This enables Hyprland's Lua entrypoint for builds that support hyprland.lua."
-echo "[WARN] hyprland.conf remains in place as fallback; rollback is removing or renaming $DEST_HYPR_DIR/hyprland.lua."
+if [ "$REVERT" -eq 1 ]; then
+  echo "[WARN] Revert mode: restores latest backup-*/.conf files in UserConfigs and configs."
+else
+  echo "[WARN] This enables Hyprland's Lua entrypoint for builds that support hyprland.lua."
+  echo "[WARN] hyprland.conf remains in place as fallback; rollback restores backup-*/.conf files."
+fi
+
+restore_latest_conf_backup() {
+  local target_dir="$1"
+  local label="$2"
+  local latest_backup=""
+  local moved=0
+  local file
+  local backups=()
+
+  [ -d "$target_dir" ] || return 0
+
+  mapfile -t backups < <(find "$target_dir" -mindepth 1 -maxdepth 1 -type d -name 'backup-*' | sort)
+  [ "${#backups[@]}" -gt 0 ] || return 0
+  latest_backup="${backups[${#backups[@]}-1]}"
+
+  while IFS= read -r -d '' file; do
+    mv "$file" "$target_dir/"
+    moved=1
+  done < <(find "$latest_backup" -maxdepth 1 -type f -name '*.conf' -print0)
+
+  if [ "$moved" -eq 1 ]; then
+    echo "[OK] Restored $label/*.conf from $latest_backup"
+  else
+    echo "[INFO] No .conf files found in latest backup for $label: $latest_backup"
+  fi
+}
 
 if [ "$YES" -eq 0 ]; then
-  printf "[ACTION] Continue with Lua config migration? [y/N] "
+  if [ "$REVERT" -eq 1 ]; then
+    printf "[ACTION] Continue and revert Lua migration using latest backups? [y/N] "
+  else
+    printf "[ACTION] Continue with Lua config migration? [y/N] "
+  fi
   read -r reply
   case "$reply" in
     [Yy]|[Yy][Ee][Ss])
@@ -91,17 +136,41 @@ if [ "$YES" -eq 0 ]; then
 fi
 
 if [ "$DRY_RUN" -eq 1 ]; then
-  echo "[DRY-RUN] Would create target directory if missing: $DEST_HYPR_DIR"
-  if [ -d "$DEST_HYPR_DIR" ]; then
-    echo "[DRY-RUN] Would copy backup: $DEST_HYPR_DIR -> $BACKUP_DIR"
+  if [ "$REVERT" -eq 1 ]; then
+    echo "[DRY-RUN] Would disable Lua entrypoint: $DEST_HYPR_DIR/hyprland.lua -> $DEST_HYPR_DIR/hyprland.lua.disabled"
+    echo "[DRY-RUN] Would restore latest backup-*/.conf files into:"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR"
+    echo "[DRY-RUN]   - $CONFIGS_DIR"
+  else
+    echo "[DRY-RUN] Would create target directory if missing: $DEST_HYPR_DIR"
+    if [ -d "$DEST_HYPR_DIR" ]; then
+      echo "[DRY-RUN] Would copy backup: $DEST_HYPR_DIR -> $BACKUP_DIR"
+    fi
+    echo "[DRY-RUN] Would copy: $SRC_HYPR_DIR/hyprland.lua -> $DEST_HYPR_DIR/hyprland.lua"
+    echo "[DRY-RUN] Would replace Lua module directory: $DEST_HYPR_DIR/lua"
+    if [ -f "$USER_WINDOW_RULES" ] || [ -f "$USER_KEYBINDS" ]; then
+      echo "[DRY-RUN] Would convert found UserConfigs into: $USER_OVERRIDES_OUT"
+      [ -f "$USER_WINDOW_RULES" ] && echo "[DRY-RUN]   - $USER_WINDOW_RULES"
+      [ -f "$USER_KEYBINDS" ] && echo "[DRY-RUN]   - $USER_KEYBINDS"
+    fi
+    if [ -d "$USER_CONFIGS_DIR" ]; then
+      echo "[DRY-RUN] Would move UserConfigs/*.conf into: $USER_CONFIGS_BACKUP_DIR"
+    fi
+    if [ -d "$CONFIGS_DIR" ]; then
+      echo "[DRY-RUN] Would move configs/*.conf into: $CONFIGS_BACKUP_DIR"
+    fi
   fi
-  echo "[DRY-RUN] Would copy: $SRC_HYPR_DIR/hyprland.lua -> $DEST_HYPR_DIR/hyprland.lua"
-  echo "[DRY-RUN] Would replace Lua module directory: $DEST_HYPR_DIR/lua"
-  if [ -f "$USER_WINDOW_RULES" ] || [ -f "$USER_KEYBINDS" ]; then
-    echo "[DRY-RUN] Would convert found UserConfigs into: $USER_OVERRIDES_OUT"
-    [ -f "$USER_WINDOW_RULES" ] && echo "[DRY-RUN]   - $USER_WINDOW_RULES"
-    [ -f "$USER_KEYBINDS" ] && echo "[DRY-RUN]   - $USER_KEYBINDS"
+  exit 0
+fi
+if [ "$REVERT" -eq 1 ]; then
+  if [ -f "$DEST_HYPR_DIR/hyprland.lua" ]; then
+    mv "$DEST_HYPR_DIR/hyprland.lua" "$DEST_HYPR_DIR/hyprland.lua.disabled"
+    echo "[OK] Disabled Lua entrypoint: $DEST_HYPR_DIR/hyprland.lua.disabled"
   fi
+  restore_latest_conf_backup "$USER_CONFIGS_DIR" "$USER_CONFIGS_DIR"
+  restore_latest_conf_backup "$CONFIGS_DIR" "$CONFIGS_DIR"
+  echo "[OK] Revert complete."
+  echo "[INFO] Restart Hyprland to load restored .conf files."
   exit 0
 fi
 
@@ -115,6 +184,7 @@ fi
 cp -f "$SRC_HYPR_DIR/hyprland.lua" "$DEST_HYPR_DIR/hyprland.lua"
 rm -rf "$DEST_HYPR_DIR/lua"
 cp -a "$SRC_HYPR_DIR/lua" "$DEST_HYPR_DIR/lua"
+mkdir -p "$USER_CONFIGS_DIR" "$CONFIGS_DIR"
 if [ -f "$USER_WINDOW_RULES" ] || [ -f "$USER_KEYBINDS" ]; then
   python3 - "$USER_OVERRIDES_OUT" "$USER_WINDOW_RULES" "$USER_KEYBINDS" <<'PY'
 import re
@@ -505,6 +575,42 @@ print(f"[OK] UserConfigs converted into {out_path}")
 PY
 fi
 
+cat > "$USER_OVERRIDES_SHIM" <<'LUA'
+-- Auto-generated by scripts/migrate-hypr-to-lua.sh.
+-- Keeps user-editable overrides in ~/.config/hypr/UserConfigs/user_overrides.lua.
+local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")
+local path = configHome .. "/hypr/UserConfigs/user_overrides.lua"
+local ok, err = pcall(dofile, path)
+if not ok and err then
+  print("[WARN] Unable to load user overrides from " .. path .. ": " .. tostring(err))
+end
+LUA
+
+backup_conf_files() {
+  local source_dir="$1"
+  local backup_dir="$2"
+  local label="$3"
+  local moved=0
+  local file
+
+  [ -d "$source_dir" ] || return 0
+
+  while IFS= read -r -d '' file; do
+    if [ "$moved" -eq 0 ]; then
+      mkdir -p "$backup_dir"
+    fi
+    mv "$file" "$backup_dir/"
+    moved=1
+  done < <(find "$source_dir" -maxdepth 1 -type f -name '*.conf' -print0)
+
+  if [ "$moved" -eq 1 ]; then
+    echo "[OK] Moved $label/*.conf -> $backup_dir"
+  fi
+}
+
+backup_conf_files "$USER_CONFIGS_DIR" "$USER_CONFIGS_BACKUP_DIR" "$USER_CONFIGS_DIR"
+backup_conf_files "$CONFIGS_DIR" "$CONFIGS_BACKUP_DIR" "$CONFIGS_DIR"
+
 echo "[OK] Lua Hyprland config copied."
 echo "[INFO] Restart Hyprland to test Lua config pickup."
-echo "[INFO] To rollback: mv '$DEST_HYPR_DIR/hyprland.lua' '$DEST_HYPR_DIR/hyprland.lua.disabled'"
+echo "[INFO] To rollback: $(basename "$0") --revert"

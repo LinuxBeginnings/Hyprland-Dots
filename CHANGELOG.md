@@ -1,5 +1,13 @@
 # Changelog — KoolDots
 
+## v2.3.24
+
+- Began Migration process to LUA
+  - Created `scripts/migrate-hypr-to-lua.sh`
+  - Script converts `configs` and `UserConfigs` to LUA
+  - Backs them up in local directories
+  - Allows a revert option to restore hyprlang config files
+
 ## v2.3.23
 
 - `OverviewToggle.sh` wasn't checking properly for quickshell service
