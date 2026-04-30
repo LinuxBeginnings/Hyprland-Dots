@@ -1,5 +1,9 @@
 # Changelog — KoolDots
 
+## v2.3.24
+
+- Created new development branch
+
 ## v2.3.23
 
 - Changed `whiptail` GUI to dark colors
@@ -65,6 +69,7 @@
 - Fixed: `rofi beats` keybind not working
 
 v2.3.22
+
 ## v2.3.22
 
 - Fixed: Kitty font issue
