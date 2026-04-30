@@ -3,6 +3,7 @@
 
 * {
     font-family: "JetBrainsMono Nerd Font", FontAwesome, Roboto, Helvetica, Arial, sans-serif;
+    /* NOTE: Waybar v14+ ignores % font-size values */
     font-size: 99%;
     font-weight: bold;
 }
@@ -13,18 +14,26 @@ window#waybar {
     color: #d3c6aa;
     transition-property: background-color;
     transition-duration: .5s;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 
 window#waybar.hidden {
     opacity: 0.2;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 
 /*
 window#waybar.empty {
     background-color: transparent;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 window#waybar.solo {
     background-color: #FFFFFF;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 */
 
@@ -369,12 +378,15 @@ tooltip decoration:backdrop {
   box-shadow: none;
 }
 
+/* Waybar scaling: adjust tooltip label font-size to scale the bar */
 tooltip label {
   color: #d3c6aa;
   padding-left: 5px;
   padding-right: 5px;
   padding-top: 0px;
   padding-bottom: 5px;
+  /* Waybar scaling: adjust tooltip label font-size to scale the bar */
+  font-size: 14px;
 }
 
 
@@ -399,6 +411,8 @@ tooltip label {
 window#waybar.bottombar #backlight-slider trough,
 window#waybar.bottombar #pulseaudio-slider trough {
   min-height: 7px;
+  /* Waybar scaling: adjust font-size to scale the bar */
+  font-size: 14px;
 }
 
 #backlight-slider highlight,

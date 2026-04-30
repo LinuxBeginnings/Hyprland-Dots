@@ -6,11 +6,13 @@
     font-weight: bold;
 	min-height: 0;  
     /* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
+    /* NOTE: Waybar v14+ ignores % font-size values */
     font-size: 99%;
     font-feature-settings: '"zero", "ss01", "ss02", "ss03", "ss04", "ss05", "cv31"';
     
     border: none;
     border-radius: 10px;
+    /* NOTE: Waybar v14+ ignores % font-size values */
     font-size: 99%;
     min-height: 20px;
     margin: 0px;
@@ -20,6 +22,8 @@
 .module {
     padding: 2px 4px;
     margin: 1px 1px;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 
 .modules-left>widget:first-child .module {
@@ -35,6 +39,8 @@
 window#waybar {
     background-color: transparent;
     color: black;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
     transition: background-color 0.5s;
 }
 
@@ -42,10 +48,14 @@ window#waybar {
 window#waybar.empty #window {
     background-color: transparent;
     background: transparent;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 
 window#waybar.hidden {
     opacity: 0.2;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 
 /* Tooltip styling */
@@ -60,8 +70,11 @@ tooltip {
 }
 
 menu label,
+/* Waybar scaling: adjust tooltip label font-size to scale the bar */
 tooltip label {
     color: rgb(0, 238, 255);
+    /* Waybar scaling: adjust tooltip label font-size to scale the bar */
+    font-size: 14px;
 }
 
 /* Workspaces Button Styling */
@@ -126,6 +139,8 @@ tooltip label {
 #taskbar.empty,
 window#waybar.empty {
     background-color: transparent;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 
 /* Specific Module Styles */

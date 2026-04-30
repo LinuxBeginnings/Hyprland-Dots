@@ -38,6 +38,7 @@
     font-weight: bold;
     min-height: 0;  
     /* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
+    /* NOTE: Waybar v14+ ignores % font-size values */
     font-size: 99%;
     font-feature-settings: '"zero", "ss01", "ss02", "ss03", "ss04", "ss05", "cv31"';
 }
@@ -45,10 +46,12 @@
 window#waybar {
     background-color: rgba(0,0,0,0.4);
     border-radius: 6px;
-    padding-top: 2px;
-    padding-bottom: 0px;
-    padding-right: 4px;
-    padding-left: 4px;
+	padding-top: 2px;
+	padding-bottom: 0px;
+	padding-right: 4px;
+	padding-left: 4px;
+    /* Waybar scaling: adjust font-size to scale the bar */
+    font-size: 14px;
 }
 
 tooltip {
@@ -189,8 +192,8 @@ tooltip {
 
 #custom-hint {
     color: @peach;
-    padding-right: 6px;
-    padding-left: 6px;
+	padding-right: 6px;
+	padding-left: 6px;
 }
 
 #pulseaudio-slider,
@@ -249,11 +252,11 @@ tooltip {
 
 #battery.critical:not(.charging) {
     color: #f53c3c;
-    animation-name: blink;
-    animation-duration: 3.0s;
-    animation-timing-function: steps(12);
-    animation-iteration-count: infinite;
-    animation-direction: alternate;
+	animation-name: blink;
+	animation-duration: 3.0s;
+	animation-timing-function: steps(12);
+	animation-iteration-count: infinite;
+	animation-direction: alternate;
 }
 
 #custom-hypridle,
@@ -276,8 +279,8 @@ tooltip {
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay {
     color: @lavender;
-    padding-right: 6px;
-    padding-left: 6px;
+	padding-right: 6px;
+	padding-left: 6px;
 }
 
 /*-----Indicators----*/
