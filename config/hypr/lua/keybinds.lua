@@ -28,6 +28,9 @@ local function shell_quote(value)
 end
 
 local function raw_dispatch_cmd(command)
+  if dsp and dsp.exec_raw then
+    return dsp.exec_raw(tostring(command))
+  end
   local expression = "hl.dsp.exec_raw(" .. string.format("%q", tostring(command)) .. ")"
   return exec_cmd("hyprctl dispatch " .. shell_quote(expression))
 end
@@ -698,10 +701,30 @@ bind(
   exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --swappy"),
   { description = "screenshot (swappy)" }
 )
-bind("SUPER SHIFT", "left", dispatch("resizeactive", "-50 0"), { description = "resize left (-50)" })
-bind("SUPER SHIFT", "right", dispatch("resizeactive", "50 0"), { description = "resize right (+50)" })
-bind("SUPER SHIFT", "up", dispatch("resizeactive", "0 -50"), { description = "resize up (-50)" })
-bind("SUPER SHIFT", "down", dispatch("resizeactive", "0 50"), { description = "resize down (+50)" })
+bind(
+  "SUPER SHIFT",
+  "left",
+  exec_cmd("bash $HOME/.config/hypr/scripts/ResizeActive.sh -50 0"),
+  { description = "resize left (-50)" }
+)
+bind(
+  "SUPER SHIFT",
+  "right",
+  exec_cmd("bash $HOME/.config/hypr/scripts/ResizeActive.sh 50 0"),
+  { description = "resize right (+50)" }
+)
+bind(
+  "SUPER SHIFT",
+  "up",
+  exec_cmd("bash $HOME/.config/hypr/scripts/ResizeActive.sh 0 -50"),
+  { description = "resize up (-50)" }
+)
+bind(
+  "SUPER SHIFT",
+  "down",
+  exec_cmd("bash $HOME/.config/hypr/scripts/ResizeActive.sh 0 50"),
+  { description = "resize down (+50)" }
+)
 bind(
   "SUPER CTRL",
   "left",
