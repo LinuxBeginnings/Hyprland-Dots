@@ -12,6 +12,11 @@
 - Added project header to all .LUA files 
 - Migration script will add that to the converted .conf files as well 
 - Updted keybinds parser to support LUA 
+- Fixed resize by keybind, SUPERSHIFT= + Arrow keys 
+- Then modified that script to support mouse resize  
+  - SUPER + Left Mouse to move 
+  - SUEPR + Right Mouse to resize 
+
 
 ## v2.3.23
 
