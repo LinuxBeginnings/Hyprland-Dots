@@ -279,9 +279,6 @@ local function chord(mods, key)
   return mods .. " + " .. key
 end
 local function bind(mods, key, fn, opts)
-  if opts and opts.mouse then
-    return
-  end
   if opts then
     hl.bind(chord(mods, key), fn, opts)
   else
@@ -315,7 +312,15 @@ local function unbind_chord(key_chord)
   end
 end
 local function bindm(mods, key, dispatcher, description)
-  bind(mods, key, dispatch("mouse " .. dispatcher, dispatcher), { description = description })
+  local action = nil
+  if dispatcher == "movewindow" and window_api.drag then
+    action = window_api.drag()
+  elseif dispatcher == "resizewindow" and window_api.resize then
+    action = window_api.resize()
+  else
+    action = raw_dispatch_cmd(dispatcher)
+  end
+  bind(mods, key, action, { description = description, mouse = true })
 end
 -- Mass unbind defaults before rebuilding the Lua keymap.
 local keys_to_unbind = {
