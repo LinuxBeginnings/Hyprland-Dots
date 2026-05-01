@@ -1,5 +1,14 @@
 # Changelog — KoolDots
 
+## v2.3.24
+
+- Created new development branch
+- Removed hard-coded rofi terminal overrides in theme configs
+  - `themes/KooL_dwm.rasi`
+  - `dwm-config-horiz.rasi`
+  - `dwm-config-vert.rasi`
+- Thanks to [@TeaJhay](https://github.com/TeaJhay) for finding this
+
 ## v2.3.23
 
 - Changed `whiptail` GUI to dark colors
