@@ -10,7 +10,7 @@
   - Added menu option for LayerRules in quicksettings 
 - Improved move/resize and window swapping using native calls
   - Thanks to `TheAhumMaitra` 
-    - His LUA code it better than mine 
+    - His LUA code is better than mine 
     - I will probably be "borrowing" more ;) 
     - https://github.com/TheAhumMaitra/Aurora
     - https://github.com/TheAhumMaitra
