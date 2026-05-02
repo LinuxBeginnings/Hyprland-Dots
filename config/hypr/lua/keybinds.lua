@@ -706,30 +706,36 @@ bind(
   exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --swappy"),
   { description = "screenshot (swappy)" }
 )
-bind(
-  "SUPER SHIFT",
-  "left",
-  exec_cmd("bash $HOME/.config/hypr/scripts/ResizeActive.sh -50 0"),
-  { description = "resize left (-50)" }
-)
-bind(
-  "SUPER SHIFT",
-  "right",
-  exec_cmd("bash $HOME/.config/hypr/scripts/ResizeActive.sh 50 0"),
-  { description = "resize right (+50)" }
-)
-bind(
-  "SUPER SHIFT",
-  "up",
-  exec_cmd("bash $HOME/.config/hypr/scripts/ResizeActive.sh 0 -50"),
-  { description = "resize up (-50)" }
-)
-bind(
-  "SUPER SHIFT",
-  "down",
-  exec_cmd("bash $HOME/.config/hypr/scripts/ResizeActive.sh 0 50"),
-  { description = "resize down (+50)" }
-)
+-- Keep legacy script-based resize bindings commented for quick rollback during Lua API migration.
+-- These call ResizeActive.sh and are preserved in case native hl.dsp/hl.window resize behavior regresses.
+-- bind(
+--   "SUPER SHIFT",
+--   "left",
+--   exec_cmd("bash $HOME/.config/hypr/scripts/ResizeActive.sh -50 0"),
+--   { description = "resize left (-50)" }
+-- )
+-- bind(
+--   "SUPER SHIFT",
+--   "right",
+--   exec_cmd("bash $HOME/.config/hypr/scripts/ResizeActive.sh 50 0"),
+--   { description = "resize right (+50)" }
+-- )
+-- bind(
+--   "SUPER SHIFT",
+--   "up",
+--   exec_cmd("bash $HOME/.config/hypr/scripts/ResizeActive.sh 0 -50"),
+--   { description = "resize up (-50)" }
+-- )
+-- bind(
+--   "SUPER SHIFT",
+--   "down",
+--   exec_cmd("bash $HOME/.config/hypr/scripts/ResizeActive.sh 0 50"),
+--   { description = "resize down (+50)" }
+-- )
+bind("SUPER SHIFT", "left", window_api.resize({ x = -50, y = 0, relative = true }), { description = "resize left (-50)" })
+bind("SUPER SHIFT", "right", window_api.resize({ x = 50, y = 0, relative = true }), { description = "resize right (+50)" })
+bind("SUPER SHIFT", "up", window_api.resize({ x = 0, y = -50, relative = true }), { description = "resize up (-50)" })
+bind("SUPER SHIFT", "down", window_api.resize({ x = 0, y = 50, relative = true }), { description = "resize down (+50)" })
 bind(
   "SUPER CTRL",
   "left",
