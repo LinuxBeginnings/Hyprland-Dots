@@ -3,6 +3,7 @@
 ## v2.3.24
 
 - Added helper script `logout.sh` to call `hyprshutdown`
+  - Added pkill  `waybar`, `awww-daemon`, and `swww-daemon` before `hyprshutdown`
 - Moved layer rules to own file `LayerRules.conf`
   - Added additional rules from ``TheAhumMaitra``
   - Updated LUA config accordingly 

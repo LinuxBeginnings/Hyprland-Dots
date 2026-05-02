@@ -9,6 +9,10 @@
 
 # Close wlogout if it is still visible.
 pkill -x wlogout >/dev/null 2>&1 || true
+# Prevent these background apps from blocking hyprshutdown confirmation.
+pkill -x awww-daemon >/dev/null 2>&1 || true
+pkill -x swww-daemon >/dev/null 2>&1 || true
+pkill -x waybar >/dev/null 2>&1 || true
 
 if command -v hyprshutdown >/dev/null 2>&1; then
     exec "$(command -v hyprshutdown)"
