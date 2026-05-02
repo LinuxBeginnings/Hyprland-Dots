@@ -18,7 +18,7 @@
 }
 {
     "label" : "logout",
-    "action" : "hyprshutdown",
+    "action" : "$HOME/.config/hypr/scripts/Logout.sh",
     "text" : "Logout",
     "keybind" : "e"
 }
