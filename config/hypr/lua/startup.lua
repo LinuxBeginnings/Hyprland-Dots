@@ -17,6 +17,10 @@ local function shell_quote(value)
   return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
 end
 local function exec_once(cmd)
+  -- Why this wrapper exists:
+  -- 1) Enforce once-per-Hypr-session startup behavior using marker files.
+  -- 2) Avoid startup race conditions by waiting for Wayland/Hypr sockets.
+  -- 3) Capture per-command logs to simplify troubleshooting in user setups.
 
   local key = cmd:gsub("[^%w_.-]", "_"):sub(1, 80)
   local marker = "/tmp/hypr-lua-exec-once-" .. session .. "-" .. key
@@ -26,22 +30,38 @@ local function exec_once(cmd)
   local script = "[ -e " .. shell_quote(marker) .. " ] || { touch " .. shell_quote(marker) .. " && sh -lc " .. shell_quote(inner) .. " >>" .. shell_quote(log) .. " 2>&1 & }"
   os.execute("sh -lc " .. shell_quote(script))
 end
+-- Prefer lifecycle-hook orchestration for clarity while keeping exec_once
+-- reliability semantics for real-world startup behavior.
+local startup_commands = {
+  "$HOME/.config/hypr/initial-boot.sh",
+  "sh -c \"sleep 2; " .. scriptsDir .. "/WallpaperDaemon.sh\"",
+  "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP",
+  "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP",
+  scriptsDir .. "/Polkit.sh",
+  "nm-applet --indicator",
+  "nm-tray",
+  "swaync",
+  scriptsDir .. "/PortalHyprlandUbuntu.sh",
+  "sh -c \"sleep 5; pgrep -x waybar >/dev/null || waybar\"",
+  "qs -c overview",
+  "hypridle",
+  scriptsDir .. "/Hyprsunset.sh init",
+  "wl-paste --type text --watch cliphist store",
+  "wl-paste --type image --watch cliphist store",
+}
 
-exec_once("$HOME/.config/hypr/initial-boot.sh")
-exec_once("sh -c \"sleep 2; " .. scriptsDir .. "/WallpaperDaemon.sh\"")
-exec_once("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
-exec_once("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
-exec_once(scriptsDir .. "/Polkit.sh")
-exec_once("nm-applet --indicator")
-exec_once("nm-tray")
-exec_once("swaync")
-exec_once(scriptsDir .. "/PortalHyprlandUbuntu.sh")
-exec_once("sh -c \"sleep 5; pgrep -x waybar >/dev/null || waybar\"")
-exec_once("qs -c overview")
-exec_once("hypridle")
-exec_once(scriptsDir .. "/Hyprsunset.sh init")
-exec_once("wl-paste --type text --watch cliphist store")
-exec_once("wl-paste --type image --watch cliphist store")
+local function run_startup_commands()
+  for _, cmd in ipairs(startup_commands) do
+    exec_once(cmd)
+  end
+end
+
+if hl and hl.on then
+  hl.on("hyprland.start", run_startup_commands)
+else
+  -- Compatibility fallback for older/limited runtimes without hl.on.
+  run_startup_commands()
+end
 
 -- Optional startup examples retained from the original config:
 -- exec_once("mpvpaper '*' -o \"load-scripts=no no-audio --loop\" \"\"")
