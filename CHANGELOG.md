@@ -15,7 +15,10 @@
 - Fixed resize by keybind, SUPERSHIFT= + Arrow keys 
 - Then modified that script to support mouse resize  
   - SUPER + Left Mouse to move 
-  - SUEPR + Right Mouse to resize 
+  - SUPER + Right Mouse to resiz 
+- Added `Javamanger.sh` 
+  - Manage Java runtime instances 
+  - 1st pass, only tested for Arch 
 
 
 ## v2.3.23
