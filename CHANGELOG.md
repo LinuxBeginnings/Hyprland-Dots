@@ -2,6 +2,11 @@
 
 ## v2.3.24
 
+- Fixed `layerrules` made menus look terrible 
+- Removed "-config-v3.conf" files for 
+  - ``WindowRules.conf/lua`` 
+  - ``LayerRules.conf/lua`` 
+    - They are no longer needed 
 - Added helper script `logout.sh` to call `hyprshutdown`
   - Added pkill  `waybar`, `awww-daemon`, and `swww-daemon` before `hyprshutdown`
 - Moved layer rules to own file `LayerRules.conf`
