@@ -19,6 +19,13 @@
 - Added `Javamanger.sh` 
   - Manage Java runtime instances 
   - 1st pass, only tested for Arch 
+    - Added code for other distros, needs testing 
+- Improved move/resize and window swapping using native calls
+  - Thanks to `TheAhumMaitra` 
+    - His LUA code it better than mine 
+    - I will probably be "borrowing" more ;) 
+    - https://github.com/TheAhumMaitra/Aurora
+    - https://github.com/TheAhumMaitra
 
 
 ## v2.3.23
