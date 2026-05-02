@@ -17,15 +17,15 @@ check_network() {
     if ping -c1 -W1 8.8.8.8 >/dev/null 2>&1; then
         return 0
     fi
-    
+
     if ping -c1 -W1 1.1.1.1 >/dev/null 2>&1; then
         return 0
     fi
-    
+
     if curl -s --connect-timeout 2 "https://ipinfo.io" >/dev/null 2>&1; then
         return 0
     fi
-    
+
     return 1
 }
 

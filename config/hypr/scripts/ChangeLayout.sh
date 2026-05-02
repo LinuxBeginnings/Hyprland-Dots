@@ -15,6 +15,25 @@ get_layout() {
   hyprctl -j getoption general:layout | jq -r '.str'
 }
 
+set_hypr_layout() {
+  local target="$1"
+  local output
+
+  output="$(hyprctl keyword general:layout "$target" 2>&1)"
+  if grep -q "keyword can't work with non-legacy parsers" <<<"$output"; then
+    output="$(hyprctl eval "hl.config({ general = { layout = \"${target}\" } })" 2>&1)"
+  fi
+
+  if ! grep -q "^ok$" <<<"$output"; then
+    echo "$output" >&2
+    return 1
+  fi
+}
+
+hypr_keyword() {
+  hyprctl keyword "$@" >/dev/null 2>&1 || true
+}
+
 next_layout() {
   local current="$1"
   local i
@@ -30,64 +49,65 @@ next_layout() {
 set_layout() {
   local target="$1"
 
-  hyprctl keyword general:layout "$target"
-  hyprctl keyword unbind SUPER,j
-  hyprctl keyword unbind SUPER,k
-  hyprctl keyword unbind SUPER,left
-  hyprctl keyword unbind SUPER,right
-  hyprctl keyword unbind SUPER,up
-  hyprctl keyword unbind SUPER,down
-  hyprctl keyword unbind SUPER,O
+  if ! set_hypr_layout "$target"; then
+    notify-send -e -u critical -i "$notif" " Layout switch failed: $target"
+    return 1
+  fi
+
+  hypr_keyword unbind SUPER,j
+  hypr_keyword unbind SUPER,k
+  hypr_keyword bind SUPER,j,cyclenext
+  hypr_keyword bind SUPER,k,cyclenext,prev
+  hypr_keyword unbind SUPER,left
+  hypr_keyword unbind SUPER,right
+  hypr_keyword unbind SUPER,up
+  hypr_keyword unbind SUPER,down
+  hypr_keyword unbind SUPER,O
 
   case "$target" in
   "dwindle")
-    hyprctl keyword bind SUPER,j,cyclenext
-    hyprctl keyword bind SUPER,k,cyclenext,prev
-    hyprctl keyword bind SUPER,left,cyclenext,prev
-    hyprctl keyword bind SUPER,up,cyclenext,prev
-    hyprctl keyword bind SUPER,right,cyclenext
-    hyprctl keyword bind SUPER,down,cyclenext
-    hyprctl keyword bind SUPER,O,layoutmsg,togglesplit
-    notify-send -e -u low -i "$notif" " Dwindle Layout"
+    hypr_keyword bind SUPER,left,cyclenext,prev
+    hypr_keyword bind SUPER,up,cyclenext,prev
+    hypr_keyword bind SUPER,right,cyclenext
+    hypr_keyword bind SUPER,down,cyclenext
+    hypr_keyword bind SUPER,O,layoutmsg,togglesplit
     ;;
   "scrolling")
-    hyprctl keyword bind SUPER,j,cyclenext
-    hyprctl keyword bind SUPER,k,cyclenext,prev
-    hyprctl keyword bind SUPER,left,cyclenext,prev
-    hyprctl keyword bind SUPER,up,cyclenext,prev
-    hyprctl keyword bind SUPER,right,cyclenext
-    hyprctl keyword bind SUPER,down,cyclenext
-    notify-send -e -u low -i "$notif" " Scrolling Layout"
+    hypr_keyword bind SUPER,left,cyclenext,prev
+    hypr_keyword bind SUPER,up,cyclenext,prev
+    hypr_keyword bind SUPER,right,cyclenext
+    hypr_keyword bind SUPER,down,cyclenext
     ;;
   "monocle")
-    hyprctl keyword bind SUPER,j,layoutmsg,cyclenext
-    hyprctl keyword bind SUPER,k,layoutmsg,cycleprev
-    hyprctl keyword bind SUPER,left,layoutmsg,cycleprev
-    hyprctl keyword bind SUPER,up,layoutmsg,cycleprev
-    hyprctl keyword bind SUPER,right,layoutmsg,cyclenext
-    hyprctl keyword bind SUPER,down,layoutmsg,cyclenext
-    notify-send -e -u low -i "$notif" " Monocle Layout"
+    hypr_keyword bind SUPER,left,layoutmsg,cycleprev
+    hypr_keyword bind SUPER,up,layoutmsg,cycleprev
+    hypr_keyword bind SUPER,right,layoutmsg,cyclenext
+    hypr_keyword bind SUPER,down,layoutmsg,cyclenext
     ;;
   "master")
-    hyprctl keyword bind SUPER,j,layoutmsg,cyclenext
-    hyprctl keyword bind SUPER,k,layoutmsg,cycleprev
-    hyprctl keyword bind SUPER,left,movefocus,l
-    hyprctl keyword bind SUPER,right,movefocus,r
-    hyprctl keyword bind SUPER,up,movefocus,u
-    hyprctl keyword bind SUPER,down,movefocus,d
-    notify-send -e -u low -i "$notif" " Master Layout"
+    hypr_keyword bind SUPER,left,movefocus,l
+    hypr_keyword bind SUPER,right,movefocus,r
+    hypr_keyword bind SUPER,up,movefocus,u
+    hypr_keyword bind SUPER,down,movefocus,d
     ;;
   *)
-    hyprctl keyword bind SUPER,j,layoutmsg,cyclenext
-    hyprctl keyword bind SUPER,k,layoutmsg,cycleprev
-    hyprctl keyword bind SUPER,left,movefocus,l
-    hyprctl keyword bind SUPER,right,movefocus,r
-    hyprctl keyword bind SUPER,up,movefocus,u
-    hyprctl keyword bind SUPER,down,movefocus,d
+    hypr_keyword bind SUPER,left,movefocus,l
+    hypr_keyword bind SUPER,right,movefocus,r
+    hypr_keyword bind SUPER,up,movefocus,u
+    hypr_keyword bind SUPER,down,movefocus,d
     echo "Unknown layout: $target" >&2
     return 1
     ;;
   esac
+
+  local actual
+  actual="$(get_layout)"
+  if [[ "$actual" == "$target" ]]; then
+    notify-send -e -u low -i "$notif" " ${actual^} Layout"
+  else
+    notify-send -e -u critical -i "$notif" " Layout switch failed: still ${actual}"
+    return 1
+  fi
 }
 
 current="$(get_layout)"

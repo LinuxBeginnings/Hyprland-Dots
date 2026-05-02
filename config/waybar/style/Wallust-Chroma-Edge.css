@@ -26,7 +26,8 @@ window#waybar {
   font-size: 14px;
 }
 
-window#waybar.empty window#waybar.empty #window {
+window#waybar.empty,
+window#waybar.empty #window {
   padding: 0px;
   border: 0px;
   background-color: transparent;

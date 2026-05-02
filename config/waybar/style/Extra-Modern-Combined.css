@@ -36,7 +36,7 @@
 * {
     font-family: "JetBrainsMono Nerd Font";
     font-weight: bold;
-	min-height: 0;  
+	min-height: 0;
     /* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
     /* NOTE: Waybar v14+ ignores % font-size values */
     font-size: 99%;
@@ -271,7 +271,7 @@ tooltip {
 #custom-weather.clearNight,
 #custom-weather.cloudyFoggyDay,
 #custom-weather.cloudyFoggyNight,
-#custom-weather.default, 
+#custom-weather.default,
 #custom-weather.rainyDay,
 #custom-weather.rainyNight,
 #custom-weather.severe,

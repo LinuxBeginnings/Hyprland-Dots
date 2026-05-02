@@ -128,6 +128,163 @@ def parse_files(files):
             missing_unbind_suggestions.append(suggest)
             
     return raw_keybinds, missing_unbind_suggestions
+def _parse_lua_string(value):
+    value = value.strip()
+    if len(value) < 2:
+        return None
+    if (value[0] == value[-1]) and value[0] in ("'", '"'):
+        quote = value[0]
+        body = value[1:-1]
+        if quote == '"':
+            body = body.replace('\\"', '"')
+        else:
+            body = body.replace("\\'", "'")
+        body = body.replace("\\\\", "\\")
+        return body
+    return None
+
+def _split_lua_args(arg_text):
+    args = []
+    current = []
+    depth = 0
+    in_string = None
+    escape = False
+    for ch in arg_text:
+        if in_string:
+            current.append(ch)
+            if escape:
+                escape = False
+            elif ch == '\\':
+                escape = True
+            elif ch == in_string:
+                in_string = None
+            continue
+        if ch in ("'", '"'):
+            in_string = ch
+            current.append(ch)
+            continue
+        if ch in "([{":
+            depth += 1
+            current.append(ch)
+            continue
+        if ch in ")]}":
+            depth = max(depth - 1, 0)
+            current.append(ch)
+            continue
+        if ch == ',' and depth == 0:
+            args.append("".join(current).strip())
+            current = []
+            continue
+        current.append(ch)
+    if current:
+        args.append("".join(current).strip())
+    return args
+
+def _find_lua_calls(text, function_names):
+    calls = []
+    pattern = re.compile(r'\b(' + "|".join(re.escape(name) for name in function_names) + r')\s*\(')
+    pos = 0
+    while True:
+        match = pattern.search(text, pos)
+        if not match:
+            break
+        fn = match.group(1)
+        start = match.end()
+        idx = start
+        depth = 1
+        in_string = None
+        escape = False
+        while idx < len(text):
+            ch = text[idx]
+            if in_string:
+                if escape:
+                    escape = False
+                elif ch == '\\':
+                    escape = True
+                elif ch == in_string:
+                    in_string = None
+            else:
+                if ch in ("'", '"'):
+                    in_string = ch
+                elif ch == '(':
+                    depth += 1
+                elif ch == ')':
+                    depth -= 1
+                    if depth == 0:
+                        calls.append((fn, text[start:idx]))
+                        pos = idx + 1
+                        break
+            idx += 1
+        else:
+            break
+    return calls
+
+def _extract_lua_binds(text):
+    binds = []
+    calls = _find_lua_calls(text, ["bind", "bindm", "hl.bind"])
+    for fn, args_text in calls:
+        args = _split_lua_args(args_text)
+        if len(args) < 2:
+            continue
+        mods = _parse_lua_string(args[0])
+        key = _parse_lua_string(args[1])
+        if mods is None or key is None:
+            continue
+        description = None
+        desc_match = re.search(r'description\s*=\s*(\"(?:\\.|[^\"])*\"|\'(?:\\.|[^\'])*\')', args_text, re.DOTALL)
+        if desc_match:
+            description = _parse_lua_string(desc_match.group(1))
+        elif fn == "bindm" and len(args) >= 4:
+            description = _parse_lua_string(args[3])
+        binds.append({
+            "mods": mods,
+            "key": key,
+            "description": description or "",
+        })
+    return binds
+
+def _format_lua_binds(binds):
+    formatted_lines = []
+    for bind in binds:
+        mods = bind["mods"].replace("$mainMod", "SUPER")
+        mods = re.sub(r'[ \t]+', '+', mods.strip())
+        key = bind["key"].strip()
+        if mods and key:
+            combo_str = f"{mods}+{key}"
+        elif key:
+            combo_str = key
+        else:
+            combo_str = mods
+        desc = (bind.get("description") or "").strip()
+        if desc:
+            formatted_lines.append(f"{combo_str} — {desc}")
+        else:
+            formatted_lines.append(combo_str)
+    return formatted_lines
+
+def parse_lua_files(files):
+    order = []
+    bind_map = {}
+    for file_path in files:
+        if not os.path.exists(file_path):
+            continue
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                binds = _extract_lua_binds(f.read())
+        except Exception as e:
+            sys.stderr.write(f"Error reading {file_path}: {e}\n")
+            continue
+        for bind in binds:
+            combo_key = normalize_combo(f"{bind['mods']},{bind['key']}")
+            if combo_key in bind_map:
+                try:
+                    order.remove(combo_key)
+                except ValueError:
+                    pass
+            bind_map[combo_key] = bind
+            order.append(combo_key)
+    effective_binds = [bind_map[key] for key in order if key in bind_map]
+    return _format_lua_binds(effective_binds)
 
 def format_for_rofi(raw_binds):
     formatted_lines = []
@@ -214,7 +371,16 @@ def main():
         sys.exit(0)
         
     config_files = sys.argv[1:]
-    
+    has_lua = any(path.endswith(".lua") for path in config_files)
+    if has_lua:
+        formatted = parse_lua_files(config_files)
+        if not formatted:
+            print("no keybinds found.")
+            sys.exit(1)
+        for line in formatted:
+            print(line)
+        return
+
     binds, suggestions = parse_files(config_files)
     
     if not binds:

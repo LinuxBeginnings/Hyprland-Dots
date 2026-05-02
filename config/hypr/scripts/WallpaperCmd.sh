@@ -24,6 +24,7 @@ if [ "$WWW_CMD" = "awww" ]; then
   mkdir -p "$WWW_CACHE_DIR"
   if [ ! -f "$WWW_MIGRATION_MARKER" ]; then
     awww clear-cache >/dev/null 2>&1 || true
+    mkdir -p "$WWW_CACHE_DIR"
     touch "$WWW_MIGRATION_MARKER"
   fi
 fi

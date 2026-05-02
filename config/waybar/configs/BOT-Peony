@@ -26,6 +26,9 @@
 "width": 1444,
 	
 "modules-left": [
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
 	"hyprland/workspaces#roman", 
 	"mpris", 
 	"group/notify", 

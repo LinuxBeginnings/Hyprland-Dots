@@ -25,6 +25,27 @@ LAST_TOGGLE_FILE="/tmp/dropdown_terminal_last_toggle"
 MIN_TOGGLE_INTERVAL_MS=250
 DROPDOWN_KITTY_CLASS="kitty-dropterm"
 
+lua_quote() {
+  local value="$1"
+  value=${value//\\/\\\\}
+  value=${value//\"/\\\"}
+  printf '"%s"' "$value"
+}
+
+hypr_dispatch_raw() {
+  local command="$*"
+  local quoted
+  quoted=$(lua_quote "$command")
+  hyprctl dispatch "hl.dsp.exec_raw($quoted)"
+}
+
+hypr_exec_cmd() {
+  local command="$*"
+  local quoted
+  quoted=$(lua_quote "$command")
+  hyprctl dispatch "hl.dsp.exec_cmd($quoted)"
+}
+
 # Dropdown size and position configuration (percentages)
 WIDTH_PERCENT=65  # Width as percentage of screen width
 HEIGHT_PERCENT=65 # Height as percentage of screen height
@@ -163,18 +184,19 @@ animate_slide_down() {
   local step_y=$(((target_y - start_y) / SLIDE_STEPS))
 
   # Move window to start position instantly (off-screen)
-  hyprctl dispatch movewindowpixel "exact $target_x $start_y,address:$addr" >/dev/null 2>&1
+  hypr_dispatch_raw movewindowpixel "exact $target_x $start_y,address:$addr" >/dev/null 2>&1
+
   sleep 0.05
 
   # Animate slide down
   for i in $(seq 1 $SLIDE_STEPS); do
     local current_y=$((start_y + (step_y * i)))
-    hyprctl dispatch movewindowpixel "exact $target_x $current_y,address:$addr" >/dev/null 2>&1
+    hypr_dispatch_raw movewindowpixel "exact $target_x $current_y,address:$addr" >/dev/null 2>&1
     sleep 0.03
   done
 
   # Ensure final position is exact
-  hyprctl dispatch movewindowpixel "exact $target_x $target_y,address:$addr" >/dev/null 2>&1
+  hypr_dispatch_raw movewindowpixel "exact $target_x $target_y,address:$addr" >/dev/null 2>&1
 }
 
 # Function to animate window slide up (hide)
@@ -196,7 +218,7 @@ animate_slide_up() {
   # Animate slide up
   for i in $(seq 1 $SLIDE_STEPS); do
     local current_y=$((start_y - (step_y * i)))
-    hyprctl dispatch movewindowpixel "exact $start_x $current_y,address:$addr" >/dev/null 2>&1
+    hypr_dispatch_raw movewindowpixel "exact $start_x $current_y,address:$addr" >/dev/null 2>&1
     sleep 0.03
   done
 
@@ -370,14 +392,14 @@ window_is_pinned() {
 ensure_pinned() {
   local addr="$1"
   if ! window_is_pinned "$addr"; then
-    hyprctl dispatch pin "address:$addr" >/dev/null 2>&1
+    hypr_dispatch_raw pin "address:$addr" >/dev/null 2>&1
   fi
 }
 
 ensure_unpinned() {
   local addr="$1"
   if window_is_pinned "$addr"; then
-    hyprctl dispatch pin "address:$addr" >/dev/null 2>&1
+    hypr_dispatch_raw pin "address:$addr" >/dev/null 2>&1
   fi
 }
 
@@ -403,30 +425,32 @@ spawn_terminal() {
   local windows_before=$(hyprctl clients -j)
   local count_before=$(echo "$windows_before" | jq 'length')
 
-  # Launch terminal directly in special workspace to avoid visible spawn
-  hyprctl dispatch exec "[float; size $width $height; workspace special:scratchpad silent] $TERMINAL_CMD"
-
-  # Wait for window to appear
-  sleep 0.1
-
-  # Get windows after spawning
-  local windows_after=$(hyprctl clients -j)
-  local count_after=$(echo "$windows_after" | jq 'length')
+  # Launch terminal, then move/resize it after Hyprland reports the new client.
+  hypr_exec_cmd "$TERMINAL_CMD"
 
   local new_addr=""
+  for _ in $(seq 1 20); do
+    local windows_after=$(hyprctl clients -j)
+    local recovered
+    recovered=$(echo "$windows_after" | jq -r --arg CLASS "$DROPDOWN_KITTY_CLASS" \
+      '.[] | select(.class == $CLASS) | .address' | head -1)
+    if [ -n "$recovered" ] && [ "$recovered" != "null" ]; then
+      new_addr="$recovered"
+      break
+    fi
 
-  if [ "$count_after" -gt "$count_before" ]; then
-    # Find the new window by comparing before/after lists
-    new_addr=$(comm -13 \
-      <(echo "$windows_before" | jq -r '.[].address' | sort) \
-      <(echo "$windows_after" | jq -r '.[].address' | sort) |
-      head -1)
-  fi
-
-  # Fallback: try to find by the most recently mapped window
-  if [ -z "$new_addr" ] || [ "$new_addr" = "null" ]; then
-    new_addr=$(hyprctl clients -j | jq -r 'sort_by(.focusHistoryID) | .[-1] | .address')
-  fi
+    local count_after=$(echo "$windows_after" | jq 'length')
+    if [ "$count_after" -gt "$count_before" ]; then
+      new_addr=$(comm -13 \
+        <(echo "$windows_before" | jq -r '.[].address' | sort) \
+        <(echo "$windows_after" | jq -r '.[].address' | sort) |
+        head -1)
+      if [ -n "$new_addr" ] && [ "$new_addr" != "null" ]; then
+        break
+      fi
+    fi
+    sleep 0.1
+  done
 
   if [ -n "$new_addr" ] && [ "$new_addr" != "null" ]; then
     # Store the address and monitor name
@@ -436,11 +460,11 @@ spawn_terminal() {
     # Small delay to ensure it's properly in special workspace
     sleep 0.2
     # Move to current workspace but start hidden off-screen
-    hyprctl dispatch movetoworkspacesilent "$CURRENT_WS,address:$new_addr"
+    hypr_dispatch_raw movetoworkspacesilent "$CURRENT_WS,address:$new_addr"
     ensure_pinned "$new_addr"
-    hyprctl dispatch resizewindowpixel "exact $width $height,address:$new_addr" >/dev/null 2>&1
+    hypr_dispatch_raw resizewindowpixel "exact $width $height,address:$new_addr" >/dev/null 2>&1
     local off_y=$((target_y - height - 200))
-    hyprctl dispatch movewindowpixel "exact $target_x $off_y,address:$new_addr" >/dev/null 2>&1
+    hypr_dispatch_raw movewindowpixel "exact $target_x $off_y,address:$new_addr" >/dev/null 2>&1
     set_hidden_state "hidden"
 
     return 0
@@ -454,78 +478,16 @@ spawn_terminal() {
 TERMINAL_ADDR=$(resolve_terminal_address)
 
 if [ -n "$TERMINAL_ADDR" ]; then
-  debug_echo "Found existing terminal: $TERMINAL_ADDR"
-  focused_monitor=$(get_monitor_info | awk '{print $6}')
-  dropdown_monitor=$(get_terminal_monitor)
-  if [ "$focused_monitor" != "$dropdown_monitor" ]; then
-    debug_echo "Monitor focus changed: moving dropdown to $focused_monitor"
-    # Calculate new position for focused monitor
-    pos_info=$(calculate_dropdown_position)
-    target_x=$(echo $pos_info | cut -d' ' -f1)
-    target_y=$(echo $pos_info | cut -d' ' -f2)
-    width=$(echo $pos_info | cut -d' ' -f3)
-    height=$(echo $pos_info | cut -d' ' -f4)
-    monitor_name=$(echo $pos_info | cut -d' ' -f5)
-    # Move and resize window
-    hyprctl dispatch movewindowpixel "exact $target_x $target_y,address:$TERMINAL_ADDR"
-    hyprctl dispatch resizewindowpixel "exact $width $height,address:$TERMINAL_ADDR"
-    # Update ADDR_FILE
-    echo "$TERMINAL_ADDR $monitor_name" >"$ADDR_FILE"
-  fi
-
-  hidden_state=$(get_hidden_state)
-  if [ "$hidden_state" = "hidden" ] || [ -z "$hidden_state" ] || window_is_hidden "$TERMINAL_ADDR"; then
-    debug_echo "Bringing terminal from hidden position with slide down animation"
-
-    # Calculate target position
-    pos_info=$(calculate_dropdown_position)
-    target_x=$(echo $pos_info | cut -d' ' -f1)
-    target_y=$(echo $pos_info | cut -d' ' -f2)
-    width=$(echo $pos_info | cut -d' ' -f3)
-    height=$(echo $pos_info | cut -d' ' -f4)
-
-    ensure_pinned "$TERMINAL_ADDR"
-
-    # Set size and animate slide down
-    hyprctl dispatch resizewindowpixel "exact $width $height,address:$TERMINAL_ADDR"
-    animate_slide_down "$TERMINAL_ADDR" "$target_x" "$target_y" "$width" "$height"
-
-    hyprctl dispatch focuswindow "address:$TERMINAL_ADDR"
-    set_hidden_state "shown"
-  else
-    debug_echo "Hiding terminal off-screen with slide up animation"
-
-    # Get current geometry for animation
-    geometry=$(get_window_geometry "$TERMINAL_ADDR")
-    if [ -n "$geometry" ]; then
-      curr_x=$(echo $geometry | cut -d' ' -f1)
-      curr_y=$(echo $geometry | cut -d' ' -f2)
-      curr_width=$(echo $geometry | cut -d' ' -f3)
-      curr_height=$(echo $geometry | cut -d' ' -f4)
-
-      debug_echo "Current geometry: ${curr_x},${curr_y} ${curr_width}x${curr_height}"
-
-      # Animate slide up first
-      animate_slide_up "$TERMINAL_ADDR" "$curr_x" "$curr_y" "$curr_width" "$curr_height"
-
-      # Move off-screen after animation
-      off_y=$((curr_y - curr_height - 200))
-      hyprctl dispatch movewindowpixel "exact $curr_x $off_y,address:$TERMINAL_ADDR" >/dev/null 2>&1
-      ensure_unpinned "$TERMINAL_ADDR"
-      set_hidden_state "hidden"
-    else
-      debug_echo "Could not get window geometry, moving off-screen without animation"
-      hyprctl dispatch movewindowpixel "exact 0 -1000,address:$TERMINAL_ADDR" >/dev/null 2>&1
-      ensure_unpinned "$TERMINAL_ADDR"
-      set_hidden_state "hidden"
-    fi
-  fi
+  debug_echo "Found existing terminal: $TERMINAL_ADDR; closing it"
+  hypr_exec_cmd "pkill -f 'kitty --class kitty-dropterm'"
+  rm -f "$ADDR_FILE" "$STATE_FILE"
 else
   debug_echo "No existing terminal found, creating new one"
   if spawn_terminal; then
     TERMINAL_ADDR=$(get_terminal_address)
     if [ -n "$TERMINAL_ADDR" ]; then
-      hyprctl dispatch focuswindow "address:$TERMINAL_ADDR"
+      hypr_dispatch_raw focuswindow "address:$TERMINAL_ADDR"
+      set_hidden_state "shown"
     fi
   fi
 fi

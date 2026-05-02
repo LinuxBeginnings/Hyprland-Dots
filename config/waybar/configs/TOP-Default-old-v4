@@ -22,6 +22,9 @@
 "margin-right": 8,
 
 "modules-left": [
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
 	"group/app_drawer",
 	"custom/separator#dot-line",
 	"group/mobo_drawer",

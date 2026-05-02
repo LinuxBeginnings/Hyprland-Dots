@@ -23,6 +23,9 @@
 //"gtk-layer-shell": true,
   
 "modules-left": [
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
 	"group/notify",	
   "clock#vertical",
     

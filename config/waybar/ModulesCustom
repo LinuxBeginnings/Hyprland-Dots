@@ -115,6 +115,17 @@
 	"format": " {}",
 	"on-click": "$HOME/.config/hypr/scripts/KeyboardLayout.sh switch",
 },
+"custom/hypr_layout": {
+	"exec": "$HOME/.config/hypr/scripts/HyprLayoutModule.sh status",
+	"return-type": "json",
+	"interval": 2,
+	"signal": 8,
+	"format": "{}",
+	"on-click": "$HOME/.config/hypr/scripts/HyprLayoutModule.sh menu",
+	"on-click-right": "$HOME/.config/hypr/scripts/HyprLayoutModule.sh next",
+	"tooltip": true,
+	"escape": false
+},
 
 "custom/light_dark": {
 	"format": "󰔎 ",
@@ -174,7 +185,7 @@
 	"on-scroll-down": "$HOME/.config/hypr/scripts/Volume.sh --dec",
 	"smooth-scrolling-threshold": 1,
 },
-    
+
 "custom/power": {
 	"format": " ⏻ ",
 	"on-click": "$HOME/.config/hypr/scripts/Wlogout.sh",
@@ -189,7 +200,7 @@
     "tooltip": true,
 	"tooltip-format": "Left Click: Reboot",
 },
-    
+
 "custom/quit": {
     "format": "󰗼",
     "on-click": "hyprctl dispatch exit",

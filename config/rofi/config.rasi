@@ -1,16 +1,16 @@
 /* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
-/* dKoolDots - Default 
+/* dKoolDots - Default
 
 * All main themes or configs are located in ~/.config/rofi/themes/
-* If you want to edit the config, that is where you should edit NOT here 
+* If you want to edit the config, that is where you should edit NOT here
 
 * To load a new theme, manually edit the file path below or choose desired theme via rofi theme selector (choose via app menu)
 
-* Alternative way to Load (preferred) own cooked by Ja 
-* SUPER CTRL R - Choose style & SUPER CTRL SHIFT R 
+* Alternative way to Load (preferred) own cooked by Ja
+* SUPER CTRL R - Choose style & SUPER CTRL SHIFT R
 
-* TIPS 
-* If you have edited a config, rename it with a unique name. During update, the contents of 
+* TIPS
+* If you have edited a config, rename it with a unique name. During update, the contents of
 * ~/.config/rofi/themes/ will be replaced. */
 
 /* ---- Global Configuration Fonts ---- */
