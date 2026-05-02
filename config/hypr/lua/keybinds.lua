@@ -736,18 +736,22 @@ bind("SUPER SHIFT", "left", window_api.resize({ x = -50, y = 0, relative = true 
 bind("SUPER SHIFT", "right", window_api.resize({ x = 50, y = 0, relative = true }), { description = "resize right (+50)" })
 bind("SUPER SHIFT", "up", window_api.resize({ x = 0, y = -50, relative = true }), { description = "resize up (-50)" })
 bind("SUPER SHIFT", "down", window_api.resize({ x = 0, y = 50, relative = true }), { description = "resize down (+50)" })
-bind(
-  "SUPER CTRL",
-  "left",
-  exec_cmd("$HOME/.config/hypr/scripts/LuaMoveWindowDirectional.sh left"),
-  { description = "move window left" }
-)
-bind(
-  "SUPER CTRL",
-  "right",
-  exec_cmd("$HOME/.config/hypr/scripts/LuaMoveWindowDirectional.sh right"),
-  { description = "move window right" }
-)
+-- Keep legacy directional move script binds commented for rollback during Lua API migration.
+-- Native movewindow dispatch below replaces LuaMoveWindowDirectional.sh usage.
+-- bind(
+--   "SUPER CTRL",
+--   "left",
+--   exec_cmd("$HOME/.config/hypr/scripts/LuaMoveWindowDirectional.sh left"),
+--   { description = "move window left" }
+-- )
+-- bind(
+--   "SUPER CTRL",
+--   "right",
+--   exec_cmd("$HOME/.config/hypr/scripts/LuaMoveWindowDirectional.sh right"),
+--   { description = "move window right" }
+-- )
+bind("SUPER CTRL", "left", dispatch("movewindow", "l"), { description = "move window left" })
+bind("SUPER CTRL", "right", dispatch("movewindow", "r"), { description = "move window right" })
 bind("SUPER CTRL", "up", dispatch("movewindow", "u"), { description = "move window up" })
 bind("SUPER CTRL", "down", dispatch("movewindow", "d"), { description = "move window down" })
 bind(
@@ -780,18 +784,22 @@ bind("SUPER", "left", dispatch("movefocus", "l"), { description = "focus left" }
 bind("SUPER", "right", dispatch("movefocus", "r"), { description = "focus right" })
 bind("SUPER", "up", dispatch("movefocus", "u"), { description = "focus up" })
 bind("SUPER", "down", dispatch("movefocus", "d"), { description = "focus down" })
-bind(
-  "SUPER",
-  "tab",
-  exec_cmd("$HOME/.config/hypr/scripts/LuaFocusWorkspaceRelative.sh next"),
-  { description = "next workspace" }
-)
-bind(
-  "SUPER SHIFT",
-  "tab",
-  exec_cmd("$HOME/.config/hypr/scripts/LuaFocusWorkspaceRelative.sh previous"),
-  { description = "previous workspace" }
-)
+-- Keep legacy relative workspace focus script binds commented for rollback during Lua API migration.
+-- Native workspace dispatch below replaces LuaFocusWorkspaceRelative.sh usage.
+-- bind(
+--   "SUPER",
+--   "tab",
+--   exec_cmd("$HOME/.config/hypr/scripts/LuaFocusWorkspaceRelative.sh next"),
+--   { description = "next workspace" }
+-- )
+-- bind(
+--   "SUPER SHIFT",
+--   "tab",
+--   exec_cmd("$HOME/.config/hypr/scripts/LuaFocusWorkspaceRelative.sh previous"),
+--   { description = "previous workspace" }
+-- )
+bind("SUPER", "tab", dispatch("workspace", "e+1"), { description = "next workspace" })
+bind("SUPER SHIFT", "tab", dispatch("workspace", "e-1"), { description = "previous workspace" })
 bind("SUPER SHIFT", "U", dispatch("movetoworkspace", "special"), { description = "move to special workspace" })
 bind("SUPER", "U", dispatch("togglespecialworkspace", ""), { description = "toggle special workspace" })
 bind("SUPER", "code:10", dispatch("workspace", "1"), { description = "workspace 1" })
@@ -814,18 +822,22 @@ bind("SUPER SHIFT", "code:16", dispatch("movetoworkspace", "7"), { description =
 bind("SUPER SHIFT", "code:17", dispatch("movetoworkspace", "8"), { description = "move to workspace 8" })
 bind("SUPER SHIFT", "code:18", dispatch("movetoworkspace", "9"), { description = "move to workspace 9" })
 bind("SUPER SHIFT", "code:19", dispatch("movetoworkspace", "10"), { description = "move to workspace 10" })
-bind(
-  "SUPER SHIFT",
-  "bracketleft",
-  exec_cmd("$HOME/.config/hypr/scripts/LuaMoveWindowWorkspaceRelative.sh previous"),
-  { description = "move to previous workspace" }
-)
-bind(
-  "SUPER SHIFT",
-  "bracketright",
-  exec_cmd("$HOME/.config/hypr/scripts/LuaMoveWindowWorkspaceRelative.sh next"),
-  { description = "move to next workspace" }
-)
+-- Keep legacy relative move-to-workspace script binds commented for rollback during Lua API migration.
+-- Native movetoworkspace dispatch below replaces LuaMoveWindowWorkspaceRelative.sh usage.
+-- bind(
+--   "SUPER SHIFT",
+--   "bracketleft",
+--   exec_cmd("$HOME/.config/hypr/scripts/LuaMoveWindowWorkspaceRelative.sh previous"),
+--   { description = "move to previous workspace" }
+-- )
+-- bind(
+--   "SUPER SHIFT",
+--   "bracketright",
+--   exec_cmd("$HOME/.config/hypr/scripts/LuaMoveWindowWorkspaceRelative.sh next"),
+--   { description = "move to next workspace" }
+-- )
+bind("SUPER SHIFT", "bracketleft", dispatch("movetoworkspace", "-1"), { description = "move to previous workspace" })
+bind("SUPER SHIFT", "bracketright", dispatch("movetoworkspace", "+1"), { description = "move to next workspace" })
 bind("SUPER CTRL", "code:10", dispatch("movetoworkspacesilent", "1"), { description = "move silently to workspace 1" })
 bind("SUPER CTRL", "code:11", dispatch("movetoworkspacesilent", "2"), { description = "move silently to workspace 2" })
 bind("SUPER CTRL", "code:12", dispatch("movetoworkspacesilent", "3"), { description = "move silently to workspace 3" })
@@ -841,41 +853,51 @@ bind(
   dispatch("movetoworkspacesilent", "10"),
   { description = "move silently to workspace 10" }
 )
-bind(
-  "SUPER CTRL",
-  "bracketleft",
-  exec_cmd("$HOME/.config/hypr/scripts/LuaMoveWindowWorkspaceRelative.sh previous"),
-  { description = "move silently to previous workspace" }
-)
-bind(
-  "SUPER CTRL",
-  "bracketright",
-  exec_cmd("$HOME/.config/hypr/scripts/LuaMoveWindowWorkspaceRelative.sh next"),
-  { description = "move silently to next workspace" }
-)
-bind(
-  "SUPER",
-  "mouse_down",
-  exec_cmd("$HOME/.config/hypr/scripts/LuaFocusWorkspaceRelative.sh next"),
-  { description = "next workspace" }
-)
-bind(
-  "SUPER",
-  "mouse_up",
-  exec_cmd("$HOME/.config/hypr/scripts/LuaFocusWorkspaceRelative.sh previous"),
-  { description = "previous workspace" }
-)
-bind(
-  "SUPER",
-  "period",
-  exec_cmd("$HOME/.config/hypr/scripts/LuaFocusWorkspaceRelative.sh next"),
-  { description = "next workspace" }
-)
-bind(
-  "SUPER",
-  "comma",
-  exec_cmd("$HOME/.config/hypr/scripts/LuaFocusWorkspaceRelative.sh previous"),
-  { description = "previous workspace" }
-)
+-- Keep legacy silent relative move-to-workspace script binds commented for rollback during Lua API migration.
+-- Native movetoworkspacesilent dispatch below replaces LuaMoveWindowWorkspaceRelative.sh usage.
+-- bind(
+--   "SUPER CTRL",
+--   "bracketleft",
+--   exec_cmd("$HOME/.config/hypr/scripts/LuaMoveWindowWorkspaceRelative.sh previous"),
+--   { description = "move silently to previous workspace" }
+-- )
+-- bind(
+--   "SUPER CTRL",
+--   "bracketright",
+--   exec_cmd("$HOME/.config/hypr/scripts/LuaMoveWindowWorkspaceRelative.sh next"),
+--   { description = "move silently to next workspace" }
+-- )
+bind("SUPER CTRL", "bracketleft", dispatch("movetoworkspacesilent", "-1"), { description = "move silently to previous workspace" })
+bind("SUPER CTRL", "bracketright", dispatch("movetoworkspacesilent", "+1"), { description = "move silently to next workspace" })
+-- Keep legacy scroll/period/comma workspace focus script binds commented for rollback during Lua API migration.
+-- Native workspace dispatch below replaces LuaFocusWorkspaceRelative.sh usage.
+-- bind(
+--   "SUPER",
+--   "mouse_down",
+--   exec_cmd("$HOME/.config/hypr/scripts/LuaFocusWorkspaceRelative.sh next"),
+--   { description = "next workspace" }
+-- )
+-- bind(
+--   "SUPER",
+--   "mouse_up",
+--   exec_cmd("$HOME/.config/hypr/scripts/LuaFocusWorkspaceRelative.sh previous"),
+--   { description = "previous workspace" }
+-- )
+-- bind(
+--   "SUPER",
+--   "period",
+--   exec_cmd("$HOME/.config/hypr/scripts/LuaFocusWorkspaceRelative.sh next"),
+--   { description = "next workspace" }
+-- )
+-- bind(
+--   "SUPER",
+--   "comma",
+--   exec_cmd("$HOME/.config/hypr/scripts/LuaFocusWorkspaceRelative.sh previous"),
+--   { description = "previous workspace" }
+-- )
+bind("SUPER", "mouse_down", dispatch("workspace", "e+1"), { description = "next workspace" })
+bind("SUPER", "mouse_up", dispatch("workspace", "e-1"), { description = "previous workspace" })
+bind("SUPER", "period", dispatch("workspace", "e+1"), { description = "next workspace" })
+bind("SUPER", "comma", dispatch("workspace", "e-1"), { description = "previous workspace" })
 bindm("SUPER", "mouse:272", "movewindow", "move window")
 bindm("SUPER", "mouse:273", "resizewindow", "resize window")
