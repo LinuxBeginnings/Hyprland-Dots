@@ -10,9 +10,15 @@
 CONFIGS_DIR="$HOME/.config/hypr/configs"
 TARGET_FILE="$CONFIGS_DIR/WindowRules.conf"
 V3_FILE="$CONFIGS_DIR/WindowRules-config-v3.conf"
+LAYER_TARGET_FILE="$CONFIGS_DIR/LayerRules.conf"
+LAYER_V3_FILE="$CONFIGS_DIR/LayerRules-config-v3.conf"
 
 if [[ ! -f "$V3_FILE" ]]; then
   echo "Error: Source configuration file not found: $V3_FILE"
+  exit 1
+fi
+if [[ ! -f "$LAYER_V3_FILE" ]]; then
+  echo "Error: Source configuration file not found: $LAYER_V3_FILE"
   exit 1
 fi
 
@@ -53,6 +59,11 @@ if [ "$SMALLEST" = "$REQUIRED_VER" ]; then
     mv "$TARGET_FILE" "$TARGET_FILE.bak"
   fi
   cp "$V3_FILE" "$TARGET_FILE"
+  if [ -f "$LAYER_TARGET_FILE" ]; then
+    echo "Backing up existing LayerRules.conf to LayerRules.conf.bak"
+    mv "$LAYER_TARGET_FILE" "$LAYER_TARGET_FILE.bak"
+  fi
+  cp "$LAYER_V3_FILE" "$LAYER_TARGET_FILE"
 
   if command -v hyprctl &>/dev/null; then
     if hyprctl instances &>/dev/null; then

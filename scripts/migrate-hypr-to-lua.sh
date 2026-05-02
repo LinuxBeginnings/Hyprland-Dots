@@ -29,7 +29,9 @@ USER_SETTINGS="$USER_CONFIGS_DIR/UserSettings.conf"
 USER_DECORATIONS="$USER_CONFIGS_DIR/UserDecorations.conf"
 USER_ANIMATIONS="$USER_CONFIGS_DIR/UserAnimations.conf"
 USER_LAPTOPS="$USER_CONFIGS_DIR/Laptops.conf"
+USER_LAYER_RULES="$USER_CONFIGS_DIR/LayerRules.conf"
 SYSTEM_WINDOW_RULES="$CONFIGS_DIR/WindowRules.conf"
+SYSTEM_LAYER_RULES="$CONFIGS_DIR/LayerRules.conf"
 SYSTEM_KEYBINDS="$CONFIGS_DIR/Keybinds.conf"
 SYSTEM_ENV_VARS="$CONFIGS_DIR/ENVariables.conf"
 SYSTEM_STARTUP_APPS="$CONFIGS_DIR/Startup_Apps.conf"
@@ -163,12 +165,14 @@ if [ "$DRY_RUN" -eq 1 ]; then
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/system_env.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/system_startup.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/system_window_rules.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/system_layer_rules.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/system_keybinds.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/system_settings.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/system_laptops.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_env.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_startup.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_window_rules.lua"
+    echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_layer_rules.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_keybinds.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_settings.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_decorations.lua"
@@ -209,12 +213,14 @@ mkdir -p "$USER_CONFIGS_DIR" "$CONFIGS_DIR"
 python3 - \
   "$USER_CONFIGS_DIR" \
   "$SYSTEM_WINDOW_RULES" \
+  "$SYSTEM_LAYER_RULES" \
   "$SYSTEM_KEYBINDS" \
   "$SYSTEM_ENV_VARS" \
   "$SYSTEM_STARTUP_APPS" \
   "$SYSTEM_SETTINGS" \
   "$SYSTEM_LAPTOPS" \
   "$USER_WINDOW_RULES" \
+  "$USER_LAYER_RULES" \
   "$USER_KEYBINDS" \
   "$USER_ENV_VARS" \
   "$USER_STARTUP_APPS" \
@@ -237,31 +243,35 @@ HEADER = """-- ==================================================
 
 user_configs_dir = Path(sys.argv[1])
 system_window_rules_path = Path(sys.argv[2])
-system_keybinds_path = Path(sys.argv[3])
-system_env_path = Path(sys.argv[4])
-system_startup_path = Path(sys.argv[5])
-system_settings_path = Path(sys.argv[6])
-system_laptops_path = Path(sys.argv[7])
-window_rules_path = Path(sys.argv[8])
-keybinds_path = Path(sys.argv[9])
-env_path = Path(sys.argv[10])
-startup_path = Path(sys.argv[11])
-settings_path = Path(sys.argv[12])
-decorations_path = Path(sys.argv[13])
-animations_path = Path(sys.argv[14])
-laptops_path = Path(sys.argv[15])
-user_defaults_path = Path(sys.argv[16])
+system_layer_rules_path = Path(sys.argv[3])
+system_keybinds_path = Path(sys.argv[4])
+system_env_path = Path(sys.argv[5])
+system_startup_path = Path(sys.argv[6])
+system_settings_path = Path(sys.argv[7])
+system_laptops_path = Path(sys.argv[8])
+window_rules_path = Path(sys.argv[9])
+layer_rules_path = Path(sys.argv[10])
+keybinds_path = Path(sys.argv[11])
+env_path = Path(sys.argv[12])
+startup_path = Path(sys.argv[13])
+settings_path = Path(sys.argv[14])
+decorations_path = Path(sys.argv[15])
+animations_path = Path(sys.argv[16])
+laptops_path = Path(sys.argv[17])
+user_defaults_path = Path(sys.argv[18])
 
 files_out = {
     "system_env": user_configs_dir / "system_env.lua",
     "system_startup": user_configs_dir / "system_startup.lua",
     "system_window_rules": user_configs_dir / "system_window_rules.lua",
+    "system_layer_rules": user_configs_dir / "system_layer_rules.lua",
     "system_keybinds": user_configs_dir / "system_keybinds.lua",
     "system_settings": user_configs_dir / "system_settings.lua",
     "system_laptops": user_configs_dir / "system_laptops.lua",
     "env": user_configs_dir / "user_env.lua",
     "startup": user_configs_dir / "user_startup.lua",
     "window_rules": user_configs_dir / "user_window_rules.lua",
+    "layer_rules": user_configs_dir / "user_layer_rules.lua",
     "keybinds": user_configs_dir / "user_keybinds.lua",
     "settings": user_configs_dir / "user_settings.lua",
     "decorations": user_configs_dir / "user_decorations.lua",
@@ -572,8 +582,10 @@ def parse_keybinds(path, *, variables=None, visited=None):
 
     return converted
 
-system_rules = parse_rules(system_window_rules_path, "system")
-rules = parse_rules(window_rules_path, "user")
+system_window_rules = [rule for rule in parse_rules(system_window_rules_path, "system-window") if rule[0] == "window"]
+system_layer_rules = [rule for rule in parse_rules(system_layer_rules_path, "system-layer") if rule[0] == "layer"]
+window_rules = [rule for rule in parse_rules(window_rules_path, "user-window") if rule[0] == "window"]
+layer_rules = [rule for rule in parse_rules(layer_rules_path, "user-layer") if rule[0] == "layer"]
 base_keybind_vars = {}
 parse_keybinds(user_defaults_path, variables=base_keybind_vars)
 system_keybinds = parse_keybinds(system_keybinds_path, variables=dict(base_keybind_vars))
@@ -627,7 +639,7 @@ write_file(files_out["system_startup"], system_startup_lines)
 
 system_window_lines = [
     "-- System defaults migrated from configs/WindowRules.conf (auto-generated).",
-    "-- Add additional rules with apply_window_rule({...}) / apply_layer_rule({...}).",
+    "-- Add additional rules with apply_window_rule({...}).",
     "-- Example:",
     "-- apply_window_rule({",
     "--   name = \"My System Rule\",",
@@ -641,6 +653,26 @@ system_window_lines = [
     "  end",
     "end",
     "",
+]
+if system_window_rules:
+    system_window_lines.append("-- Converted from configs/WindowRules.conf")
+    for rule_type, rule in system_window_rules:
+        system_window_lines.append(emit_rule(rule_type, rule))
+        system_window_lines.append("")
+else:
+    system_window_lines.append("-- No active window rules were found in configs/WindowRules.conf.")
+write_file(files_out["system_window_rules"], system_window_lines)
+
+system_layer_lines = [
+    "-- System defaults migrated from configs/LayerRules.conf (auto-generated).",
+    "-- Add additional rules with apply_layer_rule({...}).",
+    "-- Example:",
+    "-- apply_layer_rule({",
+    "--   name = \"My Layer Rule\",",
+    "--   match = { namespace = \"rofi\" },",
+    "--   blur = true,",
+    "-- })",
+    "",
     "local function apply_layer_rule(rule)",
     "  if hl.layer_rule then",
     "    hl.layer_rule(rule)",
@@ -648,14 +680,14 @@ system_window_lines = [
     "end",
     "",
 ]
-if system_rules:
-    system_window_lines.append("-- Converted from configs/WindowRules.conf")
-    for rule_type, rule in system_rules:
-        system_window_lines.append(emit_rule(rule_type, rule))
-        system_window_lines.append("")
+if system_layer_rules:
+    system_layer_lines.append("-- Converted from configs/LayerRules.conf")
+    for rule_type, rule in system_layer_rules:
+        system_layer_lines.append(emit_rule(rule_type, rule))
+        system_layer_lines.append("")
 else:
-    system_window_lines.append("-- No active window/layer rules were found in configs/WindowRules.conf.")
-write_file(files_out["system_window_rules"], system_window_lines)
+    system_layer_lines.append("-- No active layer rules were found in configs/LayerRules.conf.")
+write_file(files_out["system_layer_rules"], system_layer_lines)
 
 system_keybind_lines = [
     "-- System defaults migrated from configs/Keybinds.conf (auto-generated).",
@@ -833,8 +865,8 @@ else:
 write_file(files_out["startup"], startup_lines)
 
 window_lines = [
-    "-- User window/layer rule overrides (auto-generated).",
-    "-- Add your own rules with apply_window_rule({...}) / apply_layer_rule({...})",
+    "-- User window rule overrides (auto-generated).",
+    "-- Add your own rules with apply_window_rule({...})",
     "-- Example:",
     "-- apply_window_rule({",
     "--   name = \"My Float Rule\",",
@@ -849,6 +881,26 @@ window_lines = [
     "  end",
     "end",
     "",
+]
+if window_rules:
+    window_lines.append("-- Converted from WindowRules.conf")
+    for rule_type, rule in window_rules:
+        window_lines.append(emit_rule(rule_type, rule))
+        window_lines.append("")
+else:
+    window_lines.append("-- No active window rules were found in WindowRules.conf.")
+write_file(files_out["window_rules"], window_lines)
+
+layer_lines = [
+    "-- User layer rule overrides (auto-generated).",
+    "-- Add your own rules with apply_layer_rule({...})",
+    "-- Example:",
+    "-- apply_layer_rule({",
+    "--   name = \"My Layer Rule\",",
+    "--   match = { namespace = \"notifications\" },",
+    "--   blur = true,",
+    "-- })",
+    "",
     "local function apply_layer_rule(rule)",
     "  if hl.layer_rule then",
     "    hl.layer_rule(rule)",
@@ -856,14 +908,14 @@ window_lines = [
     "end",
     "",
 ]
-if rules:
-    window_lines.append("-- Converted from WindowRules.conf")
-    for rule_type, rule in rules:
-        window_lines.append(emit_rule(rule_type, rule))
-        window_lines.append("")
+if layer_rules:
+    layer_lines.append("-- Converted from LayerRules.conf")
+    for rule_type, rule in layer_rules:
+        layer_lines.append(emit_rule(rule_type, rule))
+        layer_lines.append("")
 else:
-    window_lines.append("-- No active window/layer rules were found in WindowRules.conf.")
-write_file(files_out["window_rules"], window_lines)
+    layer_lines.append("-- No active layer rules were found in LayerRules.conf.")
+write_file(files_out["layer_rules"], layer_lines)
 
 keybind_lines = [
     "-- User keybind overrides (auto-generated).",
@@ -1011,12 +1063,14 @@ local files = {
   "system_env.lua",
   "system_startup.lua",
   "system_window_rules.lua",
+  "system_layer_rules.lua",
   "system_keybinds.lua",
   "system_settings.lua",
   "system_laptops.lua",
   "user_env.lua",
   "user_startup.lua",
   "user_window_rules.lua",
+  "user_layer_rules.lua",
   "user_keybinds.lua",
   "user_settings.lua",
   "user_decorations.lua",

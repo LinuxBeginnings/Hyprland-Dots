@@ -14,11 +14,6 @@ local function apply_window_rule(rule)
   end
 end
 
-local function apply_layer_rule(rule)
-  if hl.layer_rule then
-    hl.layer_rule(rule)
-  end
-end
 
 apply_window_rule({
   name = "windowrule-001",
@@ -774,61 +769,6 @@ apply_window_rule({
   no_initial_focus = true,
 })
 
-apply_layer_rule({
-  name = "layerrule-001",
-  match = {
-    namespace = "rofi",
-  },
-  blur = true,
-})
-
-apply_layer_rule({
-  name = "layerrule-002",
-  match = {
-    namespace = "notifications",
-  },
-  blur = true,
-})
-
-apply_layer_rule({
-  name = "layerrule-003",
-  match = {
-    namespace = "quickshell:overview",
-  },
-  blur = true,
-})
-
-apply_layer_rule({
-  name = "layerrule-004",
-  match = {
-    namespace = "quickshell:overview",
-  },
-  ignore_alpha = 0.5,
-})
-
-apply_layer_rule({
-  name = "layerrule-005",
-  match = {
-    namespace = "wallpaper",
-  },
-  blur = true,
-})
-
-apply_layer_rule({
-  name = "layerrule-006",
-  match = {
-    namespace = "rofi",
-  },
-  animation = "slide",
-})
-
-apply_layer_rule({
-  name = "layerrule-007",
-  match = {
-    namespace = "notifications",
-  },
-  animation = "slide",
-})
 
 apply_window_rule({
   name = "Picture-in-Picture",

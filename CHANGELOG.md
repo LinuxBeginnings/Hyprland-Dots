@@ -2,6 +2,16 @@
 
 ## v2.3.24
 
+- Moved layer rules to own file `LayerRules.conf`
+  - Added additional rules from ``TheAhumMaitra``
+  - Updated LUA config accordingly 
+  - Added menu option for LayerRules in quicksettings 
+- Improved move/resize and window swapping using native calls
+  - Thanks to `TheAhumMaitra` 
+    - His LUA code it better than mine 
+    - I will probably be "borrowing" more ;) 
+    - https://github.com/TheAhumMaitra/Aurora
+    - https://github.com/TheAhumMaitra
 - Created new development branch
 - Removed hard-coded rofi terminal overrides in theme configs
   - `themes/KooL_dwm.rasi`
@@ -26,12 +36,6 @@
   - Manage Java runtime instances 
   - 1st pass, only tested for Arch 
     - Added code for other distros, needs testing 
-- Improved move/resize and window swapping using native calls
-  - Thanks to `TheAhumMaitra` 
-    - His LUA code it better than mine 
-    - I will probably be "borrowing" more ;) 
-    - https://github.com/TheAhumMaitra/Aurora
-    - https://github.com/TheAhumMaitra
 
 
 ## v2.3.23

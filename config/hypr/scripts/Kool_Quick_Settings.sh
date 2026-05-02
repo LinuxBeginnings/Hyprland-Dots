@@ -208,6 +208,7 @@ Edit User Keybinds
 Edit User ENV variables
 Edit User Startup Apps (overlay)
 Edit User Window Rules (overlay)
+Edit User Layer Rules (overlay)
 Edit User Settings
 Edit User Decorations
 Edit User Animations
@@ -216,6 +217,7 @@ Edit User Laptop Settings
 Edit System Default Keybinds
 Edit System Default Startup Apps
 Edit System Default Window Rules
+Edit System Default Layer Rules
 Edit System Default Settings
 --- UTILITIES ---
 Set SDDM Wallpaper
@@ -253,6 +255,8 @@ main() {
             if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_startup.lua"; else file="$UserConfigs/Startup_Apps.conf"; fi ;;
         "Edit User Window Rules (overlay)")
             if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_window_rules.lua"; else file="$UserConfigs/WindowRules.conf"; fi ;;
+        "Edit User Layer Rules (overlay)")
+            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_layer_rules.lua"; else file="$UserConfigs/LayerRules.conf"; fi ;;
         "Edit User Settings")
             if [[ "$hypr_config_mode" == "lua" ]]; then
                 file="$UserConfigs/user_settings.lua"
@@ -273,6 +277,8 @@ main() {
             if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/system_startup.lua"; else file="$configs/Startup_Apps.conf"; fi ;;
         "Edit System Default Window Rules")
             if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/system_window_rules.lua"; else file="$configs/WindowRules.conf"; fi ;;
+        "Edit System Default Layer Rules")
+            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/system_layer_rules.lua"; else file="$configs/LayerRules.conf"; fi ;;
         "Edit System Default Settings")
             if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/system_settings.lua"; else file="$configs/SystemSettings.conf"; fi ;;
         "Set SDDM Wallpaper") $scriptsDir/sddm_wallpaper.sh --normal ;;
