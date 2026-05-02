@@ -219,7 +219,32 @@ def _find_lua_calls(text, function_names):
             break
     return calls
 
-def _extract_lua_binds(text):
+def _find_lua_block(text, start_idx, open_char="{", close_char="}"):
+    depth = 0
+    in_string = None
+    escape = False
+    for idx in range(start_idx, len(text)):
+        ch = text[idx]
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == in_string:
+                in_string = None
+            continue
+        if ch in ("'", '"'):
+            in_string = ch
+            continue
+        if ch == open_char:
+            depth += 1
+        elif ch == close_char:
+            depth -= 1
+            if depth == 0:
+                return text[start_idx + 1:idx], idx + 1
+    return None, None
+
+def _extract_lua_bind_calls(text):
     binds = []
     calls = _find_lua_calls(text, ["bind", "bindm", "hl.bind"])
     for fn, args_text in calls:
@@ -241,6 +266,62 @@ def _extract_lua_binds(text):
             "key": key,
             "description": description or "",
         })
+    return binds
+
+def _extract_lua_bind_tables(text):
+    binds = []
+    pattern = re.compile(r'\bapp_binds\s*=\s*\{', re.MULTILINE)
+    for match in pattern.finditer(text):
+        block, end_idx = _find_lua_block(text, match.end() - 1)
+        if block is None:
+            continue
+        idx = 0
+        depth = 0
+        in_string = None
+        escape = False
+        entry_start = None
+        while idx < len(block):
+            ch = block[idx]
+            if in_string:
+                if escape:
+                    escape = False
+                elif ch == "\\":
+                    escape = True
+                elif ch == in_string:
+                    in_string = None
+                idx += 1
+                continue
+            if ch in ("'", '"'):
+                in_string = ch
+                idx += 1
+                continue
+            if ch == "{":
+                depth += 1
+                if depth == 1:
+                    entry_start = idx + 1
+            elif ch == "}":
+                if depth == 1 and entry_start is not None:
+                    entry_text = block[entry_start:idx]
+                    args = _split_lua_args(entry_text)
+                    if len(args) >= 4:
+                        mods = _parse_lua_string(args[0])
+                        key = _parse_lua_string(args[1])
+                        description = _parse_lua_string(args[3])
+                        if mods is not None and key is not None:
+                            binds.append({
+                                "mods": mods,
+                                "key": key,
+                                "description": description or "",
+                            })
+                    entry_start = None
+                depth = max(depth - 1, 0)
+            idx += 1
+    return binds
+
+def _extract_lua_binds(text):
+    binds = []
+    binds.extend(_extract_lua_bind_calls(text))
+    binds.extend(_extract_lua_bind_tables(text))
     return binds
 
 def _format_lua_binds(binds):
