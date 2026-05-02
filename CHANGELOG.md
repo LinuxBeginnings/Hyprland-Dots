@@ -2,6 +2,12 @@
 
 ## v2.3.24
 
+- Created new development branch
+- Removed hard-coded rofi terminal overrides in theme configs
+  - `themes/KooL_dwm.rasi`
+  - `dwm-config-horiz.rasi`
+  - `dwm-config-vert.rasi`
+- Thanks to [@TeaJhay](https://github.com/TeaJhay) for finding this
 - Began Migration process to LUA
   - Created `scripts/migrate-hypr-to-lua.sh`
   - Script converts `configs` and `UserConfigs` to LUA
@@ -30,6 +36,13 @@
 
 ## v2.3.23
 
+- Changed `whiptail` GUI to dark colors
+  - Some terminals rendered incorrectly made menu unreadable
+- Added more icons to `ModulesWorkpaces`
+- Removed the following from hyprland settings:
+  - `vfr` -- Been enabled by default
+  - `psuedotile` -- In `dwindle` layout
+  - As of Hyprland v0.55 they will generate confiuration errors
 - `OverviewToggle.sh` wasn't checking properly for quickshell service
   - Found by `@TeaJhay`
   - Changed script to look for `qs` not `quickshell`
