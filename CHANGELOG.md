@@ -2,6 +2,7 @@
 
 ## v2.3.24
 
+- Fixed  `Toggle-Active-Windown-Audio` script to work with LUA workflow
 - Fixed `layerrules` made menus look terrible 
 - Removed "-config-v3.conf" files for 
   - ``WindowRules.conf/lua`` 
