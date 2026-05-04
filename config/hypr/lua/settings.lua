@@ -118,7 +118,9 @@ hl.config({
   misc = {
     disable_hyprland_logo = true,
     disable_splash_rendering = true,
-    vrr = 2,
+    -- Setting vrr 0, issues with MPV/VLC at fullscreen
+    -- vrr 0, disable, vrr 1, always on, vrr 2, on at full screen
+    vrr = 0,
     mouse_move_enables_dpms = true,
     enable_swallow = false,
     swallow_regex = "^(kitty)$",
