@@ -34,3 +34,32 @@ for _, file in ipairs(files) do
     print("[WARN] Unable to load user override file " .. path .. ": " .. tostring(err))
   end
 end
+
+-- Legacy compatibility: import UserKeybinds.conf when user_keybinds.lua is missing.
+do
+  local userKeybindsLua = userDir .. "/user_keybinds.lua"
+  local legacyUserKeybinds = userDir .. "/UserKeybinds.conf"
+
+  local hasUserLua = io.open(userKeybindsLua, "r")
+  if hasUserLua then
+    hasUserLua:close()
+  else
+    local legacy = io.open(legacyUserKeybinds, "r")
+    if legacy then
+      local function trim(value)
+        return (value or ""):gsub("^%s+", ""):gsub("%s+$", "")
+      end
+      for line in legacy:lines() do
+        local trimmed = trim(line)
+        if trimmed ~= "" and not trimmed:match("^#") then
+          local keyword, value = trimmed:match("^([%w_]+)%s*=%s*(.+)$")
+          if keyword and value and (keyword:match("^bind") or keyword == "unbind") then
+            local cmd = "hyprctl keyword " .. keyword .. " " .. string.format("%q", value)
+            pcall(os.execute, cmd)
+          end
+        end
+      end
+      legacy:close()
+    end
+  end
+end

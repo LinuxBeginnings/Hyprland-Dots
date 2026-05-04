@@ -12,8 +12,8 @@
 --   2) key (e.g. "Return", "code:10", "mouse_down")
 --   3) action (exec_cmd(...) or dispatch(...))
 --   4) description text
-local ok, keybind_helpers = pcall(require, "keybind_helpers")
-if not ok or not keybind_helpers then
+local keybind_helpers = nil
+do
   local source = (debug.getinfo(1, "S") or {}).source or ""
   local source_path = source:match("^@(.+)$")
   local source_dir = source_path and source_path:match("^(.*)/[^/]+$") or nil
@@ -23,17 +23,25 @@ if not ok or not keybind_helpers then
     home ~= "" and (home .. "/.config/hypr/lua/keybind_helpers.lua") or nil,
     home ~= "" and (home .. "/.config/hypr/keybind_helpers.lua") or nil,
   }
+
+  local tried_paths = {}
   for _, helper_path in ipairs(candidate_paths) do
     if helper_path then
-      local loaded_ok, loaded_helpers = pcall(dofile, helper_path)
-      if loaded_ok and loaded_helpers then
-        keybind_helpers = loaded_helpers
-        break
+      table.insert(tried_paths, helper_path)
+      local f = io.open(helper_path, "r")
+      if f then
+        f:close()
+        local loaded_ok, loaded_helpers = pcall(dofile, helper_path)
+        if loaded_ok and type(loaded_helpers) == "table" and loaded_helpers.unbind_default_keys then
+          keybind_helpers = loaded_helpers
+          break
+        end
       end
     end
   end
+
   if not keybind_helpers then
-    error("Failed to load keybind_helpers.lua via require() and fallback dofile() paths")
+    error("Failed to load keybind_helpers.lua from: " .. table.concat(tried_paths, ", "))
   end
 end
 local window_api = keybind_helpers.window_api
