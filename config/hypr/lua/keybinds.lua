@@ -12,7 +12,30 @@
 --   2) key (e.g. "Return", "code:10", "mouse_down")
 --   3) action (exec_cmd(...) or dispatch(...))
 --   4) description text
-local keybind_helpers = require("keybind_helpers")
+local ok, keybind_helpers = pcall(require, "keybind_helpers")
+if not ok or not keybind_helpers then
+  local source = (debug.getinfo(1, "S") or {}).source or ""
+  local source_path = source:match("^@(.+)$")
+  local source_dir = source_path and source_path:match("^(.*)/[^/]+$") or nil
+  local home = os.getenv("HOME") or ""
+  local candidate_paths = {
+    source_dir and (source_dir .. "/keybind_helpers.lua") or nil,
+    home ~= "" and (home .. "/.config/hypr/lua/keybind_helpers.lua") or nil,
+    home ~= "" and (home .. "/.config/hypr/keybind_helpers.lua") or nil,
+  }
+  for _, helper_path in ipairs(candidate_paths) do
+    if helper_path then
+      local loaded_ok, loaded_helpers = pcall(dofile, helper_path)
+      if loaded_ok and loaded_helpers then
+        keybind_helpers = loaded_helpers
+        break
+      end
+    end
+  end
+  if not keybind_helpers then
+    error("Failed to load keybind_helpers.lua via require() and fallback dofile() paths")
+  end
+end
 local window_api = keybind_helpers.window_api
 local exec_cmd = keybind_helpers.exec_cmd
 local raw_dispatch_cmd = keybind_helpers.raw_dispatch_cmd
