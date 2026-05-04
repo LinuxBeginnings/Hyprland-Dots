@@ -2,6 +2,7 @@
 
 ## v2.3.24
 
+- Fixed legacy import of `UserKeybinds.conf`
 - Created a `keybind_helpers.lua` file
   - Moved all the helper functions which should need to be edited
   - This cleans up the `keybinds.lua` file to be more user friendly, easier editing
