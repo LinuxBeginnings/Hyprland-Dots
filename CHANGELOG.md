@@ -2,22 +2,37 @@
 
 ## v2.3.24
 
-- Fixed  `Toggle-Active-Windown-Audio` script to work with LUA workflow
-- Fixed `layerrules` made menus look terrible 
-- Removed "-config-v3.conf" files for 
-  - ``WindowRules.conf/lua`` 
-  - ``LayerRules.conf/lua`` 
-    - They are no longer needed 
+- Created a `keybind_helpers.lua` file
+  - Moved all the helper functions which should need to be edited
+  - This cleans up the `keybinds.lua` file to be more user friendly, easier editing
+- Edited `keybinds.lua` to make it easier to understand and edit
+  - Added a clear “User-editable bindings” header block.
+  - Grouped bindings with section labels:
+  - Application launchers and utility scripts
+  - Window/session controls
+  - Layout and tiling controls
+  - Audio/media/hardware keys
+  - Screenshot bindings
+  - Window resize/move/swap/grouping
+  - Workspace navigation/assignment
+  - Mouse drag/resize bindings
+
+- Fixed `Toggle-Active-Windown-Audio` script to work with LUA workflow
+- Fixed `layerrules` made menus look terrible
+- Removed "-config-v3.conf" files for
+  - `WindowRules.conf/lua`
+  - `LayerRules.conf/lua`
+    - They are no longer needed
 - Added helper script `logout.sh` to call `hyprshutdown`
-  - Added pkill  `waybar`, `awww-daemon`, and `swww-daemon` before `hyprshutdown`
+  - Added pkill `waybar`, `awww-daemon`, and `swww-daemon` before `hyprshutdown`
 - Moved layer rules to own file `LayerRules.conf`
-  - Added additional rules from ``TheAhumMaitra``
-  - Updated LUA config accordingly 
-  - Added menu option for LayerRules in quicksettings 
+  - Added additional rules from `TheAhumMaitra`
+  - Updated LUA config accordingly
+  - Added menu option for LayerRules in quicksettings
 - Improved move/resize and window swapping using native calls
-  - Thanks to `TheAhumMaitra` 
-    - His LUA code is better than mine 
-    - I will probably be "borrowing" more ;) 
+  - Thanks to `TheAhumMaitra`
+    - His LUA code is better than mine
+    - I will probably be "borrowing" more ;)
     - https://github.com/TheAhumMaitra/Aurora
     - https://github.com/TheAhumMaitra
 - Created new development branch
@@ -33,18 +48,17 @@
   - Allows a revert option to restore hyprlang config files
 - Making `Kool_Quick_Settings.sh` script LUA/HYPRLANG aware
 - Broke out the `hypr/configs` and `hypr/UserConfig` LUA files
-- Added project header to all .LUA files 
-- Migration script will add that to the converted .conf files as well 
-- Updted keybinds parser to support LUA 
-- Fixed resize by keybind, SUPERSHIFT= + Arrow keys 
-- Then modified that script to support mouse resize  
-  - SUPER + Left Mouse to move 
-  - SUPER + Right Mouse to resiz 
-- Added `Javamanger.sh` 
-  - Manage Java runtime instances 
-  - 1st pass, only tested for Arch 
-    - Added code for other distros, needs testing 
-
+- Added project header to all .LUA files
+- Migration script will add that to the converted .conf files as well
+- Updted keybinds parser to support LUA
+- Fixed resize by keybind, SUPERSHIFT= + Arrow keys
+- Then modified that script to support mouse resize
+  - SUPER + Left Mouse to move
+  - SUPER + Right Mouse to resiz
+- Added `Javamanger.sh`
+  - Manage Java runtime instances
+  - 1st pass, only tested for Arch
+    - Added code for other distros, needs testing
 
 ## v2.3.23
 
