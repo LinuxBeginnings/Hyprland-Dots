@@ -8,9 +8,29 @@
 import sys
 import re
 import os
+CODE_KEY_MAP = {
+    10: "1",
+    11: "2",
+    12: "3",
+    13: "4",
+    14: "5",
+    15: "6",
+    16: "7",
+    17: "8",
+    18: "9",
+    19: "0",
+}
 
 def normalize_combo(combo):
     return combo.replace(" ", "").replace("\t", "")
+
+def humanize_key_token(mods, key):
+    key = key.strip()
+    code_match = re.match(r'(?i)^code:(\d+)$', key)
+    if code_match:
+        code_num = int(code_match.group(1))
+        return CODE_KEY_MAP.get(code_num, key)
+    return key
 
 def extract_combo(line):
     # Remove comments and whitespace
@@ -329,7 +349,7 @@ def _format_lua_binds(binds):
     for bind in binds:
         mods = bind["mods"].replace("$mainMod", "SUPER")
         mods = re.sub(r'[ \t]+', '+', mods.strip())
-        key = bind["key"].strip()
+        key = humanize_key_token(mods, bind["key"])
         if mods and key:
             combo_str = f"{mods}+{key}"
         elif key:
@@ -424,6 +444,7 @@ def format_for_rofi(raw_binds):
         # Formatting mods
         mods = mods.replace("$mainMod", "SUPER")
         mods = re.sub(r'[ \t]+', '+', mods)
+        key = humanize_key_token(mods, key)
         
         # Build combo string
         if mods and key:

@@ -49,17 +49,81 @@ do
       local function trim(value)
         return (value or ""):gsub("^%s+", ""):gsub("%s+$", "")
       end
+      local function strip_inline_comment(value)
+        return trim((value or ""):gsub("%s+#.*$", ""))
+      end
+      local function load_vars_from_file(path, vars)
+        local handle = io.open(path, "r")
+        if not handle then
+          return
+        end
+        for raw in handle:lines() do
+          local line = trim(raw)
+          if line ~= "" and not line:match("^#") then
+            local name, val = line:match("^%$([%w_]+)%s*=%s*(.+)$")
+            if name and val then
+              vars[name] = strip_inline_comment(val)
+            end
+          end
+        end
+        handle:close()
+      end
+      local vars = {}
+      local raw_lines = {}
+      local configDir = configHome .. "/hypr/configs"
+      local defaultsFile = userDir .. "/01-UserDefaults.conf"
+      local keybindsFile = configDir .. "/Keybinds.conf"
+      local systemSettingsFile = configDir .. "/SystemSettings.conf"
+
+      load_vars_from_file(systemSettingsFile, vars)
+      load_vars_from_file(keybindsFile, vars)
+      load_vars_from_file(defaultsFile, vars)
+
       for line in legacy:lines() do
+        table.insert(raw_lines, line)
         local trimmed = trim(line)
         if trimmed ~= "" and not trimmed:match("^#") then
-          local keyword, value = trimmed:match("^([%w_]+)%s*=%s*(.+)$")
-          if keyword and value and (keyword:match("^bind") or keyword == "unbind") then
-            local cmd = "hyprctl keyword " .. keyword .. " " .. string.format("%q", value)
-            pcall(os.execute, cmd)
+          local var_name, var_value = trimmed:match("^%$([%w_]+)%s*=%s*(.+)$")
+          if var_name and var_value then
+            vars[var_name] = strip_inline_comment(var_value)
           end
         end
       end
       legacy:close()
+
+      local function expand_vars(value)
+        value = tostring(value or "")
+        for _ = 1, 8 do
+          local changed = false
+          value = value:gsub("%$([%w_]+)", function(name)
+            local replacement = vars[name]
+            if replacement ~= nil then
+              changed = true
+              return replacement
+            end
+            return "$" .. name
+          end)
+          if not changed then
+            break
+          end
+        end
+        return value
+      end
+
+      for _, line in ipairs(raw_lines) do
+        local trimmed = trim(line)
+        if trimmed ~= "" and not trimmed:match("^#") then
+          local keyword, value = trimmed:match("^([%w_]+)%s*=%s*(.+)$")
+          if keyword and value and (keyword:match("^bind") or keyword == "unbind") then
+            local expanded = expand_vars(value)
+            local cmd = "hyprctl keyword " .. keyword .. " " .. string.format("%q", expanded)
+            local ok = os.execute(cmd)
+            if not ok then
+              print("[WARN] Failed to apply legacy keybind via: " .. cmd)
+            end
+          end
+        end
+      end
     end
   end
 end
