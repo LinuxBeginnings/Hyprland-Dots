@@ -29,7 +29,7 @@
 
 <h3 align="center">
   <img src="https://github.com/LinuxBeginnings/Telegram-Animated-Emojis/blob/main/Activity/Sparkles.webp" alt="Sparkles" width="38" height="38" />
-  KoolDots --  Hyprland Dotfiles Showcase
+  KooL's Hyprland Dotfiles Showcase
   <img src="https://github.com/LinuxBeginnings/Telegram-Animated-Emojis/blob/main/Activity/Sparkles.webp" alt="Sparkles" width="38" height="38" />
 </h3>
 
@@ -63,16 +63,18 @@ Automated Hyprland Scripts for Distro of choice which will pull this dotfiles if
 
 - [OpenSUSE(Tumbleweed)](https://github.com/LinuxBeginnings/OpenSuse-Hyprland)
 
-- [Fedora-Linux (43/Rawhide)](https://github.com/LinuxBeginnings/Fedora-Hyprland)
+- [Fedora-Linux (43/44//Rawhide)](https://github.com/LinuxBeginnings/Fedora-Hyprland)
 
-- [Debian-Linux (Trixie & SID)](https://github.com/LinuxBeginnings/Debian-Hyprland)
+- [Debian-Linux (Trixie,Testing,SID)](https://github.com/LinuxBeginnings/Debian-Hyprland)
 
 - [NixOS (25.05+)](https://github.com/LinuxBeginnings/NixOS-Hyprland)
 
 - [Ubuntu 24.04 LTS](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/24.04)
-- [Ubuntu 24.10 (deprecated)](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/24.10)
-- [Ubuntu 25.04 (deprecated)](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/25.04)
-- [Ubuntu 25.10](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/25.10)
+- [Ubuntu 26.04 LTS](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/26.04)
+- No longer supported
+  - [Ubuntu 24.10 (deprecated)](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/24.10)
+  - [Ubuntu 25.04 (deprecated)](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/25.04)
+  - [Ubuntu 25.10 (deprecated )](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/25.10)
 
 ---
 
