@@ -2,6 +2,12 @@
 
 ## v2.3.24
 
+- Fixed `MonitorProfiles.sh` script to work with LUA or HYPRLANG
+  - Added additional profiles also
+    - Virtual-1 1920x1080
+    - Virtual-1 2560x1080
+    - HDMI-A-1 High Refresh Rate
+    - eDP-1 disable
 - Fixed legacy import of `UserKeybinds.conf`
 - Created a `keybind_helpers.lua` file
   - Moved all the helper functions which should need to be edited
