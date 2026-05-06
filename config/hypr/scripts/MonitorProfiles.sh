@@ -17,10 +17,21 @@ config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 hypr_dir="$config_home/hypr"
 lua_entry="$hypr_dir/hyprland.lua"
 legacy_lua_entry="$config_home/hyprland.lua"
-if [[ -f "$lua_entry" || -f "$legacy_lua_entry" ]]; then
-    hypr_config_mode="lua"
-else
-    hypr_config_mode="conf"
+if [[ -n "$HYPR_CONFIG_MODE" ]]; then
+    case "${HYPR_CONFIG_MODE,,}" in
+        lua) hypr_config_mode="lua" ;;
+        conf|hyprlang) hypr_config_mode="conf" ;;
+        auto) hypr_config_mode="" ;;
+        *) hypr_config_mode="" ;;
+    esac
+fi
+
+if [[ -z "$hypr_config_mode" ]]; then
+    if [[ -f "$lua_entry" || -f "$legacy_lua_entry" ]]; then
+        hypr_config_mode="lua"
+    else
+        hypr_config_mode="conf"
+    fi
 fi
 
 # Variables
