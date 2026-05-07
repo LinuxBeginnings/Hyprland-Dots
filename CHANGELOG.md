@@ -2,6 +2,8 @@
 
 ## v2.3.24
 
+- Fixed `Gamemode.sh`
+  - It supports both HYPRLANG and LUA configs
 - Fixed `Float-all-windows.sh`
   - It works with HYPRLANG and LUA
 - Started making Wallust code support v4.0
