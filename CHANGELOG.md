@@ -2,6 +2,9 @@
 
 ## v2.3.24
 
+- Enhanced `ExternalBrightness.sh`
+  - Taken from code modified by `@RAH-iĐ905`
+  - Discovers montiors, and LUA compatible
 - Fixed `JavaManger.sh` field width cut off JDK version
 - Fixed `Tak0-Autodispatch.sh`
   - Reworked code to support LUA config
