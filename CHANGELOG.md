@@ -2,6 +2,8 @@
 
 ## v2.3.24
 
+- Fixed `Tak0-Autodispatch.sh`
+   - Reworked code to support LUA config 
 - Fixed `Tak0-Per-Window-Switch.sh`
   - Had syntax error
   - Added support for both Hyprlang and LUA configs
