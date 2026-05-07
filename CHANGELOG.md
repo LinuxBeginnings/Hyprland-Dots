@@ -2,6 +2,8 @@
 
 ## v2.3.24
 
+- Fixed incorrect XDGDATA dirs for flatpak
+  - Updated `ENVariables.conf` and `env.lua`
 - Updated keybind description for `hyprsunset` to include `hyprsunset`
   - Makes it easier to find in keybind search tool
 - Fixed `Gamemode.sh`
