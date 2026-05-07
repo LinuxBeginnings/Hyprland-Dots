@@ -2,8 +2,9 @@
 
 ## v2.3.24
 
+- Fixed `JavaManger.sh` field width cut off JDK version
 - Fixed `Tak0-Autodispatch.sh`
-   - Reworked code to support LUA config 
+  - Reworked code to support LUA config
 - Fixed `Tak0-Per-Window-Switch.sh`
   - Had syntax error
   - Added support for both Hyprlang and LUA configs
@@ -79,7 +80,7 @@
 - Fixed resize by keybind, SUPERSHIFT= + Arrow keys
 - Then modified that script to support mouse resize
   - SUPER + Left Mouse to move
-  - SUPER + Right Mouse to resiz
+  - SUPER + Right Mouse to resize
 - Added `Javamanger.sh`
   - Manage Java runtime instances
   - 1st pass, only tested for Arch

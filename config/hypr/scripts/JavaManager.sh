@@ -207,7 +207,8 @@ SELECTION=$(generate_list | rofi -dmenu -i \
   -p "󰒓 Java" \
   -config "$THEME" \
   -theme-str '
-    window { width: 1000px; }
+    window { width: 1400px; }
+    listview { scrollbar: true; }
     inputbar { children: [ "prompt", "textbox-prompt-colon", "entry" ]; }
     prompt { background-color: @selected; text-color: @background; padding: 4px 8px; border-radius: 4px; }
     ' \
