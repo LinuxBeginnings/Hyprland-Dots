@@ -6,6 +6,12 @@
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
 set -euo pipefail
+# Wallust v3/v4 compatibility
+wallust_args=()
+# shellcheck source=/dev/null
+if [ -f "$HOME/.config/hypr/scripts/WallustConfig.sh" ]; then
+  . "$HOME/.config/hypr/scripts/WallustConfig.sh"
+fi
 
 # SPDX-FileCopyrightText: 2025-present Ahum Maitra theahummaitra@gmail.com
 #
@@ -28,7 +34,7 @@ have_notify() { command -v notify-send >/dev/null 2>&1; }
 
 # Prompt for theme; guard -e on cancel
 set +e
-choice="$(wallust theme list \
+choice="$(wallust "${wallust_args[@]}" theme list \
   | sed -e '1d' -e 's/^- //' \
   | rofi -dmenu -i -p 'Select Global Theme')"
 prompt_status=$?
@@ -43,7 +49,7 @@ fi
 start_ts=$(date +%s)
 
 # Apply the theme and report result
-if wallust theme -- "${choice}"; then
+if wallust "${wallust_args[@]}" theme -- "${choice}"; then
   have_notify && notify-send -a ThemeChanger \
     -h string:x-dunst-stack-tag:themechanger \
     "Global theme changed" "Selected: ${choice}"

@@ -9,6 +9,11 @@
 
 # Variables
 terminal=kitty
+wallust_args=()
+# shellcheck source=/dev/null
+if [ -f "$HOME/.config/hypr/scripts/WallustConfig.sh" ]; then
+    . "$HOME/.config/hypr/scripts/WallustConfig.sh"
+fi
 wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
 wallpaper_output="$HOME/.config/hypr/wallpaper_effects/.wallpaper_modified"
 SCRIPTSDIR="$HOME/.config/hypr/scripts"
@@ -61,7 +66,7 @@ declare -A effects=(
 no-effects() {
     $WWW img -o "$focused_monitor" "$wallpaper_current" $SWWW_PARAMS &&
     wait $!
-    wallust run "$wallpaper_current" -s &&
+    wallust "${wallust_args[@]}" run -s "$wallpaper_current" &&
     wait $!
     # Refresh rofi, waybar, wallust palettes
 	sleep 2
@@ -101,7 +106,7 @@ main() {
 
             sleep 2
 
-            wallust run "$wallpaper_output" -s &
+            wallust "${wallust_args[@]}" run -s "$wallpaper_output" &
             sleep 1
             # Refresh rofi, waybar, wallust palettes
             "${SCRIPTSDIR}/Refresh.sh"

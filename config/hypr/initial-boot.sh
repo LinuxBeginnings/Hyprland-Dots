@@ -16,6 +16,11 @@ color_scheme="prefer-dark"
 gtk_theme="Flat-Remix-GTK-Blue-Dark"
 icon_theme="Flat-Remix-Blue-Dark"
 cursor_theme="Bibata-Modern-Ice"
+wallust_args=()
+# shellcheck source=/dev/null
+if [ -f "$scriptsDir/WallustConfig.sh" ]; then
+    . "$scriptsDir/WallustConfig.sh"
+fi
 
 if command -v awww >/dev/null 2>&1; then
     WWW="awww"
@@ -32,7 +37,7 @@ if [ ! -f "$HOME/.config/hypr/.initial_startup_done" ]; then
     sleep 1
     # Initialize wallust and wallpaper
 	if [ -f "$wallpaper" ]; then
-		wallust run -s $wallpaper > /dev/null 
+		wallust "${wallust_args[@]}" run -s "$wallpaper" > /dev/null 
 		$WWW query || $DAEMON && $swww $wallpaper $effect
 	    "$scriptsDir/WallustSwww.sh" > /dev/null 2>&1 & 
 	fi

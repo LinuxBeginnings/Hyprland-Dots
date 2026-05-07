@@ -1,0 +1,13 @@
+# /* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */  #
+# wallust configuration - kitty only (v4)
+
+backend = "fastresize"
+palette = "kmeans"
+style = "dark"
+use16cols = true
+kmeans = { k = 16, min_dist = 10.0 }
+threshold = 11
+
+[templates]
+kitty.template = 'colors-kitty.conf'
+kitty.target = '~/.config/kitty/kitty-themes/01-Wallust.conf'

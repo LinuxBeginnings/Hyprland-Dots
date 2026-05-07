@@ -1,0 +1,53 @@
+# /* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */  #
+# wallust configuration - for wallust version 4.x
+#
+# NOTE:
+# - This repo also ships a v3 config at wallust.toml.
+# - Many distros install wallust-git which reports wallust 4.0.0-alpha.
+#   Wallust v4 cannot parse the v3 config.
+#
+# This config is used automatically by scripts when wallust major version >= 4.
+
+# How the image is parsed in order to get the colors:
+# full - resized - wal - thumb - fastresize
+backend = "fastresize"
+
+# How the image colors are processed into a palette:
+# salience - ansi - kmeans
+palette = "kmeans"
+
+# Controls whether to generate a dark or light scheme
+style = "dark"
+
+# Dim the upper half of the palette (color8-color15) for 16-color variation
+use16cols = true
+
+# Kmeans tuning (v4 default values shown here explicitly)
+kmeans = { k = 16, min_dist = 10.0 }
+
+# Difference between similar colors, used by the colorspace:
+#  1          Not perceptible by human eyes.
+#  1 - 2      Perceptible through close observation.
+#  2 - 10     Perceptible at a glance.
+#  11 - 49    Colors are more similar than opposite
+#  100        Colors are exact opposite
+threshold = 11
+
+[templates]
+cava.template = 'colors-cava'
+cava.target = '~/.config/cava/config'
+
+hypr.template = 'colors-hyprland.conf'
+hypr.target = '~/.config/hypr/wallust/wallust-hyprland.conf'
+
+rofi.template = 'colors-rofi.rasi'
+rofi.target = '~/.config/rofi/wallust/colors-rofi.rasi'
+
+waybar.template = 'colors-waybar.css'
+waybar.target = '~/.config/waybar/wallust/colors-waybar.css'
+
+ghostty.template = 'colors-ghostty.conf'
+ghostty.target = '~/.config/ghostty/wallust.conf'
+
+quickshell.template = 'qml_color.json'
+quickshell.target = '~/.config/quickshell/qml_color.json'

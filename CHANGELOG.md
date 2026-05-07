@@ -2,7 +2,11 @@
 
 ## v2.3.24
 
-- Enhanced `OverviewToggle.sh` handling of quickshell vs. ags 
+- Started making Wallust code support v4.0
+  - `wallust v4.0.0` isn't backward compatible
+  - There seem to be more options but the color palletes are worse IMO
+  - Suggest current users ping wallust to v3.5.2
+- Enhanced `OverviewToggle.sh` handling of quickshell vs. ags
 - Fixed `MonitorProfiles.sh` script to work with LUA or HYPRLANG
   - Added additional profiles also
     - Virtual-1 1920x1080
