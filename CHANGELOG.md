@@ -2,6 +2,8 @@
 
 ## v2.3.24
 
+- Fixed `Float-all-windows.sh`
+  - It works with HYPRLANG and LUA
 - Started making Wallust code support v4.0
   - `wallust v4.0.0` isn't backward compatible
   - There seem to be more options but the color palletes are worse IMO
