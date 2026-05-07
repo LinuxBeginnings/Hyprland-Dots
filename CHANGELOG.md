@@ -2,6 +2,9 @@
 
 ## v2.3.24
 
+- Fixed `Tak0-Per-Window-Switch.sh`
+  - Had syntax error
+  - Added support for both Hyprlang and LUA configs
 - Fixed incorrect XDGDATA dirs for flatpak
   - Updated `ENVariables.conf` and `env.lua`
 - Updated keybind description for `hyprsunset` to include `hyprsunset`
