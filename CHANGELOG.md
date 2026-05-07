@@ -2,6 +2,8 @@
 
 ## v2.3.24
 
+- Updated keybind description for `hyprsunset` to include `hyprsunset`
+  - Makes it easier to find in keybind search tool
 - Fixed `Gamemode.sh`
   - It supports both HYPRLANG and LUA configs
 - Fixed `Float-all-windows.sh`
