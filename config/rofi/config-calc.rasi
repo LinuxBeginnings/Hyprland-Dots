@@ -1,29 +1,9 @@
 /* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
-/* Main Config Calculator */
-/* Submitted by: https://github.com/JosephArmas */
+/* Calculator mode follows global rofi theme selection */
 
-@import "~/.config/rofi/config.rasi" 
+@import "~/.config/rofi/config.rasi"
 
-/* ---- Mainbox ---- */
-mainbox {
-  children: [ "inputbar", "message", "listview" ];
-  height: inherit;
-}
-
-/* ---- Window ---- */
-window {
-  width: 30%;
-  height: inherit;
-}
-
-/* ---- Entry ---- */
-entry {
-  expand: true;
-  placeholder: " 🧮 Calculate (Ex: 100 + 10%)";
-}
-
-/* ---- Listview ---- */
-listview {
-  enable: true;
-  lines: 4;
+configuration {
+    modi: "calc";
+    display-calc: " Calculator";
 }
