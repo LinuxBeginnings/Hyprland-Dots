@@ -1,56 +1,29 @@
-/* ---- 💫 https://github.com/JaKooLit 💫 ---- */
-/* Rofi-Calc Style Override */
+/* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
+/* Main Config Calculator */
+/* Submitted by: https://github.com/JosephArmas */
 
 @import "~/.config/rofi/config.rasi" 
 
-/* ---- Configuration ---- */
-configuration {
-    modi:                       "calc";
-    display-calc:               "  calc";
+/* ---- Mainbox ---- */
+mainbox {
+  children: [ "inputbar", "message", "listview" ];
+  height: inherit;
 }
 
 /* ---- Window ---- */
 window {
-    width:                       40%; /* Wider calculator window */
+  width: 30%;
+  height: inherit;
 }
 
-/* ---- Mainbox ---- */
-mainbox {
-    children:                    [ "inputbar", "message", "listview" ]; /* Removed mode-switcher for cleaner UX */
-}
-
-/* ---- Inputbar ---- */
-inputbar {
-    padding:                     10em 2em 2em 2em; /* Increased top padding to show more wallpaper and move input down */
-}
-
-textbox-prompt-colon {
-    str:                         "  ";
-}
-
+/* ---- Entry ---- */
 entry {
-    placeholder:                 "  Ex: 100 + 10%  or  50 usd to eur"; /* Show complexity support */
+  expand: true;
+  placeholder: " 🧮 Calculate (Ex: 100 + 10%)";
 }
 
-/* ---- Listview (History) ---- */
+/* ---- Listview ---- */
 listview {
-    columns:                     1;
-    lines:                       4; /* Fewer lines for cleaner look */
-    fixed-height:                false;
-}
-
-/* ---- Elements (History Entries) ---- */
-element {
-    padding:                     0.4em 1em; /* Slimmer history entries */
-}
-
-/* ---- Message (Result Display) ---- */
-message {
-    padding:                     1em 1.5em;
-}
-
-textbox {
-    horizontal-align:            0.0;
-    background-color:            @color11;
-    border-radius:               1em;
+  enable: true;
+  lines: 4;
 }
