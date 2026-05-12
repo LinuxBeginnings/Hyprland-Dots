@@ -1,4 +1,4 @@
-/* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
+/* ---- 💫 https://github.com/JaKooLit 💫 ---- */
 /* Rofi Beats Config */
 
 @import "~/.config/rofi/config.rasi" 
@@ -23,7 +23,7 @@ entry {
 /* ---- Listview ---- */
 listview {
   columns: 2;
-  lines: 7;
+  lines: 5;
   fixed-height: false;
   margin: 10px;
   scrollbar: true;
@@ -34,15 +34,26 @@ listview {
 /* ---- Elements ---- */
 element {
   orientation: horizontal;
+  padding: 12px;
+  border-radius: 12px;
+  spacing: 12px;
+  background-color: transparent;
+}
+
+element selected {
+  background-color: @color11; /* Use a theme color instead of white */
+  text-color: @foreground;
 }
 
 element-icon {
-  size: 0%;
+  size: 64px; /* Slightly bigger icons */
+  border-radius: 8px;
+  background-color: transparent;
 }
 
 element-text {
   horizontal-align: 0.0;
   vertical-align: 0.5;
-  margin: 0px;
-  padding: 0px;
+  text-color: inherit;
+  expand: true;
 }

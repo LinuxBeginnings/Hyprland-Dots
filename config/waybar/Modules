@@ -1,4 +1,4 @@
-//* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- *//
+//* ---- 💫 https://github.com/JaKooLit 💫 ---- *//
 /* Waybar Modules */
 
 /* NOTE: hyprland-workspaces, Custom Modules, Custom Vertical & Groups on a separate files */
@@ -97,9 +97,9 @@
 
 "clock": {
 	"interval": 1,
-    //"format": " {:%I:%M %p}", // AM PM format
-    "format": " {:%H:%M:%S}", // 24H
-	"format-alt": " {:L%H:%M   %Y, %d %B, %A}",
+    "format": " {:%I:%M %p}", // AM PM format
+    //"format": " {:%H:%M:%S}",// 24H
+	"format-alt": " {:%H:%M   %Y, %d %B, %A}",
 	"tooltip-format": "<tt><small>{calendar}</small></tt>",
 	"calendar": {
 		"mode": "year",
@@ -125,30 +125,30 @@
 },
 
 "clock#2": {
-    //"format": " {:%I:%M %p}", // AM PM format
-    "format": "  {:%H:%M}", // 24H
-    "format-alt": "{:L%A  |  %H:%M  |  %e %B}",
+    "format": " {:%I:%M %p}", // AM PM format
+    //"format": "  {:%H:%M}",// 24H
+    "format-alt": "{:%A  |  %H:%M  |  %e %B}",
     "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
 },
 
 "clock#3": {
-    //"format": "{:L%I:%M %p - %d/%b}", //for AM/PM
-    "format": "{:L%H:%M - %d/%b}", // 24H
+    "format": "{:%I:%M %p - %d/%b}",//for AM/PM
+    //"format": "{:%H:%M - %d/%b}",// 24H
 	"tooltip": false
 },
 
 "clock#4": {
 	"interval": 60,
-    //"format": "{:L%B | %a %d, %Y | %I:%M %p}", // AM PM format
-    "format": "{:L%B | %a %d, %Y | %H:%M}", // 24H
-	"format-alt": "{:L%a %b %d, %G}",
+    "format": "{:%B | %a %d, %Y | %I:%M %p}",// AM PM format
+    //"format": "{:%B | %a %d, %Y | %H:%M}",// 24H
+	"format-alt": "{:%a %b %d, %G}",
 	"tooltip-format": "<big>{:%B %Y}</big>\n<tt><small>{calendar}</small></tt>",
 },
 
 "clock#5": {
-    //"format": "{:%A, %I:%M %P}", // AM PM format
-    "format": "{:%a %d | %H:%M}", // 24H
-	"format-alt": "{:L%A, %d %B, %Y (%R)}",
+    "format": "{:%A, %I:%M %P}",// AM PM format
+    //"format": "{:%a %d | %H:%M}",// 24H
+	"format-alt": "{:%A, %d %B, %Y (%R)}",
 	"tooltip-format": "<big>{:%B %Y}</big>\n<tt><small>{calendar}</small></tt>",
 },
 
@@ -239,9 +239,9 @@
 	"interval": 10,
 	"format": "{player_icon} ",
 	"format-paused": "{status_icon} <i>{dynamic}</i>",
-	"on-click-middle": "playerctl play-pause",
-	"on-click": "playerctl previous",
-	"on-click-right": "playerctl next",
+	"on-click-middle": "$HOME/.config/hypr/UserScripts/RofiBeats.sh --play-pause",
+	"on-click": "$HOME/.config/hypr/UserScripts/RofiBeats.sh --prev",
+	"on-click-right": "$HOME/.config/hypr/UserScripts/RofiBeats.sh --next",
 	"scroll-step": 5.0,
 	"on-scroll-up": "$HOME/.config/hypr/scripts/Volume.sh --inc",
 	"on-scroll-down": "$HOME/.config/hypr/scripts/Volume.sh --dec",
