@@ -36,6 +36,8 @@ GDK_BACKEND=$BACKEND yad \
   " B" "Launch Browser" "(Default browser)" \
   " A" "Desktop Overview" "Shows open apps in workspaces" \
   " D" "Application Launcher" "(rofi-wayland)" \
+  " ALT C" "Pro Calculator" "(rofi-calc)" \
+  " SHIFT M" "RofiBeats Music Player" "(YouTube & Radio)" \
   " E" "Open File Manager" "(Thunar)" \
   " S" "Google Search using rofi" "(rofi)" \
   " T" "Global theme switcher" "(rofi)" \
@@ -46,6 +48,7 @@ GDK_BACKEND=$BACKEND yad \
   " W" "Choose wallpaper" "(Wallpaper Menu)" \
   " Shift W" "Choose wallpaper effects" "(imagemagick + awww)" \
   "CTRL ALT W" "Random wallpaper" "(via awww)" \
+  " SHIFT L" "Hyprlock Wallpaper" "(Select lockscreen image)" \
   " CTRL ALT B" "Hide/UnHide Waybar" "waybar" \
   " CTRL B" "Choose waybar styles" "(waybar styles)" \
   " ALT B" "Choose waybar layout" "(waybar layout)" \
