@@ -11,7 +11,7 @@ configuration {
 
 /* ---- Window ---- */
 window {
-    width:                       40%; /* Narrower for calculator */
+    width:                       40%; /* Wider calculator window */
 }
 
 /* ---- Mainbox ---- */
