@@ -9,29 +9,53 @@
 
 music_icon="$HOME/.config/swaync/icons/music.png"
 
+# RofiBeats script path
+rofi_beats_script="$HOME/.config/hypr/UserScripts/RofiBeats.sh"
+
+is_rofi_beats() {
+  pgrep -x "mpv" >/dev/null
+  return $?
+}
+
 # Play the next track
 play_next() {
-  playerctl next
-  show_music_notification
+  if is_rofi_beats; then
+    $rofi_beats_script --next
+  else
+    playerctl next
+    show_music_notification
+  fi
 }
 
 # Play the previous track
 play_previous() {
-  playerctl previous
-  show_music_notification
+  if is_rofi_beats; then
+    $rofi_beats_script --prev
+  else
+    playerctl previous
+    show_music_notification
+  fi
 }
 
 # Toggle play/pause
 toggle_play_pause() {
-  playerctl play-pause
-  sleep 0.1
-  show_music_notification
+  if is_rofi_beats; then
+    $rofi_beats_script --play-pause
+  else
+    playerctl play-pause
+    sleep 0.1
+    show_music_notification
+  fi
 }
 
 # Stop playback
 stop_playback() {
-  playerctl stop
-  notify-send -e -u low -i $music_icon " Playback:" " Stopped"
+  if is_rofi_beats; then
+    $rofi_beats_script --stop
+  else
+    playerctl stop
+    notify-send -e -u low -i $music_icon " Playback:" " Stopped"
+  fi
 }
 
 # Display notification with song information
@@ -40,7 +64,14 @@ show_music_notification() {
   if [[ "$status" == "Playing" ]]; then
     song_title=$(playerctl metadata title)
     song_artist=$(playerctl metadata artist)
-    notify-send -e -u low -i $music_icon "Now Playing:" "$song_title by $song_artist"
+    
+    icon="$music_icon"
+    if is_rofi_beats; then
+      thumb_path="$HOME/.cache/rofi-beats/.last_thumb"
+      [[ -f "$thumb_path" ]] && icon=$(cat "$thumb_path")
+    fi
+    
+    notify-send -e -u low -i "$icon" "Now Playing:" "$song_title by $song_artist"
   elif [[ "$status" == "Paused" ]]; then
     notify-send -e -u low -i $music_icon " Playback:" " Paused"
   fi
