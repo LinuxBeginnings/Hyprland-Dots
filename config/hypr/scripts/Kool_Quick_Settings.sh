@@ -24,6 +24,7 @@ config_file="$hypr_dir/UserConfigs/01-UserDefaults.conf"
 lua_defaults_file="$hypr_dir/lua/user_defaults.lua"
 term="${term:-${TERM:-kitty}}"
 edit="${edit:-${EDITOR:-nano}}"
+visual="${visual:-${VISUAL:-}}"
 
 if [[ "$hypr_config_mode" == "conf" && -f "$config_file" ]]; then
     tmp_config_file=$(mktemp)
@@ -32,8 +33,10 @@ if [[ "$hypr_config_mode" == "conf" && -f "$config_file" ]]; then
 elif [[ "$hypr_config_mode" == "lua" && -f "$lua_defaults_file" ]]; then
     lua_term=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.term[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
     lua_edit=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.edit[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
+    lua_visual=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.visual[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
     [[ -n "$lua_term" ]] && term="$lua_term"
     [[ -n "$lua_edit" ]] && edit="$lua_edit"
+    [[ -n "$lua_visual" ]] && visual="$lua_visual"
 fi
 # ##################################### #
 
@@ -54,6 +57,34 @@ show_info() {
     else
         notify-send "Info" "$1"
     fi
+}
+
+# Determine whether an editor command is terminal-based (TUI)
+is_tui_editor() {
+    local -a cmd=("$@")
+    local bin base arg
+    [[ ${#cmd[@]} -eq 0 ]] && return 1
+
+    bin="${cmd[0]}"
+    base="$(basename "$bin")"
+
+    case "$base" in
+        vi|vim|nvim|nano|hx|helix|kak|micro|emacs-nox)
+            return 0
+            ;;
+        emacs|emacsclient)
+            for arg in "${cmd[@]:1}"; do
+                case "$arg" in
+                    -nw|--no-window-system|-t|--tty)
+                        return 0
+                        ;;
+                esac
+            done
+            return 1
+            ;;
+    esac
+
+    return 1
 }
 # Function to toggle Rainbow Borders script availability and refresh UI components
 toggle_rainbow_borders() {
@@ -325,9 +356,20 @@ main() {
         *) return ;;  # Do nothing for invalid choices
     esac
 
-    # Open the selected file in the terminal with the text editor
+    # Open selected file using configured editor
     if [ -n "$file" ]; then
-        $term -e $edit "$file"
+        local -a edit_cmd term_cmd visual_cmd selected_cmd
+        read -r -a edit_cmd <<< "$edit"
+        read -r -a term_cmd <<< "$term"
+        [[ -n "$visual" ]] && read -r -a visual_cmd <<< "$visual"
+        selected_cmd=("${edit_cmd[@]}")
+        [[ ${#visual_cmd[@]} -gt 0 ]] && selected_cmd=("${visual_cmd[@]}")
+
+        if is_tui_editor "${selected_cmd[@]}"; then
+            "${term_cmd[@]}" -e "${selected_cmd[@]}" "$file"
+        else
+            "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
+        fi
     fi
 }
 

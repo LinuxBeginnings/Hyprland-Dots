@@ -12,7 +12,12 @@ local editor = os.getenv("EDITOR")
 if editor == nil or editor == "" then
   editor = "nano"
 end
+local visual = os.getenv("VISUAL")
+if visual == nil then
+  visual = ""
+end
 KOOLDOTS_DEFAULTS.edit = editor
+KOOLDOTS_DEFAULTS.visual = visual
 KOOLDOTS_DEFAULTS.term = "kitty"
 KOOLDOTS_DEFAULTS.files = "thunar"
 KOOLDOTS_DEFAULTS.search_engine = "https://www.google.com/search?q={}"

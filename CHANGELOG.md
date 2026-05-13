@@ -2,6 +2,10 @@
 
 ## v2.3.24
 
+- Added support for `$VISUAL` editor
+  - Setting the env variable to your GUI editor will override `$EDITOR`
+  - You can use `neovide`, `code/codium`. `geany`, `emacs` etc
+  - Providing a richer environment, and faster.
 - Enhanced `ExternalBrightness.sh`
   - Taken from code modified by `@RAH-iĐ905`
   - Discovers montiors, and LUA compatible
