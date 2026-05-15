@@ -439,8 +439,16 @@ def parse_rules(path, prefix):
     i = 0
     rule_index = 1
     layer_index = 1
+    pending_name = None
     while i < len(lines):
-        line = strip_comment(lines[i])
+        raw_line = lines[i]
+        name_hint = re.match(r"^\s*#\s*name\s*[:=]\s*(.+?)\s*$", raw_line)
+        if name_hint:
+            pending_name = lua_string(name_hint.group(1).strip())
+            i += 1
+            continue
+
+        line = strip_comment(raw_line)
         if not line:
             i += 1
             continue
@@ -449,12 +457,15 @@ def parse_rules(path, prefix):
             rule_type, rule, i = parse_block(lines, i)
             if rule.get("match"):
                 if "name" not in rule:
-                    if rule_type == "window":
+                    if pending_name is not None:
+                        rule["name"] = pending_name
+                    elif rule_type == "window":
                         rule["name"] = lua_string(f"{prefix}-windowrule-{rule_index:03d}")
                         rule_index += 1
                     else:
                         rule["name"] = lua_string(f"{prefix}-layerrule-{layer_index:03d}")
                         layer_index += 1
+                pending_name = None
                 parsed.append((rule_type, rule))
             i += 1
             continue
@@ -466,13 +477,23 @@ def parse_rules(path, prefix):
             for item in split_items(match.group(2)):
                 parse_rule_item(item, rule)
             if rule.get("match"):
-                if rule_type == "window":
-                    rule["name"] = lua_string(f"{prefix}-windowrule-{rule_index:03d}")
-                    rule_index += 1
-                else:
-                    rule["name"] = lua_string(f"{prefix}-layerrule-{layer_index:03d}")
-                    layer_index += 1
+                if "name" not in rule:
+                    if pending_name is not None:
+                        rule["name"] = pending_name
+                    elif rule_type == "window":
+                        rule["name"] = lua_string(f"{prefix}-windowrule-{rule_index:03d}")
+                        rule_index += 1
+                    else:
+                        rule["name"] = lua_string(f"{prefix}-layerrule-{layer_index:03d}")
+                        layer_index += 1
+                pending_name = None
                 parsed.append((rule_type, rule))
+            else:
+                pending_name = None
+            i += 1
+            continue
+
+        pending_name = None
         i += 1
     return parsed
 

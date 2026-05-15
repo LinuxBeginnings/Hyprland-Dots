@@ -16,9 +16,65 @@ end
 
 
 apply_window_rule({
-  name = "tag-browser-web-clients",
+  name = "tag-browser-firefox",
   match = {
-    class = "^([Ff]irefox|org.mozilla.firefox|[Ff]irefox-esr|[Ff]irefox-bin|[Gg]oogle-chrome(-beta|-dev|-unstable)?|chrome-.+-Default|[Cc]hromium|[Mm]icrosoft-edge(-stable|-beta|-dev|-unstable)|[Bb]rave-browser(-beta|-dev|-unstable)?|[Tt]horium-browser|[Cc]achy-browser|zen-alpha|zen)$",
+    class = "^([Ff]irefox|org.mozilla.firefox|[Ff]irefox-esr|[Ff]irefox-bin)$",
+  },
+  tag = "+browser",
+})
+
+apply_window_rule({
+  name = "tag-browser-google-chrome",
+  match = {
+    class = "^([Gg]oogle-chrome(-beta|-dev|-unstable)?)$",
+  },
+  tag = "+browser",
+})
+
+apply_window_rule({
+  name = "tag-browser-chrome-default-profile",
+  match = {
+    class = "^(chrome-.+-Default)$",
+  },
+  tag = "+browser",
+})
+
+apply_window_rule({
+  name = "tag-browser-chromium",
+  match = {
+    class = "^([Cc]hromium)$",
+  },
+  tag = "+browser",
+})
+
+apply_window_rule({
+  name = "tag-browser-microsoft-edge",
+  match = {
+    class = "^([Mm]icrosoft-edge(-stable|-beta|-dev|-unstable))$",
+  },
+  tag = "+browser",
+})
+
+apply_window_rule({
+  name = "tag-browser-brave",
+  match = {
+    class = "^([Bb]rave-browser(-beta|-dev|-unstable)?)$",
+  },
+  tag = "+browser",
+})
+
+apply_window_rule({
+  name = "tag-browser-thorium-cachy",
+  match = {
+    class = "^([Tt]horium-browser|[Cc]achy-browser)$",
+  },
+  tag = "+browser",
+})
+
+apply_window_rule({
+  name = "tag-browser-zen",
+  match = {
+    class = "^(zen-alpha|zen)$",
   },
   tag = "+browser",
 })
