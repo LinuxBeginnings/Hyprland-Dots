@@ -21,6 +21,7 @@ REVERT=0
 
 USER_CONFIGS_DIR="$DEST_HYPR_DIR/UserConfigs"
 CONFIGS_DIR="$DEST_HYPR_DIR/configs"
+LEGACY_CONFIGS_DIR_NAME="LegacyConfigs"
 USER_WINDOW_RULES="$USER_CONFIGS_DIR/WindowRules.conf"
 USER_KEYBINDS="$USER_CONFIGS_DIR/UserKeybinds.conf"
 USER_ENV_VARS="$USER_CONFIGS_DIR/ENVariables.conf"
@@ -37,8 +38,10 @@ SYSTEM_ENV_VARS="$CONFIGS_DIR/ENVariables.conf"
 SYSTEM_STARTUP_APPS="$CONFIGS_DIR/Startup_Apps.conf"
 SYSTEM_SETTINGS="$CONFIGS_DIR/SystemSettings.conf"
 SYSTEM_LAPTOPS="$CONFIGS_DIR/Laptops.conf"
-USER_CONFIGS_BACKUP_DIR="$USER_CONFIGS_DIR/backup-$MIGRATION_TS"
-CONFIGS_BACKUP_DIR="$CONFIGS_DIR/backup-$MIGRATION_TS"
+USER_CONFIGS_LEGACY_ROOT="$USER_CONFIGS_DIR/$LEGACY_CONFIGS_DIR_NAME"
+CONFIGS_LEGACY_ROOT="$CONFIGS_DIR/$LEGACY_CONFIGS_DIR_NAME"
+USER_CONFIGS_LEGACY_DIR="$USER_CONFIGS_LEGACY_ROOT/$MIGRATION_TS"
+CONFIGS_LEGACY_DIR="$CONFIGS_LEGACY_ROOT/$MIGRATION_TS"
 USER_OVERRIDES_SHIM="$DEST_HYPR_DIR/lua/user_overrides.lua"
 
 usage() {
@@ -54,7 +57,7 @@ current Hyprland config directory before changing files.
 Options:
   -y, --yes      Run without confirmation prompts.
   -n, --dry-run  Show what would change without copying files.
-  -r, --revert   Revert migration by restoring latest backup-*/.conf files.
+  -r, --revert   Revert migration by restoring latest LegacyConfigs/<timestamp> .conf files.
   -h, --help     Show this help.
 USAGE
 }
@@ -99,41 +102,49 @@ echo "[INFO] Source: $SRC_HYPR_DIR"
 echo "[INFO] Target: $DEST_HYPR_DIR"
 echo "[INFO] Backup: $BACKUP_DIR"
 if [ "$REVERT" -eq 1 ]; then
-  echo "[WARN] Revert mode: restores latest backup-*/.conf files in UserConfigs and configs."
+  echo "[WARN] Revert mode: restores latest LegacyConfigs/<timestamp> .conf files in UserConfigs and configs."
 else
   echo "[WARN] This enables Hyprland's Lua entrypoint for builds that support hyprland.lua."
-  echo "[WARN] hyprland.conf remains in place as fallback; rollback restores backup-*/.conf files."
+  echo "[WARN] hyprland.conf remains in place as fallback; old .conf files move into LegacyConfigs/<timestamp>."
 fi
 
 restore_latest_conf_backup() {
   local target_dir="$1"
   local label="$2"
-  local latest_backup=""
+  local latest_archive=""
+  local legacy_root="$target_dir/$LEGACY_CONFIGS_DIR_NAME"
   local moved=0
   local file
-  local backups=()
+  local archives=()
 
   [ -d "$target_dir" ] || return 0
 
-  mapfile -t backups < <(find "$target_dir" -mindepth 1 -maxdepth 1 -type d -name 'backup-*' | sort)
-  [ "${#backups[@]}" -gt 0 ] || return 0
-  latest_backup="${backups[${#backups[@]}-1]}"
+  if [ -d "$legacy_root" ]; then
+    mapfile -t archives < <(find "$legacy_root" -mindepth 1 -maxdepth 1 -type d | sort)
+  fi
+
+  if [ "${#archives[@]}" -eq 0 ]; then
+    mapfile -t archives < <(find "$target_dir" -mindepth 1 -maxdepth 1 -type d -name 'backup-*' | sort)
+  fi
+
+  [ "${#archives[@]}" -gt 0 ] || return 0
+  latest_archive="${archives[${#archives[@]}-1]}"
 
   while IFS= read -r -d '' file; do
     cp -a "$file" "$target_dir/"
     moved=1
-  done < <(find "$latest_backup" -maxdepth 1 -type f -name '*.conf' -print0)
+  done < <(find "$latest_archive" -maxdepth 1 -type f -name '*.conf' -print0)
 
   if [ "$moved" -eq 1 ]; then
-    echo "[OK] Restored $label/*.conf from $latest_backup"
+    echo "[OK] Restored $label/*.conf from $latest_archive"
   else
-    echo "[INFO] No .conf files found in latest backup for $label: $latest_backup"
+    echo "[INFO] No .conf files found in latest archive for $label: $latest_archive"
   fi
 }
 
 if [ "$YES" -eq 0 ]; then
   if [ "$REVERT" -eq 1 ]; then
-    printf "[ACTION] Continue and revert Lua migration using latest backups? [y/N] "
+    printf "[ACTION] Continue and revert Lua migration using latest legacy archives? [y/N] "
   else
     printf "[ACTION] Continue with Lua config migration? [y/N] "
   fi
@@ -151,7 +162,7 @@ fi
 if [ "$DRY_RUN" -eq 1 ]; then
   if [ "$REVERT" -eq 1 ]; then
     echo "[DRY-RUN] Would disable Lua entrypoint: $DEST_HYPR_DIR/hyprland.lua -> $DEST_HYPR_DIR/hyprland.lua.disabled"
-    echo "[DRY-RUN] Would restore latest backup-*/.conf files into:"
+    echo "[DRY-RUN] Would restore latest LegacyConfigs/<timestamp> .conf files into:"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR"
     echo "[DRY-RUN]   - $CONFIGS_DIR"
   else
@@ -179,10 +190,10 @@ if [ "$DRY_RUN" -eq 1 ]; then
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_animations.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_laptops.lua"
     if [ -d "$USER_CONFIGS_DIR" ]; then
-      echo "[DRY-RUN] Would copy UserConfigs/*.conf into: $USER_CONFIGS_BACKUP_DIR"
+      echo "[DRY-RUN] Would move UserConfigs/*.conf into: $USER_CONFIGS_LEGACY_DIR"
     fi
     if [ -d "$CONFIGS_DIR" ]; then
-      echo "[DRY-RUN] Would copy configs/*.conf into: $CONFIGS_BACKUP_DIR"
+      echo "[DRY-RUN] Would move configs/*.conf into: $CONFIGS_LEGACY_DIR"
     fi
   fi
   exit 0
@@ -1107,30 +1118,28 @@ for _, file in ipairs(files) do
 end
 LUA
 
-backup_conf_files() {
+move_conf_files_to_legacy() {
   local source_dir="$1"
-  local backup_dir="$2"
+  local legacy_dir="$2"
   local label="$3"
   local moved=0
   local file
 
   [ -d "$source_dir" ] || return 0
+  mkdir -p "$legacy_dir"
 
   while IFS= read -r -d '' file; do
-    if [ "$moved" -eq 0 ]; then
-      mkdir -p "$backup_dir"
-    fi
-    cp -a "$file" "$backup_dir/"
+    mv "$file" "$legacy_dir/"
     moved=1
   done < <(find "$source_dir" -maxdepth 1 -type f -name '*.conf' -print0)
 
   if [ "$moved" -eq 1 ]; then
-    echo "[OK] Copied $label/*.conf -> $backup_dir"
+    echo "[OK] Moved $label/*.conf -> $legacy_dir"
   fi
 }
 
-backup_conf_files "$USER_CONFIGS_DIR" "$USER_CONFIGS_BACKUP_DIR" "$USER_CONFIGS_DIR"
-backup_conf_files "$CONFIGS_DIR" "$CONFIGS_BACKUP_DIR" "$CONFIGS_DIR"
+move_conf_files_to_legacy "$USER_CONFIGS_DIR" "$USER_CONFIGS_LEGACY_DIR" "$USER_CONFIGS_DIR"
+move_conf_files_to_legacy "$CONFIGS_DIR" "$CONFIGS_LEGACY_DIR" "$CONFIGS_DIR"
 
 echo "[OK] Lua Hyprland config copied."
 echo "[INFO] Restart Hyprland to test Lua config pickup."
