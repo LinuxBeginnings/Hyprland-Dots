@@ -2,12 +2,13 @@
 
 ## v2.3.24
 
-- Improved migration process to properly backup and move the .lua files 
-  - `/.config/hypr/lua` are the pristine source files 
-  - Migration script will convert the .conf files to .lua 
-     - Them move the system configs to `.config/hypr/configs`
-     - Then move thhe user configs to `.config/hypr/UserConfigs`
-     - Preserving user changes on subsquent updates
+- Fixed logic issue in migration script
+- Improved migration process to properly backup and move the .lua files
+  - `/.config/hypr/lua` are the pristine source files
+  - Migration script will convert the .conf files to .lua
+    - Them move the system configs to `.config/hypr/configs`
+    - Then move thhe user configs to `.config/hypr/UserConfigs`
+    - Preserving user changes on subsquent updates
 - Updated migration script to make/keep proper Window Rule names
 - Found LUA function to handle lid switch to enable/disable laptop display
   - Thank you `@star` on `TheBlackDons` Discord Server

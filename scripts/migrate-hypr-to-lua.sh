@@ -43,6 +43,11 @@ CONFIGS_LEGACY_ROOT="$CONFIGS_DIR/$LEGACY_CONFIGS_DIR_NAME"
 USER_CONFIGS_LEGACY_DIR="$USER_CONFIGS_LEGACY_ROOT/$MIGRATION_TS"
 CONFIGS_LEGACY_DIR="$CONFIGS_LEGACY_ROOT/$MIGRATION_TS"
 USER_OVERRIDES_SHIM="$DEST_HYPR_DIR/lua/user_overrides.lua"
+SOURCE_LUA_ENTRY_ENABLED="$SRC_HYPR_DIR/hyprland.lua"
+SOURCE_LUA_ENTRY_DISABLED="$SRC_HYPR_DIR/hyprland.lua.disable"
+DEST_LUA_ENTRY="$DEST_HYPR_DIR/hyprland.lua"
+DEST_LUA_ENTRY_DISABLED="$DEST_HYPR_DIR/hyprland.lua.disable"
+SOURCE_LUA_ENTRY=""
 
 usage() {
   cat <<USAGE
@@ -86,8 +91,19 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-if [ "$REVERT" -eq 0 ] && { [ ! -f "$SRC_HYPR_DIR/hyprland.lua" ] || [ ! -d "$SRC_HYPR_DIR/lua" ]; }; then
+if [ -f "$SOURCE_LUA_ENTRY_ENABLED" ]; then
+  SOURCE_LUA_ENTRY="$SOURCE_LUA_ENTRY_ENABLED"
+elif [ -f "$SOURCE_LUA_ENTRY_DISABLED" ]; then
+  SOURCE_LUA_ENTRY="$SOURCE_LUA_ENTRY_DISABLED"
+fi
+
+if [ "$REVERT" -eq 0 ] && [ ! -d "$SRC_HYPR_DIR/lua" ]; then
   echo "[ERROR] Lua config source files were not found under $SRC_HYPR_DIR" >&2
+  exit 1
+fi
+
+if [ "$REVERT" -eq 0 ] && [ -z "$SOURCE_LUA_ENTRY" ] && [ ! -f "$DEST_LUA_ENTRY" ] && [ ! -f "$DEST_LUA_ENTRY_DISABLED" ]; then
+  echo "[ERROR] No Lua entrypoint was found at $SRC_HYPR_DIR/hyprland.lua(.disable) or $DEST_HYPR_DIR/hyprland.lua(.disable)" >&2
   exit 1
 fi
 
@@ -161,7 +177,13 @@ fi
 
 if [ "$DRY_RUN" -eq 1 ]; then
   if [ "$REVERT" -eq 1 ]; then
-    echo "[DRY-RUN] Would disable Lua entrypoint: $DEST_HYPR_DIR/hyprland.lua -> $DEST_HYPR_DIR/hyprland.lua.disabled"
+    if [ -f "$DEST_LUA_ENTRY" ]; then
+      echo "[DRY-RUN] Would disable Lua entrypoint: $DEST_LUA_ENTRY -> $DEST_LUA_ENTRY_DISABLED"
+    elif [ -f "$DEST_LUA_ENTRY_DISABLED" ]; then
+      echo "[DRY-RUN] Lua entrypoint already disabled: $DEST_LUA_ENTRY_DISABLED"
+    else
+      echo "[DRY-RUN] No Lua entrypoint found to disable at: $DEST_LUA_ENTRY"
+    fi
     echo "[DRY-RUN] Would restore latest LegacyConfigs/<timestamp> .conf files into:"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR"
     echo "[DRY-RUN]   - $CONFIGS_DIR"
@@ -170,7 +192,13 @@ if [ "$DRY_RUN" -eq 1 ]; then
     if [ -d "$DEST_HYPR_DIR" ]; then
       echo "[DRY-RUN] Would copy backup: $DEST_HYPR_DIR -> $BACKUP_DIR"
     fi
-    echo "[DRY-RUN] Would copy: $SRC_HYPR_DIR/hyprland.lua -> $DEST_HYPR_DIR/hyprland.lua"
+    if [ -f "$DEST_LUA_ENTRY_DISABLED" ]; then
+      echo "[DRY-RUN] Would enable Lua entrypoint: $DEST_LUA_ENTRY_DISABLED -> $DEST_LUA_ENTRY"
+    elif [ -f "$DEST_LUA_ENTRY" ]; then
+      echo "[DRY-RUN] Lua entrypoint already enabled: $DEST_LUA_ENTRY"
+    elif [ -n "$SOURCE_LUA_ENTRY" ]; then
+      echo "[DRY-RUN] Would install Lua entrypoint: $SOURCE_LUA_ENTRY -> $DEST_LUA_ENTRY"
+    fi
     echo "[DRY-RUN] Would replace Lua module directory: $DEST_HYPR_DIR/lua"
     echo "[DRY-RUN] Would generate split configs/UserConfigs Lua overlays:"
     echo "[DRY-RUN]   - $CONFIGS_DIR/system_env.lua"
@@ -200,9 +228,13 @@ if [ "$DRY_RUN" -eq 1 ]; then
   exit 0
 fi
 if [ "$REVERT" -eq 1 ]; then
-  if [ -f "$DEST_HYPR_DIR/hyprland.lua" ]; then
-    mv "$DEST_HYPR_DIR/hyprland.lua" "$DEST_HYPR_DIR/hyprland.lua.disabled"
-    echo "[OK] Disabled Lua entrypoint: $DEST_HYPR_DIR/hyprland.lua.disabled"
+  if [ -f "$DEST_LUA_ENTRY" ]; then
+    mv -f "$DEST_LUA_ENTRY" "$DEST_LUA_ENTRY_DISABLED"
+    echo "[OK] Disabled Lua entrypoint: $DEST_LUA_ENTRY_DISABLED"
+  elif [ -f "$DEST_LUA_ENTRY_DISABLED" ]; then
+    echo "[INFO] Lua entrypoint already disabled: $DEST_LUA_ENTRY_DISABLED"
+  else
+    echo "[INFO] No Lua entrypoint found to disable at $DEST_LUA_ENTRY"
   fi
   restore_latest_conf_backup "$USER_CONFIGS_DIR" "$USER_CONFIGS_DIR"
   restore_latest_conf_backup "$CONFIGS_DIR" "$CONFIGS_DIR"
@@ -217,8 +249,23 @@ if [ -d "$DEST_HYPR_DIR" ] && [ -n "$(find "$DEST_HYPR_DIR" -mindepth 1 -maxdept
   cp -a "$DEST_HYPR_DIR" "$BACKUP_DIR"
   echo "[OK] Backup created at $BACKUP_DIR"
 fi
-
-cp -f "$SRC_HYPR_DIR/hyprland.lua" "$DEST_HYPR_DIR/hyprland.lua"
+if [ -f "$DEST_LUA_ENTRY_DISABLED" ]; then
+  if [ -f "$DEST_LUA_ENTRY" ]; then
+    rm -f "$DEST_LUA_ENTRY_DISABLED"
+    echo "[INFO] Removed duplicate disabled entrypoint: $DEST_LUA_ENTRY_DISABLED"
+  else
+    mv "$DEST_LUA_ENTRY_DISABLED" "$DEST_LUA_ENTRY"
+    echo "[OK] Enabled Lua entrypoint: $DEST_LUA_ENTRY"
+  fi
+elif [ -f "$DEST_LUA_ENTRY" ]; then
+  echo "[INFO] Lua entrypoint already enabled: $DEST_LUA_ENTRY"
+elif [ -n "$SOURCE_LUA_ENTRY" ]; then
+  cp -f "$SOURCE_LUA_ENTRY" "$DEST_LUA_ENTRY"
+  echo "[OK] Installed Lua entrypoint: $SOURCE_LUA_ENTRY -> $DEST_LUA_ENTRY"
+else
+  echo "[ERROR] Unable to locate a Lua entrypoint to enable." >&2
+  exit 1
+fi
 rm -rf "$DEST_HYPR_DIR/lua"
 cp -a "$SRC_HYPR_DIR/lua" "$DEST_HYPR_DIR/lua"
 mkdir -p "$USER_CONFIGS_DIR" "$CONFIGS_DIR"
