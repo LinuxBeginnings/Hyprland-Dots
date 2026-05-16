@@ -2,6 +2,12 @@
 
 ## v2.3.24
 
+- Updated migration script to make/keep proper Window Rule names
+- Found LUA function to handle lid switch to enable/disable laptop display
+  - Thank you `@star` on `TheBlackDons` Discord Server
+- Add `.luarc.jsonc` and `hl.meta.lua` (Thank you @Tony,btw) for the latter
+  - This will get rid of `function not defined` errors in Editor LSP's that support LUA
+  - And provide fuction info as well with properly configured editors
 - Added support for `$VISUAL` editor
   - Setting the env variable to your GUI editor will override `$EDITOR`
   - You can use `neovide`, `code/codium`. `geany`, `emacs` etc
