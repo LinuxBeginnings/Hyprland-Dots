@@ -25,25 +25,45 @@ LAST_TOGGLE_FILE="/tmp/dropdown_terminal_last_toggle"
 MIN_TOGGLE_INTERVAL_MS=250
 DROPDOWN_KITTY_CLASS="kitty-dropterm"
 
+HYPR_HAS_LUA_DISPATCHER=""
+
 lua_quote() {
   local value="$1"
   value=${value//\\/\\\\}
   value=${value//\"/\\\"}
-  printf '"%s"' "$value"
+  printf '\"%s\"' "$value"
 }
 
-hypr_dispatch_raw() {
-  local command="$*"
-  local quoted
-  quoted=$(lua_quote "$command")
-  hyprctl dispatch "hl.dsp.exec_raw($quoted)"
+supports_lua_dispatcher() {
+  if [ -n "$HYPR_HAS_LUA_DISPATCHER" ]; then
+    [ "$HYPR_HAS_LUA_DISPATCHER" = "true" ]
+    return
+  fi
+
+  if hyprctl dispatch "hl.dsp.exec_cmd(\"true\")" >/dev/null 2>&1; then
+    HYPR_HAS_LUA_DISPATCHER="true"
+  else
+    HYPR_HAS_LUA_DISPATCHER="false"
+  fi
+
+  [ "$HYPR_HAS_LUA_DISPATCHER" = "true" ]
+}
+
+hypr_dispatch() {
+  local dispatcher="$1"
+  shift
+  hyprctl dispatch "$dispatcher" "$*"
 }
 
 hypr_exec_cmd() {
   local command="$*"
-  local quoted
-  quoted=$(lua_quote "$command")
-  hyprctl dispatch "hl.dsp.exec_cmd($quoted)"
+  if supports_lua_dispatcher; then
+    local quoted
+    quoted=$(lua_quote "$command")
+    hyprctl dispatch "hl.dsp.exec_cmd($quoted)"
+  else
+    hyprctl dispatch exec "$command"
+  fi
 }
 
 # Dropdown size and position configuration (percentages)
@@ -184,19 +204,19 @@ animate_slide_down() {
   local step_y=$(((target_y - start_y) / SLIDE_STEPS))
 
   # Move window to start position instantly (off-screen)
-  hypr_dispatch_raw movewindowpixel "exact $target_x $start_y,address:$addr" >/dev/null 2>&1
+  hypr_dispatch movewindowpixel "exact $target_x $start_y,address:$addr" >/dev/null 2>&1
 
   sleep 0.05
 
   # Animate slide down
   for i in $(seq 1 $SLIDE_STEPS); do
     local current_y=$((start_y + (step_y * i)))
-    hypr_dispatch_raw movewindowpixel "exact $target_x $current_y,address:$addr" >/dev/null 2>&1
+    hypr_dispatch movewindowpixel "exact $target_x $current_y,address:$addr" >/dev/null 2>&1
     sleep 0.03
   done
 
   # Ensure final position is exact
-  hypr_dispatch_raw movewindowpixel "exact $target_x $target_y,address:$addr" >/dev/null 2>&1
+  hypr_dispatch movewindowpixel "exact $target_x $target_y,address:$addr" >/dev/null 2>&1
 }
 
 # Function to animate window slide up (hide)
@@ -218,7 +238,7 @@ animate_slide_up() {
   # Animate slide up
   for i in $(seq 1 $SLIDE_STEPS); do
     local current_y=$((start_y - (step_y * i)))
-    hypr_dispatch_raw movewindowpixel "exact $start_x $current_y,address:$addr" >/dev/null 2>&1
+    hypr_dispatch movewindowpixel "exact $start_x $current_y,address:$addr" >/dev/null 2>&1
     sleep 0.03
   done
 
@@ -392,14 +412,14 @@ window_is_pinned() {
 ensure_pinned() {
   local addr="$1"
   if ! window_is_pinned "$addr"; then
-    hypr_dispatch_raw pin "address:$addr" >/dev/null 2>&1
+    hypr_dispatch pin "address:$addr" >/dev/null 2>&1
   fi
 }
 
 ensure_unpinned() {
   local addr="$1"
   if window_is_pinned "$addr"; then
-    hypr_dispatch_raw pin "address:$addr" >/dev/null 2>&1
+    hypr_dispatch pin "address:$addr" >/dev/null 2>&1
   fi
 }
 
@@ -460,11 +480,11 @@ spawn_terminal() {
     # Small delay to ensure it's properly in special workspace
     sleep 0.2
     # Move to current workspace but start hidden off-screen
-    hypr_dispatch_raw movetoworkspacesilent "$CURRENT_WS,address:$new_addr"
+    hypr_dispatch movetoworkspacesilent "$CURRENT_WS,address:$new_addr"
     ensure_pinned "$new_addr"
-    hypr_dispatch_raw resizewindowpixel "exact $width $height,address:$new_addr" >/dev/null 2>&1
+    hypr_dispatch resizewindowpixel "exact $width $height,address:$new_addr" >/dev/null 2>&1
     local off_y=$((target_y - height - 200))
-    hypr_dispatch_raw movewindowpixel "exact $target_x $off_y,address:$new_addr" >/dev/null 2>&1
+    hypr_dispatch movewindowpixel "exact $target_x $off_y,address:$new_addr" >/dev/null 2>&1
     set_hidden_state "hidden"
 
     return 0
@@ -486,7 +506,7 @@ else
   if spawn_terminal; then
     TERMINAL_ADDR=$(get_terminal_address)
     if [ -n "$TERMINAL_ADDR" ]; then
-      hypr_dispatch_raw focuswindow "address:$TERMINAL_ADDR"
+      hypr_dispatch focuswindow "address:$TERMINAL_ADDR"
       set_hidden_state "shown"
     fi
   fi
