@@ -2,6 +2,9 @@
 
 ## v2.3.24
 
+- Updated description for logout/exit keybinding
+  - It only said `exit` if you search for `logout` nothing is returned
+- Fixed logout keybinding and logout from menu not working in LUA config
 - Fixed logic issue in migration script
 - Improved migration process to properly backup and move the .lua files
   - `/.config/hypr/lua` are the pristine source files
