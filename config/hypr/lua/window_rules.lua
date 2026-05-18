@@ -1076,6 +1076,16 @@ apply_window_rule({
   center = true,
   size = "(monitor_w*0.6) (monitor_h*0.65)",
 })
+apply_window_rule({
+  name = "Megasync",
+  match = {
+    class = "^(nz\\.co\\.mega\\.megasync)$",
+    initial_class = "^(nz\\.co\\.mega\\.megasync)$",
+  },
+  float = true,
+  center = true,
+  size = "(monitor_w*0.1) (monitor_h*0.2)",
+})
 
 apply_window_rule({
   name = "Mousam Weather",
