@@ -22,6 +22,7 @@ local function load_optional(path)
   end
   return false
 end
+local loaded_user_split = false
 
 local system_files = {
   "system_env.lua",
@@ -50,11 +51,15 @@ local user_files = {
   "user_decorations.lua",
   "user_animations.lua",
   "user_laptops.lua",
-  "user_overrides.lua", -- legacy single-file support
 }
 for _, file in ipairs(user_files) do
   local path = userDir .. "/" .. file
-  load_optional(path)
+  if load_optional(path) then
+    loaded_user_split = true
+  end
+end
+if not loaded_user_split then
+  load_optional(userDir .. "/user_overrides.lua") -- legacy single-file support
 end
 
 -- Legacy compatibility: import UserKeybinds.conf when user_keybinds.lua is missing.

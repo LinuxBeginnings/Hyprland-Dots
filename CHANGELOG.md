@@ -4,6 +4,10 @@
 
 ## Fixed:
 
+- Duplicate import of keybinds 
+  - was reading ``lua/keybinds.lua`` and `UserConfigs/configs` 
+  - Udpated `Kool_Quick_Settings.sh`  
+    - Only reads  `configs` and `UserConfigs` dirs
 - MonitorProfile for `eDP-1-disable.lua` incorrect
   - Changed to `disable = true`
 - `copy.sh`
