@@ -71,6 +71,63 @@ hypr_exec_cmd() {
   fi
 }
 
+lua_workspace_expr() {
+  local workspace="$1"
+  if [[ "$workspace" =~ ^-?[0-9]+$ ]]; then
+    printf '%s' "$workspace"
+  else
+    local escaped
+    escaped="$(lua_escape "$workspace")"
+    printf '"%s"' "$escaped"
+  fi
+}
+
+focus_window() {
+  local addr="$1"
+  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
+    local selector escaped
+    selector="address:$addr"
+    escaped="$(lua_escape "$selector")"
+    hyprctl dispatch "hl.dsp.focus({ window = \"$escaped\" })"
+  else
+    hypr_dispatch focuswindow "address:$addr"
+  fi
+}
+
+set_window_floating() {
+  local addr="$1"
+  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
+    focus_window "$addr" >/dev/null 2>&1 || return 1
+    hyprctl dispatch "hl.dsp.window.float({ action = \"on\" })"
+  else
+    hypr_dispatch setfloating "address:$addr"
+  fi
+}
+
+resize_window_exact() {
+  local addr="$1"
+  local width="$2"
+  local height="$3"
+  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
+    focus_window "$addr" >/dev/null 2>&1 || return 1
+    hyprctl dispatch "hl.dsp.window.resize({ x = $width, y = $height, exact = true })"
+  else
+    hypr_dispatch resizewindowpixel "exact $width $height,address:$addr"
+  fi
+}
+
+move_window_exact() {
+  local addr="$1"
+  local x="$2"
+  local y="$3"
+  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
+    focus_window "$addr" >/dev/null 2>&1 || return 1
+    hyprctl dispatch "hl.dsp.window.move({ x = $x, y = $y, exact = true })"
+  else
+    hypr_dispatch movewindowpixel "exact $x $y,address:$addr"
+  fi
+}
+
 # Dropdown size and position configuration (percentages)
 WIDTH_PERCENT=65  # Width as percentage of screen width
 HEIGHT_PERCENT=65 # Height as percentage of screen height
@@ -109,7 +166,7 @@ done
 
 TERMINAL_CMD="$*"
 if [[ "$TERMINAL_CMD" == kitty* ]] && [[ "$TERMINAL_CMD" != *"--class"* ]] && [[ "$TERMINAL_CMD" != *"--name"* ]] && [[ "$TERMINAL_CMD" != *"--app-id"* ]]; then
-  TERMINAL_CMD="$TERMINAL_CMD --class $DROPDOWN_KITTY_CLASS"
+  TERMINAL_CMD="$TERMINAL_CMD --class $DROPDOWN_KITTY_CLASS --app-id $DROPDOWN_KITTY_CLASS"
 fi
 
 # Ensure only one instance runs at a time (prevents overlapping animations)
@@ -396,7 +453,7 @@ get_terminal_address() {
 # Try to find an existing dropdown terminal by class (kitty only)
 find_terminal_by_class() {
   hyprctl clients -j 2>/dev/null | jq -r --arg CLASS "$DROPDOWN_KITTY_CLASS" \
-    '.[] | select(.class == $CLASS) | .address' | head -1
+    '.[] | select((.class == $CLASS) or (.initialClass == $CLASS)) | .address' | head -1
 }
 
 # Function to get stored monitor name
@@ -427,30 +484,6 @@ window_exists() {
 }
 
 
-# Function to check if window is pinned
-window_is_pinned() {
-  local addr="$1"
-  if [ -n "$addr" ]; then
-    hyprctl clients -j 2>/dev/null | jq -e --arg ADDR "$addr" '.[] | select(.address == $ADDR) | .pinned == true' >/dev/null 2>&1
-  else
-    return 1
-  fi
-}
-
-# Ensure pin state without toggling unexpectedly
-ensure_pinned() {
-  local addr="$1"
-  if ! window_is_pinned "$addr"; then
-    hypr_dispatch pin "address:$addr" >/dev/null 2>&1
-  fi
-}
-
-ensure_unpinned() {
-  local addr="$1"
-  if window_is_pinned "$addr"; then
-    hypr_dispatch pin "address:$addr" >/dev/null 2>&1
-  fi
-}
 window_workspace_name() {
   local addr="$1"
   hyprctl clients -j 2>/dev/null | jq -r --arg ADDR "$addr" '.[] | select(.address == $ADDR) | .workspace.name // empty'
@@ -461,6 +494,60 @@ window_is_on_special_workspace() {
   local workspace_name
   workspace_name=$(window_workspace_name "$addr")
   [ "$workspace_name" = "$SPECIAL_WS" ] || [ "$workspace_name" = "$SPECIAL_NAME" ]
+}
+
+workspace_matches_target() {
+  local target_ws="$1"
+  local current_ws="$2"
+  if [ "$target_ws" = "$SPECIAL_WS" ] || [ "$target_ws" = "$SPECIAL_NAME" ]; then
+    [ "$current_ws" = "$SPECIAL_WS" ] || [ "$current_ws" = "$SPECIAL_NAME" ]
+  else
+    [ "$current_ws" = "$target_ws" ]
+  fi
+}
+
+move_window_to_workspace_silent() {
+  local target_ws="$1"
+  local addr="$2"
+  local post_ws=""
+
+  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
+    local ws_expr
+    ws_expr=$(lua_workspace_expr "$target_ws")
+    focus_window "$addr" >/dev/null 2>&1 || return 1
+    hyprctl dispatch "hl.dsp.window.move({ workspace = $ws_expr, follow = false })" >/dev/null 2>&1 || return 1
+    sleep 0.03
+    post_ws=$(window_workspace_name "$addr")
+    workspace_matches_target "$target_ws" "$post_ws"
+    return $?
+  fi
+
+  # Preferred syntax on newer Hyprland builds (target a specific window by selector).
+  if hypr_dispatch movetoworkspacesilent "$target_ws,address:$addr" >/dev/null 2>&1; then
+    sleep 0.03
+    post_ws=$(window_workspace_name "$addr")
+    if workspace_matches_target "$target_ws" "$post_ws"; then
+      return 0
+    fi
+  fi
+
+  # Compatibility fallback for builds where selector syntax is ignored.
+  hypr_dispatch focuswindow "address:$addr" >/dev/null 2>&1 || return 1
+  hypr_dispatch movetoworkspacesilent "$target_ws" >/dev/null 2>&1 || return 1
+  sleep 0.03
+  post_ws=$(window_workspace_name "$addr")
+  workspace_matches_target "$target_ws" "$post_ws"
+}
+
+infer_hidden_state() {
+  local addr="$1"
+  if window_is_hidden "$addr"; then
+    echo "hidden"
+  elif window_is_on_special_workspace "$addr"; then
+    echo "hidden"
+  else
+    echo "shown"
+  fi
 }
 
 apply_dropdown_layout() {
@@ -476,10 +563,9 @@ apply_dropdown_layout() {
   local target_y=$(echo "$pos_info" | cut -d' ' -f2)
   local width=$(echo "$pos_info" | cut -d' ' -f3)
   local height=$(echo "$pos_info" | cut -d' ' -f4)
-
-  hypr_dispatch setfloating "address:$addr" >/dev/null 2>&1
-  hypr_dispatch resizewindowpixel "exact $width $height,address:$addr" >/dev/null 2>&1
-  hypr_dispatch movewindowpixel "exact $target_x $target_y,address:$addr" >/dev/null 2>&1
+  set_window_floating "$addr" >/dev/null 2>&1
+  resize_window_exact "$addr" "$width" "$height" >/dev/null 2>&1
+  move_window_exact "$addr" "$target_x" "$target_y" >/dev/null 2>&1
   return 0
 }
 
@@ -487,24 +573,26 @@ show_terminal() {
   local addr="$1"
   local current_ws
   current_ws=$(get_current_workspace)
-  if [ -z "$current_ws" ]; then
-    current_ws="1"
+  if ! [[ "$current_ws" =~ ^-?[0-9]+$ ]]; then
+    current_ws=1
   fi
-
-  hypr_dispatch movetoworkspacesilent "$current_ws,address:$addr" >/dev/null 2>&1
-  apply_dropdown_layout "$addr"
-  ensure_pinned "$addr"
-  hypr_dispatch focuswindow "address:$addr" >/dev/null 2>&1
+  move_window_to_workspace_silent "$current_ws" "$addr" >/dev/null 2>&1 || debug_echo "Failed to move dropdown terminal to workspace $current_ws"
+  apply_dropdown_layout "$addr" || debug_echo "Dropdown layout update returned non-zero"
+  focus_window "$addr" >/dev/null 2>&1 || true
   set_hidden_state "shown"
-  debug_echo "Dropdown terminal shown on workspace $current_ws"
+  debug_echo "Dropdown terminal shown"
+  return 0
 }
 
 hide_terminal() {
   local addr="$1"
-  ensure_unpinned "$addr"
-  hypr_dispatch movetoworkspacesilent "$SPECIAL_WS,address:$addr" >/dev/null 2>&1
+  if ! move_window_to_workspace_silent "$SPECIAL_WS" "$addr"; then
+    debug_echo "Failed to move dropdown terminal to $SPECIAL_WS"
+    return 1
+  fi
   set_hidden_state "hidden"
-  debug_echo "Dropdown terminal hidden to $SPECIAL_WS"
+  debug_echo "Dropdown terminal hidden on $SPECIAL_WS"
+  return 0
 }
 
 # Function to spawn terminal and capture its address
@@ -541,7 +629,7 @@ spawn_terminal() {
     local windows_after=$(hyprctl clients -j)
     local recovered
     recovered=$(echo "$windows_after" | jq -r --arg CLASS "$DROPDOWN_KITTY_CLASS" \
-      '.[] | select(.class == $CLASS) | .address' | head -1)
+      '.[] | select((.class == $CLASS) or (.initialClass == $CLASS)) | .address' | head -1)
     if [ -n "$recovered" ] && [ "$recovered" != "null" ]; then
       new_addr="$recovered"
       break
@@ -566,13 +654,10 @@ spawn_terminal() {
     debug_echo "Terminal created with address: $new_addr in special workspace on monitor $monitor_name"
 
     # Configure in special workspace and keep hidden until explicitly toggled.
-    hypr_dispatch movetoworkspacesilent "$SPECIAL_WS,address:$new_addr"
-    sleep 0.05
-    hypr_dispatch setfloating "address:$new_addr" >/dev/null 2>&1
-    ensure_unpinned "$new_addr"
-    hypr_dispatch resizewindowpixel "exact $width $height,address:$new_addr" >/dev/null 2>&1
-    hypr_dispatch movewindowpixel "exact $target_x $target_y,address:$new_addr" >/dev/null 2>&1
-    set_hidden_state "hidden"
+    set_window_floating "$new_addr" >/dev/null 2>&1
+    resize_window_exact "$new_addr" "$width" "$height" >/dev/null 2>&1
+    move_window_exact "$new_addr" "$target_x" "$target_y" >/dev/null 2>&1
+    hide_terminal "$new_addr" || debug_echo "Failed to hide new dropdown terminal after spawn"
 
     return 0
   fi
@@ -600,8 +685,13 @@ if [ "$STARTUP_MODE" = true ]; then
   hide_terminal "$TERMINAL_ADDR"
   exit 0
 fi
+HIDDEN_STATE=$(get_hidden_state)
+if [ "$HIDDEN_STATE" != "hidden" ] && [ "$HIDDEN_STATE" != "shown" ]; then
+  HIDDEN_STATE=$(infer_hidden_state "$TERMINAL_ADDR")
+  set_hidden_state "$HIDDEN_STATE"
+fi
 
-if window_is_on_special_workspace "$TERMINAL_ADDR"; then
+if [ "$HIDDEN_STATE" = "hidden" ]; then
   show_terminal "$TERMINAL_ADDR"
 else
   hide_terminal "$TERMINAL_ADDR"

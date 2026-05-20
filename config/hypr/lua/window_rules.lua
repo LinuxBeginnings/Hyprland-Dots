@@ -1107,7 +1107,4 @@ apply_window_rule({
     class = "kitty-dropterm",
   },
   float = true,
-  size = "1248 702",
-  move = "336 108",
-  pin = true,
 })
