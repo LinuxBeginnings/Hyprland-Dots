@@ -97,8 +97,7 @@ focus_window() {
 set_window_floating() {
   local addr="$1"
   if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    focus_window "$addr" >/dev/null 2>&1 || return 1
-    hyprctl dispatch "hl.dsp.window.float({ action = \"on\" })"
+    hyprctl dispatch "hl.dsp.window.float({ window = 'address:$addr', action = 'on' })"
   else
     hypr_dispatch setfloating "address:$addr"
   fi
@@ -109,8 +108,7 @@ resize_window_exact() {
   local width="$2"
   local height="$3"
   if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    focus_window "$addr" >/dev/null 2>&1 || return 1
-    hyprctl dispatch "hl.dsp.window.resize({ x = $width, y = $height, exact = true })"
+    hyprctl dispatch "hl.dsp.window.resize({ window = 'address:$addr', x = $width, y = $height, exact = true })"
   else
     hypr_dispatch resizewindowpixel "exact $width $height,address:$addr"
   fi
@@ -121,8 +119,7 @@ move_window_exact() {
   local x="$2"
   local y="$3"
   if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    focus_window "$addr" >/dev/null 2>&1 || return 1
-    hyprctl dispatch "hl.dsp.window.move({ x = $x, y = $y, exact = true })"
+    hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', x = $x, y = $y, exact = true })"
   else
     hypr_dispatch movewindowpixel "exact $x $y,address:$addr"
   fi
@@ -134,9 +131,12 @@ HEIGHT_PERCENT=65 # Height as percentage of screen height
 Y_PERCENT=10      # Y position as percentage from top (X is auto-centered)
 
 # Animation settings
-ANIMATION_DURATION=100 # milliseconds
-SLIDE_STEPS=5
-SLIDE_DELAY=5 # milliseconds between steps
+ANIMATION_DURATION=220 # total animation time in milliseconds
+SLIDE_STEPS=12
+SLIDE_DELAY=$((ANIMATION_DURATION / SLIDE_STEPS))
+if [ "$SLIDE_DELAY" -lt 8 ]; then
+  SLIDE_DELAY=8
+fi
 
 # Parse arguments
 STARTUP_MODE=false
@@ -253,12 +253,55 @@ get_window_geometry() {
 # Function to check if window is currently hidden off-screen
 window_is_hidden() {
   local addr="$1"
-  local y
-  y=$(hyprctl clients -j 2>/dev/null | jq -r --arg ADDR "$addr" '.[] | select(.address == $ADDR) | .at[1]' 2>/dev/null)
-  if [[ "$y" =~ ^-?[0-9]+$ ]] && [ "$y" -lt 0 ]; then
+  local geometry y height monitor_id monitor_y
+  geometry=$(hyprctl clients -j 2>/dev/null | jq -r --arg ADDR "$addr" '.[] | select(.address == $ADDR) | "\(.at[1]) \(.size[1]) \(.monitor)"' 2>/dev/null)
+  y=$(echo "$geometry" | awk '{print $1}')
+  height=$(echo "$geometry" | awk '{print $2}')
+  monitor_id=$(echo "$geometry" | awk '{print $3}')
+
+  if ! [[ "$y" =~ ^-?[0-9]+$ && "$height" =~ ^[0-9]+$ ]]; then
+    return 1
+  fi
+
+  if [[ "$monitor_id" =~ ^-?[0-9]+$ ]]; then
+    monitor_y=$(hyprctl monitors -j 2>/dev/null | jq -r --argjson MID "$monitor_id" '.[] | select(.id == $MID) | .y' 2>/dev/null | head -1)
+  fi
+  if ! [[ "$monitor_y" =~ ^-?[0-9]+$ ]]; then
+    monitor_y=0
+  fi
+
+  if [ $((y + height)) -le "$monitor_y" ]; then
     return 0
   fi
   return 1
+}
+
+get_window_monitor_top() {
+  local addr="$1"
+  local monitor_id monitor_y
+  monitor_id=$(hyprctl clients -j 2>/dev/null | jq -r --arg ADDR "$addr" '.[] | select(.address == $ADDR) | .monitor' 2>/dev/null | head -1)
+  if [[ "$monitor_id" =~ ^-?[0-9]+$ ]]; then
+    monitor_y=$(hyprctl monitors -j 2>/dev/null | jq -r --argjson MID "$monitor_id" '.[] | select(.id == $MID) | .y' 2>/dev/null | head -1)
+    if [[ "$monitor_y" =~ ^-?[0-9]+$ ]]; then
+      echo "$monitor_y"
+      return 0
+    fi
+  fi
+  echo 0
+}
+
+get_hidden_y_for_window() {
+  local addr="$1"
+  local height="$2"
+  local monitor_top
+  if ! [[ "$height" =~ ^[0-9]+$ ]]; then
+    height=702
+  fi
+  monitor_top=$(get_window_monitor_top "$addr")
+  if ! [[ "$monitor_top" =~ ^-?[0-9]+$ ]]; then
+    monitor_top=0
+  fi
+  echo $((monitor_top - height - 80))
 }
 
 # State helpers
@@ -272,6 +315,15 @@ set_hidden_state() {
   echo "$1" >"$STATE_FILE"
 }
 
+sleep_ms() {
+  local ms="$1"
+  if command -v awk >/dev/null 2>&1; then
+    sleep "$(awk -v value="$ms" 'BEGIN { printf "%.3f", value / 1000 }')"
+  else
+    sleep 0.01
+  fi
+}
+
 # Function to animate window slide down (show)
 animate_slide_down() {
   local addr="$1"
@@ -279,29 +331,28 @@ animate_slide_down() {
   local target_y="$3"
   local width="$4"
   local height="$5"
+  local start_y="$6"
 
   debug_echo "Animating slide down for window $addr to position $target_x,$target_y"
 
-  # Start position (above screen)
-  local start_y=$((target_y - height - 50))
-
-  # Calculate step size
-  local step_y=$(((target_y - start_y) / SLIDE_STEPS))
+  if ! [[ "$start_y" =~ ^-?[0-9]+$ ]]; then
+    start_y=$((target_y - height - 50))
+  fi
+  local total_delta=$((target_y - start_y))
 
   # Move window to start position instantly (off-screen)
-  hypr_dispatch movewindowpixel "exact $target_x $start_y,address:$addr" >/dev/null 2>&1
-
-  sleep 0.05
+  move_window_exact "$addr" "$target_x" "$start_y" >/dev/null 2>&1 || return 1
+  sleep_ms "$SLIDE_DELAY"
 
   # Animate slide down
   for i in $(seq 1 $SLIDE_STEPS); do
-    local current_y=$((start_y + (step_y * i)))
-    hypr_dispatch movewindowpixel "exact $target_x $current_y,address:$addr" >/dev/null 2>&1
-    sleep 0.03
+    local current_y=$((start_y + (total_delta * i / SLIDE_STEPS)))
+    move_window_exact "$addr" "$target_x" "$current_y" >/dev/null 2>&1 || return 1
+    sleep_ms "$SLIDE_DELAY"
   done
 
   # Ensure final position is exact
-  hypr_dispatch movewindowpixel "exact $target_x $target_y,address:$addr" >/dev/null 2>&1
+  move_window_exact "$addr" "$target_x" "$target_y" >/dev/null 2>&1
 }
 
 # Function to animate window slide up (hide)
@@ -311,21 +362,22 @@ animate_slide_up() {
   local start_y="$3"
   local width="$4"
   local height="$5"
+  local end_y="$6"
 
   debug_echo "Animating slide up for window $addr from position $start_x,$start_y"
 
-  # End position (above screen)
-  local end_y=$((start_y - height - 50))
-
-  # Calculate step size
-  local step_y=$(((start_y - end_y) / SLIDE_STEPS))
+  if ! [[ "$end_y" =~ ^-?[0-9]+$ ]]; then
+    end_y=$((start_y - height - 50))
+  fi
+  local total_delta=$((start_y - end_y))
 
   # Animate slide up
   for i in $(seq 1 $SLIDE_STEPS); do
-    local current_y=$((start_y - (step_y * i)))
-    hypr_dispatch movewindowpixel "exact $start_x $current_y,address:$addr" >/dev/null 2>&1
-    sleep 0.03
+    local current_y=$((start_y - (total_delta * i / SLIDE_STEPS)))
+    move_window_exact "$addr" "$start_x" "$current_y" >/dev/null 2>&1 || return 1
+    sleep_ms "$SLIDE_DELAY"
   done
+  move_window_exact "$addr" "$start_x" "$end_y" >/dev/null 2>&1
 
   debug_echo "Slide up animation completed"
 }
@@ -514,8 +566,7 @@ move_window_to_workspace_silent() {
   if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
     local ws_expr
     ws_expr=$(lua_workspace_expr "$target_ws")
-    focus_window "$addr" >/dev/null 2>&1 || return 1
-    hyprctl dispatch "hl.dsp.window.move({ workspace = $ws_expr, follow = false })" >/dev/null 2>&1 || return 1
+    hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', workspace = $ws_expr, follow = false })" >/dev/null 2>&1 || return 1
     sleep 0.03
     post_ws=$(window_workspace_name "$addr")
     workspace_matches_target "$target_ws" "$post_ws"
@@ -572,12 +623,33 @@ apply_dropdown_layout() {
 show_terminal() {
   local addr="$1"
   local current_ws
+  local pos_info target_x target_y width height hidden_y
   current_ws=$(get_current_workspace)
   if ! [[ "$current_ws" =~ ^-?[0-9]+$ ]]; then
     current_ws=1
   fi
-  move_window_to_workspace_silent "$current_ws" "$addr" >/dev/null 2>&1 || debug_echo "Failed to move dropdown terminal to workspace $current_ws"
-  apply_dropdown_layout "$addr" || debug_echo "Dropdown layout update returned non-zero"
+  pos_info=$(calculate_dropdown_position)
+  if [ $? -ne 0 ] || [ -z "$pos_info" ]; then
+    debug_echo "Failed to calculate dropdown position for show; falling back to direct layout"
+    move_window_to_workspace_silent "$current_ws" "$addr" >/dev/null 2>&1 || debug_echo "Failed to move dropdown terminal to workspace $current_ws"
+    apply_dropdown_layout "$addr" || debug_echo "Dropdown layout update returned non-zero"
+    focus_window "$addr" >/dev/null 2>&1 || true
+    set_hidden_state "shown"
+    debug_echo "Dropdown terminal shown"
+    return 0
+  fi
+
+  target_x=$(echo "$pos_info" | cut -d' ' -f1)
+  target_y=$(echo "$pos_info" | cut -d' ' -f2)
+  width=$(echo "$pos_info" | cut -d' ' -f3)
+  height=$(echo "$pos_info" | cut -d' ' -f4)
+  hidden_y=$(get_hidden_y_for_window "$addr" "$height")
+  if window_is_on_special_workspace "$addr"; then
+    move_window_to_workspace_silent "$current_ws" "$addr" >/dev/null 2>&1 || debug_echo "Failed to move dropdown terminal to workspace $current_ws"
+  fi
+  set_window_floating "$addr" >/dev/null 2>&1 || true
+  resize_window_exact "$addr" "$width" "$height" >/dev/null 2>&1 || true
+  animate_slide_down "$addr" "$target_x" "$target_y" "$width" "$height" "$hidden_y" || move_window_exact "$addr" "$target_x" "$target_y" >/dev/null 2>&1
   focus_window "$addr" >/dev/null 2>&1 || true
   set_hidden_state "shown"
   debug_echo "Dropdown terminal shown"
@@ -586,12 +658,52 @@ show_terminal() {
 
 hide_terminal() {
   local addr="$1"
-  if ! move_window_to_workspace_silent "$SPECIAL_WS" "$addr"; then
-    debug_echo "Failed to move dropdown terminal to $SPECIAL_WS"
-    return 1
+  local geometry start_x start_y width height hidden_y
+  if window_is_hidden "$addr" || window_is_on_special_workspace "$addr"; then
+    set_hidden_state "hidden"
+    debug_echo "Dropdown terminal already hidden"
+    return 0
+  fi
+
+  geometry=$(get_window_geometry "$addr")
+  if [ -n "$geometry" ]; then
+    start_x=$(echo "$geometry" | awk '{print $1}')
+    start_y=$(echo "$geometry" | awk '{print $2}')
+    width=$(echo "$geometry" | awk '{print $3}')
+    height=$(echo "$geometry" | awk '{print $4}')
+  else
+    local pos_info
+    pos_info=$(calculate_dropdown_position)
+    start_x=$(echo "$pos_info" | cut -d' ' -f1)
+    start_y=$(echo "$pos_info" | cut -d' ' -f2)
+    width=$(echo "$pos_info" | cut -d' ' -f3)
+    height=$(echo "$pos_info" | cut -d' ' -f4)
+  fi
+
+  if ! [[ "$height" =~ ^[0-9]+$ ]]; then
+    height=702
+  fi
+  hidden_y=$(get_hidden_y_for_window "$addr" "$height")
+  if ! [[ "$start_x" =~ ^-?[0-9]+$ && "$start_y" =~ ^-?[0-9]+$ ]]; then
+    debug_echo "Missing geometry for slide-up animation; moving off-screen directly"
+    move_window_exact "$addr" "$start_x" "$hidden_y" >/dev/null 2>&1 || true
+  else
+    animate_slide_up "$addr" "$start_x" "$start_y" "$width" "$height" "$hidden_y" || true
+  fi
+
+  if ! window_is_hidden "$addr"; then
+    debug_echo "Dropdown not off-screen after slide; trying direct off-screen move"
+    move_window_exact "$addr" "$start_x" "$hidden_y" >/dev/null 2>&1 || true
+  fi
+  if ! window_is_hidden "$addr"; then
+    debug_echo "Off-screen hide failed, falling back to $SPECIAL_WS"
+    if ! move_window_to_workspace_silent "$SPECIAL_WS" "$addr"; then
+      debug_echo "Failed to move dropdown terminal to $SPECIAL_WS"
+      return 1
+    fi
   fi
   set_hidden_state "hidden"
-  debug_echo "Dropdown terminal hidden on $SPECIAL_WS"
+  debug_echo "Dropdown terminal hidden"
   return 0
 }
 
