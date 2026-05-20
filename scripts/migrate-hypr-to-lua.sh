@@ -1089,23 +1089,43 @@ system_startup_lines = [
     "-- Example:",
     "-- exec_once(\"swaync\")",
     "",
+    "local session = os.getenv(\"HYPRLAND_INSTANCE_SIGNATURE\") or \"default\"",
+    "",
     "local function shell_quote(value)",
     "  return \"'\" .. tostring(value):gsub(\"'\", \"'\\\\''\") .. \"'\"",
     "end",
     "",
     "local function exec_once(cmd)",
-    "  local session = os.getenv(\"HYPRLAND_INSTANCE_SIGNATURE\") or \"default\"",
     "  local key = cmd:gsub(\"[^%w_.-]\", \"_\"):sub(1, 80)",
     "  local marker = \"/tmp/hypr-lua-system-exec-once-\" .. session .. \"-\" .. key",
-    "  local script = \"[ -e \" .. shell_quote(marker) .. \" ] || { touch \" .. shell_quote(marker) .. \" && sh -lc \" .. shell_quote(cmd) .. \" >/dev/null 2>&1 & }\"",
+    "  local log = \"/tmp/hypr-lua-system-startup-\" .. key .. \".log\"",
+    "  local readiness = \"runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; export XDG_RUNTIME_DIR=$runtime; if [ -z \\\"$WAYLAND_DISPLAY\\\" ] || [ ! -S \\\"$runtime/$WAYLAND_DISPLAY\\\" ]; then for sock in $runtime/wayland-*; do [ -S \\\"$sock\\\" ] || continue; case \\\"$(basename \\\"$sock\\\")\\\" in *awww*) continue ;; esac; export WAYLAND_DISPLAY=$(basename \\\"$sock\\\"); break; done; fi\"",
+    "  local inner = readiness .. \"; \" .. cmd",
+    "  local script = \"[ -e \" .. shell_quote(marker) .. \" ] || { touch \" .. shell_quote(marker) .. \" && sh -lc \" .. shell_quote(inner) .. \" >>\" .. shell_quote(log) .. \" 2>&1 & }\"",
     "  os.execute(\"sh -lc \" .. shell_quote(script))",
     "end",
     "",
 ]
 if system_startup_entries:
     system_startup_lines.append("-- Converted from configs/Startup_Apps.conf")
+    system_startup_lines.append("local startup_commands = {")
     for cmd in system_startup_entries:
-        system_startup_lines.append(f"exec_once({lua_string(cmd)})")
+        system_startup_lines.append(f"  {lua_string(cmd)},")
+    system_startup_lines.extend([
+        "}",
+        "",
+        "local function run_startup_commands()",
+        "  for _, cmd in ipairs(startup_commands) do",
+        "    exec_once(cmd)",
+        "  end",
+        "end",
+        "",
+        "if hl and hl.on then",
+        "  hl.on(\"hyprland.start\", run_startup_commands)",
+        "else",
+        "  run_startup_commands()",
+        "end",
+    ])
 else:
     system_startup_lines.append("-- No active startup entries were found in configs/Startup_Apps.conf.")
 write_file(files_out["system_startup"], system_startup_lines)
@@ -1313,23 +1333,43 @@ startup_lines = [
     "-- Example:",
     "-- exec_once(\"$HOME/.config/hypr/UserScripts/MyStartup.sh\")",
     "",
+    "local session = os.getenv(\"HYPRLAND_INSTANCE_SIGNATURE\") or \"default\"",
+    "",
     "local function shell_quote(value)",
     "  return \"'\" .. tostring(value):gsub(\"'\", \"'\\\\''\") .. \"'\"",
     "end",
     "",
     "local function exec_once(cmd)",
-    "  local session = os.getenv(\"HYPRLAND_INSTANCE_SIGNATURE\") or \"default\"",
     "  local key = cmd:gsub(\"[^%w_.-]\", \"_\"):sub(1, 80)",
     "  local marker = \"/tmp/hypr-lua-user-exec-once-\" .. session .. \"-\" .. key",
-    "  local script = \"[ -e \" .. shell_quote(marker) .. \" ] || { touch \" .. shell_quote(marker) .. \" && sh -lc \" .. shell_quote(cmd) .. \" >/dev/null 2>&1 & }\"",
+    "  local log = \"/tmp/hypr-lua-user-startup-\" .. key .. \".log\"",
+    "  local readiness = \"runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; export XDG_RUNTIME_DIR=$runtime; if [ -z \\\"$WAYLAND_DISPLAY\\\" ] || [ ! -S \\\"$runtime/$WAYLAND_DISPLAY\\\" ]; then for sock in $runtime/wayland-*; do [ -S \\\"$sock\\\" ] || continue; case \\\"$(basename \\\"$sock\\\")\\\" in *awww*) continue ;; esac; export WAYLAND_DISPLAY=$(basename \\\"$sock\\\"); break; done; fi\"",
+    "  local inner = readiness .. \"; \" .. cmd",
+    "  local script = \"[ -e \" .. shell_quote(marker) .. \" ] || { touch \" .. shell_quote(marker) .. \" && sh -lc \" .. shell_quote(inner) .. \" >>\" .. shell_quote(log) .. \" 2>&1 & }\"",
     "  os.execute(\"sh -lc \" .. shell_quote(script))",
     "end",
     "",
 ]
 if startup_entries:
     startup_lines.append("-- Converted from Startup_Apps.conf")
+    startup_lines.append("local startup_commands = {")
     for cmd in startup_entries:
-        startup_lines.append(f"exec_once({lua_string(cmd)})")
+        startup_lines.append(f"  {lua_string(cmd)},")
+    startup_lines.extend([
+        "}",
+        "",
+        "local function run_startup_commands()",
+        "  for _, cmd in ipairs(startup_commands) do",
+        "    exec_once(cmd)",
+        "  end",
+        "end",
+        "",
+        "if hl and hl.on then",
+        "  hl.on(\"hyprland.start\", run_startup_commands)",
+        "else",
+        "  run_startup_commands()",
+        "end",
+    ])
 else:
     startup_lines.extend([
         "-- No active startup entries were found in Startup_Apps.conf.",
