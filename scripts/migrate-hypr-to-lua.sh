@@ -382,18 +382,37 @@ def source_examples(path):
             continue
         lines.append(f"-- {stripped}")
     return lines
+def latest_legacy_file(path):
+    legacy_root = path.parent / "LegacyConfigs"
+    if not legacy_root.is_dir():
+        return None
+    candidates = []
+    for snapshot in sorted(legacy_root.iterdir()):
+        if not snapshot.is_dir():
+            continue
+        candidate = snapshot / path.name
+        if candidate.is_file():
+            candidates.append(candidate)
+    return candidates[-1] if candidates else None
 
 def parse_env(path):
     entries = []
-    if not path.exists():
+    source_path = path if path.exists() else latest_legacy_file(path)
+    if source_path is None:
         return entries
-    for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+    if source_path != path:
+        print(f"[INFO] {path.name} not found at {path}; using legacy source {source_path}")
+    for raw in source_path.read_text(encoding="utf-8", errors="ignore").splitlines():
         line = strip_comment(raw)
         if not line:
             continue
-        match = re.match(r"^env\s*=\s*([^,]+)\s*,\s*(.+)$", line)
-        if match:
-            entries.append((match.group(1).strip(), match.group(2).strip()))
+        comma_match = re.match(r"^env\s*=\s*([^,]+)\s*,\s*(.+)$", line)
+        if comma_match:
+            entries.append((comma_match.group(1).strip(), comma_match.group(2).strip()))
+            continue
+        equals_match = re.match(r"^env\s*=\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$", line)
+        if equals_match:
+            entries.append((equals_match.group(1).strip(), equals_match.group(2).strip()))
     return entries
 
 def parse_startup(path, *, variables=None, visited=None):
@@ -1079,9 +1098,13 @@ if system_env_entries:
     system_env_lines.append("-- Converted from configs/ENVariables.conf")
     for key, value in system_env_entries:
         system_env_lines.append(f"hl.env({lua_string(key)}, {lua_string(value)})")
+    write_file(files_out["system_env"], system_env_lines)
 else:
-    system_env_lines.append("-- No active env entries were found in configs/ENVariables.conf.")
-write_file(files_out["system_env"], system_env_lines)
+    if files_out["system_env"].exists():
+        print(f"[INFO] No active env entries found in {system_env_path}; keeping existing {files_out['system_env']}")
+    else:
+        system_env_lines.append("-- No active env entries were found in configs/ENVariables.conf.")
+        write_file(files_out["system_env"], system_env_lines)
 
 startup_readiness = (
     "runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; "
@@ -1462,14 +1485,18 @@ if env_entries:
     env_lines.append("-- Converted from ENVariables.conf")
     for key, value in env_entries:
         env_lines.append(f"hl.env({lua_string(key)}, {lua_string(value)})")
+    write_file(files_out["env"], env_lines)
 else:
-    env_lines.extend([
-        "-- No active env entries were found in ENVariables.conf.",
-        "-- Uncomment and customize examples below:",
-        "-- hl.env(\"GDK_SCALE\", \"1\")",
-        "-- hl.env(\"QT_SCALE_FACTOR\", \"1\")",
-    ])
-write_file(files_out["env"], env_lines)
+    if files_out["env"].exists():
+        print(f"[INFO] No active env entries found in {env_path}; keeping existing {files_out['env']}")
+    else:
+        env_lines.extend([
+            "-- No active env entries were found in ENVariables.conf.",
+            "-- Uncomment and customize examples below:",
+            "-- hl.env(\"GDK_SCALE\", \"1\")",
+            "-- hl.env(\"QT_SCALE_FACTOR\", \"1\")",
+        ])
+        write_file(files_out["env"], env_lines)
 
 startup_lines = [
     "-- User startup overrides (auto-generated).",
