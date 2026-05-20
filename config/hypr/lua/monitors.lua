@@ -34,3 +34,13 @@ hl.monitor({
     position = "auto",
     scale = "1",
 })
+
+-- Load user monitor overrides from UserConfigs when present.
+do
+    local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")
+    local userMonitors = configHome .. "/hypr/UserConfigs/monitors.lua"
+    local ok, err = pcall(dofile, userMonitors)
+    if not ok and err and tostring(err):find("No such file or directory", 1, true) == nil then
+        print("[WARN] Unable to load user monitor overrides from " .. userMonitors .. ": " .. tostring(err))
+    end
+end

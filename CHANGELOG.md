@@ -4,6 +4,11 @@
 
 ## Fixed:
 
+- `copy.sh`
+  - Didn't handle `hyprland.lua` properly
+  - Re-copied `*.conf` files when LUA enabled
+  - `monitors.lua` not copied to `UserConfigs` dir
+  - `MonitorProfiles.sh` wasn't set up for LUA configuration
 - `scrpts/migrate-hypr-to-lua.sh`
   - It didn't convert `monitors.conf` nor `workspaces.conf`
   - Impropved summary to show converted and what's left native

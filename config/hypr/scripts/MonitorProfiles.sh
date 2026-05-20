@@ -39,17 +39,18 @@ iDIR="$HOME/.config/swaync/images"
 SCRIPTSDIR="$HOME/.config/hypr/scripts"
 monitor_dir="$HOME/.config/hypr/Monitor_Profiles"
 target_conf="$HOME/.config/hypr/monitors.conf"
-target_lua="$HOME/.config/hypr/lua/monitors.lua"
+target_lua_user="$HOME/.config/hypr/UserConfigs/monitors.lua"
+target_lua_legacy="$HOME/.config/hypr/lua/monitors.lua"
 rofi_theme="$HOME/.config/rofi/config-Monitors.rasi"
 
 if [[ "$hypr_config_mode" == "lua" ]]; then
     profile_ext="lua"
-    target="$target_lua"
-    msg='❗NOTE:❗ This will overwrite $HOME/.config/hypr/lua/monitors.lua'
+    target="$target_lua_user"
+    msg="❗NOTE:❗ This will overwrite $HOME/.config/hypr/UserConfigs/monitors.lua"
 else
     profile_ext="conf"
     target="$target_conf"
-    msg='❗NOTE:❗ This will overwrite $HOME/.config/hypr/monitors.conf'
+    msg="❗NOTE:❗ This will overwrite $HOME/.config/hypr/monitors.conf"
 fi
 
 # Define the list of files to ignore
@@ -64,16 +65,24 @@ mon_profiles_list=$(find -L "$monitor_dir" -maxdepth 1 -type f -name "*.${profil
 for ignored_file in "${ignore_files[@]}"; do
     mon_profiles_list=$(echo "$mon_profiles_list" | grep -v -E "^$ignored_file$")
 done
+if [[ -z "$mon_profiles_list" ]]; then
+    notify-send -u low -i "$iDIR/ja.png" "Monitor Profiles" "No .${profile_ext} profiles found in $monitor_dir"
+    exit 1
+fi
 
 # Rofi Menu
-chosen_file=$(echo "$mon_profiles_list" | rofi -i -dmenu -config $rofi_theme -mesg "$msg")
+chosen_file=$(echo "$mon_profiles_list" | rofi -i -dmenu -config "$rofi_theme" -mesg "$msg")
 
 if [[ -n "$chosen_file" ]]; then
     full_path="$monitor_dir/$chosen_file.$profile_ext"
+    mkdir -p "$(dirname "$target")"
     cp "$full_path" "$target"
+    if [[ "$hypr_config_mode" == "lua" && -f "$target_lua_legacy" ]]; then
+        cp "$full_path" "$target_lua_legacy"
+    fi
     
     notify-send -u low -i "$iDIR/ja.png" "$chosen_file" "Monitor Profile Loaded"
 fi
 
 sleep 1
-${SCRIPTSDIR}/RefreshNoWaybar.sh &
+"${SCRIPTSDIR}/RefreshNoWaybar.sh" &
