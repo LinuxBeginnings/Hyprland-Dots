@@ -22,7 +22,10 @@
   - It didn't convert `monitors.conf` nor `workspaces.conf`
   - Impropved summary to show converted and what's left native
     - I.e. `hyprlock.conf` and `hypridle.conf` still use `.conf`
-- `DropDownterminal` adding lua support broke legacy hyprlang
+- `DropDownterminal`
+  - Created `silent-mode` for startup
+    - It now goes directly to specialworkspace
+  - Adding lua support broke legacy hyprlang
   - Part Dos: Fixed the fix to work in lua workflow
   - Part Tres: `DropDownterminal.sh` exited on hide not persisted
 - logout keybinding and logout from menu not working in LUA config

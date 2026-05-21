@@ -707,6 +707,28 @@ hide_terminal() {
   return 0
 }
 
+hide_terminal_silent() {
+  local addr="$1"
+  local geometry start_x height hidden_y
+  geometry=$(get_window_geometry "$addr")
+  if [ -n "$geometry" ]; then
+    start_x=$(echo "$geometry" | awk '{print $1}')
+    height=$(echo "$geometry" | awk '{print $4}')
+  fi
+  if ! [[ "$height" =~ ^[0-9]+$ ]]; then
+    height=702
+  fi
+  hidden_y=$(get_hidden_y_for_window "$addr" "$height")
+  if ! [[ "$start_x" =~ ^-?[0-9]+$ ]]; then
+    start_x=0
+  fi
+  move_window_exact "$addr" "$start_x" "$hidden_y" >/dev/null 2>&1 || true
+  move_window_to_workspace_silent "$SPECIAL_WS" "$addr" >/dev/null 2>&1 || true
+  set_hidden_state "hidden"
+  debug_echo "Dropdown terminal hidden (silent)"
+  return 0
+}
+
 # Function to spawn terminal and capture its address
 spawn_terminal() {
   debug_echo "Creating new dropdown terminal with command: $TERMINAL_CMD"
@@ -729,11 +751,8 @@ spawn_terminal() {
   local windows_before=$(hyprctl clients -j)
   local count_before=$(echo "$windows_before" | jq 'length')
 
-  # Launch terminal; on Hyprlang workflow pre-apply workspace/geometry hints to avoid visible zigzag.
-  local launch_cmd="$TERMINAL_CMD"
-  if [[ "$HYPR_CONFIG_MODE" == "conf" ]]; then
-    launch_cmd="[workspace $SPECIAL_WS silent;float;size $width $height;move $target_x $target_y] $TERMINAL_CMD"
-  fi
+  # Launch terminal with pre-applied workspace/geometry hints to avoid visible zigzag.
+  local launch_cmd="[workspace $SPECIAL_WS silent;float;size $width $height;move $target_x $target_y] $TERMINAL_CMD"
   hypr_exec_cmd "$launch_cmd"
 
   local new_addr=""
@@ -769,7 +788,11 @@ spawn_terminal() {
     set_window_floating "$new_addr" >/dev/null 2>&1
     resize_window_exact "$new_addr" "$width" "$height" >/dev/null 2>&1
     move_window_exact "$new_addr" "$target_x" "$target_y" >/dev/null 2>&1
-    hide_terminal "$new_addr" || debug_echo "Failed to hide new dropdown terminal after spawn"
+    if [ "$STARTUP_MODE" = true ]; then
+      hide_terminal_silent "$new_addr" || debug_echo "Failed to hide new dropdown terminal after spawn (silent)"
+    else
+      hide_terminal "$new_addr" || debug_echo "Failed to hide new dropdown terminal after spawn"
+    fi
 
     return 0
   fi
@@ -794,7 +817,7 @@ fi
 
 if [ "$STARTUP_MODE" = true ]; then
   debug_echo "Startup mode requested: ensuring dropdown terminal exists and stays hidden"
-  hide_terminal "$TERMINAL_ADDR"
+  hide_terminal_silent "$TERMINAL_ADDR"
   exit 0
 fi
 HIDDEN_STATE=$(get_hidden_state)
