@@ -62,12 +62,6 @@
 
 ## Updated:
 
-- Created `user_keybinds_helper.lua`
-  - The removes the basic setup for user keybinds
-  - The generated `user_keybinds.lua` now only has the bindings config
-  - Removing all the setup code, functions, makes editing easier
-  - Also any updates to the user keybind code is done outside of `UserConfigs`
-    - which is preserved on updates
 - `ENVariables.conf` and `env.lua`
 - migration script to make/keep proper Window Rule names
 - LUA function to handle lid switch to enable/disable laptop display
@@ -80,6 +74,17 @@
 
 ## Added:
 
+- Created helper lua modules for `UserConfigs` lua files
+  - `user_keybinds_helper.lua`
+  - `user_startup_helper.lua`
+  - `user_window_rules.lua`
+  - `user_layer_rules.lua`
+  - `user_decorations.lua`
+    - The removes the basic setup user lua files
+    - The generated `user_keybinds.lua` now only has the bindings config
+    - Removing all the setup code, functions, makes editing easier
+    - Also any updates to the user keybind code is done outside of `UserConfigs`
+      - `UserConfigs` dir is preserved on updates
 - `SUPERCTRL + G` for ghostty theme selector
 - Kitty theme selector to `Kool_Quick_Settings` to match entry for ghostty
 - `.luarc.jsonc` and `hl.meta.lua` (Thank you @Tony,btw) for the latter
