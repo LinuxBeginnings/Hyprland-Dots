@@ -261,18 +261,13 @@ if [ "${#wallust_kitty_args[@]}" -gt 0 ]; then
 fi
 (
   if [ -f "$kitty_cfg" ]; then
-    kitty_ts=$(date +%s)
     run_wallust_with_config "$kitty_cfg"
-    wait_for_templates "$kitty_ts" "$HOME/.config/kitty/kitty-themes/01-Wallust.conf" || true
   fi
 
-  # Reload kitty colors when wallpaper-based theme is active
+  # Reload kitty colors when wallpaper-based theme is active.
+  # Use SIGUSR1 directly to avoid extra latency from kitty remote-control calls.
   kitty_wallust_theme="$HOME/.config/kitty/kitty-themes/01-Wallust.conf"
   if [ -s "$kitty_wallust_theme" ]; then
-    if command -v kitty >/dev/null 2>&1; then
-      kitty @ load-config >/dev/null 2>&1 || true
-      kitty @ set-colors --all --configured "$kitty_wallust_theme" >/dev/null 2>&1 || true
-    fi
     if pidof kitty >/dev/null 2>&1; then
       for pid in $(pidof kitty); do
         kill -SIGUSR1 "$pid" 2>/dev/null || true

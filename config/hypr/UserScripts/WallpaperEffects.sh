@@ -9,11 +9,6 @@
 
 # Variables
 terminal=kitty
-wallust_args=()
-# shellcheck source=/dev/null
-if [ -f "$HOME/.config/hypr/scripts/WallustConfig.sh" ]; then
-    . "$HOME/.config/hypr/scripts/WallustConfig.sh"
-fi
 wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
 wallpaper_output="$HOME/.config/hypr/wallpaper_effects/.wallpaper_modified"
 SCRIPTSDIR="$HOME/.config/hypr/scripts"
@@ -64,13 +59,11 @@ declare -A effects=(
 
 # Function to apply no effects
 no-effects() {
-    $WWW img -o "$focused_monitor" "$wallpaper_current" $SWWW_PARAMS &&
-    wait $!
-    if ! wallust "${wallust_args[@]}" run -s "$wallpaper_current"; then
+    $WWW img -o "$focused_monitor" "$wallpaper_current" $SWWW_PARAMS || return 1
+    if ! "$SCRIPTSDIR/WallustSwww.sh" "$wallpaper_current"; then
         notify-send -u critical -i "$iDIR/error.png" "Wallust failed" "Wallpaper theme not refreshed"
         return 1
     fi
-    wait $!
     # Refresh rofi, waybar, wallust palettes
 	sleep 0.5
 	"$SCRIPTSDIR/Refresh.sh"
@@ -105,17 +98,13 @@ main() {
             done
 
             sleep 1
-            $WWW img -o "$focused_monitor" "$wallpaper_output" $SWWW_PARAMS &
-
-            sleep 2
-
-            wallust "${wallust_args[@]}" run -s "$wallpaper_output" &
-            sleep 1
-            # Refresh rofi, waybar, wallust palettes
-            if ! wait %1; then
+            $WWW img -o "$focused_monitor" "$wallpaper_output" $SWWW_PARAMS
+            sleep 0.5
+            if ! "$SCRIPTSDIR/WallustSwww.sh" "$wallpaper_output"; then
                 notify-send -u critical -i "$iDIR/error.png" "Wallust failed" "Wallpaper theme not refreshed"
                 return 1
             fi
+            # Refresh rofi, waybar, wallust palettes
             "${SCRIPTSDIR}/Refresh.sh"
             notify-send -u low -i "$iDIR/ja.png" "$choice" "effects applied"
         else
