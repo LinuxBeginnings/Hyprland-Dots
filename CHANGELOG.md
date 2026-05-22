@@ -4,6 +4,8 @@
 
 ## Fixed:
 
+- Parser for `UserConfigs` mistook border size 1 as as true/false value
+- `UserConfigs/user_decorations.lua` was not being imported correctly
 - My custom keybinds were included in defaults by mistake
   - Removed from both .lua and .conf files
 - Theme by wallpaper and global theme

@@ -828,9 +828,9 @@ def render_table(value, indent=4):
 def scalar(value, *, bool_words=True):
     value = value.strip()
     lower = value.lower()
-    if bool_words and lower in {"on", "true", "1", "yes"}:
+    if bool_words and lower in {"on", "true", "yes"}:
         return "true"
-    if bool_words and lower in {"off", "false", "0", "no"}:
+    if bool_words and lower in {"off", "false", "no"}:
         return "false"
     if re.fullmatch(r"[-+]?\d+(\.\d+)?", value):
         return value
@@ -1846,9 +1846,9 @@ for name, source in [
                 "  local source_dir = source_path and source_path:match(\"^(.*)/[^/]+$\") or nil",
                 "  local home = os.getenv(\"HOME\") or \"\"",
                 "  local candidate_paths = {",
-                "    source_dir and (source_dir .. \"/../lua/user_decorations_helper.lua\") or nil",
-                "    home ~= \"\" and (home .. \"/.config/hypr/lua/user_decorations_helper.lua\") or nil",
-                "    home ~= \"\" and (home .. \"/.config/hypr/user_decorations_helper.lua\") or nil",
+                "    source_dir and (source_dir .. \"/../lua/user_decorations_helper.lua\") or nil,",
+                "    home ~= \"\" and (home .. \"/.config/hypr/lua/user_decorations_helper.lua\") or nil,",
+                "    home ~= \"\" and (home .. \"/.config/hypr/user_decorations_helper.lua\") or nil,",
                 "  }",
                 "",
                 "  local tried_paths = {}",
