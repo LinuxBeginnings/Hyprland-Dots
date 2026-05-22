@@ -104,6 +104,15 @@ install_terminal_configs() {
   else
     echo "${ERROR:-[ERROR]} - $WEZTERM_SRC not found; skipping WezTerm config install." 2>&1 | tee -a "$log"
   fi
+
+  # Kitty: open terminal URLs in the browser and focus it in Hyprland
+  local OPEN_URL_SRC="$base/config/hypr/scripts/open-url-hypr.sh"
+  local OPEN_URL_DEST="$HOME/.local/bin/open-url-hypr"
+  if [ -f "$OPEN_URL_SRC" ]; then
+    mkdir -p "$HOME/.local/bin"
+    install -m 0755 "$OPEN_URL_SRC" "$OPEN_URL_DEST" 2>&1 | tee -a "$log"
+    echo "${OK:-[OK]} - Installed Kitty URL helper to $OPEN_URL_DEST." 2>&1 | tee -a "$log"
+  fi
 }
 
 choose_default_editor() {
