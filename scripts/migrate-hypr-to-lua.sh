@@ -751,6 +751,80 @@ def parse_user_defaults(path):
         defaults[key] = value
     return defaults
 
+def parse_hyprlang_sections(path):
+    sections = {}
+    if not path.exists():
+        return sections
+
+    stack = [sections]
+    for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = strip_comment(raw)
+        if not line:
+            continue
+        if line.startswith("source"):
+            continue
+        if line.endswith("{"):
+            name = line[:-1].strip()
+            if not name:
+                continue
+            current = stack[-1]
+            target = current.setdefault(name, {})
+            stack.append(target)
+            continue
+        if line == "}":
+            if len(stack) > 1:
+                stack.pop()
+            continue
+        if "=" in line:
+            key, value = [part.strip() for part in line.split("=", 1)]
+            if not key:
+                continue
+            container = stack[-1]
+            parts = [part for part in key.split(".") if part]
+            for part in parts[:-1]:
+                container = container.setdefault(part, {})
+            container[parts[-1]] = value
+    return sections
+
+WALLUST_FALLBACKS = {
+    "color12": "rgba(8db4ffff)",
+    "color10": "rgba(5f6578ff)",
+    "color15": "rgba(ffffffff)",
+    "color0": "rgba(0f111aff)",
+}
+
+def wallust_expr(value):
+    value = value.strip()
+    if not value.startswith("$"):
+        return None
+    var = value[1:].strip().lower()
+    if re.fullmatch(r"color\d+", var):
+        fallback = WALLUST_FALLBACKS.get(var)
+        if fallback:
+            return f"wallust_color({lua_string(var)}, {lua_string(fallback)})"
+        return f"wallust_color({lua_string(var)})"
+    return None
+
+def lua_value(value):
+    wallust_value = wallust_expr(value)
+    if wallust_value is not None:
+        return wallust_value
+    return scalar(value)
+
+def render_table(value, indent=4):
+    lines = []
+    for key, child in value.items():
+        if isinstance(child, dict):
+            lines.append(" " * indent + f"{key} = {{")
+            lines.extend(render_table(child, indent + 2))
+            lines.append(" " * indent + "},")
+        else:
+            rendered = lua_value(str(child))
+            if rendered is None:
+                continue
+            lines.append(" " * indent + f"{key} = {rendered},")
+    return lines
+
 def scalar(value, *, bool_words=True):
     value = value.strip()
     lower = value.lower()
@@ -1755,6 +1829,7 @@ for name, source in [
     reference = source_examples(source)
     if name == "decorations":
         if reference or not files_out[name].exists():
+            parsed_decorations = parse_hyprlang_sections(source)
             decoration_lines = [
                 title,
                 "-- This file is intentionally split from other user overrides.",
@@ -1771,9 +1846,9 @@ for name, source in [
                 "  local source_dir = source_path and source_path:match(\"^(.*)/[^/]+$\") or nil",
                 "  local home = os.getenv(\"HOME\") or \"\"",
                 "  local candidate_paths = {",
-                "    source_dir and (source_dir .. \"/../lua/user_decorations_helper.lua\") or nil,",
-                "    home ~= \"\" and (home .. \"/.config/hypr/lua/user_decorations_helper.lua\") or nil,",
-                "    home ~= \"\" and (home .. \"/.config/hypr/user_decorations_helper.lua\") or nil,",
+                "    source_dir and (source_dir .. \"/../lua/user_decorations_helper.lua\") or nil",
+                "    home ~= \"\" and (home .. \"/.config/hypr/lua/user_decorations_helper.lua\") or nil",
+                "    home ~= \"\" and (home .. \"/.config/hypr/user_decorations_helper.lua\") or nil",
                 "  }",
                 "",
                 "  local tried_paths = {}",
@@ -1799,65 +1874,82 @@ for name, source in [
                 "local load_wallust_colors = user_decorations_helper.load_wallust_colors",
                 "",
                 "local wallust = load_wallust_colors(wallust_colors_file)",
-                "local active_border = wallust.color12 or \"rgba(8db4ffff)\"",
-                "local inactive_border = wallust.color10 or \"rgba(5f6578ff)\"",
-                "local group_border_active = wallust.color15 or \"rgba(ffffffff)\"",
-                "local groupbar_active = wallust.color0 or \"rgba(0f111aff)\"",
-                "",
-                "hl.config({",
-                "  general = {",
-                "    border_size = 2,",
-                "    gaps_in = 2,",
-                "    gaps_out = 4,",
-                "    col = {",
-                "      active_border = active_border,",
-                "      inactive_border = inactive_border,",
-                "    },",
-                "  },",
-                "})",
-                "",
-                "hl.config({",
-                "  decoration = {",
-                "    rounding = 10,",
-                "    active_opacity = 1.0,",
-                "    inactive_opacity = 0.9,",
-                "    fullscreen_opacity = 1.0,",
-                "    dim_inactive = true,",
-                "    dim_strength = 0.1,",
-                "    dim_special = 0.8,",
-                "    shadow = {",
-                "      enabled = true,",
-                "      range = 3,",
-                "      render_power = 1,",
-                "      color = active_border,",
-                "      color_inactive = inactive_border,",
-                "    },",
-                "    blur = {",
-                "      enabled = true,",
-                "      size = 6,",
-                "      passes = 3,",
-                "      new_optimizations = true,",
-                "      xray = true,",
-                "      ignore_opacity = true,",
-                "      special = true,",
-                "      popups = true,",
-                "    },",
-                "  },",
-                "})",
-                "",
-                "hl.config({",
-                "  group = {",
-                "    col = {",
-                "      border_active = group_border_active,",
-                "    },",
-                "    groupbar = {",
-                "      col = {",
-                "        active = groupbar_active,",
-                "      },",
-                "    },",
-                "  },",
-                "})",
+                "local function wallust_color(name, fallback)",
+                "  local value = wallust[name]",
+                "  if value ~= nil then",
+                "    return value",
+                "  end",
+                "  return fallback",
+                "end",
             ]
+            if parsed_decorations:
+                for section_name in ("general", "decoration", "group"):
+                    section = parsed_decorations.get(section_name)
+                    if not section:
+                        continue
+                    decoration_lines.append("")
+                    decoration_lines.append("hl.config({")
+                    decoration_lines.append(f"  {section_name} = {{")
+                    decoration_lines.extend(render_table(section, indent=4))
+                    decoration_lines.append("  },")
+                    decoration_lines.append("})")
+            else:
+                decoration_lines.extend([
+                    "",
+                    "hl.config({",
+                    "  general = {",
+                    "    border_size = 2,",
+                    "    gaps_in = 2,",
+                    "    gaps_out = 4,",
+                    "    col = {",
+                    "      active_border = wallust_color(\"color12\", \"rgba(8db4ffff)\"),",
+                    "      inactive_border = wallust_color(\"color10\", \"rgba(5f6578ff)\"),",
+                    "    },",
+                    "  },",
+                    "})",
+                    "",
+                    "hl.config({",
+                    "  decoration = {",
+                    "    rounding = 10,",
+                    "    active_opacity = 1.0,",
+                    "    inactive_opacity = 0.9,",
+                    "    fullscreen_opacity = 1.0,",
+                    "    dim_inactive = true,",
+                    "    dim_strength = 0.1,",
+                    "    dim_special = 0.8,",
+                    "    shadow = {",
+                    "      enabled = true,",
+                    "      range = 3,",
+                    "      render_power = 1,",
+                    "      color = wallust_color(\"color12\", \"rgba(8db4ffff)\"),",
+                    "      color_inactive = wallust_color(\"color10\", \"rgba(5f6578ff)\"),",
+                    "    },",
+                    "    blur = {",
+                    "      enabled = true,",
+                    "      size = 6,",
+                    "      passes = 3,",
+                    "      new_optimizations = true,",
+                    "      xray = true,",
+                    "      ignore_opacity = true,",
+                    "      special = true,",
+                    "      popups = true,",
+                    "    },",
+                    "  },",
+                    "})",
+                    "",
+                    "hl.config({",
+                    "  group = {",
+                    "    col = {",
+                    "      border_active = wallust_color(\"color15\", \"rgba(ffffffff)\"),",
+                    "    },",
+                    "    groupbar = {",
+                    "      col = {",
+                    "        active = wallust_color(\"color0\", \"rgba(0f111aff)\"),",
+                    "      },",
+                    "    },",
+                    "  },",
+                    "})",
+                ])
             if reference:
                 decoration_lines.extend([
                     "",
