@@ -37,8 +37,4 @@ do
 end
 local exec_cmd = user_keybinds_helper.exec_cmd
 local bind = user_keybinds_helper.bind
--- NOTE: Dropterminal is currently certified only with kitty. Not all terminals behave correctly as a dropdown.
 
-bind("SUPER SHIFT", "T", exec_cmd("$HOME/.config/hypr/scripts/Dropterminal.sh kitty"), {
-  description = "DropDown terminal",
-})

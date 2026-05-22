@@ -4,6 +4,8 @@
 
 ## Fixed:
 
+- My custom keybinds were included in defaults by mistake
+  - Removed from both .lua and .conf files
 - Theme by wallpaper and global theme
   - Neither were updating waybar nor border colors
   - Adjusted colors on style sheet `Wallust-Chrome-Fustion.css`
