@@ -753,7 +753,7 @@ def parse_user_defaults(path):
 
 def parse_hyprlang_sections(path):
     sections = {}
-    if not path.exists():
+    if path is None or not path.exists():
         return sections
 
     stack = [sections]
@@ -764,8 +764,8 @@ def parse_hyprlang_sections(path):
         if line.startswith("source"):
             continue
         if line.endswith("{"):
-            name = line[:-1].strip()
-            if not name:
+            name = line[:-1].strip().replace("-", "_")
+            if not name or name.startswith("$"):
                 continue
             current = stack[-1]
             target = current.setdefault(name, {})
@@ -777,14 +777,56 @@ def parse_hyprlang_sections(path):
             continue
         if "=" in line:
             key, value = [part.strip() for part in line.split("=", 1)]
-            if not key:
+            if not key or key.startswith("$"):
                 continue
+            key = key.replace("-", "_")
             container = stack[-1]
-            parts = [part for part in key.split(".") if part]
+            parts = [part.replace("-", "_") for part in key.split(".") if part]
             for part in parts[:-1]:
                 container = container.setdefault(part, {})
             container[parts[-1]] = value
     return sections
+
+def parse_scripts_dir(path):
+    if path is None or not path.exists():
+        return None
+    for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = strip_comment(raw)
+        if not line:
+            continue
+        match = re.match(r"^\\$scriptsDir\\s*=\\s*(.+)$", line)
+        if match:
+            return unquote(match.group(1).strip())
+    return None
+
+def parse_gestures(path):
+    simple = []
+    complex_entries = []
+    if path is None or not path.exists():
+        return simple, complex_entries
+    for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = strip_comment(raw)
+        if not line:
+            continue
+        match = re.match(r"^gesture\\s*=\\s*(.+)$", line)
+        if not match:
+            continue
+        payload = match.group(1).strip()
+        parts = [part.strip() for part in payload.split(",")]
+        if len(parts) >= 3 and parts[2] == "workspace":
+            try:
+                fingers = int(parts[0])
+            except ValueError:
+                complex_entries.append(payload)
+                continue
+            simple.append({
+                "fingers": fingers,
+                "direction": parts[1],
+                "action": "workspace",
+            })
+        else:
+            complex_entries.append(payload)
+    return simple, complex_entries
 
 WALLUST_FALLBACKS = {
     "color12": "rgba(8db4ffff)",
@@ -1538,10 +1580,80 @@ for name, source in [
         "-- hl.config({ general = { gaps_in = 4, gaps_out = 8 } })",
         "",
     ]
-    reference = source_examples(source)
+    source_path = source if source.exists() else latest_legacy_file(source)
+    if source_path and source_path != source:
+        print(f"[INFO] {source.name} not found at {source}; using legacy source {source_path}")
+
+    if name == "system_settings":
+        if source_path is None:
+            lines.append(f"-- No active entries were found in {source.name}.")
+            write_file(files_out[name], lines)
+        else:
+            scripts_dir = parse_scripts_dir(source_path)
+            if scripts_dir:
+                lines.append(f"local scriptsDir = {lua_string(scripts_dir)}")
+                lines.append("")
+
+            sections = parse_hyprlang_sections(source_path)
+            gestures_section = sections.pop("gestures", None)
+            if gestures_section and "gesture" in gestures_section:
+                gestures_section.pop("gesture", None)
+
+            ordered_sections = [
+                "dwindle",
+                "master",
+                "scrolling",
+                "general",
+                "input",
+                "gestures",
+                "misc",
+                "binds",
+                "xwayland",
+                "render",
+                "cursor",
+            ]
+            for section in ordered_sections:
+                if section == "gestures":
+                    data = gestures_section
+                elif section == "misc":
+                    data = sections.get(section) or {}
+                    if "force_default_wallpaper" not in data:
+                        data["force_default_wallpaper"] = "false"
+                else:
+                    data = sections.get(section)
+                if not data:
+                    continue
+                lines.append("hl.config({")
+                lines.append(f"  {section} = {{")
+                lines.extend(render_table(data, indent=4))
+                lines.append("  },")
+                lines.append("})")
+                lines.append("")
+
+            simple_gestures, complex_gestures = parse_gestures(source_path)
+            for spec in simple_gestures:
+                lines.extend([
+                    "hl.gesture({",
+                    f"  fingers = {spec['fingers']},",
+                    f"  direction = {lua_string(spec['direction'])},",
+                    f"  action = {lua_string(spec['action'])},",
+                    "})",
+                    "",
+                ])
+
+            if complex_gestures:
+                lines.append("-- Complex dispatcher gestures from SystemSettings.conf are pending explicit Lua API parity:")
+                for entry in complex_gestures:
+                    lines.append(f"-- gesture = {entry}")
+                lines.append("")
+
+            write_file(files_out[name], lines)
+        continue
+
+    reference = source_examples(source_path) if source_path else []
     if reference:
         lines.extend([
-            f"-- Source reference from {source.name} (hyprlang):",
+            f"-- Source reference from {source_path.name} (hyprlang):",
             *reference,
         ])
     else:

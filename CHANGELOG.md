@@ -4,10 +4,11 @@
 
 ## Fixed:
 
-- Logout is NixOS. 
-   - Added fallback if hyprshutdown not installed or fails 
-   - Fixed pathing issues where not all logout options used`Logout.sh`
-- Removed sleep statments from startup to trim login time 
+- Migration script didn't properly create the `system_settings.lua` file
+- Logout is NixOS.
+  - Added fallback if hyprshutdown not installed or fails
+  - Fixed pathing issues where not all logout options used`Logout.sh`
+- Removed sleep statments from startup to trim login time
 - Network icon on waybar invisible
   - Changed the CSS files it's better but should revisit it
 - NixOS waybar issues:
@@ -81,6 +82,7 @@
 
 ## Updated:
 
+- Updated lua defaults to disable hyprland wallpaper at start
 - `ENVariables.conf` and `env.lua`
 - migration script to make/keep proper Window Rule names
 - LUA function to handle lid switch to enable/disable laptop display
