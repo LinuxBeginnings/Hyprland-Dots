@@ -42,7 +42,7 @@ local startup_commands = {
   "nm-tray",
   "swaync",
   scriptsDir .. "/PortalHyprlandUbuntu.sh",
-  "sh -c \\\"sleep 5; if command -v systemctl >/dev/null 2>&1 && (systemctl --user --quiet is-active waybar.service 2>/dev/null || systemctl --user --quiet is-enabled waybar.service 2>/dev/null); then systemctl --user start waybar.service >/dev/null 2>&1; else (pgrep -x waybar >/dev/null || pgrep -x .waybar-wrapped >/dev/null) || waybar; fi\\\"",
+  "sh " .. scriptsDir .. "/WaybarStartup.sh",
   "qs -c overview",
   "hypridle",
   scriptsDir .. "/Hyprsunset.sh init",
