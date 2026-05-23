@@ -4,6 +4,8 @@
 
 ## Fixed:
 
+- Network icon on waybar invisible
+  - Changed the CSS files it's better but should revisit it
 - NixOS waybar issues:
   - User waybar service enabled
     - `install.sh` checks for and disables on install
