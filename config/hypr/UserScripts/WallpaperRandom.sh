@@ -25,7 +25,7 @@ TYPE="random"
 DURATION=1
 BEZIER=".43,1.19,1,.4"
 if [[ "$WWW_CMD" == "swww" || "$WWW_CMD" == "awww" ]]; then
-  SWWW_PARAMS="--transition-fps $FPS --transition-type $TYPE --transition-duration $DURATION --transition-bezier $BEZIER"
+  SWWW_PARAMS="--transition-fps $FPS --transition-type $TYPE --transition-duration $DURATION --transition-bezier $BEZIER --resize fit"
 else
   SWWW_PARAMS=""
 fi

@@ -92,9 +92,9 @@ apply_wallpaper_for_monitor() {
   fi
 
   if [ -n "$wallpaper_path" ] && [ -f "$wallpaper_path" ]; then
-    if ! "$WWW_CMD" img -o "$monitor" "$wallpaper_path" >/dev/null 2>&1; then
+    if ! "$WWW_CMD" img -o "$monitor" --resize fit "$wallpaper_path" >/dev/null 2>&1; then
       sleep 0.3
-      "$WWW_CMD" img -o "$monitor" "$wallpaper_path" >/dev/null 2>&1 &
+      "$WWW_CMD" img -o "$monitor" --resize fit "$wallpaper_path" >/dev/null 2>&1 &
     fi
   fi
 }

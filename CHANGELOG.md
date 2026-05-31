@@ -4,6 +4,10 @@
 
 ## Fixed:
 
+- `awww` default didn't work for wide screen monitors
+  - Default is to `resize --crop`
+  - Added `resize --fit` as default parameter
+  - Thanks to **CateDesu** for finding issue & correct parameters
 - After LUA migration
   - Logout issues:
     - logout stopped working
