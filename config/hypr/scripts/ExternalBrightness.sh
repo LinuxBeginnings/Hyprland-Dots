@@ -37,8 +37,8 @@ get_brightness() {
     return 1
   fi
   local current max
-  current="$(printf "%s" "${line}" | sed -n 's/.*current value = \([0-9]\+\).*/\1/p')"
-  max="$(printf "%s" "${line}" | sed -n 's/.*max value = \([0-9]\+\).*/\1/p')"
+  current="$(printf "%s" "${line}" | sed -n 's/.*current value = *\([0-9]\+\).*/\1/p')"
+  max="$(printf "%s" "${line}" | sed -n 's/.*max value = *\([0-9]\+\).*/\1/p')"
   [[ -n "${current}" && -n "${max}" ]] || return 1
   printf "%s %s\n" "${current}" "${max}"
 }
