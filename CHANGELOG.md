@@ -6,7 +6,9 @@
 
 - `awww` default didn't work for wide screen monitors
   - Default is to `resize --crop`
-  - Added `resize --fit` as default parameter
+  - Made wallpaper scripts monitor determinsitic 
+    - Just overriding default won't work for non ultrawide screens 
+    - Also add UserConfig override variabe to force default if needed
   - Thanks to **CateDesu** for finding issue & correct parameters
 - After LUA migration
   - Logout issues:
