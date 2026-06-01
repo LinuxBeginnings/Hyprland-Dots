@@ -116,6 +116,7 @@
 
 ## Added:
 
+- `yazi` config to `copy.sh`
 - Waybar widget for layouts
   - Shows current layout
     - `D` for `dwindle`
