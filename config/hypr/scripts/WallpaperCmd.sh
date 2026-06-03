@@ -128,7 +128,12 @@ wallpaper_resize_mode() {
   is_mismatch="$(awk -v d="$mismatch" 'BEGIN {print (d >= 0.12) ? 1 : 0}')"
 
   if [ "$is_mismatch" -eq 1 ]; then
-    printf '%s\n' "fit"
+    # awww fit mode can letterbox with black bars; prefer crop to keep full-screen fill.
+    if [ "${WWW_CMD:-}" = "awww" ]; then
+      printf '%s\n' "crop"
+    else
+      printf '%s\n' "fit"
+    fi
   else
     printf '%s\n' "crop"
   fi
