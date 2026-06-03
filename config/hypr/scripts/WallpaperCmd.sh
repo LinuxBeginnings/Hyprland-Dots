@@ -87,7 +87,7 @@ wallpaper_resize_mode() {
   local image_path="$1"
   local monitor="${2:-}"
   local mode="${WALLPAPER_RESIZE_MODE:-auto}"
-  local mon_w mon_h img_w img_h mismatch is_mismatch
+  local mon_w mon_h img_w img_h
 
   mode="${mode,,}"
   case "$mode" in
@@ -116,26 +116,7 @@ wallpaper_resize_mode() {
     return 0
   fi
 
-  mismatch="$(awk -v mw="$mon_w" -v mh="$mon_h" -v iw="$img_w" -v ih="$img_h" '
-    BEGIN {
-      monitor_ratio = mw / mh
-      image_ratio = iw / ih
-      delta = image_ratio - monitor_ratio
-      if (delta < 0) delta = -delta
-      print delta / monitor_ratio
-    }
-  ')"
-  is_mismatch="$(awk -v d="$mismatch" 'BEGIN {print (d >= 0.12) ? 1 : 0}')"
-
-  if [ "$is_mismatch" -eq 1 ]; then
-    # awww fit mode can letterbox with black bars; prefer crop to keep full-screen fill.
-    if [ "${WWW_CMD:-}" = "awww" ]; then
-      printf '%s\n' "crop"
-    else
-      printf '%s\n' "fit"
-    fi
-  else
-    printf '%s\n' "crop"
-  fi
+  # Auto mode prefers full-screen fill; set WALLPAPER_RESIZE_MODE=fit to preserve full image.
+  printf '%s\n' "crop"
 }
 export WWW_CMD WWW_DAEMON WWW_CACHE_DIR WWW_DAEMON_ARGS WWW_MIGRATION_MARKER
