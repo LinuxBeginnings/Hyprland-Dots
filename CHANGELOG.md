@@ -104,6 +104,7 @@
 
 ## Updated:
 
+- OpenSuse is not longer supported
 - Updated lua defaults to disable hyprland wallpaper at start
 - `ENVariables.conf` and `env.lua`
 - migration script to make/keep proper Window Rule names

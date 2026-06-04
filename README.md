@@ -61,8 +61,6 @@ Automated Hyprland Scripts for Distro of choice which will pull this dotfiles if
 
 - [Arch-Linux](https://github.com/LinuxBeginnings/Arch-Hyprland)
 
-- [OpenSUSE(Tumbleweed)](https://github.com/LinuxBeginnings/OpenSuse-Hyprland)
-
 - [Fedora-Linux (43/44//Rawhide)](https://github.com/LinuxBeginnings/Fedora-Hyprland)
 
 - [Debian-Linux (Trixie,Testing,SID)](https://github.com/LinuxBeginnings/Debian-Hyprland)
@@ -71,7 +69,10 @@ Automated Hyprland Scripts for Distro of choice which will pull this dotfiles if
 
 - [Ubuntu 24.04 LTS](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/24.04)
 - [Ubuntu 26.04 LTS](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/26.04)
+
 - No longer supported
+
+  - [OpenSUSE(Tumbleweed)](https://github.com/LinuxBeginnings/OpenSuse-Hyprland)
   - [Ubuntu 24.10 (deprecated)](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/24.10)
   - [Ubuntu 25.04 (deprecated)](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/25.04)
   - [Ubuntu 25.10 (deprecated )](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/25.10)
