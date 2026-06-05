@@ -160,7 +160,12 @@ chmod +x copy.sh
 ### ✍️ Contributing
 
 - If you have improvements on the dotfiles or configuration, feel free to submit a PR for improvement.
+    - Pull Requests (PRs) must be submitted against the `development` branch! 
+    - Those submitted against the `main` branch will be closed 
+    - The `main` branch is only for fully tested code 
+       - Your change might work fine for your distro but not for the others we support 
 - I always welcome improvements as I am also just learning just like you guys!
+
 - Click [`HERE`](https://github.com/LinuxBeginnings/Hyprland-Dots/blob/main/CONTRIBUTING.md) for a guide how to contribute
 
 > Thanks to all who have contributed code, or support on the Discord server. Your efforts are greatly appreciated
@@ -177,6 +182,7 @@ chmod +x copy.sh
 
 - a Star on my Github repos would be nice 🌟
 - Subscribe to my Youtube Channel [YouTube](https://www.youtube.com/@LinuxBeginnings)
+   > Note:  Videos coming soon to the YouTube channel!  
 
 ## 🫰 Thank you for the stars 🩷
 
