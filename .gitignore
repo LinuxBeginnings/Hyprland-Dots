@@ -153,8 +153,10 @@ config/hypr/wallpaper_effects/.wallpaper_current
 config/hypr/wallust/wallust-hyprland.conf
 config/rofi/wallust/colors-rofi.rasi
 config/rofi/.current_wallpaper
+config/rofi/
+config/waybar/wallust/
 config/waybar/wallust/colors-waybar.css
-config/quickshell/qml_color.json
+config/quickshell/
 config/seanime-denshi/
 config/.gsd-keyboard.settings-ported
 config/connections.db
