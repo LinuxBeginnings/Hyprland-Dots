@@ -805,7 +805,12 @@ fi
 printf "\n%.0s" {1..1}
 
 # initialize wallust to avoid config error on hyprland
-wallust run -s $wallpaper 2>&1 | tee -a "$LOG"
+wallust_args=()
+# shellcheck source=/dev/null
+if [ -f "$DOTFILES_DIR/config/hypr/scripts/WallustConfig.sh" ]; then
+  . "$DOTFILES_DIR/config/hypr/scripts/WallustConfig.sh"
+fi
+wallust "${wallust_args[@]}" run -s "$wallpaper" 2>&1 | tee -a "$LOG"
 if is_nixos && ! command -v waybar-weather >/dev/null 2>&1; then
   echo "${WARN} waybar-weather binary is missing." 2>&1 | tee -a "$LOG"
   echo "Install the current NixOS-Hyprland version to install waybar-weather applet for Waybar" 2>&1 | tee -a "$LOG"

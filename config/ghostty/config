@@ -1,5 +1,6 @@
 # pkill -SIGUSR2 ghostty
 theme = "Catppuccin Mocha"
+#config-file = ~/.config/ghostty/wallust.conf
 #theme = Aura
 #theme = Aardvark Blue
 #theme = GruvboxDarkHard

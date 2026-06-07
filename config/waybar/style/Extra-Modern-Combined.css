@@ -3,18 +3,18 @@
 
 /* NOTE: This style is NOT vertical layout friendly! */
 
-@define-color white          #F2F2F2;
-@define-color black          #000000;
-@define-color text           #FFFFFF;
-@define-color lightgray      #686868;
-@define-color darkgray       #353535;
+@define-color white      	#F2F2F2;
+@define-color black      	#000000;
+@define-color text       	#FFFFFF;
+@define-color lightgray  	#686868;
+@define-color darkgray   	#353535;
 
-@define-color transparent    rgba(1, 1, 1, 0.5);
-@define-color teal-trans    rgba(1, 117, 84, 0.5);
-@define-color cyan            rgba(53, 140, 169, 1);
+@define-color transparent	rgba(1, 1, 1, 0.5);
+@define-color teal-trans	rgba(1, 117, 84, 0.5);
+@define-color cyan			rgba(53, 140, 169, 1);
 
 @define-color background-module     @background-alt;
-@define-color background-module2    @background;
+@define-color background-module2	@background;
 @define-color border-color          @color12;
 @define-color button-color          @color10;
 @define-color button-hover          @color13;
@@ -36,7 +36,7 @@
 * {
     font-family: "JetBrainsMono Nerd Font";
     font-weight: bold;
-    min-height: 0;  
+	min-height: 0;
     /* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
     /* NOTE: Waybar v14+ ignores % font-size values */
     font-size: 99%;
@@ -118,10 +118,10 @@ tooltip {
 .modules-center {
     background-color: @background-module;
     border-radius: 0px 0px 45px 45px;
-    padding-top: 8px;
-    padding-bottom: 8px;
-    padding-left: 10px;
-    padding-right: 6px;
+	padding-top: 8px;
+	padding-bottom: 8px;
+	padding-left: 10px;
+	padding-right: 6px;
 }
 
 #backlight,
@@ -159,6 +159,7 @@ tooltip {
 #custom-lock,
 #custom-hint,
 #custom-hypridle,
+#custom-hypr_layout,
 #custom-menu,
 #custom-playerctl,
 #custom-power_vertical,
@@ -171,8 +172,8 @@ tooltip {
 #custom-tty,
 #custom-updater {
     color: @foreground;
-    padding-right: 6px;
-    padding-left: 6px;
+	padding-right: 6px;
+	padding-left: 6px;
 }
 
 #temperature.critical {
@@ -271,7 +272,7 @@ tooltip {
 #custom-weather.clearNight,
 #custom-weather.cloudyFoggyDay,
 #custom-weather.cloudyFoggyNight,
-#custom-weather.default, 
+#custom-weather.default,
 #custom-weather.rainyDay,
 #custom-weather.rainyNight,
 #custom-weather.severe,
@@ -301,3 +302,27 @@ tooltip {
 
 #custom-swaync{
     color: #ffd700;}
+
+/* --- tray readability override (global) --- */
+#tray > *,
+#tray > .passive,
+#tray > .active,
+#tray > .needs-attention {
+  background: rgba(137, 180, 250, 0.55);
+  border-radius: 8px;
+  border: 1px solid rgba(17, 17, 27, 0.35);
+  margin-left: 1px;
+  margin-right: 1px;
+  padding-left: 2px;
+  padding-right: 2px;
+  color: rgba(17, 17, 27, 0.98);
+  -gtk-icon-effect: none;
+}
+
+#tray image {
+  background: transparent;
+  color: rgba(17, 17, 27, 0.98);
+  -gtk-icon-style: symbolic;
+  -gtk-icon-effect: none;
+  opacity: 1;
+}

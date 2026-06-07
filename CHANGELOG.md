@@ -2,7 +2,216 @@
 
 ## v2.3.24
 
-- Created new development branch
+## Fixed:
+
+- `awww` default didn't work for wide screen monitors
+  - Default is to `resize --crop`
+  - Made wallpaper scripts monitor determinsitic
+    - Just overriding default won't work for non ultrawide screens
+    - Also add UserConfig override variabe to force default if needed
+  - Thanks to **CateDesu** for finding issue & correct parameters
+  - Found some corner cases and fixed them
+- After LUA migration
+  - Logout issues:
+    - logout stopped working
+    - Long delay 20s+ for logout when using SDDM
+  - Duplicate keybinds
+  - layout persistance code failed
+- `cava` colors reloaded dynamically with wallpaper change
+- Updated `initial-boot.sh` to set `prefer-dark `
+  - This will set flatpak apps to dark
+  - PortalHyprland now also has the ubuntu portal code
+- Added script `scripts/DisableWaybarService.sh`
+  - Some OS's / distros add a `waybar.service` to manage waybar
+  - This breaks theming and waybar restarts
+- `scripts/lib_copy.sh` wasn't preserving `UserConfigs` dir
+- Bad import path in `.config/waybar/style/ML4W/glass.css` file
+- Migration script didn't properly create the `system_settings.lua` file
+- Logout is NixOS.
+  - Added fallback if hyprshutdown not installed or fails
+  - Fixed pathing issues where not all logout options used`Logout.sh`
+- Removed sleep statments from startup to trim login time
+- Network icon on waybar invisible
+  - Changed the CSS files it's better but should revisit it
+- NixOS waybar issues:
+  - User waybar service enabled
+    - `install.sh` checks for and disables on install
+    - `Refresh.sh` now supports systemctl service as well
+      - On NixOS waybar startup is wrapped `Refresh.sh` handles that also
+- Parser for `UserConfigs` mistook border size 1 as as true/false value
+- `UserConfigs/user_decorations.lua` was not being imported correctly
+- My custom keybinds were included in defaults by mistake
+  - Removed from both .lua and .conf files
+- Theme by wallpaper and global theme
+  - Neither were updating waybar nor border colors
+  - Adjusted colors on style sheet `Wallust-Chrome-Fustion.css`
+    - Current workspace showed as single color blob
+- Migrate-hypr-to-lua to lua script
+  - Wasn't properly handling variables list `$scriptDir`
+- Sourcing of `UserConfig/user_keybinds.lua`
+- Duplicate import of keybinds
+  - was reading `lua/keybinds.lua` and `UserConfigs/configs`
+  - Udpated `Kool_Quick_Settings.sh`
+    - Only reads `configs` and `UserConfigs` dirs
+- MonitorProfile for `eDP-1-disable.lua` incorrect
+  - Changed to `disable = true`
+- `copy.sh`
+  - Didn't handle `hyprland.lua` properly
+  - Re-copied `*.conf` files when LUA enabled
+  - `monitors.lua` not copied to `UserConfigs` dir
+  - `MonitorProfiles.sh` wasn't set up for LUA configuration
+- `scrpts/migrate-hypr-to-lua.sh`
+  - It didn't convert `monitors.conf` nor `workspaces.conf`
+  - Impropved summary to show converted and what's left native
+    - I.e. `hyprlock.conf` and `hypridle.conf` still use `.conf`
+- `DropDownterminal`
+  - Created `silent-mode` for startup
+    - It now goes directly to specialworkspace
+  - Adding lua support broke legacy hyprlang
+  - Part Dos: Fixed the fix to work in lua workflow
+  - Part Tres: `DropDownterminal.sh` exited on hide not persisted
+- logout keybinding and logout from menu not working in LUA config
+- logic issue in migration script
+- Updated description for logout/exit keybinding
+  - It only said `exit` if you search for `logout` nothing is returned
+- Improved migration process to properly backup and move the .lua files
+  - `/.config/hypr/lua` are the pristine source files
+  - Migration script will convert the .conf files to .lua
+    - Them move the system configs to `.config/hypr/configs`
+    - Then move thhe user configs to `.config/hypr/UserConfigs`
+    - Preserving user changes on subsquent updates
+- `JavaManger.sh` field width cut off JDK version
+- `Tak0-Autodispatch.sh`
+  - Reworked code to support LUA config
+- `Tak0-Per-Window-Switch.sh`
+  - Had syntax error
+  - Added support for both Hyprlang and LUA configs
+- Incorrect XDGDATA dirs for flatpak
+- `Gamemode.sh`
+  - It supports both HYPRLANG and LUA configs
+- `Float-all-windows.sh`
+  - It works with HYPRLANG and LUA
+- `MonitorProfiles.sh` script to work with LUA or HYPRLANG
+  - Added additional profiles also
+    - Virtual-1 1920x1080
+    - Virtual-1 2560x1080
+    - HDMI-A-1 High Refresh Rate
+    - eDP-1 disable
+- Legacy import of `UserKeybinds.conf`
+- `Toggle-Active-Windown-Audio` script to work with LUA workflow
+- `layerrules` made menus look terrible
+- `OverviewToggle.sh` handling of quickshell vs. ags
+
+## Updated:
+
+- OpenSuse is not longer supported
+- Updated lua defaults to disable hyprland wallpaper at start
+- `ENVariables.conf` and `env.lua`
+- migration script to make/keep proper Window Rule names
+- LUA function to handle lid switch to enable/disable laptop display
+- Thank you `@star` on `TheBlackDons` Discord Server
+- keybind description for `hyprsunset` to include `hyprsunset`
+  - Makes it easier to find in keybind search tool
+- `ExternalBrightness.sh`
+  - Taken from code modified by `@RAH-iĐ905`
+  - Discovers montiors, and LUA compatible
+
+## Added:
+
+- `yazi` config to `copy.sh`
+- Waybar widget for layouts
+  - Shows current layout
+    - `D` for `dwindle`
+    - `S` for `scrolling`
+    - `M` for `Monocole` (Capital M)
+    - `m` for `master` (lowercase m in a circle)
+  - Click on icon brings up menu to select layout
+- Created helper lua modules for `UserConfigs` lua files
+  - `user_keybinds_helper.lua`
+  - `user_startup_helper.lua`
+  - `user_window_rules.lua`
+  - `user_layer_rules.lua`
+  - `user_decorations.lua`
+    - The removes the basic setup user lua files
+    - The generated `user_keybinds.lua` now only has the bindings config
+    - Removing all the setup code, functions, makes editing easier
+    - Also any updates to the user keybind code is done outside of `UserConfigs`
+      - `UserConfigs` dir is preserved on updates
+- `SUPERCTRL + G` for ghostty theme selector
+- Kitty theme selector to `Kool_Quick_Settings` to match entry for ghostty
+- `.luarc.jsonc` and `hl.meta.lua` (Thank you @Tony,btw) for the latter
+- This will get rid of `function not defined` errors in Editor LSP's that support LUA
+- And provide fuction info as well with properly configured editors
+- support for `$VISUAL` editor
+- Setting the env variable to your GUI editor will override `$EDITOR`
+- You can use `neovide`, `code/codium`. `geany`, `emacs` etc
+- Providing a richer environment, and faster.
+- Created a `keybind_helpers.lua` file
+  - Moved all the helper functions which should need to be edited
+  - This cleans up the `keybinds.lua` file to be more user friendly, easier editing
+- Edited `keybinds.lua` to make it easier to understand and edit
+  - Added a clear “User-editable bindings” header block.
+  - Grouped bindings with section labels:
+  - Application launchers and utility scripts
+  - Window/session controls
+  - Layout and tiling controls
+  - Audio/media/hardware keys
+  - Screenshot bindings
+  - Window resize/move/swap/grouping
+  - Workspace navigation/assignment
+  - Mouse drag/resize bindings
+- `Javamanger.sh`
+  - Manage Java runtime instances
+  - 1st pass, only tested for Arch
+    - Added code for other distros, needs testing
+- helper script `logout.sh` to call `hyprshutdown`
+  - Added pkill `waybar`, `awww-daemon`, and `swww-daemon` before `hyprshutdown`
+- menu option for `LayerRules` in Quick settings menu
+
+## Removed:
+
+- "-config-v3.conf" files for
+  - `WindowRules.conf/lua`
+  - `LayerRules.conf/lua`
+    - They are no longer needed
+- Hard-coded rofi terminal overrides in theme configs
+  - `themes/KooL_dwm.rasi`
+  - `dwm-config-horiz.rasi`
+  - `dwm-config-vert.rasi`
+- Thanks to [@TeaJhay](https://github.com/TeaJhay) for finding this
+
+## Misc:
+
+- Started planning changes to Wallust code to support v4.0
+- `wallust v4.0.0` isn't backward compatible
+- There seem to be more options but the color palletes are worse IMO
+- Suggest current users ping wallust to v3.5.2
+
+## Lua migration related:
+
+- Improved move/resize and window swapping using native calls
+  - Thanks to `TheAhumMaitra`
+    - His LUA code is better than mine
+    - I will probably be "borrowing" more ;)
+    - https://github.com/TheAhumMaitra/Aurora
+    - https://github.com/TheAhumMaitra
+- Moved layer rules to own file `LayerRules.conf`
+  - Added additional rules from `TheAhumMaitra`
+  - Updated LUA config accordingly
+- Began Migration process to LUA
+  - Created `scripts/migrate-hypr-to-lua.sh`
+  - Script converts `configs` and `UserConfigs` to LUA
+  - Backs them up in local directories
+  - Allows a revert option to restore hyprlang config files
+- Making `Kool_Quick_Settings.sh` script LUA/HYPRLANG aware
+- Broke out the `hypr/configs` and `hypr/UserConfig` LUA files
+- Added project header to all .LUA files
+- Migration script will add that to the converted .conf files as well
+- Updated keybinds parser to support LUA
+- Fixed resize by keybind, SUPERSHIFT= + Arrow keys
+- Then modified that script to support mouse resize
+  - SUPER + Left Mouse to move
+  - SUPER + Right Mouse to resize
 
 ## v2.3.23
 
@@ -70,8 +279,6 @@
 
 v2.3.22
 
-## v2.3.22
-
 - Fixed: Kitty font issue
   - Thank you `@JasonNero` for the fix
 - Enabled `touch on tablet` in `hypr/configs/SystemSettings.conf`
@@ -107,10 +314,6 @@ v2.3.22
   - Replaced with a script `Float-All-Windows.sh` in `Keybinds.conf` file
 - Fixed Package name for `waybar-weather`
 - Added `scrolling` layout
-- Fixed all float toggle
-  - Old command drepreciated
-  - Replaced with a script `Float-All-Windows.sh` in `Keybinds.conf` file
-- Fixed Package name for `waybar-weather`
 - Added `monocle` layout
 - Experimenting with some additional layerrules
 - Improving wallpaper based theming

@@ -41,3 +41,6 @@ htmlcov/
 .vscode/
 *.swp
 *.swo
+
+# Copy-Logs
+Copy-Logs/

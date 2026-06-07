@@ -109,10 +109,43 @@ install_terminal_configs() {
 choose_default_editor() {
   local log="$1"
   local base="${DOTFILES_DIR:-.}"
+  local defaults_file="$base/config/hypr/UserConfigs/01-UserDefaults.conf"
   local editor_set=0
+  set_env_default() {
+    local var_name="$1"
+    local value="$2"
+    local note="$3"
+    local tmp_file
+    tmp_file=$(mktemp)
+
+    awk -v var_name="$var_name" -v value="$value" -v note="$note" '
+      BEGIN { updated = 0 }
+      {
+        if ($0 ~ "^[[:space:]#]*env[[:space:]]*=[[:space:]]*" var_name ",") {
+          if (value != "") {
+            print "env = " var_name "," value note
+          } else {
+            print "#env = " var_name "," note
+          }
+          updated = 1
+        } else {
+          print $0
+        }
+      }
+      END {
+        if (!updated) {
+          if (value != "") {
+            print "env = " var_name "," value note
+          } else {
+            print "#env = " var_name "," note
+          }
+        }
+      }
+    ' "$defaults_file" > "$tmp_file" && mv "$tmp_file" "$defaults_file"
+  }
   update_editor() {
     local editor=$1
-    sed -i "s/#env = EDITOR,.*/env = EDITOR,$editor #default editor/" "$base/config/hypr/UserConfigs/01-UserDefaults.conf"
+    set_env_default "EDITOR" "$editor" " #default editor"
     echo "${OK:-[OK]} Default editor set to ${MAGENTA:-}$editor${RESET:-}." 2>&1 | tee -a "$log"
   }
   if command -v nvim &>/dev/null; then
@@ -133,6 +166,37 @@ choose_default_editor() {
         editor_set=1
       fi
     fi
+  fi
+
+  local visual_choice=""
+  local visual_value=""
+  local prompt_visual_input=0
+  if [[ -n "${VISUAL:-}" ]]; then
+    printf "${INFO:-[INFO]} VISUAL is currently set to ${MAGENTA:-}%s${RESET:-}\\n" "${VISUAL}"
+    if read -r -p "${CAT:-[ACTION]} Use this as Quick Settings VISUAL editor? (Y/n): " visual_choice </dev/tty; then
+      if [[ "$visual_choice" != [Nn]* ]]; then
+        visual_value="${VISUAL}"
+      else
+        prompt_visual_input=1
+      fi
+    fi
+  else
+    prompt_visual_input=1
+  fi
+
+  if [[ "$prompt_visual_input" -eq 1 ]]; then
+    printf "${INFO:-[INFO]} Optional GUI editor for Quick Settings (examples: neovide, geany, code, codium).\\n"
+    if read -r -p "${CAT:-[ACTION]} Enter VISUAL editor command or leave empty to skip: " visual_choice </dev/tty; then
+      visual_value="$visual_choice"
+    fi
+  fi
+
+  if [[ -n "$visual_value" ]]; then
+    set_env_default "VISUAL" "$visual_value" " #default visual editor for quick settings (optional)"
+    echo "${OK:-[OK]} VISUAL editor set to ${MAGENTA:-}$visual_value${RESET:-}." 2>&1 | tee -a "$log"
+  else
+    set_env_default "VISUAL" "" " #default visual editor for quick settings (optional)"
+    echo "${NOTE:-[NOTE]} VISUAL editor not set (optional)." 2>&1 | tee -a "$log"
   fi
 }
 

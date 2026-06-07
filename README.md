@@ -61,8 +61,6 @@ Automated Hyprland Scripts for Distro of choice which will pull this dotfiles if
 
 - [Arch-Linux](https://github.com/LinuxBeginnings/Arch-Hyprland)
 
-- [OpenSUSE(Tumbleweed)](https://github.com/LinuxBeginnings/OpenSuse-Hyprland)
-
 - [Fedora-Linux (43/44//Rawhide)](https://github.com/LinuxBeginnings/Fedora-Hyprland)
 
 - [Debian-Linux (Trixie,Testing,SID)](https://github.com/LinuxBeginnings/Debian-Hyprland)
@@ -71,7 +69,10 @@ Automated Hyprland Scripts for Distro of choice which will pull this dotfiles if
 
 - [Ubuntu 24.04 LTS](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/24.04)
 - [Ubuntu 26.04 LTS](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/26.04)
+
 - No longer supported
+
+  - [OpenSUSE(Tumbleweed)](https://github.com/LinuxBeginnings/OpenSuse-Hyprland)
   - [Ubuntu 24.10 (deprecated)](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/24.10)
   - [Ubuntu 25.04 (deprecated)](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/25.04)
   - [Ubuntu 25.10 (deprecated )](https://github.com/LinuxBeginnings/Ubuntu-Hyprland/tree/25.10)
@@ -159,7 +160,12 @@ chmod +x copy.sh
 ### ✍️ Contributing
 
 - If you have improvements on the dotfiles or configuration, feel free to submit a PR for improvement.
+    - Pull Requests (PRs) must be submitted against the `development` branch! 
+    - Those submitted against the `main` branch will be closed 
+    - The `main` branch is only for fully tested code 
+       - Your change might work fine for your distro but not for the others we support 
 - I always welcome improvements as I am also just learning just like you guys!
+
 - Click [`HERE`](https://github.com/LinuxBeginnings/Hyprland-Dots/blob/main/CONTRIBUTING.md) for a guide how to contribute
 
 > Thanks to all who have contributed code, or support on the Discord server. Your efforts are greatly appreciated
@@ -176,6 +182,7 @@ chmod +x copy.sh
 
 - a Star on my Github repos would be nice 🌟
 - Subscribe to my Youtube Channel [YouTube](https://www.youtube.com/@LinuxBeginnings)
+   > Note:  Videos coming soon to the YouTube channel!  
 
 ## 🫰 Thank you for the stars 🩷
 

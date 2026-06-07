@@ -116,4 +116,3 @@ source ~/.config/fish/config.fish
 ## Success!
 
 You should now be able to launch Ventoy GUI from your terminal or your application launcher seamlessly under Wayland.
-

@@ -6,6 +6,12 @@
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
 set -euo pipefail
+# Wallust v3/v4 compatibility
+wallust_args=()
+# shellcheck source=/dev/null
+if [ -f "$HOME/.config/hypr/scripts/WallustConfig.sh" ]; then
+  . "$HOME/.config/hypr/scripts/WallustConfig.sh"
+fi
 
 # SPDX-FileCopyrightText: 2025-present Ahum Maitra theahummaitra@gmail.com
 #
@@ -25,12 +31,130 @@ require rofi
 
 # notify-send is optional
 have_notify() { command -v notify-send >/dev/null 2>&1; }
+capture_current_layout() {
+  if command -v jq >/dev/null 2>&1; then
+    hyprctl -j getoption general:layout 2>/dev/null | jq -r '.str // empty'
+  else
+    hyprctl getoption general:layout 2>/dev/null | awk 'NR==1 {print $2}'
+  fi
+}
+restore_layout_after_reload() {
+  local layout="$1"
+  [ -n "$layout" ] || return 0
+
+  if [ -x "$HOME/.config/hypr/scripts/ChangeLayout.sh" ]; then
+    if "$HOME/.config/hypr/scripts/ChangeLayout.sh" --no-notify "$layout" >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
+
+  hyprctl keyword general:layout "$layout" >/dev/null 2>&1 || true
+}
+reload_hypr_preserve_layout() {
+  command -v hyprctl >/dev/null 2>&1 || return 0
+
+  local active_layout
+  active_layout="$(capture_current_layout || true)"
+
+  hyprctl reload config-only >/dev/null 2>&1 || true
+  sleep 0.1
+  restore_layout_after_reload "$active_layout"
+}
+# Cache theme list to avoid slow re-enumeration on every invocation
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
+theme_cache="${cache_dir}/wallust_theme_list.txt"
+cache_max_age=86400 # seconds
+
+build_theme_list() {
+  wallust "${wallust_args[@]}" theme list \
+    | awk '/^- /{sub(/^- /,""); sub(/ \(.*/, ""); print}'
+}
+
+update_theme_cache() {
+  mkdir -p "$cache_dir"
+  local tmp
+  tmp="$(mktemp "${cache_dir}/wallust-theme-list.XXXXXX")"
+  if build_theme_list > "$tmp"; then
+    if [ -s "$tmp" ]; then
+      mv "$tmp" "$theme_cache"
+      return 0
+    fi
+  fi
+  rm -f "$tmp"
+  return 1
+}
+
+cache_mtime=$(stat -c %Y "$theme_cache" 2>/dev/null || echo 0)
+cache_age=$(( $(date +%s) - cache_mtime ))
+if [ ! -s "$theme_cache" ] || [ "$cache_age" -gt "$cache_max_age" ]; then
+  update_theme_cache || true
+fi
+
+ensure_wallust_waybar_style() {
+  local waybar_style="$HOME/.config/waybar/style.css"
+  local colors_file="$HOME/.config/waybar/wallust/colors-waybar.css"
+  local styles_dir="$HOME/.config/waybar/style"
+  [ -f "$colors_file" ] || return 0
+  if [ -f "$waybar_style" ] && grep -q 'colors-waybar.css' "$waybar_style"; then
+    return 0
+  fi
+  local candidates=(
+    "Wallust-Chroma-Fusion.css"
+    "Wallust-ML4W-modern.css"
+    "Wallust-Colored.css"
+    "Wallust-Box-type.css"
+    "Wallust-Simple.css"
+  )
+  for candidate in "${candidates[@]}"; do
+    if [ -f "$styles_dir/$candidate" ]; then
+      ln -sf "$styles_dir/$candidate" "$waybar_style"
+      break
+    fi
+  done
+}
+reload_running_cava_colors() {
+  # CAVA supports SIGUSR2 to reload colors without full audio reinitialization.
+  if pgrep -x cava >/dev/null 2>&1; then
+    pkill -USR2 -x cava >/dev/null 2>&1 || true
+  fi
+}
+
+wallust_hypr_colors="$HOME/.config/hypr/wallust/wallust-hyprland.conf"
+extract_wallust_hex() {
+  local key="$1"
+  awk -v key="$key" '
+    $1 == "$" key && $2 == "=" {
+      if (match($3, /^rgb\(([0-9A-Fa-f]{6})\)$/, m)) {
+        print toupper(m[1])
+        exit
+      }
+    }
+  ' "$wallust_hypr_colors"
+}
+
+apply_hypr_border_fallback() {
+  [ -s "$wallust_hypr_colors" ] || return 0
+  local color12 color10 color15 color0
+  color12="$(extract_wallust_hex color12)"
+  color10="$(extract_wallust_hex color10)"
+  color15="$(extract_wallust_hex color15)"
+  color0="$(extract_wallust_hex color0)"
+
+  [ -n "$color12" ] && hyprctl keyword general:col.active_border "rgb($color12)" >/dev/null 2>&1 || true
+  [ -n "$color10" ] && hyprctl keyword general:col.inactive_border "rgb($color10)" >/dev/null 2>&1 || true
+  [ -n "$color12" ] && hyprctl keyword decoration:shadow:color "rgb($color12)" >/dev/null 2>&1 || true
+  [ -n "$color10" ] && hyprctl keyword decoration:shadow:color_inactive "rgb($color10)" >/dev/null 2>&1 || true
+  [ -n "$color15" ] && hyprctl keyword group:col.border_active "rgb($color15)" >/dev/null 2>&1 || true
+  [ -n "$color0" ] && hyprctl keyword group:groupbar:col.active "rgb($color0)" >/dev/null 2>&1 || true
+}
 
 # Prompt for theme; guard -e on cancel
 set +e
-choice="$(wallust theme list \
-  | sed -e '1d' -e 's/^- //' \
-  | rofi -dmenu -i -p 'Select Global Theme')"
+if [ -s "$theme_cache" ]; then
+  choice="$(rofi -dmenu -i -p 'Select Global Theme' < "$theme_cache")"
+else
+  choice="$(build_theme_list | rofi -dmenu -i -p 'Select Global Theme')"
+fi
 prompt_status=$?
 set -e
 
@@ -41,9 +165,15 @@ fi
 
 # Record time before applying so we can wait for fresh template outputs
 start_ts=$(date +%s)
+# Notify quickly so users get feedback immediately
+have_notify && notify-send -a ThemeChanger \
+  -h string:x-dunst-stack-tag:themechanger \
+  "Applying theme" "Selected: ${choice}"
 
 # Apply the theme and report result
-if wallust theme -- "${choice}"; then
+wallust_log="${XDG_CACHE_HOME:-$HOME/.cache}/wallust/themechanger.log"
+mkdir -p "$(dirname "$wallust_log")"
+if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
   have_notify && notify-send -a ThemeChanger \
     -h string:x-dunst-stack-tag:themechanger \
     "Global theme changed" "Selected: ${choice}"
@@ -55,9 +185,7 @@ if wallust theme -- "${choice}"; then
   targets=(
     "$HOME/.config/waybar/wallust/colors-waybar.css"
     "$HOME/.config/rofi/wallust/colors-rofi.rasi"
-    "$HOME/.config/kitty/kitty-themes/01-Wallust.conf"
     "$HOME/.config/hypr/wallust/wallust-hyprland.conf"
-    "$HOME/.config/ghostty/wallust.conf"
   )
 
   # Normalize Ghostty palette syntax in case upstream templates or older targets used ':'
@@ -101,6 +229,13 @@ if wallust theme -- "${choice}"; then
     sleep 0.5
   fi
 
+  if [ "${ok:-0}" -ne 1 ]; then
+    have_notify && notify-send -u critical -a ThemeChanger \
+      -h string:x-dunst-stack-tag:themechanger \
+      "Theme files not updated" "See: $wallust_log"
+    exit 1
+  fi
+
   # Small cushion before refresh to mirror wallpaper flow
   sleep 0.2
   # Normalize Rofi selection colors to use the palette's accent (color12)
@@ -118,10 +253,9 @@ if wallust theme -- "${choice}"; then
     fi
   fi
 
-  # Reload Hyprland so new border colors from wallust-hyprland.conf take effect
-  if command -v hyprctl >/dev/null 2>&1; then
-    hyprctl reload >/dev/null 2>&1 || true
-  fi
+  reload_hypr_preserve_layout
+  ensure_wallust_waybar_style
+  reload_running_cava_colors
 
   # Refresh bars/menus after files are ready
   if [ -x "$HOME/.config/hypr/scripts/Refresh.sh" ]; then
@@ -146,6 +280,6 @@ if wallust theme -- "${choice}"; then
 else
   have_notify && notify-send -u critical -a ThemeChanger \
     -h string:x-dunst-stack-tag:themechanger \
-    "Failed to apply theme" "${choice}"
+    "Failed to apply theme" "See: $wallust_log"
   exit 1
 fi

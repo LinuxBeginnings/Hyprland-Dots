@@ -119,7 +119,7 @@ copy_waybar() {
 copy_phase2() {
   local log="$1"
   local base="${DOTFILES_DIR:-.}"
-  local DIR="btop cava hypr Kvantum qt5ct qt6ct swappy wallust wlogout"
+  local DIR="btop cava hypr Kvantum qt5ct qt6ct swappy wallust wlogout yazi"
   for DIR_NAME in $DIR; do
     local DIRPATH="$HOME/.config/$DIR_NAME"
     if [ -d "$DIRPATH" ]; then
@@ -143,43 +143,83 @@ restore_hypr_assets() {
   local express_mode="$2"
 
   local HYPR_DIR="$HOME/.config/hypr"
+  local CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_HYPR_PATH="$HYPR_DIR-backup-$BACKUP_DIR"
 
   if [ -d "$BACKUP_HYPR_PATH" ]; then
+    local backup_mode="conf"
+    if [ -f "$BACKUP_HYPR_PATH/hyprland.lua" ] || [ -f "$CONFIG_HOME/hyprland.lua" ]; then
+      backup_mode="lua"
+    fi
+
+    # Preserve active Lua entrypoint automatically to avoid dropping users
+    # back to hyprland.conf after an upgrade.
+    if [ -f "$BACKUP_HYPR_PATH/hyprland.lua" ]; then
+      cp -f "$BACKUP_HYPR_PATH/hyprland.lua" "$HYPR_DIR/hyprland.lua" 2>&1 | tee -a "$log"
+      echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}hyprland.lua${RESET:-}" 2>&1 | tee -a "$log"
+    fi
+
     if [ "$express_mode" -eq 1 ]; then
-      echo "${NOTE:-[NOTE]} Express mode: skipping automatic restoration of animations and monitor profiles." 2>&1 | tee -a "$log"
-      return
-    fi
-
-    echo -e "\n${NOTE:-[NOTE]} Restoring ${SKY_BLUE:-}Animations & Monitor Profiles${RESET:-} into ${YELLOW:-}$HYPR_DIR${RESET:-}..."
-
-    # Fresh installs should apply repo defaults; do not restore a previous wallpaper.
-    # RUN_MODE is set by copy.sh (install|upgrade|express) and is visible here.
-    local DIR_B=("Monitor_Profiles" "animations")
-    if [ "${RUN_MODE:-}" != "install" ]; then
-      DIR_B+=("wallpaper_effects")
+      echo "${NOTE:-[NOTE]} Express mode: skipping automatic restoration of animations and monitor profile directories." 2>&1 | tee -a "$log"
     else
-      echo "${NOTE:-[NOTE]} Fresh install: skipping restore of wallpaper_effects so default wallpaper applies." 2>&1 | tee -a "$log"
+      echo -e "\n${NOTE:-[NOTE]} Restoring ${SKY_BLUE:-}Animations & Monitor Profiles${RESET:-} into ${YELLOW:-}$HYPR_DIR${RESET:-}..."
+
+      # Fresh installs should apply repo defaults; do not restore a previous wallpaper.
+      # RUN_MODE is set by copy.sh (install|upgrade|express) and is visible here.
+      local DIR_B=("Monitor_Profiles" "animations")
+      if [ "${RUN_MODE:-}" != "install" ]; then
+        DIR_B+=("wallpaper_effects")
+      else
+        echo "${NOTE:-[NOTE]} Fresh install: skipping restore of wallpaper_effects so default wallpaper applies." 2>&1 | tee -a "$log"
+      fi
+
+      for DIR_RESTORE in "${DIR_B[@]}"; do
+        local BACKUP_SUBDIR="$BACKUP_HYPR_PATH/$DIR_RESTORE"
+        if [ -d "$BACKUP_SUBDIR" ]; then
+          cp -r "$BACKUP_SUBDIR" "$HYPR_DIR/" 2>&1 | tee -a "$log"
+          echo "${OK:-[OK]} - Restored directory: ${MAGENTA:-}$DIR_RESTORE${RESET:-}" 2>&1 | tee -a "$log"
+        fi
+      done
     fi
 
-    for DIR_RESTORE in "${DIR_B[@]}"; do
-      local BACKUP_SUBDIR="$BACKUP_HYPR_PATH/$DIR_RESTORE"
-      if [ -d "$BACKUP_SUBDIR" ]; then
-        cp -r "$BACKUP_SUBDIR" "$HYPR_DIR/" 2>&1 | tee -a "$log"
-        echo "${OK:-[OK]} - Restored directory: ${MAGENTA:-}$DIR_RESTORE${RESET:-}" 2>&1 | tee -a "$log"
-      fi
-    done
+    # Keep monitor/workspace state across upgrades, including express mode.
+    if [ "$backup_mode" = "lua" ]; then
+      local LUA_USER_DIR="$HYPR_DIR/UserConfigs"
+      mkdir -p "$LUA_USER_DIR"
 
-    local FILE_B=("monitors.conf" "workspaces.conf")
-    for FILE_RESTORE in "${FILE_B[@]}"; do
-      local BACKUP_FILE="$BACKUP_HYPR_PATH/$FILE_RESTORE"
-      if [ -f "$BACKUP_FILE" ]; then
-        cp "$BACKUP_FILE" "$HYPR_DIR/$FILE_RESTORE" 2>&1 | tee -a "$log"
-        echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}$FILE_RESTORE${RESET:-}" 2>&1 | tee -a "$log"
+      local BACKUP_LUA_MONITORS=""
+      local BACKUP_LUA_WORKSPACES=""
+      if [ -f "$BACKUP_HYPR_PATH/UserConfigs/monitors.lua" ]; then
+        BACKUP_LUA_MONITORS="$BACKUP_HYPR_PATH/UserConfigs/monitors.lua"
+      elif [ -f "$BACKUP_HYPR_PATH/lua/monitors.lua" ]; then
+        BACKUP_LUA_MONITORS="$BACKUP_HYPR_PATH/lua/monitors.lua"
       fi
-    done
+      if [ -f "$BACKUP_HYPR_PATH/UserConfigs/workspaces.lua" ]; then
+        BACKUP_LUA_WORKSPACES="$BACKUP_HYPR_PATH/UserConfigs/workspaces.lua"
+      elif [ -f "$BACKUP_HYPR_PATH/lua/workspaces.lua" ]; then
+        BACKUP_LUA_WORKSPACES="$BACKUP_HYPR_PATH/lua/workspaces.lua"
+      fi
+
+      if [ -n "$BACKUP_LUA_MONITORS" ]; then
+        cp -f "$BACKUP_LUA_MONITORS" "$LUA_USER_DIR/monitors.lua" 2>&1 | tee -a "$log"
+        echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/monitors.lua${RESET:-}" 2>&1 | tee -a "$log"
+      fi
+      if [ -n "$BACKUP_LUA_WORKSPACES" ]; then
+        cp -f "$BACKUP_LUA_WORKSPACES" "$LUA_USER_DIR/workspaces.lua" 2>&1 | tee -a "$log"
+        echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/workspaces.lua${RESET:-}" 2>&1 | tee -a "$log"
+      fi
+    else
+      local FILE_B=("monitors.conf" "workspaces.conf")
+      for FILE_RESTORE in "${FILE_B[@]}"; do
+        local BACKUP_FILE="$BACKUP_HYPR_PATH/$FILE_RESTORE"
+        if [ -f "$BACKUP_FILE" ]; then
+          cp "$BACKUP_FILE" "$HYPR_DIR/$FILE_RESTORE" 2>&1 | tee -a "$log"
+          echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}$FILE_RESTORE${RESET:-}" 2>&1 | tee -a "$log"
+        fi
+      done
+    fi
   fi
 }
 
@@ -348,18 +388,25 @@ restore_user_configs() {
   local log="$1"
   local express_mode="$2"
   local old_version="$3"
-  if [ "${RUN_MODE:-}" = "install" ]; then
-    return
-  fi
 
   local DIRPATH="$HOME/.config/hypr"
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_DIR_PATH="$DIRPATH-backup-$BACKUP_DIR/UserConfigs"
+  local BACKUP_CONFIGS_PATH="$DIRPATH-backup-$BACKUP_DIR/configs"
 
   if [ -z "$BACKUP_DIR" ]; then
     echo "${ERROR:-[ERROR]} - Backup directory name is empty. Exiting." 2>&1 | tee -a "$log"
     exit 1
+  fi
+
+  if [ "${RUN_MODE:-}" = "install" ]; then
+    if [ -d "$BACKUP_DIR_PATH" ]; then
+      echo "${NOTE:-[NOTE]} Preserving existing UserConfigs directory during install." 2>&1 | tee -a "$log"
+      rsync -a "$BACKUP_DIR_PATH/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
+      echo "${OK:-[OK]} - UserConfigs directory preserved." 2>&1 | tee -a "$log"
+    fi
+    return
   fi
 
   if [ -d "$BACKUP_DIR_PATH" ]; then
@@ -409,11 +456,13 @@ restore_user_configs() {
         "ENVariables.conf"
         "LaptopDisplay.conf"
         "Laptops.conf"
+        "monitors.lua"
         "Startup_Apps.conf"
         "UserDecorations.conf"
         "UserAnimations.conf"
         "UserKeybinds.conf"
         "UserSettings.conf"
+        "workspaces.lua"
         "WindowRules.conf"
       )
 
@@ -452,6 +501,19 @@ restore_user_configs() {
           fi
         fi
       done
+    fi
+  fi
+
+  if [ -d "$BACKUP_CONFIGS_PATH" ]; then
+    local restored_system_lua=0
+    local lua_file
+    mkdir -p "$DIRPATH/configs"
+    while IFS= read -r -d '' lua_file; do
+      cp -f "$lua_file" "$DIRPATH/configs/"
+      restored_system_lua=1
+    done < <(find "$BACKUP_CONFIGS_PATH" -maxdepth 1 -type f -name 'system_*.lua' -print0)
+    if [ "$restored_system_lua" -eq 1 ]; then
+      echo "${OK:-[OK]} - Restored migrated system Lua overlays to $DIRPATH/configs." 2>&1 | tee -a "$log"
     fi
   fi
 

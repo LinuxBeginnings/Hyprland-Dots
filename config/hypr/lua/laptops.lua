@@ -1,0 +1,14 @@
+-- ==================================================
+--  KoolDots (2026)
+--  Project URL: https://github.com/LinuxBeginnings
+--  License: GNU GPLv3
+--  SPDX-License-Identifier: GPL-3.0-or-later
+-- ==================================================
+
+-- Converted from:
+-- - config/hypr/configs/Laptops.conf
+-- - config/hypr/UserConfigs/Laptops.conf
+-- - config/hypr/UserConfigs/LaptopDisplay.conf
+--
+-- No active laptop rules are currently enabled in the source files.
+-- Add hl.bind(...) and/or hl.monitor(...) entries here when enabling laptop-lid logic.

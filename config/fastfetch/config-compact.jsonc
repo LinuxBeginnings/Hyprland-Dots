@@ -5,62 +5,55 @@
  *
  */
 {
-    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
-    "logo": {
-        // "type": "auto",
-        // x."source": "~/.config/fastfetch/logo.png",
-        // "height": 10,
-        "padding": {
-            "top": 3,
-            "right": 2
-        },
-        "type": "small"
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {
+    // "type": "auto",
+    // x."source": "~/.config/fastfetch/logo.png",
+    // "height": 10,
+    "padding": {
+      "top": 3,
+      "right": 2,
     },
-    "display": {
-        "separator": " "
+    "type": "small",
+  },
+  "display": {
+    "separator": " ",
+  },
+  "modules": [
+    "break",
+    "break",
+    "break",
+    "break",
+    {
+      "type": "os",
+      "key": " ",
+      "keyColor": "31",
     },
-    "modules": [
-        "break",
-        "break",
-        "break",
-        "break",
-        {
-            "type": "os",
-            "key": " ",
-            "keyColor": "31"
-        },
-        {
-            "type": "kernel",
-            "key": " ",
-            "keyColor": "32"
-        },
-        {
-            "type": "shell",
-            "key": " ",
-            "keyColor": "34"
-        },
-        {
-            "type": "terminal",
-            "key": " ",
-            "keyColor": "35"
-        },
-        {
-            "type": "wm",
-            "key": " ",
-            "keyColor": "36"
-        },
-        {
-            "type": "uptime",
-            "key": " ",
-            "keyColor": "31"
-        },
-      {
-          "type": "command",
-          "key": " ",
-          "keyColor": "36",
-          "shell": "/bin/bash",
-          "text": "echo \"KoolDots: v$DOTS_VERSION\""
-      },
-        "break"
-    ]
+    {
+      "type": "kernel",
+      "key": " ",
+      "keyColor": "32",
+    },
+    {
+      "type": "shell",
+      "key": " ",
+      "keyColor": "34",
+    },
+    {
+      "type": "terminal",
+      "key": " ",
+      "keyColor": "35",
+    },
+    {
+      "type": "wm",
+      "key": " ",
+      "keyColor": "36",
+    },
+    {
+      "type": "uptime",
+      "key": " ",
+      "keyColor": "31",
+    },
+    "break",
+  ],
 }

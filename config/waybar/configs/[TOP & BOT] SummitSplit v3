@@ -18,6 +18,9 @@
       "gtk-layer-shell": true,
       "reload_style_on_change": true,
       "modules-left": [
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
         "idle_inhibitor",
         "custom/separator#blank",
         "tray",

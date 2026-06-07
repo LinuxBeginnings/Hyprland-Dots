@@ -22,6 +22,9 @@
 "margin-right": 8,
 
 "modules-left": [
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
 	"custom/menu",
 	"custom/light_dark",
 	"custom/separator#dot-line",

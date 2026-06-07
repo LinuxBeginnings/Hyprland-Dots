@@ -20,6 +20,9 @@
 "margin-top": 2,
 
 "modules-left": [	
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
 	"idle_inhibitor",
 	"group/mobo_drawer",
 	"hyprland/workspaces#rw",

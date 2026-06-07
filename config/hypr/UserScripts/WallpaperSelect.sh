@@ -27,9 +27,9 @@ TYPE="any"
 DURATION=2
 BEZIER=".43,1.19,1,.4"
 if [[ "$WWW_CMD" == "swww" || "$WWW_CMD" == "awww" ]]; then
-  SWWW_PARAMS="--transition-fps $FPS --transition-type $TYPE --transition-duration $DURATION --transition-bezier $BEZIER"
+  SWWW_PARAMS=(--transition-fps "$FPS" --transition-type "$TYPE" --transition-duration "$DURATION" --transition-bezier "$BEZIER")
 else
-  SWWW_PARAMS=""
+  SWWW_PARAMS=()
 fi
 
 
@@ -173,11 +173,13 @@ apply_image_wallpaper() {
     "$WWW_CMD" query >/dev/null 2>&1 && break
     sleep 0.1
   done
-  "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS || {
+  local resize_mode
+  resize_mode="$(wallpaper_resize_mode "$image_path" "$focused_monitor")"
+  "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$image_path" "${SWWW_PARAMS[@]}" || {
     sleep 0.2
-    "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
+    "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$image_path" "${SWWW_PARAMS[@]}"
   }
-  "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
+  "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$image_path" "${SWWW_PARAMS[@]}"
 
   # Persist per-monitor wallpaper selection
   mkdir -p "$(dirname "$per_monitor_wallpaper_current")" "$(dirname "$per_monitor_wallpaper_link")"
@@ -185,10 +187,13 @@ apply_image_wallpaper() {
   cp -f "$image_path" "$per_monitor_wallpaper_current" || true
 
   # Run additional scripts (pass the image path to avoid cache race conditions)
-  "$SCRIPTSDIR/WallustSwww.sh" "$image_path"
-  sleep 2
+  if ! "$SCRIPTSDIR/WallustSwww.sh" "$image_path"; then
+    notify-send -i "$iDIR/error.png" "Wallust failed" "Wallpaper theme not refreshed"
+    return 1
+  fi
+  sleep 0.5
   "$SCRIPTSDIR/Refresh.sh"
-  sleep 1
+  sleep 0.3
 
 }
 

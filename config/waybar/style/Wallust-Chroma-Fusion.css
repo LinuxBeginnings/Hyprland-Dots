@@ -97,6 +97,7 @@ tooltip {
 #custom-lock,
 #custom-hint,
 #custom-hypridle,
+#custom-hypr_layout,
 #custom-menu,
 #custom-playerctl,
 #custom-power_vertical,
@@ -186,7 +187,9 @@ tooltip {
 }
 
 #custom-cava_mviz {
-	color: @color2;
+	color: @color15;
+	background-color: rgba(15, 96, 95, 0.65);
+	border: 1px solid @color10;
 }
 
 #custom-lock,
@@ -218,7 +221,8 @@ tooltip {
 #workspaces button {
     margin: 1px 1px;
     border-radius: 15px;
-    border:0px;
+    border: 1px solid transparent;
+    background: transparent;
     color: @color15;
     padding-left: 2px;
     padding-right: 2px;
@@ -229,8 +233,9 @@ tooltip {
 
 #taskbar button.active,
 #workspaces button.active {
-    color: #FFFFFF;
-    background: @button-color;
+    color: @color0;
+    background: @color12;
+    border: 1px solid @color15;
     border-radius: 15px;
     padding-left: 4px;
     padding-right: 4px;
@@ -246,8 +251,9 @@ tooltip {
 
 #taskbar button:hover,
 #workspaces button:hover {
-    color: #FFFFFF;
-    background: @button-hover;
+    color: @color0;
+    background: @color11;
+    border: 1px solid @color15;
     border-radius: 15px;
     opacity:1.0;
     padding-left: 2px;
@@ -323,4 +329,26 @@ tooltip {
 	border-radius: 5px;
 }
 
+/* --- tray readability override (global) --- */
+#tray > *,
+#tray > .passive,
+#tray > .active,
+#tray > .needs-attention {
+  background: rgba(137, 180, 250, 0.55);
+  border-radius: 8px;
+  border: 1px solid rgba(17, 17, 27, 0.35);
+  margin-left: 1px;
+  margin-right: 1px;
+  padding-left: 2px;
+  padding-right: 2px;
+  color: rgba(17, 17, 27, 0.98);
+  -gtk-icon-effect: none;
+}
 
+#tray image {
+  background: transparent;
+  color: rgba(17, 17, 27, 0.98);
+  -gtk-icon-style: symbolic;
+  -gtk-icon-effect: none;
+  opacity: 1;
+}

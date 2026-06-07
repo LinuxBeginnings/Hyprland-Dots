@@ -136,6 +136,7 @@ tooltip {
 #custom-lock,
 #custom-hint,
 #custom-hypridle,
+#custom-hypr_layout,
 #custom-menu,
 #custom-playerctl,
 #custom-power_vertical,
@@ -217,4 +218,28 @@ tooltip {
     min-height: 10px;
     border-radius: 5px;
     background-color: #ba5663;
+}
+
+/* --- tray readability override (global) --- */
+#tray > *,
+#tray > .passive,
+#tray > .active,
+#tray > .needs-attention {
+  background: rgba(137, 180, 250, 0.55);
+  border-radius: 8px;
+  border: 1px solid rgba(17, 17, 27, 0.35);
+  margin-left: 1px;
+  margin-right: 1px;
+  padding-left: 2px;
+  padding-right: 2px;
+  color: rgba(17, 17, 27, 0.98);
+  -gtk-icon-effect: none;
+}
+
+#tray image {
+  background: transparent;
+  color: rgba(17, 17, 27, 0.98);
+  -gtk-icon-style: symbolic;
+  -gtk-icon-effect: none;
+  opacity: 1;
 }

@@ -9,12 +9,6 @@
 
 CONFIGS_DIR="$HOME/.config/hypr/configs"
 TARGET_FILE="$CONFIGS_DIR/WindowRules.conf"
-V3_FILE="$CONFIGS_DIR/WindowRules-config-v3.conf"
-
-if [[ ! -f "$V3_FILE" ]]; then
-  echo "Error: Source configuration file not found: $V3_FILE"
-  exit 1
-fi
 
 get_hyprland_version() {
   local ver="0.0.0"
@@ -46,13 +40,11 @@ REQUIRED_VER="0.53"
 SMALLEST=$(printf '%s\n' "$REQUIRED_VER" "$VERSION" | sort -V | head -n1)
 
 if [ "$SMALLEST" = "$REQUIRED_VER" ]; then
-  echo "Version $VERSION >= $REQUIRED_VER. Updating WindowRules config..."
-  # Backup existing config if it exists
   if [ -f "$TARGET_FILE" ]; then
-    echo "Backing up existing WindowRules.conf to WindowRules.conf.bak"
-    mv "$TARGET_FILE" "$TARGET_FILE.bak"
+    echo "Version $VERSION >= $REQUIRED_VER. Using WindowRules.conf directly (no -config-v3 migration file)."
+  else
+    echo "Warning: WindowRules.conf not found at $TARGET_FILE"
   fi
-  cp "$V3_FILE" "$TARGET_FILE"
 
   if command -v hyprctl &>/dev/null; then
     if hyprctl instances &>/dev/null; then

@@ -11,12 +11,12 @@ SCRIPTSDIR="$HOME/.config/hypr/scripts"
 # shellcheck source=/dev/null
 . "$SCRIPTSDIR/WallpaperCmd.sh"
 
-if command -v "$WWW_DAEMON" >/dev/null 2>&1 && command -v "$WWW_CMD" >/dev/null 2>&1; then
+if command -v "$WWW_DAEMON" >/dev/null 2>&1 && command -v "$WWW_CMD" >/dev/null 2>&1 && ! pgrep -x "$WWW_DAEMON" >/dev/null 2>&1; then
   "$WWW_DAEMON" "${WWW_DAEMON_ARGS[@]}" &
 fi
 
 # Give the daemon a moment to become ready
-for _ in {1..20}; do
+for _ in {1..50}; do
   "$WWW_CMD" query >/dev/null 2>&1 && break
   sleep 0.1
 done
@@ -92,9 +92,11 @@ apply_wallpaper_for_monitor() {
   fi
 
   if [ -n "$wallpaper_path" ] && [ -f "$wallpaper_path" ]; then
-    if ! "$WWW_CMD" img -o "$monitor" "$wallpaper_path" >/dev/null 2>&1; then
+    local resize_mode
+    resize_mode="$(wallpaper_resize_mode "$wallpaper_path" "$monitor")"
+    if ! "$WWW_CMD" img -o "$monitor" --resize "$resize_mode" "$wallpaper_path" >/dev/null 2>&1; then
       sleep 0.3
-      "$WWW_CMD" img -o "$monitor" "$wallpaper_path" >/dev/null 2>&1 &
+      "$WWW_CMD" img -o "$monitor" --resize "$resize_mode" "$wallpaper_path" >/dev/null 2>&1 &
     fi
   fi
 }
