@@ -1,5 +1,7 @@
 # Changelog — KoolDots
 
+## v2.3.25
+
 ## v2.3.24
 
 ## Fixed:
