@@ -44,3 +44,133 @@ htmlcov/
 
 # Copy-Logs
 Copy-Logs/
+
+
+
+# Ignore cache files
+**/cache/*
+**/*.cache
+**/*.log
+
+# Ignore any potential sensitive information
+**/*.key
+**/*.secret
+**/*.token
+config/Code/CachedExtensionVSIXs/ms-vscode.cpptools-1.25.2-linux-x64
+
+# General cache and log files
+**/cache/
+**/*cache/
+**/*Cache/
+**/[Cc]ache/
+**/*.log
+*.db
+*.xml
+*.ini
+*.list
+*.dirs
+*.locale
+*.yml.save
+*.save
+
+# Application-specific files and directories
+config/Antigravity/
+config/abrt/
+config/configstore/
+config/dconf/
+config/enchant/
+config/eog/
+config/cava/
+#i don't use ghostty
+config/ghostty/
+config/evince/
+config/evolution/
+config/gcloud/
+config/gh/
+config/go/
+config/gh-copilot/
+# --- GIMP 3.0 Configs ---
+
+config/# Exclude session state and window positions (highly volatile)
+config//GIMP/3.0/sessionrc
+config//GIMP/3.0/action-history
+# Exclude binary data and metadata caches
+config/GIMP/3.0/internal-data/
+config/GIMP/3.0/parasiterc
+config/GIMP/3.0/pluginrc
+# Exclude logs and recovery files
+config//GIMP/3.0/CrashLog/
+config//GIMP/3.0/backups/
+#Exclude local tool state if you want a clean slate on every install
+# /GIMP/3.0/devicerc
+# /GIMP/3.0/tool-options/
+# --- GIMP 3.0 Configs ---
+config/github-copilot/
+config/gnome-boxes/
+config/gnome-session/
+config/goa-1.0/
+config/google-chrome/
+config/gsconnect/
+config/ibus/
+config/kdeconnect/
+config/Kvantum/
+config/libreoffice/
+config/libvirt/
+config/matplotlib/
+config/menus/
+config/Miru/
+config/Mousepad/
+config/mpv/
+config/nautilus/
+config/obs-studio/
+config/pulse/
+config/qBittorrent/
+config/Rygel/
+config/systemd/
+config/Thunar/
+config/totem/
+config/uad/
+config/user-share/
+config/vlc/
+config/whoozle.github.io/
+config/YouTube Music/
+config/nextjs-nodejs/
+config/chromium/
+config/BraveSoftware/
+config/firefox/
+config/code-server/
+config/.aws/
+config/.azure/
+config/.ssh/
+config/.gnupg/
+config/.password-store/
+config/*.pem
+config/*.key
+config/*secret*
+config/*token*
+config/*credential*
+config/hypr/wallpaper_effects/.wallpaper_current
+config/hypr/wallust/wallust-hyprland.conf
+config/rofi/wallust/colors-rofi.rasi
+config/rofi/.current_wallpaper
+config/waybar/wallust/colors-waybar.css
+config/quickshell/qml_color.json
+config/seanime-denshi/
+config/.gsd-keyboard.settings-ported
+config/connections.db
+config/dleyna-server-service.conf
+config/gnome-initial-setup-done
+config/GNOME-xdg-terminals.list
+config/mimeapps.list
+config/monitors.xml
+config/pavucontrol.ini
+config/QtProject.conf
+config/rygel.conf
+config/user-dirs.dirs
+config/user-dirs.locale
+config/xdg-terminals.list
+config/Code/CachedExtensionVSIXs/*
+config/Code/Cache/*
+config/Code/
+config/gtk-3.0/
+config/AGENTS.md
