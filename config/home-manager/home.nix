@@ -13,7 +13,17 @@
   home.packages = [
     pkgs.ripgrep  # Useful for Yazi's search
     pkgs.fd       # Useful for Yazi's file finding
-    pkgs.flutter
+
+    pkgs.neovim
+    pkgs.lazygit
+    pkgs.gh
+    pkgs.bat
+    pkgs.fzf
+    pkgs.zoxide
+    pkgs.btop
+    pkgs.htop
+    pkgs.fastfetch
+    pkgs.kitty
   ];
 
   # 2. Programs with built-in Home Manager modules go here
