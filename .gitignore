@@ -91,16 +91,16 @@ config/go/
 config/gh-copilot/
 # --- GIMP 3.0 Configs ---
 
-config/# Exclude session state and window positions (highly volatile)
-config//GIMP/3.0/sessionrc
-config//GIMP/3.0/action-history
+# Exclude session state and window positions (highly volatile)
+config/GIMP/3.0/sessionrc
+config/GIMP/3.0/action-history
 # Exclude binary data and metadata caches
 config/GIMP/3.0/internal-data/
 config/GIMP/3.0/parasiterc
 config/GIMP/3.0/pluginrc
 # Exclude logs and recovery files
-config//GIMP/3.0/CrashLog/
-config//GIMP/3.0/backups/
+config/GIMP/3.0/CrashLog/
+config/GIMP/3.0/backups/
 #Exclude local tool state if you want a clean slate on every install
 # /GIMP/3.0/devicerc
 # /GIMP/3.0/tool-options/
