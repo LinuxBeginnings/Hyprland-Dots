@@ -5,7 +5,8 @@
 
 set -euo pipefail
 
-DOTFILES_CONFIG_DIR="$HOME/code/temp/Hyprland-dots/config"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOTFILES_CONFIG_DIR="$(cd "$SCRIPT_DIR/../config" && pwd)"
 TARGET_DIR="$HOME/.config"
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
 
