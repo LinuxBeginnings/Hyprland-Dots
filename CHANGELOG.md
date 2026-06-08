@@ -8,6 +8,7 @@
   - Caused execessive blurring of background
 - WindowRule for `qcalculate-gtk`
   - Had same rule as `gnome-calculator` needed own sizing
+- `Hyprlock.conf` and `Hyprlock-1080.conf` were removed, re-added
 
 ## v2.3.24
 
