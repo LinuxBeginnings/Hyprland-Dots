@@ -21,6 +21,9 @@ SCRIPTSDIR="$HOME/.config/hypr/scripts"
 . "$SCRIPTSDIR/WallpaperCmd.sh"
 notif="$HOME/.config/swaync/images/bell.png"
 wallust_rofi="$HOME/.config/wallust/templates/colors-rofi.rasi"
+theme_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
+theme_state_file="$theme_state_dir/theme_mode"
+legacy_theme_state_file="$HOME/.cache/.theme_mode"
 
 kitty_conf="$HOME/.config/kitty/kitty.conf"
 
@@ -31,6 +34,58 @@ qt5ct_dark="$HOME/.config/qt5ct/colors/Catppuccin-Mocha.conf"
 qt5ct_light="$HOME/.config/qt5ct/colors/Catppuccin-Latte.conf"
 qt6ct_dark="$HOME/.config/qt6ct/colors/Catppuccin-Mocha.conf"
 qt6ct_light="$HOME/.config/qt6ct/colors/Catppuccin-Latte.conf"
+apply_saved_mode=0
+notify_enabled=1
+preserve_wallpaper=0
+forced_mode=""
+
+normalize_mode() {
+    case "$1" in
+        Dark|Light) printf '%s' "$1" ;;
+        *) printf '' ;;
+    esac
+}
+
+read_saved_mode() {
+    local mode=""
+    if [ -f "$theme_state_file" ]; then
+        mode="$(normalize_mode "$(tr -d '\r\n' < "$theme_state_file")")"
+    fi
+    if [ -z "$mode" ] && [ -f "$legacy_theme_state_file" ]; then
+        mode="$(normalize_mode "$(tr -d '\r\n' < "$legacy_theme_state_file")")"
+    fi
+    [ -n "$mode" ] && printf '%s' "$mode" || printf 'Dark'
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --apply-current)
+            apply_saved_mode=1
+            ;;
+        --mode)
+            shift
+            forced_mode="$(normalize_mode "${1:-}")"
+            ;;
+        --no-notify)
+            notify_enabled=0
+            ;;
+        --preserve-wallpaper)
+            preserve_wallpaper=1
+            ;;
+        --help)
+            cat <<'EOF'
+Usage: DarkLight.sh [--apply-current] [--mode Dark|Light] [--no-notify] [--preserve-wallpaper]
+  (no args)            Toggle between Dark and Light and persist selection
+  --apply-current      Re-apply saved mode (defaults to Dark when unset)
+  --mode <mode>        Force target mode to Dark or Light
+  --no-notify          Suppress notifications
+  --preserve-wallpaper Keep current wallpaper instead of choosing random Dynamic-Wallpapers image
+EOF
+            exit 0
+            ;;
+    esac
+    shift
+done
 
 # intial kill process
 for pid in waybar rofi swaync ags swaybg; do
@@ -45,28 +100,33 @@ done
 swww="$WWW_CMD img"
 effect="--transition-bezier .43,1.19,1,.4 --transition-fps 60 --transition-type grow --transition-pos 0.925,0.977 --transition-duration 2"
 
-# Determine current theme mode
-if [ "$(cat $HOME/.cache/.theme_mode)" = "Light" ]; then
+# Determine target theme mode
+saved_mode="$(read_saved_mode)"
+if [ -n "$forced_mode" ]; then
+    next_mode="$forced_mode"
+elif [ "$apply_saved_mode" -eq 1 ]; then
+    next_mode="$saved_mode"
+elif [ "$saved_mode" = "Light" ]; then
     next_mode="Dark"
-    # Logic for Dark mode
-    wallpaper_path="$dark_wallpapers"
 else
     next_mode="Light"
-    # Logic for Light mode
-    wallpaper_path="$light_wallpapers"
 fi
 # Select Qt color scheme templates for the upcoming mode
 if [ "$next_mode" = "Dark" ]; then
+    wallpaper_path="$dark_wallpapers"
     qt5ct_color_scheme="$qt5ct_dark"
     qt6ct_color_scheme="$qt6ct_dark"
 else
+    wallpaper_path="$light_wallpapers"
     qt5ct_color_scheme="$qt5ct_light"
     qt6ct_color_scheme="$qt6ct_light"
 fi
 
 # Function to update theme mode for the next cycle
 update_theme_mode() {
-    echo "$next_mode" > "$HOME/.cache/.theme_mode"
+    mkdir -p "$theme_state_dir" "$HOME/.cache"
+    echo "$next_mode" > "$theme_state_file"
+    echo "$next_mode" > "$legacy_theme_state_file"
 }
 
 # Function to notify user
@@ -99,7 +159,7 @@ set_waybar_style() {
 
 # Call the function after determining the mode
 set_waybar_style "$next_mode"
-notify_user "$next_mode"
+[ "$notify_enabled" -eq 1 ] && notify_user "$next_mode"
 
 
 # swaync color change
@@ -140,14 +200,16 @@ for pid_kitty in $(pidof kitty); do
 done
 
 # Set Dynamic Wallpaper for Dark or Light Mode
-if [ "$next_mode" = "Dark" ]; then
-    next_wallpaper="$(find -L "${dark_wallpapers}" -type f \( -iname "*.jpg" -o -iname "*.png" \) -print0 | shuf -n1 -z | xargs -0)"
-else
-    next_wallpaper="$(find -L "${light_wallpapers}" -type f \( -iname "*.jpg" -o -iname "*.png" \) -print0 | shuf -n1 -z | xargs -0)"
-fi
+if [ "$preserve_wallpaper" -eq 0 ]; then
+    if [ "$next_mode" = "Dark" ]; then
+        next_wallpaper="$(find -L "${dark_wallpapers}" -type f \( -iname "*.jpg" -o -iname "*.png" \) -print0 | shuf -n1 -z | xargs -0)"
+    else
+        next_wallpaper="$(find -L "${light_wallpapers}" -type f \( -iname "*.jpg" -o -iname "*.png" \) -print0 | shuf -n1 -z | xargs -0)"
+    fi
 
-# Update wallpaper using swww command
-$swww "${next_wallpaper}" $effect
+    # Update wallpaper using swww command
+    $swww "${next_wallpaper}" $effect
+fi
 
 
 # Set Kvantum Manager theme & QT5/QT6 settings
@@ -268,7 +330,7 @@ ${SCRIPTSDIR}/Refresh.sh
 
 sleep 0.5
 # Display notifications for theme and icon changes 
-notify-send -u low -i "$notif" " Themes switched to:" " $next_mode Mode"
+[ "$notify_enabled" -eq 1 ] && notify-send -u low -i "$notif" " Themes switched to:" " $next_mode Mode"
 
 exit 0
 

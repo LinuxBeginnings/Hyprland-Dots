@@ -9,6 +9,29 @@
 - WindowRule for `qcalculate-gtk`
   - Had same rule as `gnome-calculator` needed own sizing
 
+## Added:
+
+- Dark / Light theme toggle is now persistant
+  - At startup it checks and restores selection
+  - `config/hypr/scripts/DarkLight.sh`
+  - added persistent state file:` ${XDG_STATE_HOME:-$HOME/.local/state}/hypr/theme_mode`
+  - keeps legacy sync with` ~/.cache/.theme_mode` for compatibility
+  - defaults to Dark when no saved state exists
+  - added flags:
+  - `--apply-current`
+  - `--mode Dark|Light`
+  - `--no-notify`
+  - `--preserve-wallpaper`
+  - kept normal toggle behavior for manual use
+  - `config/hypr/scripts/ApplyThemeMode.sh`
+  - startup helper that runs:
+  - `DarkLight.sh --apply-current --preserve-wallpaper --no-notify`
+  - `config/hypr/configs/Startup_Apps.conf`
+  - added startup call to re-apply saved mode:
+  - `exec-once = sh -c 'sleep 4; sh $HOME/.config/hypr/scripts/ApplyThemeMode.sh'`
+  - `config/hypr/lua/startup.lua`
+  - added equivalent startup command for Lua startup flow
+
 ## v2.3.24
 
 ## Fixed:
