@@ -145,6 +145,8 @@ chmod +x copy.sh
 - NVIDIA Owners.
   - After installation, check [`THIS`](https://github.com/LinuxBeginnings/Hyprland-Dots/wiki/FAQ_NVIDIA)
   - Make sure to edit your `~/.config/hypr/UserConfigs/ENVariables.conf` (highly recommended).
+- Hybrid Intel/NVIDIA or AMD/NVIDIA laptops may need cursor handoff fixes
+  - The installer now enables XCURSOR fallbacks and a startup cursor refresh when hybrid GPUs are detected.
 - If you have already set your own keybinds, monitors, etc.... Just copy over from backup created before log-out or reboot. (recommended)
 
 #### 🙋 QUESTIONS ?

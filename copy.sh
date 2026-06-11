@@ -363,6 +363,8 @@ if [ -d "$HOME/.icons/Bibata-Modern-Ice/hyprcursors" ]; then
   echo "${INFO} Bibata-Hyprcursor directory detected. Activating Hyprcursor...." 2>&1 | tee -a "$LOG" || true
   sed -i 's/^#env = HYPRCURSOR_THEME,Bibata-Modern-Ice/env = HYPRCURSOR_THEME,Bibata-Modern-Ice/' "$HYPRCURSOR_ENV_FILE"
   sed -i 's/^#env = HYPRCURSOR_SIZE,24/env = HYPRCURSOR_SIZE,24/' "$HYPRCURSOR_ENV_FILE"
+  sed -i 's/^#env = XCURSOR_THEME,Bibata-Modern-Ice/env = XCURSOR_THEME,Bibata-Modern-Ice/' "$HYPRCURSOR_ENV_FILE"
+  sed -i 's/^#env = XCURSOR_SIZE,24/env = XCURSOR_SIZE,24/' "$HYPRCURSOR_ENV_FILE"
 fi
 
 printf "\n%.0s" {1..1}

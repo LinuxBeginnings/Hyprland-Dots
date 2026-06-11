@@ -4,11 +4,15 @@
 
 ## Fixed:
 
+- NVIDIA Hybrid laptops have issues with cursors and GDM
+  - Added more defensive code with fallbacks
 - Dynamic wallpaper is now also per monitor
 - Disabled LayerRule for swaync
   - Caused execessive blurring of background
 - WindowRule for `qcalculate-gtk`
   - Had same rule as `gnome-calculator` needed own sizing
+- Hybrid NVIDIA cursor handoff improvements
+  - Enables Xcursor fallbacks and optional setcursor refresh on hybrid laptops
 
 ## Added:
 

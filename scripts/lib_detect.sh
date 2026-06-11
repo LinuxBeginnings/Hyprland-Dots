@@ -10,13 +10,35 @@
 # Nvidia tweaks: uncomments envs and adjusts hardware cursor setting.
 detect_nvidia_adjust() {
   local log="$1"
-  if lspci -k | grep -A 2 -E "(VGA|3D)" | grep -iq nvidia; then
+  local pci_info
+  local has_nvidia=0
+  local has_intel=0
+  local has_amd=0
+  pci_info="$(lspci -k | grep -A 2 -E "(VGA|3D)" || true)"
+  if echo "$pci_info" | grep -iq nvidia; then
+    has_nvidia=1
+  fi
+  if echo "$pci_info" | grep -iq intel; then
+    has_intel=1
+  fi
+  if echo "$pci_info" | grep -Eiq 'amd|advanced micro devices|ati'; then
+    has_amd=1
+  fi
+  if [ "$has_nvidia" -eq 1 ]; then
     echo "${INFO:-[INFO]} Nvidia GPU detected. Setting up proper env's and configs" 2>&1 | tee -a "$log" || true
     sed -i '/env = LIBVA_DRIVER_NAME,nvidia/s/^#//' config/hypr/configs/ENVariables.conf
     sed -i '/env = __GLX_VENDOR_LIBRARY_NAME,nvidia/s/^#//' config/hypr/configs/ENVariables.conf
     sed -i '/env = NVD_BACKEND,direct/s/^#//' config/hypr/configs/ENVariables.conf
     sed -i '/env = GSK_RENDERER,ngl/s/^#//' config/hypr/configs/ENVariables.conf
-    sed -i 's/^\([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*\)2/\1 1/' config/hypr/configs/SystemSettings.conf
+    if [ "$has_intel" -eq 1 ] || [ "$has_amd" -eq 1 ]; then
+      echo "${INFO:-[INFO]} Hybrid GPU detected (Intel/NVIDIA or AMD/NVIDIA). Applying cursor handoff fixes." 2>&1 | tee -a "$log" || true
+      sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 0/' config/hypr/configs/SystemSettings.conf
+      sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 0/' config/hypr/lua/settings.lua
+      sed -i '/hyprctl setcursor/s/^#//' config/hypr/configs/Startup_Apps.conf
+    else
+      sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/configs/SystemSettings.conf
+      sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/lua/settings.lua
+    fi
   fi
 }
 
