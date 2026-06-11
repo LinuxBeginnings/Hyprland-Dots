@@ -17,14 +17,37 @@ iDIR="$HOME/.config/swaync/images"
 rofi_theme="$HOME/.config/rofi/config-wallpaper.rasi"
 lock_cache_dir="$HOME/.config/hypr/wallpaper_effects"
 lock_wallpaper_link="$lock_cache_dir/.hyprlock_current"
+lock_wallpaper_current="$lock_cache_dir/.wallpaper_current"
 video_cache_dir="$HOME/.cache/hyprlock_preview"
+find_notify_send() {
+  local candidate=""
+  if candidate="$(command -v notify-send 2>/dev/null)"; then
+    [ -n "$candidate" ] && [ -x "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
+  fi
+  for candidate in /usr/bin/notify-send /usr/sbin/notify-send /bin/notify-send /sbin/notify-send; do
+    [ -x "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
+  done
+  return 1
+}
+
+NOTIFY_SEND_BIN="$(find_notify_send || true)"
 
 notify_err() {
-  if command -v notify-send >/dev/null 2>&1; then
+  if [ -n "$NOTIFY_SEND_BIN" ]; then
     if [ -f "$iDIR/error.png" ]; then
-      notify-send -i "$iDIR/error.png" "Hyprlock Wallpaper" "$1"
+      "$NOTIFY_SEND_BIN" -i "$iDIR/error.png" "Hyprlock Wallpaper" "$1"
     else
-      notify-send "Hyprlock Wallpaper" "$1"
+      "$NOTIFY_SEND_BIN" "Hyprlock Wallpaper" "$1"
+    fi
+  fi
+}
+
+notify_ok() {
+  if [ -n "$NOTIFY_SEND_BIN" ]; then
+    if [ -f "$iDIR/ja.png" ]; then
+      "$NOTIFY_SEND_BIN" -i "$iDIR/ja.png" "Hyprlock Wallpaper" "$1"
+    else
+      "$NOTIFY_SEND_BIN" "Hyprlock Wallpaper" "$1"
     fi
   fi
 }
@@ -45,10 +68,87 @@ if ! command -v bc >/dev/null 2>&1; then
   notify_err "bc not found"
   exit 1
 fi
+read_wallpaper_from_query() {
+  local monitor="$1"
+  [ -n "$monitor" ] || return 1
+  "$WWW_CMD" query 2>/dev/null | awk -v mon="$monitor" '
+    {
+      line=$0
+      sub(/^Monitor[[:space:]]+/, "", line)
+      sub(/^:[[:space:]]*/, "", line)
+      mon_name=line
+      sub(/:.*/, "", mon_name)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", mon_name)
+      if (mon_name != mon) next
 
-focused_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
+      path=line
+      sub(/^.*image:[[:space:]]*/, "", path)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", path)
+      if (path != line && length(path) > 0) {
+        print path
+        exit
+      }
+    }
+  '
+}
+
+read_cached_wallpaper() {
+  local cache_file="$1"
+  [ -f "$cache_file" ] || return 1
+  awk 'NF && $0 !~ /^filter/ {print; exit}' "$cache_file"
+}
+
+read_wallpaper_from_cache() {
+  local monitor="$1"
+  local cache_root="${WWW_CACHE_DIR:-$HOME/.cache/awww}"
+  local cache_file="$cache_root/$monitor"
+  local fallback_cache=""
+  local path=""
+
+  case "$cache_root" in
+    "$HOME/.cache/awww")
+      fallback_cache="$HOME/.cache/swww/$monitor"
+      ;;
+    "$HOME/.cache/swww")
+      fallback_cache="$HOME/.cache/awww/$monitor"
+      ;;
+  esac
+
+  path="$(read_cached_wallpaper "$cache_file" 2>/dev/null || true)"
+  if [ -z "$path" ] && [ -n "$fallback_cache" ]; then
+    path="$(read_cached_wallpaper "$fallback_cache" 2>/dev/null || true)"
+  fi
+
+  [ -n "$path" ] && [ -f "$path" ] || return 1
+  printf '%s\n' "$path"
+}
+
+get_active_workspace_monitor() {
+  hyprctl activeworkspace -j 2>/dev/null | jq -r '.monitor // empty' | head -n1
+}
+
+monitor_exists() {
+  local monitor="$1"
+  [ -n "$monitor" ] || return 1
+  hyprctl monitors -j 2>/dev/null | jq -r --arg mon "$monitor" '.[] | select(.name == $mon) | .name' | grep -qx "$monitor"
+}
+
+focused_monitor=""
+requested_monitor="${1:-${HYPRLOCK_TARGET_MONITOR:-}}"
+if monitor_exists "$requested_monitor"; then
+  focused_monitor="$requested_monitor"
+fi
 if [[ -z "$focused_monitor" ]]; then
-  notify_err "Could not detect focused monitor"
+  workspace_monitor="$(get_active_workspace_monitor)"
+  if monitor_exists "$workspace_monitor"; then
+    focused_monitor="$workspace_monitor"
+  fi
+fi
+if [[ -z "$focused_monitor" ]]; then
+  focused_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name' | head -n1)
+fi
+if [[ -z "$focused_monitor" ]]; then
+  notify_err "Could not detect target monitor"
   exit 1
 fi
 
@@ -87,7 +187,7 @@ fi
 
 current_monitor_path=""
 if [ -n "${WWW_CMD:-}" ] && command -v "$WWW_CMD" >/dev/null 2>&1; then
-  current_monitor_path="$("$WWW_CMD" query 2>/dev/null | grep "$focused_monitor" | awk '{print $NF}' | head -n1)"
+  current_monitor_path="$(read_wallpaper_from_query "$focused_monitor")"
 fi
 if [ -z "$current_monitor_path" ] && [ -L "$per_monitor_rofi_link" ]; then
   current_monitor_path="$(readlink -f "$per_monitor_rofi_link" 2>/dev/null || true)"
@@ -97,6 +197,12 @@ if [ -z "$current_monitor_path" ] && [ -f "$per_monitor_rofi_link" ]; then
 fi
 if [ -z "$current_monitor_path" ] && [ -f "$per_monitor_wallpaper_current" ]; then
   current_monitor_path="$per_monitor_wallpaper_current"
+fi
+if [ -z "$current_monitor_path" ]; then
+  current_monitor_path="$(read_wallpaper_from_cache "$focused_monitor" 2>/dev/null || true)"
+fi
+if [ -n "$current_monitor_path" ] && [ ! -f "$current_monitor_path" ]; then
+  current_monitor_path=""
 fi
 current_monitor_name=""
 if [ -n "$current_monitor_path" ]; then
@@ -152,36 +258,59 @@ update_hyprlock_config() {
 
 set_hyprlock_wallpaper() {
   local selected_file="$1"
+  local target_monitor="${2:-$focused_monitor}"
   local final_path="$selected_file"
 
   if [ ! -f "$selected_file" ]; then
-    notify_err "Selected file not found"
-    exit 1
+    notify_err "Failed for $target_monitor: selected file not found"
+    return 1
   fi
 
   if [[ "$selected_file" =~ \.(mp4|mkv|mov|webm|MP4|MKV|MOV|WEBM)$ ]]; then
     if ! command -v ffmpeg >/dev/null 2>&1; then
-      notify_err "ffmpeg not found for video preview"
-      exit 1
+      notify_err "Failed for $target_monitor: ffmpeg not found for video preview"
+      return 1
     fi
     mkdir -p "$video_cache_dir"
     local video_name
     video_name="$(basename "$selected_file")"
     final_path="$video_cache_dir/${video_name}.png"
-    ffmpeg -v error -y -i "$selected_file" -ss 00:00:01.000 -vframes 1 "$final_path"
+    if ! ffmpeg -v error -y -i "$selected_file" -ss 00:00:01.000 -vframes 1 "$final_path"; then
+      notify_err "Failed for $target_monitor: could not generate video preview"
+      return 1
+    fi
   fi
 
   mkdir -p "$lock_cache_dir"
-  ln -sf "$final_path" "$lock_wallpaper_link" || true
+  if ! ln -sf "$final_path" "$lock_wallpaper_link"; then
+    notify_err "Failed for $target_monitor: could not update hyprlock wallpaper link"
+    return 1
+  fi
+  if ! cp -f "$final_path" "$lock_wallpaper_current"; then
+    notify_err "Failed for $target_monitor: could not update lock fallback wallpaper"
+    return 1
+  fi
 
   update_hyprlock_config "$HOME/.config/hypr/hyprlock.conf" "$lock_wallpaper_link"
   update_hyprlock_config "$HOME/.config/hypr/hyprlock-2k.conf" "$lock_wallpaper_link"
   update_hyprlock_config "$HOME/.config/hypr/hyprlock-1080p.conf" "$lock_wallpaper_link"
 
   pkill -USR1 hyprlock 2>/dev/null || true
-  if command -v notify-send >/dev/null 2>&1; then
-    notify-send "Hyprlock wallpaper set" "$(basename "$selected_file")"
+
+  local resolved_path=""
+  if [ -L "$lock_wallpaper_link" ]; then
+    resolved_path="$(readlink -f "$lock_wallpaper_link" 2>/dev/null || true)"
+  elif [ -f "$lock_wallpaper_link" ]; then
+    resolved_path="$lock_wallpaper_link"
   fi
+
+  if [ -z "$resolved_path" ] || [ ! -f "$resolved_path" ]; then
+    notify_err "Failed for $target_monitor: hyprlock wallpaper was not applied"
+    return 1
+  fi
+
+  notify_ok "Set for $target_monitor: $(basename "$resolved_path")"
+  return 0
 }
 
 main() {
@@ -193,21 +322,21 @@ main() {
   fi
 
   if [[ "$choice" == "$RANDOM_PIC_NAME" ]]; then
-    set_hyprlock_wallpaper "$RANDOM_PIC"
+    set_hyprlock_wallpaper "$RANDOM_PIC" "$focused_monitor" || exit 1
     return
   fi
   if [[ "$choice" == "$current_monitor_name" && -n "$current_monitor_path" ]]; then
-    set_hyprlock_wallpaper "$current_monitor_path"
+    set_hyprlock_wallpaper "$current_monitor_path" "$focused_monitor" || exit 1
     return
   fi
 
   if [[ "$choice" == "$current_lock_name" && -n "$current_lock_path" ]]; then
-    set_hyprlock_wallpaper "$current_lock_path"
+    set_hyprlock_wallpaper "$current_lock_path" "$focused_monitor" || exit 1
     return
   fi
 
   if [[ -f "$choice" ]]; then
-    set_hyprlock_wallpaper "$choice"
+    set_hyprlock_wallpaper "$choice" "$focused_monitor" || exit 1
     return
   fi
 
@@ -219,7 +348,7 @@ main() {
     exit 1
   fi
 
-  set_hyprlock_wallpaper "$selected_file"
+  set_hyprlock_wallpaper "$selected_file" "$focused_monitor" || exit 1
 }
 
 if pidof rofi >/dev/null; then

@@ -66,7 +66,7 @@ inputbar {
     padding:                     4em;
     children:                    [ "textbox-prompt-colon", "entry" ];
     background-color:            transparent;
-    background-image:            url("~/.config/rofi/.current_wallpaper", width);
+    background-image:            url("~/.config/rofi/.current_wallpaper_focused", width);
 }
 
 textbox-prompt-colon {

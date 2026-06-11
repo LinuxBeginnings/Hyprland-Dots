@@ -64,6 +64,22 @@ show_info() {
     fi
 }
 
+get_context_monitor_name() {
+    if ! command -v hyprctl >/dev/null 2>&1; then
+        return 1
+    fi
+    local monitor=""
+    if command -v jq >/dev/null 2>&1; then
+        monitor="$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.monitor // empty' | head -n1)"
+        if [[ -z "$monitor" ]]; then
+            monitor="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused) | .name' | head -n1)"
+        fi
+    else
+        monitor="$(hyprctl monitors 2>/dev/null | awk '/^Monitor/{name=$2} /focused: yes/{print name; exit}')"
+    fi
+    printf '%s' "$monitor"
+}
+
 # Determine whether an editor command is terminal-based (TUI)
 is_tui_editor() {
     local -a cmd=("$@")
@@ -294,6 +310,8 @@ EOF
 
 # Main function to handle menu selection
 main() {
+    local quick_settings_monitor
+    quick_settings_monitor="$(get_context_monitor_name)"
     choice=$(menu | rofi -i -dmenu -config $rofi_theme -mesg "$msg")
     
     # Map choices to corresponding files
@@ -334,7 +352,13 @@ main() {
             if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_layer_rules.lua)"; else file="$configs/LayerRules.conf"; fi ;;
         "Edit System Default Settings")
             if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_settings.lua)"; else file="$configs/SystemSettings.conf"; fi ;;
-        "Set SDDM Wallpaper") $scriptsDir/sddm_wallpaper.sh --normal ;;
+        "Set SDDM Wallpaper")
+            if [[ -n "$quick_settings_monitor" ]]; then
+                "$scriptsDir/sddm_wallpaper.sh" --normal "$quick_settings_monitor"
+            else
+                "$scriptsDir/sddm_wallpaper.sh" --normal
+            fi
+            ;;
         "Choose Kitty Terminal Theme") $scriptsDir/Kitty_themes.sh ;;
         "Choose Ghostty Terminal Theme") $scriptsDir/Ghostty_themes.sh ;;
         "Configure Monitors (nwg-displays)") 
@@ -367,7 +391,13 @@ main() {
                 exit 1
             fi
             qt5ct ;;
-        "Set Hyprlock Wallpaper") $scriptsDir/HyprlockWallpaperSelect.sh ;;
+        "Set Hyprlock Wallpaper")
+            if [[ -n "$quick_settings_monitor" ]]; then
+                "$scriptsDir/HyprlockWallpaperSelect.sh" "$quick_settings_monitor"
+            else
+                "$scriptsDir/HyprlockWallpaperSelect.sh"
+            fi
+            ;;
         "Choose Hyprland Animations") $scriptsDir/Animations.sh ;;
         "Choose Monitor Profiles") $scriptsDir/MonitorProfiles.sh ;;
         "Choose Rofi Themes") $scriptsDir/RofiThemeSelector.sh ;;
