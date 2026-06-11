@@ -60,19 +60,14 @@ icon_size=$(echo "scale=1; ($monitor_height * 3) / ($scale_factor * 150)" | bc)
 adjusted_icon_size=$(echo "$icon_size" | awk '{if ($1 < 15) $1 = 20; if ($1 > 25) $1 = 25; print $1}')
 rofi_override="element-icon{size:${adjusted_icon_size}%;}"
 
-# Kill existing wallpaper daemons for video
+# Kill existing wallpaper daemons for video on the focused monitor only
 kill_wallpaper_for_video() {
-  "$WWW_CMD" kill 2>/dev/null
-  pkill mpvpaper 2>/dev/null
-  pkill swaybg 2>/dev/null
-  pkill hyprpaper 2>/dev/null
+  pkill -f "mpvpaper.*$focused_monitor" 2>/dev/null
 }
 
-# Kill existing wallpaper daemons for image
+# Kill existing wallpaper daemons for image on the focused monitor only
 kill_wallpaper_for_image() {
-  pkill mpvpaper 2>/dev/null
-  pkill swaybg 2>/dev/null
-  pkill hyprpaper 2>/dev/null
+  pkill -f "mpvpaper.*$focused_monitor" 2>/dev/null
 }
 
 # Retrieve wallpapers (both images & videos)
@@ -207,8 +202,8 @@ apply_video_wallpaper() {
   fi
   kill_wallpaper_for_video
 
-  # Apply video wallpaper using mpvpaper
-  mpvpaper '*' -o "load-scripts=no no-audio --loop" "$video_path" &
+  # Apply video wallpaper only to the focused monitor
+  mpvpaper "$focused_monitor" -o "load-scripts=no no-audio --loop" "$video_path" &
 }
 
 # Main function

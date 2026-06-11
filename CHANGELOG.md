@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- Dynamic wallpaper is now also per monitor
 - Disabled LayerRule for swaync
   - Caused execessive blurring of background
 - WindowRule for `qcalculate-gtk`
