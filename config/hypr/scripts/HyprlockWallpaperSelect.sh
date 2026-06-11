@@ -11,6 +11,8 @@ PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
 wallDIR="$PICTURES_DIR/wallpapers"
 scriptsDir="$HOME/.config/hypr/scripts"
 iDIR="$HOME/.config/swaync/images"
+# shellcheck source=/dev/null
+. "$scriptsDir/WallpaperCmd.sh" 2>/dev/null || true
 
 rofi_theme="$HOME/.config/rofi/config-wallpaper.rasi"
 lock_cache_dir="$HOME/.config/hypr/wallpaper_effects"
@@ -50,6 +52,9 @@ if [[ -z "$focused_monitor" ]]; then
   exit 1
 fi
 
+per_monitor_rofi_link="$HOME/.config/rofi/.current_wallpaper_${focused_monitor}"
+per_monitor_wallpaper_current="$lock_cache_dir/.wallpaper_current_${focused_monitor}"
+
 scale_factor=$(hyprctl monitors -j | jq -r --arg mon "$focused_monitor" '.[] | select(.name == $mon) | .scale')
 monitor_height=$(hyprctl monitors -j | jq -r --arg mon "$focused_monitor" '.[] | select(.name == $mon) | .height')
 icon_size=$(echo "scale=1; ($monitor_height * 3) / ($scale_factor * 150)" | bc)
@@ -80,11 +85,32 @@ if [ -n "$current_lock_path" ]; then
   current_lock_name="Current: $(basename "$current_lock_path")"
 fi
 
+current_monitor_path=""
+if [ -n "${WWW_CMD:-}" ] && command -v "$WWW_CMD" >/dev/null 2>&1; then
+  current_monitor_path="$("$WWW_CMD" query 2>/dev/null | grep "$focused_monitor" | awk '{print $NF}' | head -n1)"
+fi
+if [ -z "$current_monitor_path" ] && [ -L "$per_monitor_rofi_link" ]; then
+  current_monitor_path="$(readlink -f "$per_monitor_rofi_link" 2>/dev/null || true)"
+fi
+if [ -z "$current_monitor_path" ] && [ -f "$per_monitor_rofi_link" ]; then
+  current_monitor_path="$per_monitor_rofi_link"
+fi
+if [ -z "$current_monitor_path" ] && [ -f "$per_monitor_wallpaper_current" ]; then
+  current_monitor_path="$per_monitor_wallpaper_current"
+fi
+current_monitor_name=""
+if [ -n "$current_monitor_path" ]; then
+  current_monitor_name="Current monitor: $(basename "$current_monitor_path")"
+fi
+
 rofi_command="rofi -i -show -dmenu -config $rofi_theme -theme-str $rofi_override"
 
 menu() {
   IFS=$'\n' sorted_options=($(sort <<<"${PICS[*]}"))
   printf "%s\x00icon\x1f%s\n" "$RANDOM_PIC_NAME" "$RANDOM_PIC"
+  if [ -n "$current_monitor_name" ]; then
+    printf "%s\x00icon\x1f%s\n" "$current_monitor_name" "$current_monitor_path"
+  fi
   if [ -n "$current_lock_name" ]; then
     printf "%s\x00icon\x1f%s\n" "$current_lock_name" "$current_lock_path"
   fi
@@ -168,6 +194,10 @@ main() {
 
   if [[ "$choice" == "$RANDOM_PIC_NAME" ]]; then
     set_hyprlock_wallpaper "$RANDOM_PIC"
+    return
+  fi
+  if [[ "$choice" == "$current_monitor_name" && -n "$current_monitor_path" ]]; then
+    set_hyprlock_wallpaper "$current_monitor_path"
     return
   fi
 

@@ -280,7 +280,7 @@ Configure Workspace Rules (nwg-displays)
 GTK Settings (nwg-look)
 QT Apps Settings (qt6ct)
 QT Apps Settings (qt5ct)
-Choose Hyprlock Wallpaper
+Set Hyprlock Wallpaper
 Choose Hyprland Animations
 Choose Monitor Profiles
 Choose Rofi Themes
@@ -367,7 +367,7 @@ main() {
                 exit 1
             fi
             qt5ct ;;
-        "Choose Hyprlock Wallpaper") $scriptsDir/HyprlockWallpaperSelect.sh ;;
+        "Set Hyprlock Wallpaper") $scriptsDir/HyprlockWallpaperSelect.sh ;;
         "Choose Hyprland Animations") $scriptsDir/Animations.sh ;;
         "Choose Monitor Profiles") $scriptsDir/MonitorProfiles.sh ;;
         "Choose Rofi Themes") $scriptsDir/RofiThemeSelector.sh ;;
