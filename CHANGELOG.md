@@ -16,6 +16,7 @@
 
 ## Added:
 
+- Menu item in Quick settings, (SUPERSHIFT + E) to set Hyprlock background
 - Dark / Light theme toggle is now persistant
   - At startup it checks and restores selection
   - `config/hypr/scripts/DarkLight.sh`
