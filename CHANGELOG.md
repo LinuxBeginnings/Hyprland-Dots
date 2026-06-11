@@ -38,6 +38,11 @@
   - `config/hypr/lua/startup.lua`
   - added equivalent startup command for Lua startup flow
 
+  ## Updated:
+  - Enabled 12 min timer on turning off monitor
+    - For a very long that's been disabled by default
+    - The suspend option is still disabled
+
 ## v2.3.24
 
 ## Fixed:
