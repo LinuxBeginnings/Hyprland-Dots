@@ -52,6 +52,28 @@ wait_for_wayland() {
   return 1
 }
 
+ensure_portal_env() {
+  export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-Hyprland}"
+  export XDG_SESSION_DESKTOP="${XDG_SESSION_DESKTOP:-Hyprland}"
+  export XDG_SESSION_TYPE="${XDG_SESSION_TYPE:-wayland}"
+  if [[ -f "/usr/share/glib-2.0/schemas/gschemas.compiled" ]]; then
+    export GSETTINGS_SCHEMA_DIR="/usr/share/glib-2.0/schemas"
+  fi
+
+  local data_dirs="${XDG_DATA_DIRS:-}"
+  if [[ -z "$data_dirs" ]]; then
+    data_dirs="/usr/local/share:/usr/share"
+  else
+    if [[ ":$data_dirs:" != *":/usr/local/share:"* ]]; then
+      data_dirs="/usr/local/share:$data_dirs"
+    fi
+    if [[ ":$data_dirs:" != *":/usr/share:"* ]]; then
+      data_dirs="$data_dirs:/usr/share"
+    fi
+  fi
+  export XDG_DATA_DIRS="$data_dirs"
+}
+
 start_portal_binary() {
   local description="$1"
   shift
@@ -67,10 +89,13 @@ start_portal_binary() {
 
 restart_portal_via_systemd() {
   command -v systemctl >/dev/null 2>&1 || return 1
+  ensure_portal_env
   if command -v dbus-update-activation-environment >/dev/null 2>&1; then
-    dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE >/dev/null 2>&1 || true
+    dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GSETTINGS_SCHEMA_DIR >/dev/null 2>&1 || true
   fi
-  systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE >/dev/null 2>&1 || true
+
+  systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GSETTINGS_SCHEMA_DIR >/dev/null 2>&1 || true
+  systemctl --user reset-failed xdg-desktop-portal-hyprland.service xdg-desktop-portal.service xdg-desktop-portal-gtk.service >/dev/null 2>&1 || true
   systemctl --user start graphical-session.target >/dev/null 2>&1 || true
 
   for _ in $(seq 1 30); do
