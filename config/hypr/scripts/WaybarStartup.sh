@@ -14,6 +14,30 @@ export XDG_RUNTIME_DIR="$runtime_dir"
 is_waybar_running() {
     pgrep -x "waybar" >/dev/null 2>&1 || pgrep -x '\.waybar-wrapped' >/dev/null 2>&1
 }
+sync_portal_env() {
+    if command -v dbus-update-activation-environment >/dev/null 2>&1; then
+        dbus-update-activation-environment --systemd \
+            WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GSETTINGS_SCHEMA_DIR >/dev/null 2>&1 || true
+    fi
+
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl --user import-environment \
+            WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GSETTINGS_SCHEMA_DIR >/dev/null 2>&1 || true
+    fi
+}
+
+start_portal_services() {
+    command -v systemctl >/dev/null 2>&1 || return 0
+
+    systemctl --user start xdg-desktop-portal-hyprland.service >/dev/null 2>&1 || true
+    systemctl --user start xdg-desktop-portal.service >/dev/null 2>&1 || true
+
+    for _ in $(seq 1 50); do
+        systemctl --user is-active --quiet xdg-desktop-portal.service && return 0
+        sleep 0.1
+    done
+    return 1
+}
 
 wait_for_wayland() {
     # If WAYLAND_DISPLAY is already valid, use it.
@@ -71,6 +95,8 @@ main() {
     # Allow key startup services to settle before launching Waybar.
     sleep 1
     wait_for_wayland || true
+    sync_portal_env
+    start_portal_services || true
 
     is_waybar_running && exit 0
 
