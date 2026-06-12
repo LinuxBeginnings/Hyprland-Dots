@@ -119,11 +119,9 @@ restart_portal_via_systemd() {
   if is_ubuntu_family; then
     systemctl --user start xdg-desktop-portal-gtk.service >/dev/null 2>&1 || true
   fi
-  systemctl --user start xdg-desktop-portal.service >/dev/null 2>&1 || true
 
   for _ in $(seq 1 60); do
-    if systemctl --user is-active --quiet xdg-desktop-portal-hyprland.service &&
-      systemctl --user is-active --quiet xdg-desktop-portal.service; then
+    if systemctl --user is-active --quiet xdg-desktop-portal-hyprland.service; then
       return 0
     fi
     sleep 0.1
