@@ -4,6 +4,14 @@
 
 ## Fixed:
 
+- `xdg-desktop-portal-hyprland` shows failed after CachyOS update
+  - A regression bug in CachyOS is causing the issue
+  - Screensharing doesn't work as a result
+  - I created a script to create and override until they release the fix
+    - In the `Hyprland-Dots` directory
+      - Often located in `~/Arch-Hyprland=/Hyprland-Dots`
+    - Run the script `config/hypr/scripts/Add-override-Hyprland-Portal.sh`
+      - I will also be uploading the script to the Discord server
 - NVIDIA Hybrid laptops have issues with cursors and GDM
   - Added more defensive code with fallbacks
 - Dynamic wallpaper is now also per monitor
