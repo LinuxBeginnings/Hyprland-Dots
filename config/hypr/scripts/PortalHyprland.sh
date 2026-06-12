@@ -86,6 +86,13 @@ start_portal_binary() {
   echo "Warning: no $description binary found (checked: $*)" >&2
   return 1
 }
+stop_portal_processes() {
+  kill_quietly xdg-desktop-portal-hyprland
+  kill_quietly xdg-desktop-portal-wlr
+  kill_quietly xdg-desktop-portal-gnome
+  kill_quietly xdg-desktop-portal-gtk
+  kill_quietly xdg-desktop-portal
+}
 
 restart_portal_via_systemd() {
   command -v systemctl >/dev/null 2>&1 || return 1
@@ -95,6 +102,9 @@ restart_portal_via_systemd() {
   fi
 
   systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GSETTINGS_SCHEMA_DIR >/dev/null 2>&1 || true
+  systemctl --user stop xdg-desktop-portal.service xdg-desktop-portal-hyprland.service xdg-desktop-portal-gtk.service >/dev/null 2>&1 || true
+  stop_portal_processes
+  sleep 0.5
   systemctl --user reset-failed xdg-desktop-portal-hyprland.service xdg-desktop-portal.service xdg-desktop-portal-gtk.service >/dev/null 2>&1 || true
   systemctl --user start graphical-session.target >/dev/null 2>&1 || true
 
@@ -105,9 +115,11 @@ restart_portal_via_systemd() {
     sleep 0.1
   done
 
-  systemctl --user restart xdg-desktop-portal-hyprland.service >/dev/null 2>&1 || true
-  systemctl --user restart xdg-desktop-portal-gtk.service >/dev/null 2>&1 || true
-  systemctl --user restart xdg-desktop-portal.service >/dev/null 2>&1 || true
+  systemctl --user start xdg-desktop-portal-hyprland.service >/dev/null 2>&1 || true
+  if is_ubuntu_family; then
+    systemctl --user start xdg-desktop-portal-gtk.service >/dev/null 2>&1 || true
+  fi
+  systemctl --user start xdg-desktop-portal.service >/dev/null 2>&1 || true
 
   for _ in $(seq 1 60); do
     if systemctl --user is-active --quiet xdg-desktop-portal-hyprland.service &&
@@ -121,11 +133,7 @@ restart_portal_via_systemd() {
 
 restart_portal_manually() {
   sleep 1
-  kill_quietly xdg-desktop-portal-hyprland
-  kill_quietly xdg-desktop-portal-wlr
-  kill_quietly xdg-desktop-portal-gnome
-  kill_quietly xdg-desktop-portal-gtk
-  kill_quietly xdg-desktop-portal
+  stop_portal_processes
   sleep 1
 
   start_portal_binary "xdg-desktop-portal-hyprland" \
@@ -146,8 +154,9 @@ restart_portal_manually() {
 }
 
 wait_for_wayland || true
-
-if ! restart_portal_via_systemd; then
+if command -v systemctl >/dev/null 2>&1; then
+  restart_portal_via_systemd || true
+else
   restart_portal_manually
 fi
 
