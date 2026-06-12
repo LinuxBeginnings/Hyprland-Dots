@@ -67,15 +67,26 @@ start_portal_binary() {
 
 restart_portal_via_systemd() {
   command -v systemctl >/dev/null 2>&1 || return 1
+  if command -v dbus-update-activation-environment >/dev/null 2>&1; then
+    dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE >/dev/null 2>&1 || true
+  fi
+  systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE >/dev/null 2>&1 || true
+  systemctl --user start graphical-session.target >/dev/null 2>&1 || true
 
-  systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP >/dev/null 2>&1 || true
-  systemctl --user --no-block start graphical-session.target >/dev/null 2>&1 || true
-  systemctl --user --no-block restart xdg-desktop-portal.service >/dev/null 2>&1 || true
-  systemctl --user --no-block restart xdg-desktop-portal-hyprland.service >/dev/null 2>&1 || true
-  systemctl --user --no-block restart xdg-desktop-portal-gtk.service >/dev/null 2>&1 || true
+  for _ in $(seq 1 30); do
+    if systemctl --user is-active --quiet graphical-session.target; then
+      break
+    fi
+    sleep 0.1
+  done
 
-  for _ in $(seq 1 40); do
-    if systemctl --user is-active --quiet xdg-desktop-portal-hyprland.service; then
+  systemctl --user restart xdg-desktop-portal-hyprland.service >/dev/null 2>&1 || true
+  systemctl --user restart xdg-desktop-portal-gtk.service >/dev/null 2>&1 || true
+  systemctl --user restart xdg-desktop-portal.service >/dev/null 2>&1 || true
+
+  for _ in $(seq 1 60); do
+    if systemctl --user is-active --quiet xdg-desktop-portal-hyprland.service &&
+      systemctl --user is-active --quiet xdg-desktop-portal.service; then
       return 0
     fi
     sleep 0.1
