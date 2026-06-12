@@ -346,6 +346,7 @@ fi
 detect_nvidia_adjust "$LOG"
 detect_vm_adjust "$LOG"
 detect_nixos_adjust "$LOG"
+adjust_qt_quick_controls_style "$LOG"
 # NixOS: report missing waybar-weather without attempting to install
 is_nixos() {
   grep -qi '^ID=nixos' /etc/os-release 2>/dev/null

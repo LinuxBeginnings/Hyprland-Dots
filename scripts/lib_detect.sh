@@ -66,6 +66,32 @@ detect_nixos_adjust() {
     grep -qx '\$scriptsDir/Polkit.sh' "$DISABLE_SA" || echo '$scriptsDir/Polkit.sh' >>"$DISABLE_SA"
   fi
 }
+# Qt Quick Controls style safety: enable Hyprland style only when module exists.
+adjust_qt_quick_controls_style() {
+  local log="$1"
+  local env_conf="config/hypr/configs/ENVariables.conf"
+  local env_lua="config/hypr/lua/env.lua"
+  local style="Basic"
+
+  if find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/org/hyprland/style' -print -quit 2>/dev/null | grep -q .; then
+    style="org.hyprland.style"
+  elif command -v dpkg >/dev/null 2>&1 && dpkg -s qml6-module-org-hyprland-style >/dev/null 2>&1; then
+    style="org.hyprland.style"
+  fi
+
+  if [ -f "$env_conf" ]; then
+    sed -i -E "s|^env = QT_QUICK_CONTROLS_STYLE,.*$|env = QT_QUICK_CONTROLS_STYLE,${style}|" "$env_conf"
+  fi
+  if [ -f "$env_lua" ]; then
+    sed -i -E "s|^hl\\.env\\(\"QT_QUICK_CONTROLS_STYLE\", \".*\"\\)$|hl.env(\"QT_QUICK_CONTROLS_STYLE\", \"${style}\")|" "$env_lua"
+  fi
+
+  if [ "$style" = "org.hyprland.style" ]; then
+    echo "${INFO:-[INFO]} hyprland Qt style module detected. Using QT_QUICK_CONTROLS_STYLE=$style" 2>&1 | tee -a "$log" || true
+  else
+    echo "${WARN:-[WARN]} hyprland Qt style module not found. Using QT_QUICK_CONTROLS_STYLE=Basic to avoid Qt app crashes." 2>&1 | tee -a "$log" || true
+  fi
+}
 
 # Decide waybar config/style based on chassis type. Echoes chosen config path.
 detect_waybar_config() {
