@@ -24,6 +24,22 @@
 
 ## Added:
 
+- Keybind `SUPER + ALT + F` to maximize window in `scrolling` layout
+- Keybind `SUPER+R` to toggle column widths in `scrolling` layout
+- Sample LUA workspace rules for setting layout per monitor/workspace
+  ```lua
+      hl.workspace_rule({ workspace = "1", monitor = "HDMI-A-1", layout = "scrolling" })
+      hl.workspace_rule({ workspace = "1", monitor = "HDMI-A-1", layout = "dwindle" })
+      hl.workspace_rule({ workspace = "1", monitor = "HDMI-A-1", layout = "master" })
+      hl.workspace_rule({ workspace = "1", monitor = "HDMI-A-1", layout = "monocle" })
+  ```
+- Sample `hyprlang` (.conf) versions also
+  ```ini
+      workspace = 1, monitor:HDMI-A-1, layout:scrolling
+      workspace = 1, monitor:HDMI-A-1, layout:dwindle
+      workspace = 1, monitor:HDMI-A-1, layout:master
+      workspace = 1, monitor:HDMI-A-1, layout:monocle
+  ```
 - Menu item in Quick settings, (SUPERSHIFT + E) to set Hyprlock background
 - Dark / Light theme toggle is now persistant
   - At startup it checks and restores selection

@@ -315,6 +315,7 @@ local keys_to_unbind = {
   "SUPER + V",
   "SUPER + W",
   "SUPER + P",
+  "SUPER + R",
   "SUPER + N",
   "SUPER + T",
   "SUPER + X",

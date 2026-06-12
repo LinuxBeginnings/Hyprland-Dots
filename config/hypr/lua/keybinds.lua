@@ -207,6 +207,12 @@ end
 -- Section: Window/session controls
 bind("SUPER SHIFT", "F", dispatch("fullscreen", ""), { description = "fullscreen" })
 bind("SUPER CTRL", "F", dispatch("fullscreen", "1"), { description = "maximize window" })
+bind(
+  "SUPER ALT",
+  "F",
+  exec_cmd("bash $HOME/.config/hypr/scripts/ScrollMaximizeToggle.sh"),
+  { description = "scrolling maximize toggle" }
+)
 bind("SUPER", "SPACE", dispatch("togglefloating", ""), { description = "Float current window" })
 bind("SUPER CTRL", "O", dispatch("setprop", "active opaque toggle"), { description = "toggle active window opacity" })
 bind(
@@ -315,6 +321,36 @@ bind(
   ),
   { description = "toggle scrolling V/H" }
 )
+local col_width_presets = { 0.25, 0.33, 0.5, 0.66, 0.75, 1.0 }
+bind("SUPER", "R", function()
+  local ws = hl.get_active_workspace and hl.get_active_workspace() or nil
+  if ws == nil or ws.tiled_layout ~= "scrolling" then
+    return
+  end
+
+  local w = hl.get_active_window and hl.get_active_window() or nil
+  local col = w ~= nil and w.layout and w.layout.column or nil
+  local current_width = nil
+  if type(col) == "table" then
+    current_width = col.width
+  else
+    current_width = col
+  end
+  if type(current_width) ~= "number" then
+    return
+  end
+
+  local closest, best = 1, math.huge
+  for i, v in ipairs(col_width_presets) do
+    local diff = math.abs(v - current_width)
+    if diff < best then
+      best, closest = diff, i
+    end
+  end
+
+  local nextIdx = closest % #col_width_presets + 1
+  hl.dispatch(hl.dsp.layout("colresize " .. tostring(col_width_presets[nextIdx])))
+end, { description = "cycle column width preset (scrolling)" })
 bind("ALT", "Tab", exec_cmd("$HOME/.config/hypr/scripts/LuaCycleWindow.sh next"), { description = "cycle next window" })
 
 -- Section: Audio, media, and hardware keys
