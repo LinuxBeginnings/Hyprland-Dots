@@ -322,9 +322,51 @@ bind(
   { description = "toggle scrolling V/H" }
 )
 local col_width_presets = { 0.25, 0.33, 0.5, 0.66, 0.75, 1.0 }
+local function _as_number(v)
+  if type(v) == "number" then
+    return v
+  end
+  if type(v) == "string" then
+    return tonumber(v)
+  end
+  return nil
+end
+local function _window_width(win)
+  if type(win) ~= "table" then
+    return nil
+  end
+  local sz = win.size
+  if type(sz) == "number" then
+    return sz
+  end
+  if type(sz) == "table" then
+    return _as_number(sz[1] or sz.width or sz.w)
+  end
+  return nil
+end
+local function _monitor_width(win)
+  local mon = type(win) == "table" and win.monitor or nil
+  if type(mon) == "table" then
+    local w = _as_number(mon.width or mon.w or (type(mon.size) == "table" and (mon.size[1] or mon.size.width)))
+    if w ~= nil then
+      return w
+    end
+  end
+  if hl.get_active_monitor then
+    local active_mon = hl.get_active_monitor()
+    if type(active_mon) == "table" then
+      local w = _as_number(active_mon.width or active_mon.w or (type(active_mon.size) == "table" and (active_mon.size[1] or active_mon.size.width)))
+      if w ~= nil then
+        return w
+      end
+    end
+  end
+  return nil
+end
 bind("SUPER", "R", function()
   local ws = hl.get_active_workspace and hl.get_active_workspace() or nil
-  if ws == nil or ws.tiled_layout ~= "scrolling" then
+  local ws_layout = ws and (ws.tiled_layout or ws.tiledLayout) or nil
+  if ws_layout ~= "scrolling" then
     return
   end
 
@@ -332,12 +374,22 @@ bind("SUPER", "R", function()
   local col = w ~= nil and w.layout and w.layout.column or nil
   local current_width = nil
   if type(col) == "table" then
-    current_width = col.width
+    current_width = _as_number(col.width)
   else
-    current_width = col
+    current_width = _as_number(col)
   end
   if type(current_width) ~= "number" then
+    local ww = _window_width(w)
+    local mw = _monitor_width(w)
+    if type(ww) == "number" and type(mw) == "number" and mw > 0 then
+      current_width = ww / mw
+    end
+  end
+  if type(current_width) ~= "number" or current_width <= 0 then
     return
+  end
+  if current_width > 1 then
+    current_width = 1
   end
 
   local closest, best = 1, math.huge
