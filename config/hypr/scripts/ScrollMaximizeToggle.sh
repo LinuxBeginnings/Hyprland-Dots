@@ -4,29 +4,77 @@ set -euo pipefail
 if ! command -v hyprctl >/dev/null 2>&1; then
   exit 1
 fi
+dispatch_ok() {
+  local dispatcher="$1"
+  shift
+  local output=""
+  case "$dispatcher" in
+    fullscreen)
+      if [[ "${1:-}" == "1" ]]; then
+        output="$(hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = "maximized" })' 2>&1 || true)"
+      else
+        output="$(hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = "fullscreen" })' 2>&1 || true)"
+      fi
+      ;;
+    layoutmsg)
+      local msg="${1:-}"
+      msg="${msg//\\/\\\\}"
+      msg="${msg//\"/\\\"}"
+      output="$(hyprctl dispatch "hl.dsp.layout(\"${msg}\")" 2>&1 || true)"
+      ;;
+    *)
+      output="$(hyprctl dispatch "$dispatcher" "$@" 2>&1 || true)"
+      ;;
+  esac
+  local normalized=""
+  normalized="$(printf '%s' "$output" | tr -d '\r\n')"
+  [[ -z "$normalized" || "$normalized" == "ok" ]]
+}
 
 if ! command -v jq >/dev/null 2>&1; then
-  hyprctl dispatch fullscreen 1 >/dev/null 2>&1 || true
+  dispatch_ok fullscreen 1 >/dev/null 2>&1 || true
   exit 0
 fi
 
 run_layoutmsg() {
   local msg="$1"
-  local output=""
-  output="$(hyprctl dispatch layoutmsg "$msg" 2>&1 || true)"
-  [[ "$(printf '%s' "$output" | tr -d '\r\n')" == "ok" ]]
+  dispatch_ok layoutmsg "$msg"
+}
+toggle_maximize() {
+  local active_window_json="$1"
+  local fullscreen_state=""
+  fullscreen_state="$(jq -r '
+    (.fullscreen // .fullscreenClient // 0) as $value
+    | if ($value | type) == "boolean" then
+        (if $value then 1 else 0 end)
+      elif ($value | type) == "number" then
+        $value
+      elif ($value | type) == "string" then
+        ($value | tonumber? // 0)
+      else
+        0
+      end
+  ' <<<"$active_window_json" 2>/dev/null || true)"
+  if [[ -n "$fullscreen_state" && "$fullscreen_state" != "null" ]] && awk -v v="$fullscreen_state" 'BEGIN { exit !(v > 0) }'; then
+    dispatch_ok fullscreen 1 >/dev/null 2>&1 || true
+    return 0
+  fi
+  return 1
 }
 
 workspace_json="$(hyprctl -j activeworkspace 2>/dev/null || true)"
 layout_name="$(jq -r '.tiledLayout // .tiled_layout // empty' <<<"$workspace_json")"
 
 if [[ "$layout_name" != "scrolling" ]]; then
-  hyprctl dispatch fullscreen 1 >/dev/null 2>&1 || true
+  dispatch_ok fullscreen 1 >/dev/null 2>&1 || true
   exit 0
 fi
 
 window_json="$(hyprctl -j activewindow 2>/dev/null || true)"
 if [[ -z "$window_json" || "$window_json" == "null" ]]; then
+  exit 0
+fi
+if toggle_maximize "$window_json"; then
   exit 0
 fi
 
@@ -47,7 +95,7 @@ if [[ -n "$column_width" && "$column_width" != "null" ]]; then
 fi
 
 if [[ -z "$window_address" || -z "$window_width" || "$window_width" == "null" ]]; then
-  hyprctl dispatch fullscreen 1 >/dev/null 2>&1 || true
+  dispatch_ok fullscreen 1 >/dev/null 2>&1 || true
   exit 0
 fi
 
@@ -105,6 +153,10 @@ if [[ -z "$column_width" || "$column_width" == "null" ]]; then
     if [[ -n "$max_width" ]]; then
       column_width="$(awk -v w="$window_width" -v mw="$max_width" 'BEGIN { if (w > 0 && mw > 0) printf "%.6f", (w / mw); }')"
     fi
+  else
+    dispatch_ok fullscreen 1 >/dev/null 2>&1 || true
+    trap - EXIT
+    exit 0
   fi
   if [[ -z "$column_width" || "$column_width" == "null" ]]; then
     trap - EXIT
@@ -120,4 +172,4 @@ jq --arg key "$window_address" --argjson value "$column_width" '. + {($key): $va
 mv "$tmp_file" "$state_file"
 trap - EXIT
 
-run_layoutmsg "colresize 1.0" >/dev/null 2>&1 || true
+run_layoutmsg "colresize 1.0" >/dev/null 2>&1 || dispatch_ok fullscreen 1 >/dev/null 2>&1 || true

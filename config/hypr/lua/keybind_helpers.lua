@@ -118,11 +118,17 @@ local function dispatch(name, args)
   if name == "togglefloating" and window_api.float then
     return window_api.float({ action = "toggle" })
   end
-  if name == "fullscreen" and window_api.fullscreen then
-    if args == "1" then
-      return window_api.fullscreen({ mode = "maximized" })
+  if name == "fullscreen" then
+    if window_api.fullscreen then
+      if args == "1" then
+        return window_api.fullscreen({ mode = "maximized" })
+      end
+      return window_api.fullscreen({ mode = "fullscreen" })
     end
-    return window_api.fullscreen({ mode = "fullscreen" })
+    if args == "1" then
+      return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\" })'")
+    end
+    return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"fullscreen\" })'")
   end
   if name == "pseudo" and window_api.pseudo then
     return window_api.pseudo()

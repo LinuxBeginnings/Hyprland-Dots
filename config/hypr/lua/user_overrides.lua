@@ -29,7 +29,6 @@ local system_files = {
   "system_startup.lua",
   "system_window_rules.lua",
   "system_layer_rules.lua",
-  "system_keybinds.lua",
   "system_settings.lua",
   "system_laptops.lua",
 }
