@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- LUA mode, `lua_user_overides.lua` wasn't loading `system_keybinds.lua`
 - `xdg-desktop-portal-hyprland` shows failed after CachyOS update
   - A regression bug in CachyOS is causing the issue
   - Screensharing doesn't work as a result
@@ -63,9 +64,9 @@
   - added equivalent startup command for Lua startup flow
 
   ## Updated:
-  - Reset binding for fullscreen and maximize 
-    - `SUPER + F` is maximize 
-    - `SHIFT + SHIFT + F` is fullscreen 
+  - Reset binding for fullscreen and maximize
+    - `SUPER + F` is maximize
+    - `SHIFT + SHIFT + F` is fullscreen
     - Now works in all layouts
   - Enabled 12 min timer on turning off monitor
     - For a very long that's been disabled by default
