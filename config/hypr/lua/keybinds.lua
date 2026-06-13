@@ -206,13 +206,7 @@ end
 
 -- Section: Window/session controls
 bind("SUPER SHIFT", "F", dispatch("fullscreen", ""), { description = "fullscreen" })
-bind("SUPER CTRL", "F", dispatch("fullscreen", "1"), { description = "maximize window" })
-bind(
-  "SUPER ALT",
-  "F",
-  exec_cmd("bash $HOME/.config/hypr/scripts/ScrollMaximizeToggle.sh"),
-  { description = "scrolling maximize toggle" }
-)
+bind("SUPER", "F", dispatch("fullscreen", "1"), { description = "maximize window" })
 bind("SUPER", "SPACE", dispatch("togglefloating", ""), { description = "Float current window" })
 bind("SUPER CTRL", "O", dispatch("setprop", "active opaque toggle"), { description = "toggle active window opacity" })
 bind(
