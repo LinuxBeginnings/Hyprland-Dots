@@ -11,6 +11,21 @@ set -euo pipefail
 
 watch_root="$HOME/.config/hypr"
 [ -d "$watch_root" ] || exit 0
+session="${HYPRLAND_INSTANCE_SIGNATURE:-default}"
+pid_file="/tmp/hypr-lua-autoreload-${session}.pid"
+
+if [ -f "$pid_file" ]; then
+  existing_pid="$(cat "$pid_file" 2>/dev/null || true)"
+  if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
+    exit 0
+  fi
+fi
+
+echo "$$" >"$pid_file"
+cleanup() {
+  rm -f "$pid_file"
+}
+trap cleanup EXIT INT TERM
 
 reload_hypr() {
   hyprctl reload >/dev/null 2>&1 || true

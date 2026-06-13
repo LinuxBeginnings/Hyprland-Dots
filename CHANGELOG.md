@@ -4,7 +4,8 @@
 
 ## Fixed:
 
-- LUA mode, `lua_user_overides.lua` wasn't loading `system_keybinds.lua`
+- LUA: Fixed `LuaAutoReload.sh` wasn't activating changes on save 
+- LUA: `lua_user_overides.lua` wasn't loading `system_keybinds.lua`
 - `xdg-desktop-portal-hyprland` shows failed after CachyOS update
   - A regression bug in CachyOS is causing the issue
   - Screensharing doesn't work as a result
