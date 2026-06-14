@@ -72,6 +72,8 @@ adjust_qt_quick_controls_style() {
   local env_conf="config/hypr/configs/ENVariables.conf"
   local env_lua="config/hypr/lua/env.lua"
   local style="Basic"
+  local qt_style_override="Fusion"
+  local has_kvantum_qml=0
 
   if find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/org/hyprland/style' -print -quit 2>/dev/null | grep -q .; then
     style="org.hyprland.style"
@@ -79,17 +81,29 @@ adjust_qt_quick_controls_style() {
     style="org.hyprland.style"
   fi
 
+  if find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/kvantum' -print -quit 2>/dev/null | grep -q .; then
+    has_kvantum_qml=1
+    qt_style_override="kvantum"
+  fi
+
   if [ -f "$env_conf" ]; then
     sed -i -E "s|^env = QT_QUICK_CONTROLS_STYLE,.*$|env = QT_QUICK_CONTROLS_STYLE,${style}|" "$env_conf"
+    sed -i -E "s|^env = QT_STYLE_OVERRIDE,.*$|env = QT_STYLE_OVERRIDE,${qt_style_override}|" "$env_conf"
   fi
   if [ -f "$env_lua" ]; then
     sed -i -E "s|^hl\\.env\\(\"QT_QUICK_CONTROLS_STYLE\", \".*\"\\)$|hl.env(\"QT_QUICK_CONTROLS_STYLE\", \"${style}\")|" "$env_lua"
+    sed -i -E "s|^hl\\.env\\(\"QT_STYLE_OVERRIDE\", \".*\"\\)$|hl.env(\"QT_STYLE_OVERRIDE\", \"${qt_style_override}\")|" "$env_lua"
   fi
 
   if [ "$style" = "org.hyprland.style" ]; then
     echo "${INFO:-[INFO]} hyprland Qt style module detected. Using QT_QUICK_CONTROLS_STYLE=$style" 2>&1 | tee -a "$log" || true
   else
     echo "${WARN:-[WARN]} hyprland Qt style module not found. Using QT_QUICK_CONTROLS_STYLE=Basic to avoid Qt app crashes." 2>&1 | tee -a "$log" || true
+  fi
+  if [ "$has_kvantum_qml" -eq 1 ]; then
+    echo "${INFO:-[INFO]} Kvantum QML module detected. Using QT_STYLE_OVERRIDE=kvantum" 2>&1 | tee -a "$log" || true
+  else
+    echo "${WARN:-[WARN]} Kvantum QML module not found. Using QT_STYLE_OVERRIDE=Fusion as fallback." 2>&1 | tee -a "$log" || true
   fi
 }
 
