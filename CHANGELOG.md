@@ -4,6 +4,9 @@
 
 ## Fixed:
 
+- Waybar would start then be restarted at login 
+  - Changed start order, `ThemeMode.sh` runs before waybar start 
+  - This restores users dark/light theme choice before waybar starts
 - LUA: `QT_STYLE_OVERRIDE` in LUA was hard coded to `kvantum`
 - LUA: Fixed `LuaAutoReload.sh` wasn't activating changes on save
 - LUA: `lua_user_overides.lua` wasn't loading `system_keybinds.lua`
