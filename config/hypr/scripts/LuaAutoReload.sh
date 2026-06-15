@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-watch_root="$HOME/.config/hypr"
+watch_root="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
 [ -d "$watch_root" ] || exit 0
 session="${HYPRLAND_INSTANCE_SIGNATURE:-default}"
 pid_file="/tmp/hypr-lua-autoreload-${session}.pid"

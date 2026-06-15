@@ -10,7 +10,7 @@
 
 theme="freedesktop" # Set the theme for the system sounds.
 mute=false          # Set to true to mute the system sounds.
-directSoundDir="$HOME/.config/hypr/sounds"
+directSoundDir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/sounds"
 
 # Mute individual sounds here.
 muteScreenshots=false

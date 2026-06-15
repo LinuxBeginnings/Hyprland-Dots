@@ -6,7 +6,7 @@ SPECIFIC_ID=$ID
 FAMILY_ID=$ID_LIKE
 
 # 2. Define your asset directory
-ASSET_DIR="$HOME/.config/fastfetch/images"
+ASSET_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch/images"
 
 # 3. Selection Logic
 if [ -f "$ASSET_DIR/$SPECIFIC_ID.png" ]; then

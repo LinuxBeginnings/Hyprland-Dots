@@ -9,17 +9,17 @@
 
 # Variables
 terminal=kitty
-wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
-wallpaper_output="$HOME/.config/hypr/wallpaper_effects/.wallpaper_modified"
-SCRIPTSDIR="$HOME/.config/hypr/scripts"
+wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current"
+wallpaper_output="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_modified"
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 # shellcheck source=/dev/null
 . "$SCRIPTSDIR/WallpaperCmd.sh"
 focused_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
-rofi_theme="$HOME/.config/rofi/config-wallpaper-effect.rasi"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-wallpaper-effect.rasi"
 
 # Directory for swaync
-iDIR="$HOME/.config/swaync/images"
-iDIRi="$HOME/.config/swaync/icons"
+iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
+iDIRi="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/icons"
 
 # swww/awww transition config
 FPS=60

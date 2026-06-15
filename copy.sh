@@ -6,7 +6,7 @@
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
 # Purpose:
-#   Orchestrates copying/upgrading LinuxBeginnings's Hyprland dotfiles into ~/.config.
+#   Orchestrates copying/upgrading LinuxBeginnings's Hyprland dotfiles into ${XDG_CONFIG_HOME:-$HOME/.config}.
 #   Handles interactive prompts, backups/restores, per-app tweaks, and express mode.
 #
 # Layout (high-level; future modularization targets):
@@ -35,11 +35,11 @@
 #   - Consider modularizing remaining app-specific tweaks/prompts.
 
 clear
-wallpaper=$HOME/.config/hypr/wallpaper_effects/.wallpaper_current
+wallpaper=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current
 # Defaults updated to normalized names
-waybar_style="$HOME/.config/waybar/style/Extra-Prismatic-Glow.css"
-waybar_config="$HOME/.config/waybar/configs/TOP-Default"
-waybar_config_laptop="$HOME/.config/waybar/configs/TOP-Default-Laptop"
+waybar_style="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/Extra-Prismatic-Glow.css"
+waybar_config="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/TOP-Default"
+waybar_config_laptop="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/TOP-Default-Laptop"
 
 # Set some colors for output messages
 OK="$(tput setaf 2)[OK]$(tput sgr0)"
@@ -147,7 +147,7 @@ version_gte() {
 }
 
 get_installed_dotfiles_version() {
-  local hypr_dir="$HOME/.config/hypr"
+  local hypr_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
   if [ -d "$hypr_dir" ]; then
     # Pick the highest semantic version among files named vX.Y.Z
     find "$hypr_dir" -maxdepth 1 -type f -name 'v*.*.*' -printf '%f\n' 2>/dev/null |
@@ -434,10 +434,10 @@ prompt_express_upgrade "$EXPRESS_SUPPORTED" "$LOG"
 
 set -e
 
-# Check if the ~/.config/ directory exists
-if [ ! -d "$HOME/.config" ]; then
-  echo "${ERROR} - $HOME/.config directory does not exist. Creating it now."
-  mkdir -p "$HOME/.config" && echo "Directory created successfully." || echo "Failed to create directory."
+# Check if the ${XDG_CONFIG_HOME:-$HOME/.config}/ directory exists
+if [ ! -d "${XDG_CONFIG_HOME:-$HOME/.config}" ]; then
+  echo "${ERROR} - ${XDG_CONFIG_HOME:-$HOME/.config} directory does not exist. Creating it now."
+  mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}" && echo "Directory created successfully." || echo "Failed to create directory."
 fi
 
 printf "${INFO} - copying dotfiles ${SKY_BLUE}first${RESET} part\n"
@@ -453,7 +453,7 @@ printf "\\n%.0s" {1..1}
 # - upgrade (non-express): copy only if missing; prompt only if copied
 # - express: copy only if missing; never prompt
 WAYBAR_WEATHER_SRC="$DOTFILES_DIR/config/waybar-weather"
-WAYBAR_WEATHER_DEST="$HOME/.config/waybar-weather"
+WAYBAR_WEATHER_DEST="${XDG_CONFIG_HOME:-$HOME/.config}/waybar-weather"
 WAYBAR_WEATHER_COPIED=0
 
 if [ "$RUN_MODE" = "install" ]; then
@@ -518,7 +518,7 @@ fi
 if command -v ags >/dev/null 2>&1; then
   echo -e "${NOTE} - ${YELLOW}ags${RESET} is detected as installed"
 
-  DIRPATH_AGS="$HOME/.config/ags"
+  DIRPATH_AGS="${XDG_CONFIG_HOME:-$HOME/.config}/ags"
 
   if [ ! -d "$DIRPATH_AGS" ]; then
     echo "${INFO} - ags config not found, copying new config."
@@ -559,7 +559,7 @@ INSTALLED_VERSION_AT_START="$(get_installed_dotfiles_version || true)"
 if command -v qs >/dev/null 2>&1; then
   echo -e "${NOTE} - ${YELLOW}quickshell${RESET} is detected as installed"
 
-  DIRPATH_QS="$HOME/.config/quickshell"
+  DIRPATH_QS="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
 
   if [ ! -d "$DIRPATH_QS" ]; then
     echo "${INFO} - quickshell config not found, copying new config."
@@ -606,7 +606,7 @@ if command -v qs >/dev/null 2>&1; then
   fi
 
   # Check for old quickshell startup commands and update them
-  HYPR_STARTUP="$HOME/.config/hypr/configs/Startup_Apps.conf"
+  HYPR_STARTUP="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/configs/Startup_Apps.conf"
   if [ -f "$HYPR_STARTUP" ]; then
     if grep -q '^exec-once = qs\s*$\|^exec-once = qs &' "$HYPR_STARTUP"; then
       echo "${NOTE} - Found old Quickshell startup command, updating to new overview config..." 2>&1 | tee -a "$LOG"
@@ -640,14 +640,14 @@ rofi_DIR="$HOME/.local/share/rofi/themes"
 if [ ! -d "$rofi_DIR" ]; then
   mkdir -p "$rofi_DIR"
 fi
-if [ -d "$HOME/.config/rofi/themes" ]; then
-  if [ -z "$(ls -A $HOME/.config/rofi/themes)" ]; then
-    echo '/* Dummy Rofi theme */' >"$HOME/.config/rofi/themes/dummy.rasi"
+if [ -d "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes" ]; then
+  if [ -z "$(ls -A ${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes)" ]; then
+    echo '/* Dummy Rofi theme */' >"${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/dummy.rasi"
   fi
-  ln -snf "$HOME/.config/rofi/themes/"* "$HOME/.local/share/rofi/themes/"
+  ln -snf "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/"* "$HOME/.local/share/rofi/themes/"
   # Delete the dummy file if it was created
-  if [ -f "$HOME/.config/rofi/themes/dummy.rasi" ]; then
-    rm "$HOME/.config/rofi/themes/dummy.rasi"
+  if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/dummy.rasi" ]; then
+    rm "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/dummy.rasi"
   fi
 fi
 
@@ -663,14 +663,14 @@ else
 fi
 
 # Set some files as executable
-chmod +x "$HOME/.config/hypr/scripts/"* 2>&1 | tee -a "$LOG"
-chmod +x "$HOME/.config/hypr/UserScripts/"* 2>&1 | tee -a "$LOG"
+chmod +x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/"* 2>&1 | tee -a "$LOG"
+chmod +x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserScripts/"* 2>&1 | tee -a "$LOG"
 # Set executable for initial-boot.sh
-chmod +x "$HOME/.config/hypr/initial-boot.sh" 2>&1 | tee -a "$LOG"
+chmod +x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/initial-boot.sh" 2>&1 | tee -a "$LOG"
 
 # Copy systemd user overrides (e.g., hyprpolkitagent)
 SYSTEMD_SRC="$DOTFILES_DIR/config/systemd"
-SYSTEMD_DEST="$HOME/.config/systemd"
+SYSTEMD_DEST="${XDG_CONFIG_HOME:-$HOME/.config}/systemd"
 if [ -d "$SYSTEMD_SRC" ]; then
   mkdir -p "$SYSTEMD_DEST"
   cp -r "$SYSTEMD_SRC/." "$SYSTEMD_DEST/" 2>&1 | tee -a "$LOG"
@@ -701,7 +701,7 @@ fi
 # Ensure waybar config uses the normalized default.
 # - If the current path is not a symlink (regular file), convert it to a symlink.
 # - If the symlink points somewhere else (or is broken), reset it to the new default.
-WAYBAR_CONFIG_LINK="$HOME/.config/waybar/config"
+WAYBAR_CONFIG_LINK="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/config"
 WAYBAR_CONFIG_TARGET="$config_file"
 if [ -e "$WAYBAR_CONFIG_TARGET" ]; then
   if [ -L "$WAYBAR_CONFIG_LINK" ]; then
@@ -717,12 +717,12 @@ else
 fi
 
 # Remove inappropriate waybar configs
-rm -rf "$HOME/.config/waybar/configs/[TOP] Default$config_remove" \
-  "$HOME/.config/waybar/configs/[BOT] Default$config_remove" \
-  "$HOME/.config/waybar/configs/[TOP] Default$config_remove (old v1)" \
-  "$HOME/.config/waybar/configs/[TOP] Default$config_remove (old v2)" \
-  "$HOME/.config/waybar/configs/[TOP] Default$config_remove (old v3)" \
-  "$HOME/.config/waybar/configs/[TOP] Default$config_remove (old v4)" 2>&1 | tee -a "$LOG" || true
+rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/[TOP] Default$config_remove" \
+  "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/[BOT] Default$config_remove" \
+  "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/[TOP] Default$config_remove (old v1)" \
+  "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/[TOP] Default$config_remove (old v2)" \
+  "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/[TOP] Default$config_remove (old v3)" \
+  "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/[TOP] Default$config_remove (old v4)" 2>&1 | tee -a "$LOG" || true
 
 printf "\n%.0s" {1..1}
 
@@ -790,7 +790,7 @@ fi
 # Ensure waybar style uses the normalized default.
 # - If the current path is not a symlink (regular file), convert it to a symlink.
 # - If the symlink points somewhere else (or is broken), reset it to the new default.
-WAYBAR_STYLE_LINK="$HOME/.config/waybar/style.css"
+WAYBAR_STYLE_LINK="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
 WAYBAR_STYLE_TARGET="$waybar_style"
 if [ -e "$WAYBAR_STYLE_TARGET" ]; then
   if [ -L "$WAYBAR_STYLE_LINK" ]; then

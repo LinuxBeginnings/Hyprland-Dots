@@ -13,8 +13,8 @@ set -euo pipefail
 wallust_args=()
 wallust_kitty_args=()
 # shellcheck source=/dev/null
-if [ -f "$HOME/.config/hypr/scripts/WallustConfig.sh" ]; then
-  . "$HOME/.config/hypr/scripts/WallustConfig.sh"
+if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustConfig.sh" ]; then
+  . "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustConfig.sh"
 fi
 have_notify() { command -v notify-send >/dev/null 2>&1; }
 wallust_log="${XDG_CACHE_HOME:-$HOME/.cache}/wallust/wallust-swww.log"
@@ -30,8 +30,8 @@ restore_layout_after_reload() {
   local layout="$1"
   [ -n "$layout" ] || return 0
 
-  if [ -x "$HOME/.config/hypr/scripts/ChangeLayout.sh" ]; then
-    if "$HOME/.config/hypr/scripts/ChangeLayout.sh" --no-notify "$layout" >/dev/null 2>&1; then
+  if [ -x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" ]; then
+    if "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" --no-notify "$layout" >/dev/null 2>&1; then
       return 0
     fi
   fi
@@ -49,9 +49,9 @@ reload_hypr_preserve_layout() {
   restore_layout_after_reload "$active_layout"
 }
 ensure_wallust_waybar_style() {
-  local waybar_style="$HOME/.config/waybar/style.css"
-  local colors_file="$HOME/.config/waybar/wallust/colors-waybar.css"
-  local styles_dir="$HOME/.config/waybar/style"
+  local waybar_style="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
+  local colors_file="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
+  local styles_dir="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style"
   [ -f "$colors_file" ] || return 0
   if [ -f "$waybar_style" ] && grep -q 'colors-waybar.css' "$waybar_style"; then
     return 0
@@ -88,8 +88,8 @@ else
   cache_dir="$HOME/.cache/swww/"
   cache_dir_fallback="$HOME/.cache/awww/"
 fi
-rofi_link="$HOME/.config/rofi/.current_wallpaper"
-wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
+rofi_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper"
+wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current"
 read_cached_wallpaper() {
   local cache_file="$1"
   if [[ -f "$cache_file" ]]; then
@@ -163,7 +163,7 @@ mkdir -p "$(dirname "$wallpaper_current")"
 cp -f "$wallpaper_path" "$wallpaper_current" || true
 
 # Ensure Ghostty directory exists so Wallust can write target even if Ghostty isn't installed
-mkdir -p "$HOME/.config/ghostty" || true
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" || true
 wait_for_templates() {
   local start_ts="$1"
   shift
@@ -188,7 +188,7 @@ wait_for_templates() {
   return 1
 }
 
-# Run wallust (silent) to regenerate templates defined in ~/.config/wallust/wallust.toml
+# Run wallust (silent) to regenerate templates defined in ${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust.toml
 # -s is used in this repo to keep things quiet and avoid extra prompts
 start_ts=$(date +%s)
 if ! wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1; then
@@ -197,9 +197,9 @@ if ! wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1;
   exit 1
 fi
 wallust_targets=(
-  "$HOME/.config/waybar/wallust/colors-waybar.css"
-  "$HOME/.config/rofi/wallust/colors-rofi.rasi"
-  "$HOME/.config/hypr/wallust/wallust-hyprland.conf"
+  "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
+  "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/wallust/colors-rofi.rasi"
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
 )
 if ! wait_for_templates "$start_ts" "${wallust_targets[@]}"; then
   have_notify && notify-send -u critical -a WallustSwww \
@@ -210,7 +210,7 @@ ensure_wallust_waybar_style
 reload_running_cava_colors
 
 # Normalize Rofi selection colors to a brighter accent and readable foreground
-rofi_colors="$HOME/.config/rofi/wallust/colors-rofi.rasi"
+rofi_colors="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/wallust/colors-rofi.rasi"
 if [ -f "$rofi_colors" ]; then
   accent_hex=$(sed -n 's/^\s*color13:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
   [ -z "$accent_hex" ] && accent_hex=$(sed -n 's/^\s*color12:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
@@ -244,7 +244,7 @@ run_wallust_with_config() {
   # Legacy fallback for builds that still honor env-based config override.
   WALLUST_CONFIG="$cfg" wallust run -s "$wallpaper_path" || true
 }
-wallust_hypr_colors="$HOME/.config/hypr/wallust/wallust-hyprland.conf"
+wallust_hypr_colors="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
 extract_wallust_hex() {
   local key="$1"
   awk -v key="$key" '
@@ -274,7 +274,7 @@ apply_hypr_border_fallback() {
 }
 
 apply_hypr_gap_fallback() {
-  local decorations_lua="$HOME/.config/hypr/UserConfigs/user_decorations.lua"
+  local decorations_lua="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/user_decorations.lua"
   [ -s "$decorations_lua" ] || return 0
   local gaps_in gaps_out border_size
   gaps_in="$(sed -n 's/^[[:space:]]*gaps_in[[:space:]]*=[[:space:]]*\([0-9]\+\).*/\1/p' "$decorations_lua" | head -n1)"
@@ -289,9 +289,9 @@ apply_hypr_gap_fallback() {
 # Apply Hyprland updates immediately to avoid delayed border/gap changes.
 reload_hypr_preserve_layout
 
-kitty_cfg="$HOME/.config/wallust/wallust-kitty.toml"
+kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-kitty.toml"
 if [ "${#wallust_kitty_args[@]}" -gt 0 ]; then
-  kitty_cfg="$HOME/.config/wallust/wallust-kitty-v4.toml"
+  kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-kitty-v4.toml"
 fi
 (
   if [ -f "$kitty_cfg" ]; then
@@ -300,7 +300,7 @@ fi
 
   # Reload kitty colors when wallpaper-based theme is active.
   # Use SIGUSR1 directly to avoid extra latency from kitty remote-control calls.
-  kitty_wallust_theme="$HOME/.config/kitty/kitty-themes/01-Wallust.conf"
+  kitty_wallust_theme="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty-themes/01-Wallust.conf"
   if [ -s "$kitty_wallust_theme" ]; then
     if pidof kitty >/dev/null 2>&1; then
       for pid in $(pidof kitty); do
@@ -310,13 +310,13 @@ fi
   fi
 
   # Normalize Ghostty palette syntax in case ':' was used by older files
-  if [ -f "$HOME/.config/ghostty/wallust.conf" ]; then
-    sed -i -E 's/^(\s*palette\s*=\s*)([0-9]{1,2}):/\1\2=/' "$HOME/.config/ghostty/wallust.conf" 2>/dev/null || true
+  if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" ]; then
+    sed -i -E 's/^(\s*palette\s*=\s*)([0-9]{1,2}):/\1\2=/' "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" 2>/dev/null || true
   fi
 
   # Light wait for Ghostty colors file to be present then signal Ghostty to reload (SIGUSR2)
   for _ in 1 2 3; do
-    [ -s "$HOME/.config/ghostty/wallust.conf" ] && break
+    [ -s "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" ] && break
     sleep 0.1
   done
   if pidof ghostty >/dev/null; then

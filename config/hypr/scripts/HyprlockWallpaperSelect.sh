@@ -9,13 +9,13 @@
 
 PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
 wallDIR="$PICTURES_DIR/wallpapers"
-scriptsDir="$HOME/.config/hypr/scripts"
-iDIR="$HOME/.config/swaync/images"
+scriptsDir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
+iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
 # shellcheck source=/dev/null
 . "$scriptsDir/WallpaperCmd.sh" 2>/dev/null || true
 
-rofi_theme="$HOME/.config/rofi/config-wallpaper.rasi"
-lock_cache_dir="$HOME/.config/hypr/wallpaper_effects"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-wallpaper.rasi"
+lock_cache_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects"
 lock_wallpaper_link="$lock_cache_dir/.hyprlock_current"
 lock_wallpaper_current="$lock_cache_dir/.wallpaper_current"
 video_cache_dir="$HOME/.cache/hyprlock_preview"
@@ -152,7 +152,7 @@ if [[ -z "$focused_monitor" ]]; then
   exit 1
 fi
 
-per_monitor_rofi_link="$HOME/.config/rofi/.current_wallpaper_${focused_monitor}"
+per_monitor_rofi_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper_${focused_monitor}"
 per_monitor_wallpaper_current="$lock_cache_dir/.wallpaper_current_${focused_monitor}"
 
 scale_factor=$(hyprctl monitors -j | jq -r --arg mon "$focused_monitor" '.[] | select(.name == $mon) | .scale')
@@ -291,9 +291,9 @@ set_hyprlock_wallpaper() {
     return 1
   fi
 
-  update_hyprlock_config "$HOME/.config/hypr/hyprlock.conf" "$lock_wallpaper_link"
-  update_hyprlock_config "$HOME/.config/hypr/hyprlock-2k.conf" "$lock_wallpaper_link"
-  update_hyprlock_config "$HOME/.config/hypr/hyprlock-1080p.conf" "$lock_wallpaper_link"
+  update_hyprlock_config "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprlock.conf" "$lock_wallpaper_link"
+  update_hyprlock_config "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprlock-2k.conf" "$lock_wallpaper_link"
+  update_hyprlock_config "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprlock-1080p.conf" "$lock_wallpaper_link"
 
   pkill -USR1 hyprlock 2>/dev/null || true
 

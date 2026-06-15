@@ -9,7 +9,7 @@
 # Updated for UserConfigs/configs separation
 
 # Detect active Hyprland config mode (Lua entrypoint vs legacy .conf includes)
-config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+config_home="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
 hypr_dir="$config_home/hypr"
 lua_entry="$hypr_dir/hyprland.lua"
 legacy_lua_entry="$config_home/hyprland.lua"
@@ -49,9 +49,9 @@ fi
 # variables
 configs="$hypr_dir/configs"
 UserConfigs="$hypr_dir/UserConfigs"
-rofi_theme="$HOME/.config/rofi/config-edit.rasi"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-edit.rasi"
 msg=' ⁉️ Choose what to do ⁉️'
-iDIR="$HOME/.config/swaync/images"
+iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
 scriptsDir="$hypr_dir/scripts"
 UserScripts="$hypr_dir/UserScripts"
 

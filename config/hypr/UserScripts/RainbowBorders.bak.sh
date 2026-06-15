@@ -10,7 +10,7 @@
 # Possible values: "wallust_random", "rainbow", "gradient_flow"
 EFFECT_TYPE="gradient_flow"
 
-WALLUST_COLORS_SOURCE="$HOME/.config/hypr/wallust/wallust-hyprland.conf"
+WALLUST_COLORS_SOURCE="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
 
 WALLUST_COLORS=()
 

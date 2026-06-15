@@ -16,7 +16,7 @@ if pidof rofi > /dev/null; then
 fi
 
 # define the config files
-config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+config_home="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
 hypr_dir="$config_home/hypr"
 keybinds_conf="$hypr_dir/configs/Keybinds.conf"
 user_keybinds_conf="$hypr_dir/UserConfigs/UserKeybinds.conf"
@@ -26,7 +26,7 @@ lua_user_keybinds="$hypr_dir/UserConfigs/user_keybinds.lua"
 lua_system_keybinds="$hypr_dir/configs/system_keybinds.lua"
 lua_legacy_system_keybinds="$hypr_dir/UserConfigs/system_keybinds.lua"
 lua_overrides="$hypr_dir/UserConfigs/user_overrides.lua"
-rofi_theme="$HOME/.config/rofi/config-keybinds.rasi"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-keybinds.rasi"
 msg='☣️ NOTE ☣️: Clicking with Mouse or Pressing ENTER will have NO function'
 
 # detect active Hyprland config mode (Lua entrypoint vs legacy .conf includes)
@@ -55,7 +55,7 @@ fi
 
 # Parse binds using the python script for speed
 # The last argument must be the user config for override logic to work correctly
-display_keybinds=$("$HOME/.config/hypr/scripts/keybinds_parser.py" "${files[@]}")
+display_keybinds=$("${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/keybinds_parser.py" "${files[@]}")
 
 # Check for suggestions file created by python script
 if [[ -f "/tmp/hypr_keybind_suggestions_file" ]]; then

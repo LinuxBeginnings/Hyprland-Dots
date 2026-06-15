@@ -11,15 +11,15 @@
 terminal=kitty
 PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
 wallDIR="$PICTURES_DIR/wallpapers"
-SCRIPTSDIR="$HOME/.config/hypr/scripts"
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 # shellcheck source=/dev/null
 . "$SCRIPTSDIR/WallpaperCmd.sh"
-wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
-wallpaper_link="$HOME/.config/rofi/.current_wallpaper"
+wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current"
+wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper"
 
 # Directory for swaync
-iDIR="$HOME/.config/swaync/images"
-iDIRi="$HOME/.config/swaync/icons"
+iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
+iDIRi="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/icons"
 
 # swww/awww transition config
 FPS=60
@@ -40,11 +40,11 @@ if ! command -v bc &>/dev/null; then
 fi
 
 # Variables
-rofi_theme="$HOME/.config/rofi/config-wallpaper.rasi"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-wallpaper.rasi"
 focused_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
 
-per_monitor_wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current_${focused_monitor}"
-per_monitor_wallpaper_link="$HOME/.config/rofi/.current_wallpaper_${focused_monitor}"
+per_monitor_wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current_${focused_monitor}"
+per_monitor_wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper_${focused_monitor}"
 
 # Ensure focused_monitor is detected
 if [[ -z "$focused_monitor" ]]; then
@@ -128,7 +128,7 @@ menu() {
 
 modify_startup_config() {
   local selected_file="$1"
-  local startup_config="$HOME/.config/hypr/UserConfigs/Startup_Apps.conf"
+  local startup_config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/Startup_Apps.conf"
 
   # Check if it's a live wallpaper (video)
   if [[ "$selected_file" =~ \.(mp4|mkv|mov|webm)$ ]]; then

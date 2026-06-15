@@ -5,12 +5,12 @@
 #  License: GNU GPLv3
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
-# A modified version of Rofi-Theme-Selector, concentrating only on ~/.local and also, applying only 10 @themes in ~/.config/rofi/config.rasi
+# A modified version of Rofi-Theme-Selector, concentrating only on ~/.local and also, applying only 10 @themes in ${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config.rasi
 # as opposed to continous adding of //@theme
 
 # This code is released in public domain by Dave Davenport <qball@gmpclient.org>
 
-iDIR="$HOME/.config/swaync/images"
+iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
 
 
 OS="linux"
@@ -42,7 +42,7 @@ fi
 
 TMP_CONFIG_FILE=$(${MKTEMP}).rasi
 #rofi_theme_dir="${HOME}/.local/share/rofi/themes"
-rofi_config_file="${XDG_CONFIG_HOME:-${HOME}/.config}/rofi/config.rasi"
+rofi_config_file="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}/rofi/config.rasi"
 
 ##
 # Array with parts to the found themes.
@@ -57,7 +57,7 @@ declare -a theme_names
 ##
 # Find themes in defined directories
 find_themes() {
-    directories=("$HOME/.local/share/rofi/themes" "$HOME/.config/rofi/themes")
+    directories=("$HOME/.local/share/rofi/themes" "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes")
     
     for TD in "${directories[@]}"; do
         if [ -d "$TD" ]; then
@@ -86,8 +86,8 @@ add_theme_to_config() {
     # Determine the correct path for the theme
     if [[ -f "$HOME/.local/share/rofi/themes/$theme_name.rasi" ]]; then
         theme_path="$HOME/.local/share/rofi/themes/$theme_name.rasi"
-    elif [[ -f "$HOME/.config/rofi/themes/$theme_name.rasi" ]]; then
-        theme_path="$HOME/.config/rofi/themes/$theme_name.rasi"
+    elif [[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/$theme_name.rasi" ]]; then
+        theme_path="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/$theme_name.rasi"
     else
         echo "Theme not found: $theme_name"
         return 1

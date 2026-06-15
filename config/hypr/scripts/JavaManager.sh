@@ -201,7 +201,7 @@ generate_list() {
 }
 
 # --- 6. rofi ---
-THEME="$HOME/.config/rofi/config.rasi"
+THEME="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config.rasi"
 
 SELECTION=$(generate_list | rofi -dmenu -i \
   -p "󰒓 Java" \

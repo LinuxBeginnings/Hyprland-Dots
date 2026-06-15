@@ -12,10 +12,10 @@ copy_phase1() {
   local base="${DOTFILES_DIR:-.}"
   local dirs="fastfetch kitty rofi swaync"
   for DIR2 in $dirs; do
-    local DIRPATH="$HOME/.config/$DIR2"
+    local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/$DIR2"
     if [ -d "$DIRPATH" ]; then
       while true; do
-        printf "\n${INFO:-[INFO]} Found ${YELLOW:-}$DIR2${RESET:-} config found in ~/.config/\n"
+        printf "\n${INFO:-[INFO]} Found ${YELLOW:-}$DIR2${RESET:-} config found in ${XDG_CONFIG_HOME:-$HOME/.config}/\n"
         echo -n "${CAT:-[ACTION]} Do you want to replace ${YELLOW:-}$DIR2${RESET:-} config? (y/n): "
         read DIR1_CHOICE
         case "$DIR1_CHOICE" in
@@ -23,17 +23,17 @@ copy_phase1() {
           BACKUP_DIR=$(get_backup_dirname)
           mv "$DIRPATH" "$DIRPATH-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
           echo -e "${NOTE:-[NOTE]} - Backed up $DIR2 to $DIRPATH-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
-          cp -r "$base/config/$DIR2" "$HOME/.config/$DIR2" 2>&1 | tee -a "$log"
+          cp -r "$base/config/$DIR2" "${XDG_CONFIG_HOME:-$HOME/.config}/$DIR2" 2>&1 | tee -a "$log"
           echo -e "${OK:-[OK]} - Replaced $DIR2 with new configuration." 2>&1 | tee -a "$log"
           if [ "$DIR2" = "rofi" ]; then
             if [ -d "$DIRPATH-backup-$BACKUP_DIR/themes" ]; then
               for file in "$DIRPATH-backup-$BACKUP_DIR/themes"/*; do
                 [ -e "$file" ] || continue
-                cp -n "$file" "$HOME/.config/rofi/themes/" >>"$log" 2>&1 || true
+                cp -n "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/" >>"$log" 2>&1 || true
               done || true
             fi
             if [ -f "$DIRPATH-backup-$BACKUP_DIR/0-shared-fonts.rasi" ]; then
-              cp "$DIRPATH-backup-$BACKUP_DIR/0-shared-fonts.rasi" "$HOME/.config/rofi/0-shared-fonts.rasi" >>"$log" 2>&1
+              cp "$DIRPATH-backup-$BACKUP_DIR/0-shared-fonts.rasi" "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/0-shared-fonts.rasi" >>"$log" 2>&1
             fi
           fi
           break
@@ -46,7 +46,7 @@ copy_phase1() {
         esac
       done
     else
-      cp -r "$base/config/$DIR2" "$HOME/.config/$DIR2" 2>&1 | tee -a "$log"
+      cp -r "$base/config/$DIR2" "${XDG_CONFIG_HOME:-$HOME/.config}/$DIR2" 2>&1 | tee -a "$log"
       echo -e "${OK:-[OK]} - Copy completed for ${YELLOW:-}$DIR2${RESET:-}" 2>&1 | tee -a "$log"
     fi
   done
@@ -56,7 +56,7 @@ copy_waybar() {
   local log="$1"
   local base="${DOTFILES_DIR:-.}"
   local DIRW="waybar"
-  local DIRPATHw="$HOME/.config/$DIRW"
+  local DIRPATHw="${XDG_CONFIG_HOME:-$HOME/.config}/$DIRW"
   if [ -d "$DIRPATHw" ]; then
     while true; do
       echo -n "${CAT:-[ACTION]} Do you want to replace ${YELLOW:-}$DIRW${RESET:-} config? (y/n): "
@@ -80,23 +80,23 @@ copy_waybar() {
         for dir in "$DIRPATHw-backup-$BACKUP_DIR/configs"/*; do
           [ -e "$dir" ] || continue
           if [ -d "$dir" ]; then
-            target_dir="$HOME/.config/waybar/configs/$(basename "$dir")"
-            [ -d "$target_dir" ] || cp -r "$dir" "$HOME/.config/waybar/configs/"
+            target_dir="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/$(basename "$dir")"
+            [ -d "$target_dir" ] || cp -r "$dir" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/"
           fi
         done
         for file in "$DIRPATHw-backup-$BACKUP_DIR/configs"/*; do
           [ -e "$file" ] || continue
-          target_file="$HOME/.config/waybar/configs/$(basename "$file")"
-          [ -e "$target_file" ] || cp "$file" "$HOME/.config/waybar/configs/"
+          target_file="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/$(basename "$file")"
+          [ -e "$target_file" ] || cp "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/"
         done || true
         for file in "$DIRPATHw-backup-$BACKUP_DIR/style"/*; do
           [ -e "$file" ] || continue
           if [ -d "$file" ]; then
-            target_dir="$HOME/.config/waybar/style/$(basename "$file")"
-            [ -d "$target_dir" ] || cp -r "$file" "$HOME/.config/waybar/style/"
+            target_dir="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/$(basename "$file")"
+            [ -d "$target_dir" ] || cp -r "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/"
           else
-            target_file="$HOME/.config/waybar/style/$(basename "$file")"
-            [ -e "$target_file" ] || cp "$file" "$HOME/.config/waybar/style/"
+            target_file="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/$(basename "$file")"
+            [ -e "$target_file" ] || cp "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/"
           fi
         done || true
         BACKUP_FILEw="$DIRPATHw-backup-$BACKUP_DIR/UserModules"
@@ -121,14 +121,14 @@ copy_phase2() {
   local base="${DOTFILES_DIR:-.}"
   local DIR="btop cava hypr Kvantum qt5ct qt6ct swappy wallust wlogout yazi"
   for DIR_NAME in $DIR; do
-    local DIRPATH="$HOME/.config/$DIR_NAME"
+    local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/$DIR_NAME"
     if [ -d "$DIRPATH" ]; then
       echo -e "\n${NOTE:-[NOTE]} - Config for ${YELLOW:-}$DIR_NAME${RESET:-} found, attempting to back up."
       BACKUP_DIR=$(get_backup_dirname)
       mv "$DIRPATH" "$DIRPATH-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
     fi
     if [ -d "$base/config/$DIR_NAME" ]; then
-      cp -r "$base/config/$DIR_NAME/" "$HOME/.config/$DIR_NAME" 2>&1 | tee -a "$log"
+      cp -r "$base/config/$DIR_NAME/" "${XDG_CONFIG_HOME:-$HOME/.config}/$DIR_NAME" 2>&1 | tee -a "$log"
       echo "${OK:-[OK]} - Copy of config for ${YELLOW:-}$DIR_NAME${RESET:-} completed!" 2>&1 | tee -a "$log"
     else
       echo "${ERROR:-[ERROR]} - Directory config/$DIR_NAME does not exist to copy." 2>&1 | tee -a "$log"
@@ -142,8 +142,8 @@ restore_hypr_assets() {
   local log="$1"
   local express_mode="$2"
 
-  local HYPR_DIR="$HOME/.config/hypr"
-  local CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local HYPR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+  local CONFIG_HOME="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_HYPR_PATH="$HYPR_DIR-backup-$BACKUP_DIR"
@@ -272,7 +272,7 @@ cleanup_duplicate_userconfigs() {
 
   echo "${INFO:-[INFO]} Running UserConfigs duplicate cleanup for detected version v$current_version (<= 2.3.18)." 2>&1 | tee -a "$log"
 
-  local HYPR_DIR="$HOME/.config/hypr"
+  local HYPR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
   local BASE_DIR="$HYPR_DIR/configs"
   local USER_DIR="$HYPR_DIR/UserConfigs"
 
@@ -389,7 +389,7 @@ restore_user_configs() {
   local express_mode="$2"
   local old_version="$3"
 
-  local DIRPATH="$HOME/.config/hypr"
+  local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_DIR_PATH="$DIRPATH-backup-$BACKUP_DIR/UserConfigs"
@@ -535,7 +535,7 @@ restore_user_scripts() {
   local log="$1"
   local express_mode="$2"
 
-  local DIRSHPATH="$HOME/.config/hypr"
+  local DIRSHPATH="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_DIR_PATH_S="$DIRSHPATH-backup-$BACKUP_DIR/UserScripts"
@@ -573,7 +573,7 @@ restore_terminal_configs() {
   local log="$1"
   local express_mode="$2"
 
-  local GHOSTTY_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty"
+  local GHOSTTY_DIR="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}/ghostty"
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
   local GHOSTTY_BACKUP="$GHOSTTY_DIR-backup-$BACKUP_DIR"
@@ -599,7 +599,7 @@ restore_hypr_files() {
   local log="$1"
   local express_mode="$2"
 
-  local DIRPATH="$HOME/.config/hypr"
+  local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_DIR_PATH_F="$DIRPATH-backup-$BACKUP_DIR"
@@ -611,7 +611,7 @@ restore_hypr_files() {
   fi
 
   if [ -d "$BACKUP_DIR_PATH_F" ] && [ "$express_mode" -eq 0 ]; then
-    echo -e "${NOTE:-[NOTE]} Restoring some files in ${MAGENTA:-}$HOME/.config/hypr directory${RESET:-}..." 2>&1 | tee -a "$log"
+    echo -e "${NOTE:-[NOTE]} Restoring some files in ${MAGENTA:-}${XDG_CONFIG_HOME:-$HOME/.config}/hypr directory${RESET:-}..." 2>&1 | tee -a "$log"
 
     for FILE_RESTORE in "${FILES_2_RESTORE[@]}"; do
       local BACKUP_FILE="$BACKUP_DIR_PATH_F/$FILE_RESTORE"

@@ -10,7 +10,7 @@
 set -euo pipefail
 
 SSH_CONFIG="${HOME}/.ssh/config"
-ROFI_CONFIG="${HOME}/.config/rofi/config.rasi"
+ROFI_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config.rasi"
 MSG='Select a host to connect via SSH'
 
 notify() {

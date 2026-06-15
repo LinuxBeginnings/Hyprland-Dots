@@ -5,11 +5,11 @@
 #  License: GNU GPLv3
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
-# Regenerate ~/.config/hypr/configs/system_settings.lua from SystemSettings.conf.
+# Regenerate ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/configs/system_settings.lua from SystemSettings.conf.
 
 set -euo pipefail
 
-CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+CONFIG_HOME="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
 HYPR_DIR="${CONFIG_HOME}/hypr"
 CONFIGS_DIR="${HYPR_DIR}/configs"
 LEGACY_DIR="${CONFIGS_DIR}/LegacyConfigs"

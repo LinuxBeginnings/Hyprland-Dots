@@ -7,7 +7,7 @@
 # ==================================================
 
 # Variables
-rofi_theme="$HOME/.config/rofi/config-emoji.rasi"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-emoji.rasi"
 msg='** note ** 👀 Click or Return to choose || Ctrl V to Paste'
 
 # Check if rofi is already running

@@ -2,15 +2,15 @@
 # /* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */  #
 # A bash script designed to run only once dotfiles installed
 
-# THIS SCRIPT CAN BE DELETED ONCE SUCCESSFULLY BOOTED!! And also, edit ~/.config/hypr/configs/Settings.conf
+# THIS SCRIPT CAN BE DELETED ONCE SUCCESSFULLY BOOTED!! And also, edit ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/configs/Settings.conf
 # NOT necessary to do since this script is only designed to run only once as long as the marker exists
-# marker file is located at ~/.config/hypr/.initial_startup_done
+# marker file is located at ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/.initial_startup_done
 # However, I do highly suggest not to touch it since again, as long as the marker exist, script wont run
 
 # Variables
-scriptsDir=$HOME/.config/hypr/scripts
-wallpaper=$HOME/.config/hypr/wallpaper_effects/.wallpaper_current
-waybar_style="$HOME/.config/waybar/style/[Extra] Neon Circuit.css"
+scriptsDir=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts
+wallpaper=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current
+waybar_style="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/[Extra] Neon Circuit.css"
 kvantum_theme="catppuccin-mocha-blue"
 color_scheme="prefer-dark"
 gtk_theme="Flat-Remix-GTK-Blue-Dark"
@@ -54,7 +54,7 @@ swww="$WWW img"
 effect="--transition-bezier .43,1.19,1,.4 --transition-fps 30 --transition-type grow --transition-pos 0.925,0.977 --transition-duration 2"
 
 # Check if a marker file exists.
-if [ ! -f "$HOME/.config/hypr/.initial_startup_done" ]; then
+if [ ! -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/.initial_startup_done" ]; then
     # Apply appearance preferences early and synchronously to avoid startup races
     # where Flatpak/libadwaita apps can default to light mode.
     set_interface_pref_with_retry color-scheme "'$color_scheme'" "'$color_scheme'" || true
@@ -82,14 +82,14 @@ if [ ! -f "$HOME/.config/hypr/.initial_startup_done" ]; then
     kvantummanager --set "$kvantum_theme" > /dev/null 2>&1 &
 
 	# waybar style
-	#if [ -L "$HOME/.config/waybar/config" ]; then
-    ##    	ln -sf "$waybar_style" "$HOME/.config/waybar/style.css"
+	#if [ -L "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/config" ]; then
+    ##    	ln -sf "$waybar_style" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
     #   	"$scriptsDir/Refresh.sh" > /dev/null 2>&1 & 
 	#fi
 
 
     # Create a marker file to indicate that the script has been executed.
-    touch "$HOME/.config/hypr/.initial_startup_done"
+    touch "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/.initial_startup_done"
 
     exit
 fi

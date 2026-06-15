@@ -4,8 +4,8 @@
 
 ## Fixed:
 
-- Waybar would start then be restarted at login 
-  - Changed start order, `ThemeMode.sh` runs before waybar start 
+- Waybar would start then be restarted at login
+  - Changed start order, `ThemeMode.sh` runs before waybar start
   - This restores users dark/light theme choice before waybar starts
 - LUA: `QT_STYLE_OVERRIDE` in LUA was hard coded to `kvantum`
 - LUA: Fixed `LuaAutoReload.sh` wasn't activating changes on save
@@ -76,8 +76,10 @@
   - Enabled 12 min timer on turning off monitor
     - For a very long that's been disabled by default
     - The suspend option is still disabled
+  - Changed `$HOME` to `${XDG_CONFIG_HOME:$HOME}`
+    - Compliant with standard especially with `UWSM`
 
-## v2.3.24
+---
 
 ## Fixed:
 

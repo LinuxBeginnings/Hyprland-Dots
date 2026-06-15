@@ -74,7 +74,7 @@ install_terminal_configs() {
 
   # Ghostty
   local GHOSTTY_SRC="$base/config/ghostty/config"
-  local GHOSTTY_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty"
+  local GHOSTTY_DIR="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}/ghostty"
   local GHOSTTY_DEST="$GHOSTTY_DIR/config"
   if [ -f "$GHOSTTY_SRC" ]; then
     if [ -d "$GHOSTTY_DIR" ]; then
@@ -96,7 +96,7 @@ install_terminal_configs() {
 
   # WezTerm
   local WEZTERM_SRC="$base/config/wezterm/wezterm.lua"
-  local WEZTERM_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/wezterm"
+  local WEZTERM_DIR="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}/wezterm"
   local WEZTERM_DEST="$WEZTERM_DIR/wezterm.lua"
   if [ -f "$WEZTERM_SRC" ]; then
     mkdir -p "$WEZTERM_DIR"

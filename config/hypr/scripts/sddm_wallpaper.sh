@@ -11,14 +11,14 @@
 terminal=kitty
 PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
 wallDIR="$PICTURES_DIR/wallpapers"
-SCRIPTSDIR="$HOME/.config/hypr/scripts"
-wallpaper_link="$HOME/.config/rofi/.current_wallpaper"
-wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
-wallpaper_modified="$HOME/.config/hypr/wallpaper_effects/.wallpaper_modified"
-rofi_theme="$HOME/.config/rofi/config-wallpaper.rasi"
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
+wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper"
+wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current"
+wallpaper_modified="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_modified"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-wallpaper.rasi"
 # Directory for swaync
-iDIR="$HOME/.config/swaync/images"
-iDIRi="$HOME/.config/swaync/icons"
+iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
+iDIRi="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/icons"
 video_preview_cache="$HOME/.cache/video_preview"
 sddm_video_cache="$HOME/.cache/sddm_preview"
 # shellcheck source=/dev/null
@@ -228,8 +228,8 @@ resolve_normal_wallpaper() {
     local per_monitor_current=""
 
     if [[ -n "$monitor" ]]; then
-        per_monitor_rofi_link="$HOME/.config/rofi/.current_wallpaper_${monitor}"
-        per_monitor_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current_${monitor}"
+        per_monitor_rofi_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper_${monitor}"
+        per_monitor_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current_${monitor}"
 
         path="$(read_wallpaper_from_query "$monitor" 2>/dev/null || true)"
         if [[ -z "$path" ]]; then
@@ -260,7 +260,7 @@ resolve_effects_wallpaper() {
     local per_monitor_modified=""
 
     if [[ -n "$monitor" ]]; then
-        per_monitor_modified="$HOME/.config/hypr/wallpaper_effects/.wallpaper_modified_${monitor}"
+        per_monitor_modified="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_modified_${monitor}"
         path="$(resolve_link_or_file "$per_monitor_modified" 2>/dev/null || true)"
     fi
 
@@ -355,7 +355,7 @@ sddm_simple="$sddm_themes_dir/simple_sddm_2"
 sddm_theme_conf="$sddm_simple/theme.conf"
 
 # rofi-wallust-sddm colors path
-rofi_wallust="$HOME/.config/rofi/wallust/colors-rofi.rasi"
+rofi_wallust="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/wallust/colors-rofi.rasi"
 if [[ ! -f "$rofi_wallust" ]]; then
     notify_err "Wallust colors file not found ($rofi_wallust). Aborting."
     exit 1

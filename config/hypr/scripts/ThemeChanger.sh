@@ -9,8 +9,8 @@ set -euo pipefail
 # Wallust v3/v4 compatibility
 wallust_args=()
 # shellcheck source=/dev/null
-if [ -f "$HOME/.config/hypr/scripts/WallustConfig.sh" ]; then
-  . "$HOME/.config/hypr/scripts/WallustConfig.sh"
+if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustConfig.sh" ]; then
+  . "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustConfig.sh"
 fi
 
 # SPDX-FileCopyrightText: 2025-present Ahum Maitra theahummaitra@gmail.com
@@ -42,8 +42,8 @@ restore_layout_after_reload() {
   local layout="$1"
   [ -n "$layout" ] || return 0
 
-  if [ -x "$HOME/.config/hypr/scripts/ChangeLayout.sh" ]; then
-    if "$HOME/.config/hypr/scripts/ChangeLayout.sh" --no-notify "$layout" >/dev/null 2>&1; then
+  if [ -x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" ]; then
+    if "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" --no-notify "$layout" >/dev/null 2>&1; then
       return 0
     fi
   fi
@@ -91,9 +91,9 @@ if [ ! -s "$theme_cache" ] || [ "$cache_age" -gt "$cache_max_age" ]; then
 fi
 
 ensure_wallust_waybar_style() {
-  local waybar_style="$HOME/.config/waybar/style.css"
-  local colors_file="$HOME/.config/waybar/wallust/colors-waybar.css"
-  local styles_dir="$HOME/.config/waybar/style"
+  local waybar_style="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
+  local colors_file="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
+  local styles_dir="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style"
   [ -f "$colors_file" ] || return 0
   if [ -f "$waybar_style" ] && grep -q 'colors-waybar.css' "$waybar_style"; then
     return 0
@@ -119,7 +119,7 @@ reload_running_cava_colors() {
   fi
 }
 
-wallust_hypr_colors="$HOME/.config/hypr/wallust/wallust-hyprland.conf"
+wallust_hypr_colors="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
 extract_wallust_hex() {
   local key="$1"
   awk -v key="$key" '
@@ -180,16 +180,16 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
 
   # Wait until template targets exist, are newer than start_ts, and are stable (size/mtime stops changing)
   # Ensure Ghostty directory exists so Wallust can write target even if Ghostty isn't installed
-  mkdir -p "$HOME/.config/ghostty" || true
+  mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" || true
 
   targets=(
-    "$HOME/.config/waybar/wallust/colors-waybar.css"
-    "$HOME/.config/rofi/wallust/colors-rofi.rasi"
-    "$HOME/.config/hypr/wallust/wallust-hyprland.conf"
+    "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
+    "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/wallust/colors-rofi.rasi"
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
   )
 
   # Normalize Ghostty palette syntax in case upstream templates or older targets used ':'
-  ghostty_conf="$HOME/.config/ghostty/wallust.conf"
+  ghostty_conf="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf"
   if [ -f "$ghostty_conf" ]; then
     sed -i -E 's/^(\s*palette\s*=\s*)([0-9]{1,2}):/\1\2=/' "$ghostty_conf" 2>/dev/null || true
   fi
@@ -239,7 +239,7 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
   # Small cushion before refresh to mirror wallpaper flow
   sleep 0.2
   # Normalize Rofi selection colors to use the palette's accent (color12)
-  rofi_colors="$HOME/.config/rofi/wallust/colors-rofi.rasi"
+  rofi_colors="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/wallust/colors-rofi.rasi"
   if [ -f "$rofi_colors" ]; then
     accent_hex=$(sed -n 's/^\s*color12:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
     [ -z "$accent_hex" ] && accent_hex=$(sed -n 's/^\s*color13:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
@@ -258,8 +258,8 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
   reload_running_cava_colors
 
   # Refresh bars/menus after files are ready
-  if [ -x "$HOME/.config/hypr/scripts/Refresh.sh" ]; then
-    "$HOME/.config/hypr/scripts/Refresh.sh" >/dev/null 2>&1 || true
+  if [ -x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/Refresh.sh" ]; then
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/Refresh.sh" >/dev/null 2>&1 || true
   else
     if command -v waybar-msg >/dev/null 2>&1; then
       waybar-msg cmd reload >/dev/null 2>&1 || true

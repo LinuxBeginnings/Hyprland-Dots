@@ -13,27 +13,27 @@ PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
 wallpaper_base_path="$PICTURES_DIR/wallpapers/Dynamic-Wallpapers"
 dark_wallpapers="$wallpaper_base_path/Dark"
 light_wallpapers="$wallpaper_base_path/Light"
-hypr_config_path="$HOME/.config/hypr"
-swaync_style="$HOME/.config/swaync/style.css"
-ags_style="$HOME/.config/ags/user/style.css"
-SCRIPTSDIR="$HOME/.config/hypr/scripts"
+hypr_config_path="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+swaync_style="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/style.css"
+ags_style="${XDG_CONFIG_HOME:-$HOME/.config}/ags/user/style.css"
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 # shellcheck source=/dev/null
 . "$SCRIPTSDIR/WallpaperCmd.sh"
-notif="$HOME/.config/swaync/images/bell.png"
-wallust_rofi="$HOME/.config/wallust/templates/colors-rofi.rasi"
+notif="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images/bell.png"
+wallust_rofi="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/templates/colors-rofi.rasi"
 theme_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
 theme_state_file="$theme_state_dir/theme_mode"
 legacy_theme_state_file="$HOME/.cache/.theme_mode"
 
-kitty_conf="$HOME/.config/kitty/kitty.conf"
+kitty_conf="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty.conf"
 
-wallust_config="$HOME/.config/wallust/wallust.toml"
+wallust_config="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust.toml"
 pallete_dark="dark16"
 pallete_light="light16"
-qt5ct_dark="$HOME/.config/qt5ct/colors/Catppuccin-Mocha.conf"
-qt5ct_light="$HOME/.config/qt5ct/colors/Catppuccin-Latte.conf"
-qt6ct_dark="$HOME/.config/qt6ct/colors/Catppuccin-Mocha.conf"
-qt6ct_light="$HOME/.config/qt6ct/colors/Catppuccin-Latte.conf"
+qt5ct_dark="${XDG_CONFIG_HOME:-$HOME/.config}/qt5ct/colors/Catppuccin-Mocha.conf"
+qt5ct_light="${XDG_CONFIG_HOME:-$HOME/.config}/qt5ct/colors/Catppuccin-Latte.conf"
+qt6ct_dark="${XDG_CONFIG_HOME:-$HOME/.config}/qt6ct/colors/Catppuccin-Mocha.conf"
+qt6ct_light="${XDG_CONFIG_HOME:-$HOME/.config}/qt6ct/colors/Catppuccin-Latte.conf"
 apply_saved_mode=0
 notify_enabled=1
 preserve_wallpaper=0
@@ -144,8 +144,8 @@ fi
 # Function to set Waybar style
 set_waybar_style() {
     theme="$1"
-    waybar_styles="$HOME/.config/waybar/style"
-    waybar_style_link="$HOME/.config/waybar/style.css"
+    waybar_styles="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style"
+    waybar_style_link="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
     style_prefix="\\[${theme}\\].*\\.css$"
 
     style_file=$(find -L "$waybar_styles" -maxdepth 1 -type f -regex ".*$style_prefix" | shuf -n 1)
@@ -215,16 +215,16 @@ fi
 # Set Kvantum Manager theme & QT5/QT6 settings
 if [ "$next_mode" = "Dark" ]; then
     kvantum_theme="catppuccin-mocha-blue"
-    #qt5ct_color_scheme="$HOME/.config/qt5ct/colors/Catppuccin-Mocha.conf"
-    #qt6ct_color_scheme="$HOME/.config/qt6ct/colors/Catppuccin-Mocha.conf"
+    #qt5ct_color_scheme="${XDG_CONFIG_HOME:-$HOME/.config}/qt5ct/colors/Catppuccin-Mocha.conf"
+    #qt6ct_color_scheme="${XDG_CONFIG_HOME:-$HOME/.config}/qt6ct/colors/Catppuccin-Mocha.conf"
 else
     kvantum_theme="catppuccin-latte-blue"
-    #qt5ct_color_scheme="$HOME/.config/qt5ct/colors/Catppuccin-Latte.conf"
-    #qt6ct_color_scheme="$HOME/.config/qt6ct/colors/Catppuccin-Latte.conf"
+    #qt5ct_color_scheme="${XDG_CONFIG_HOME:-$HOME/.config}/qt5ct/colors/Catppuccin-Latte.conf"
+    #qt6ct_color_scheme="${XDG_CONFIG_HOME:-$HOME/.config}/qt6ct/colors/Catppuccin-Latte.conf"
 fi
 
-sed -i "s|^color_scheme_path=.*$|color_scheme_path=$qt5ct_color_scheme|" "$HOME/.config/qt5ct/qt5ct.conf"
-sed -i "s|^color_scheme_path=.*$|color_scheme_path=$qt6ct_color_scheme|" "$HOME/.config/qt6ct/qt6ct.conf"
+sed -i "s|^color_scheme_path=.*$|color_scheme_path=$qt5ct_color_scheme|" "${XDG_CONFIG_HOME:-$HOME/.config}/qt5ct/qt5ct.conf"
+sed -i "s|^color_scheme_path=.*$|color_scheme_path=$qt6ct_color_scheme|" "${XDG_CONFIG_HOME:-$HOME/.config}/qt6ct/qt6ct.conf"
 kvantummanager --set "$kvantum_theme"
 
 
@@ -296,8 +296,8 @@ set_custom_gtk_theme() {
         gsettings set $icon_setting "$selected_icon"
         
         ## QT5ct icon_theme
-        sed -i "s|^icon_theme=.*$|icon_theme=$selected_icon|" "$HOME/.config/qt5ct/qt5ct.conf"
-        sed -i "s|^icon_theme=.*$|icon_theme=$selected_icon|" "$HOME/.config/qt6ct/qt6ct.conf"
+        sed -i "s|^icon_theme=.*$|icon_theme=$selected_icon|" "${XDG_CONFIG_HOME:-$HOME/.config}/qt5ct/qt5ct.conf"
+        sed -i "s|^icon_theme=.*$|icon_theme=$selected_icon|" "${XDG_CONFIG_HOME:-$HOME/.config}/qt6ct/qt6ct.conf"
 
         # Flatpak GTK apps (icons)
         if command -v flatpak &> /dev/null; then

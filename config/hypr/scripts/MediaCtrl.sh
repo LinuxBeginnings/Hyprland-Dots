@@ -7,7 +7,7 @@
 # ==================================================
 # Playerctl
 
-music_icon="$HOME/.config/swaync/icons/music.png"
+music_icon="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/icons/music.png"
 
 # Play the next track
 play_next() {

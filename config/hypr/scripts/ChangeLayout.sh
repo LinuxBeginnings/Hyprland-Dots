@@ -7,7 +7,7 @@
 # ==================================================
 # for changing Hyprland Layouts (master, dwindle, scrolling, monocle) on the fly
 
-notif="$HOME/.config/swaync/images/ja.png"
+notif="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images/ja.png"
 
 layouts=(master dwindle scrolling monocle)
 quiet_mode=0

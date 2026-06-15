@@ -7,7 +7,7 @@
 # ==================================================
 # Script for keyboard backlights (if supported) using brightnessctl
 
-iDIR="$HOME/.config/swaync/icons"
+iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/icons"
 
 # Get keyboard brightness
 get_kbd_backlight() {

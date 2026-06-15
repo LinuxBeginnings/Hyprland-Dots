@@ -9,8 +9,8 @@
 
 IFS=$'\n\t'
 
-SCRIPTSDIR="$HOME/.config/hypr/scripts"
-rofi_config="$HOME/.config/rofi/config-waybar-layout.rasi"
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
+rofi_config="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-waybar-layout.rasi"
 change_layout="${SCRIPTSDIR}/ChangeLayout.sh"
 layouts=(dwindle scrolling monocle master)
 

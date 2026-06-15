@@ -15,7 +15,7 @@ INSTALL_OVERRIDE=0
 FORCE_OVERRIDE=0
 
 # Systemd override details for hyprpolkitagent
-OVERRIDE_DIR="$HOME/.config/systemd/user/hyprpolkitagent.service.d"
+OVERRIDE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/hyprpolkitagent.service.d"
 OVERRIDE_FILE="$OVERRIDE_DIR/override.conf"
 
 OVERRIDE_CONTENT="[Unit]

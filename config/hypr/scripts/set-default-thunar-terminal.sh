@@ -11,7 +11,7 @@ setup_default_terminal() {
 
   # 1. Configure XFCE/Exo (Thunar's primary helper)
   # This handles "Open Terminal Here" and "Open with [CLI App]"
-  HELPER_DIR="$HOME/.config/xfce4"
+  HELPER_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/xfce4"
   mkdir -p "$HELPER_DIR"
   KITTY_PATH="$(command -v kitty 2>/dev/null || true)"
   if [ -z "$KITTY_PATH" ]; then

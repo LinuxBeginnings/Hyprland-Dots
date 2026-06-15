@@ -8,7 +8,7 @@
 # Wallust version compatibility helpers
 #
 # Purpose:
-# - Wallust v3 reads ~/.config/wallust/wallust.toml (this repo ships a v3 config)
+# - Wallust v3 reads ${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust.toml (this repo ships a v3 config)
 # - Wallust v4 alpha uses a different config schema; users frequently install it
 #   via wallust-git, which will fail to parse the v3 config.
 #
@@ -31,8 +31,8 @@ wallust_prepare_args() {
 
   # Wallust v4 supports -C/--config-file.
   if [ -n "$major" ] && [ "$major" -ge 4 ]; then
-    local v4_cfg="$HOME/.config/wallust/wallust-v4.toml"
-    local v4_kitty_cfg="$HOME/.config/wallust/wallust-kitty-v4.toml"
+    local v4_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-v4.toml"
+    local v4_kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-kitty-v4.toml"
 
     if [ -f "$v4_cfg" ]; then
       wallust_args=(-C "$v4_cfg")

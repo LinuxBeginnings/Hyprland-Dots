@@ -13,11 +13,11 @@ if pidof rofi > /dev/null; then
 fi
 
 # Variables
-iDIR="$HOME/.config/swaync/images"
-SCRIPTSDIR="$HOME/.config/hypr/scripts"
-animations_dir="$HOME/.config/hypr/animations"
-UserConfigs="$HOME/.config/hypr/UserConfigs"
-rofi_theme="$HOME/.config/rofi/config-Animations.rasi"
+iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
+animations_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/animations"
+UserConfigs="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-Animations.rasi"
 msg='❗NOTE:❗ This will copy animations into UserAnimations.conf'
 # list of animation files, sorted alphabetically with numbers first
 animations_list=$(find -L "$animations_dir" -maxdepth 1 -type f | sed 's/.*\///' | sed 's/\.conf$//' | sort -V)

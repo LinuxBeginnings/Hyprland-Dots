@@ -9,7 +9,7 @@
 
 PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
 wallDIR="$PICTURES_DIR/wallpapers"
-SCRIPTSDIR="$HOME/.config/hypr/scripts"
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 # shellcheck source=/dev/null
 . "$SCRIPTSDIR/WallpaperCmd.sh"
 

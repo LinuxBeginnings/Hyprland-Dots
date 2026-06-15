@@ -12,8 +12,8 @@
 #
 # NOTE: this script uses bash (not POSIX shell) for the RANDOM variable
 
-wallust_refresh=$HOME/.config/hypr/scripts/RefreshNoWaybar.sh
-SCRIPTSDIR="$HOME/.config/hypr/scripts"
+wallust_refresh=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RefreshNoWaybar.sh
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 # shellcheck source=/dev/null
 . "$SCRIPTSDIR/WallpaperCmd.sh"
 
@@ -42,7 +42,7 @@ while true; do
 			resize_mode="$(wallpaper_resize_mode "$img" "$focused_monitor")"
 			"$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$img"
 			# Regenerate colors from the exact image path to avoid cache races
-			$HOME/.config/hypr/scripts/WallustSwww.sh "$img"
+			${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustSwww.sh "$img"
 			# Refresh UI components that depend on wallust output
 			$wallust_refresh
 			sleep $INTERVAL

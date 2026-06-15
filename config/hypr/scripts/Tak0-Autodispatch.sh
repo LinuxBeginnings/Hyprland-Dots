@@ -72,7 +72,7 @@ fi
 echo "=== Deploy '$CMD' → WS $TARGET_WS @ $(date) ===" >>"$LOGFILE"
 
 # Detect active Hyprland config mode
-config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+config_home="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
 hypr_dir="$config_home/hypr"
 lua_entry="$hypr_dir/hyprland.lua"
 legacy_lua_entry="$config_home/hyprland.lua"

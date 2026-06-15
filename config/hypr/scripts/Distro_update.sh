@@ -8,7 +8,7 @@
 # Simple bash script to check and will try to update your system
 
 # Local Paths
-iDIR="$HOME/.config/swaync/images"
+iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
 
 # Check for required tools (kitty)
 if ! command -v kitty &> /dev/null; then

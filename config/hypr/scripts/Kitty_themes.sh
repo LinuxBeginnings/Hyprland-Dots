@@ -8,11 +8,11 @@
 # Kitty Themes Source https://github.com/dexpota/kitty-themes #
 
 # Define directories and variables
-kitty_themes_DiR="$HOME/.config/kitty/kitty-themes" # Kitty Themes Directory
-kitty_config="$HOME/.config/kitty/kitty.conf"
-iDIR="$HOME/.config/swaync/images" # For notifications
-rofi_theme_for_this_script="$HOME/.config/rofi/config-kitty-theme.rasi"
-wallust_refresh_script="$HOME/.config/hypr/scripts/WallustSwww.sh"
+kitty_themes_DiR="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty-themes" # Kitty Themes Directory
+kitty_config="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty.conf"
+iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images" # For notifications
+rofi_theme_for_this_script="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-kitty-theme.rasi"
+wallust_refresh_script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustSwww.sh"
 debug_log="${XDG_CACHE_HOME:-$HOME/.cache}/kooldots-kitty-themes.log"
 
 # --- Helper Functions ---
