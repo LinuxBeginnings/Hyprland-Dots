@@ -69,6 +69,8 @@
   - added equivalent startup command for Lua startup flow
 
   ## Updated:
+  - Changed `return 1` to `exit 0` in ubuntu check in portals startup script 
+     - It's been reported that this also resolves `xdg-desktop-portal` start up issue in Arch
   - Reset binding for fullscreen and maximize
     - `SUPER + F` is maximize
     - `SHIFT + SHIFT + F` is fullscreen

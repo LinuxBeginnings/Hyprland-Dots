@@ -10,16 +10,20 @@
 set -euo pipefail
 is_ubuntu_family() {
   if [[ ! -r /etc/os-release ]]; then
-    return 1
+    #return 1
+    # It's been reported this also addresses
+    # The xdg-desktop-portal failure when not using
+    # UWSM on Arch
+    exit 0
   fi
 
   # shellcheck disable=SC1091
   . /etc/os-release
-  [[ "${ID:-}" == "ubuntu" \
-    || "${ID:-}" == "linuxmint" \
-    || "${ID:-}" == "zorin" \
-    || "${ID:-}" == "rhino" \
-    || "${ID_LIKE:-}" == *ubuntu* ]]
+  [[ "${ID:-}" == "ubuntu" ||
+    "${ID:-}" == "linuxmint" ||
+    "${ID:-}" == "zorin" ||
+    "${ID:-}" == "rhino" ||
+    "${ID_LIKE:-}" == *ubuntu* ]]
 }
 
 kill_quietly() {
@@ -157,4 +161,3 @@ if command -v systemctl >/dev/null 2>&1; then
 else
   restart_portal_manually
 fi
-
