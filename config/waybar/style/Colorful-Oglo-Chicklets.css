@@ -78,7 +78,6 @@ button.active {
 #cpu,
 #disk,
 #idle_inhibitor,
-#keyboard-state,
 #memory,
 #mode,
 #mpris,
@@ -147,6 +146,21 @@ button.active {
 #custom-media,
 #custom-updater {
   margin: 0 4px;
+}
+
+#battery,
+#cpu,
+#memory,
+#disk,
+#network,
+#pulseaudio,
+#tray,
+#idle_inhibitor,
+#custom-swaync,
+#custom-menu,
+#custom-power {
+  margin-top: 2px;
+  margin-bottom: 2px;
 }
 
 /* If workspaces is the leftmost module, omit left margin */
@@ -405,14 +419,21 @@ label:focus {
 }
 
 #keyboard-state {
-  background: #97e1ad;
+  background-color: #97e1ad;
   color: #000000;
-  min-width: 16px;
-  border-bottom: 8px solid #78b48a;
+  border-bottom: 8px solid #558b66;
+  padding-left: 10px;
+  padding-right: 10px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  margin-left: 4px;
+  margin-right: 4px;
+  border-radius: 5px;
 }
 
 #keyboard-state > label {
   padding: 0 5px;
+  background-color: transparent;
 }
 
 #keyboard-state > label.locked {
