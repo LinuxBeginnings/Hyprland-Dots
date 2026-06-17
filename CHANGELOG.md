@@ -2,8 +2,18 @@
 
 ## v2.3.25
 
-## Fixed:
+## Fixed
 
+- Layout code refactor: 
+  - Layouts are now per monitor/workspace 
+  - When you set a layout mode, i.e. scrolling 
+  - It will udpate the `~/.config/hypr/workspaces.conf` file 
+  - Therefore it will be persistent on next login
+  - The current layout is shown in upper left corner 
+  - This fixes issue with setting `workspaces.conf` manually 
+    - When you selected a layout from menu the bindings didn't match 
+    - Also previously the layout was globally applied 
+      - Thanks to `@aki` for finding and reporting this issue
 - WIP: Fixing icon spacing issues in Waybar
 - Waybar would start then be restarted at login
   - Changed start order, `ThemeMode.sh` runs before waybar start

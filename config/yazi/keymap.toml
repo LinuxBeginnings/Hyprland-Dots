@@ -41,7 +41,7 @@ prepend_keymap = [
   { on = "S", run = "search fd", desc = "Search files by name using fd" },
   { on = [
     "T",
-  ], run = "plugin --sync hide-preview", desc = "Hide or show the preview" },
+  ], run = "plugin toggle-pane min-preview", desc = "Hide or show the preview" },
   { on = [
     "y",
   ], run = [

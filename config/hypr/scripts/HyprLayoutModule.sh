@@ -35,7 +35,17 @@ layout_name() {
 }
 
 get_layout() {
-	hyprctl -j getoption general:layout 2>/dev/null | jq -r '.str // "unknown"' 2>/dev/null
+	local layout
+
+	if [[ -x "$change_layout" ]]; then
+		layout="$("$change_layout" --quiet current 2>/dev/null || true)"
+		if [[ -n "$layout" ]]; then
+			printf '%s\n' "$layout"
+			return
+		fi
+	fi
+
+	hyprctl -j activeworkspace 2>/dev/null | jq -r '.tiledLayout // .tiled_layout // "unknown"' 2>/dev/null
 }
 
 next_layout() {
@@ -68,7 +78,7 @@ show_status() {
 	current="$(get_layout)"
 	icon="$(layout_icon "$current")"
 	name="$(layout_name "$current")"
-	tooltip="Hyprland layout: ${name} (${icon})\n\nLeft click: Select layout\nRight click: Cycle layout\n\nOptions:\n🄳  Dwindle\n🅂  Scrolling\n🄼  Monocle\nⓜ   Master"
+	tooltip="Workspace layout: ${name} (${icon})\n\nLeft click: Select layout for active workspace\nRight click: Cycle active workspace layout\n\nOptions:\n🄳  Dwindle\n🅂  Scrolling\n🄼  Monocle\nⓜ   Master"
 
 	printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' "$icon" "$tooltip" "$current"
 }
@@ -97,7 +107,7 @@ show_menu() {
 		return 0
 	fi
 
-	choice="$(printf '%s\n' "${options[@]}" | rofi -i -dmenu -p "Layout" -mesg "Left click selects • Right click cycles" -selected-row "$default_row" -config "$rofi_config")"
+	choice="$(printf '%s\n' "${options[@]}" | rofi -i -dmenu -p "Workspace layout" -mesg "Applies to active workspace only" -selected-row "$default_row" -config "$rofi_config")"
 	[[ -z "$choice" ]] && exit 0
 
 	case "$choice" in

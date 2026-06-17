@@ -32,8 +32,12 @@ require rofi
 # notify-send is optional
 have_notify() { command -v notify-send >/dev/null 2>&1; }
 capture_current_layout() {
+  if [ -x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" ]; then
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" --no-notify current 2>/dev/null | awk 'NF {print; exit}'
+    return 0
+  fi
   if command -v jq >/dev/null 2>&1; then
-    hyprctl -j getoption general:layout 2>/dev/null | jq -r '.str // empty'
+    hyprctl -j activeworkspace 2>/dev/null | jq -r '.tiledLayout // .tiled_layout // empty'
   else
     hyprctl getoption general:layout 2>/dev/null | awk 'NR==1 {print $2}'
   fi
@@ -43,12 +47,8 @@ restore_layout_after_reload() {
   [ -n "$layout" ] || return 0
 
   if [ -x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" ]; then
-    if "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" --no-notify "$layout" >/dev/null 2>&1; then
-      return 0
-    fi
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" --no-notify "$layout" >/dev/null 2>&1 || true
   fi
-
-  hyprctl keyword general:layout "$layout" >/dev/null 2>&1 || true
 }
 reload_hypr_preserve_layout() {
   command -v hyprctl >/dev/null 2>&1 || return 0
