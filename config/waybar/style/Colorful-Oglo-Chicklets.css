@@ -25,11 +25,12 @@ window#waybar.hidden {
   font-size: 14px;
 }
 
+/*
 window#waybar.empty {
   background-color: transparent;
-  /* Waybar scaling: adjust font-size to scale the bar */
   font-size: 14px;
 }
+*/
 
 window#waybar.solo {
   background-color: #ffffff;
