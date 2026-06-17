@@ -2,13 +2,13 @@
 /* Catppuccin Frappe */
 
 * {
-	font-family: "JetBrainsMono Nerd Font";
-	font-weight: bold;
-	min-height: 0;
-	/* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
-	/* NOTE: Waybar v14+ ignores % font-size values */
-	font-size: 99%;
-	font-feature-settings: '"zero", "ss01", "ss02", "ss03", "ss04", "ss05", "cv31"';
+  font-family: "JetBrainsMono Nerd Font";
+  font-weight: bold;
+  min-height: 0;
+  /* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
+  /* NOTE: Waybar v14+ ignores % font-size values */
+  font-size: 99%;
+  font-feature-settings: '"zero", "ss01", "ss02", "ss03", "ss04", "ss05", "cv31"';
 }
 
 @import "../waybar/style/catppuccin-themes/frappe.css";
@@ -33,43 +33,43 @@ window#waybar.hidden {
 
 #taskbar button,
 #workspaces button {
-    box-shadow: none;
-	text-shadow: none;
-    padding: 4px;
-    border-radius: 9px;
-    animation: gradient_f 20s ease-in infinite;
-    transition: all 0.5s cubic-bezier(.55,-0.68,.48,1.682);
+  box-shadow: none;
+  text-shadow: none;
+  padding: 4px;
+  border-radius: 9px;
+  animation: gradient_f 20s ease-in infinite;
+  transition: all 0.5s cubic-bezier(0.55, -0.68, 0.48, 1.682);
 }
 
 #taskbar button:hover,
 #workspaces button:hover {
-	border-radius: 10px;
-	color: @overlay0;
-	background-color: @surface0;
- 	padding-left: 2px;
-    padding-right: 2px;
-    animation: gradient_f 20s ease-in infinite;
-    transition: all 0.3s cubic-bezier(.55,-0.68,.48,1.682);
+  border-radius: 10px;
+  color: @overlay0;
+  background-color: @surface0;
+  padding-left: 2px;
+  padding-right: 2px;
+  animation: gradient_f 20s ease-in infinite;
+  transition: all 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682);
 }
 
 #workspaces button.persistent {
-	color: @surface1;
-	border-radius: 10px;
+  color: @surface1;
+  border-radius: 10px;
 }
 
 #taskbar button.active,
 #workspaces button.active {
-	color: @peach;
-  	border-radius: 10px;
-    padding-left: 8px;
-    padding-right: 8px;
-    animation: gradient_f 20s ease-in infinite;
-    transition: all 0.3s cubic-bezier(.55,-0.68,.48,1.682);
+  color: @peach;
+  border-radius: 10px;
+  padding-left: 8px;
+  padding-right: 8px;
+  animation: gradient_f 20s ease-in infinite;
+  transition: all 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682);
 }
 
 #workspaces button.urgent {
-	color: @red;
- 	border-radius: 0px;
+  color: @red;
+  border-radius: 0px;
 }
 
 #backlight,
@@ -127,32 +127,32 @@ window#waybar.hidden {
 #custom-weather.clearNight,
 #custom-weather.cloudyFoggyDay,
 #custom-weather.cloudyFoggyNight,
-#custom-weather.default, 
+#custom-weather.default,
 #custom-weather.rainyDay,
 #custom-weather.rainyNight,
 #custom-weather.severe,
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay {
-	padding-top: 4px;
-	padding-bottom: 4px;
-	padding-right: 6px;
-	padding-left: 6px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-right: 6px;
+  padding-left: 6px;
 }
 
 /*-----Indicators----*/
 #custom-hypridle.notactive,
 #idle_inhibitor.activated {
-	color: #39FF14;
-    border-bottom: 3px solid @sapphire;
+  color: #39ff14;
+  border-bottom: 3px solid @sapphire;
 }
 
 #backlight {
-  	color: @blue;
+  color: @blue;
 }
 
 #battery {
-  	color: @green;
+  color: @green;
 }
 
 @keyframes blink {
@@ -162,43 +162,43 @@ window#waybar.hidden {
 }
 
 #battery.critical:not(.charging) {
-  	background-color: @red;
-  	color: @theme_text_color;
-	animation-name: blink;
-	animation-duration: 3.0s;
-	animation-timing-function: steps(12);
-	animation-iteration-count: infinite;
-	animation-direction: alternate;
-  	box-shadow: inset 0 -3px transparent;
+  background-color: @red;
+  color: @theme_text_color;
+  animation-name: blink;
+  animation-duration: 3s;
+  animation-timing-function: steps(12);
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  box-shadow: inset 0 -3px transparent;
 }
 
 #bluetooth {
-	color: @blue;
+  color: @blue;
 }
 
 #clock {
-  	color: @yellow;
+  color: @yellow;
 }
 
 #cpu {
-  	color: @green;
+  color: @green;
 }
 
 #custom-keyboard,
 #memory {
-  	color: @sky;
+  color: @sky;
 }
 
 #disk {
-  	color: @sapphire;
+  color: @sapphire;
 }
 
 #temperature {
-  	color: @teal;
+  color: @teal;
 }
 
 #temperature.critical {
-  	background-color: @red;
+  background-color: @red;
 }
 
 #tray > .passive {
@@ -209,87 +209,87 @@ window#waybar.hidden {
 }
 
 #keyboard-state {
-  	color: @flamingo;
+  color: @flamingo;
 }
 
 #custom-cava_mviz {
-	color: @pink;
+  color: @pink;
 }
 
 #custom-menu {
-  	color: @rosewater;
+  color: @rosewater;
 }
 
 #custom-power {
-  	color: @red;
+  color: @red;
 }
 
 #custom-updater {
-  	color: @red;
+  color: @red;
 }
 
 #custom-light_dark {
-  	color: @blue;
+  color: @blue;
 }
 
 #custom-weather {
-  	color: @lavender;
+  color: @lavender;
 }
 
 #custom-lock {
-  	color: @maroon;
+  color: @maroon;
 }
 
 #pulseaudio {
-  	color: @sapphire;
+  color: @sapphire;
 }
 
 #pulseaudio.bluetooth {
-  	color: @pink;
+  color: @pink;
 }
 #pulseaudio.muted {
-  	color: @red;
+  color: @red;
 }
 
 #window {
-  	color: @mauve;
+  color: @mauve;
 }
 
 #mpris {
-  	color:@lavender;
+  color: @lavender;
 }
 
 #network {
-  	color: @teal;
+  color: @teal;
 }
 
 #network.disconnected,
 #network.disabled {
-  	background-color: @surface0;
-  	color: @text;
+  background-color: @surface0;
+  color: @text;
 }
 
 #backlight-slider slider,
 #pulseaudio-slider slider {
-	min-width: 0px;
-	min-height: 0px;
-	opacity: 0;
-	background-image: none;
-	border: none;
-	box-shadow: none;
+  min-width: 0px;
+  min-height: 0px;
+  opacity: 0;
+  background-image: none;
+  border: none;
+  box-shadow: none;
 }
 
 #backlight-slider trough,
 #pulseaudio-slider trough {
-	min-width: 80px;
-	min-height: 5px;
-	border-radius: 5px;
+  min-width: 80px;
+  min-height: 5px;
+  border-radius: 5px;
 }
 
 #backlight-slider highlight,
 #pulseaudio-slider highlight {
-	min-height: 10px;
-	border-radius: 5px;
+  min-height: 10px;
+  border-radius: 5px;
 }
 
 /* --- tray readability override (global) --- */

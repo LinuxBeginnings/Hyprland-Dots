@@ -3,13 +3,13 @@
 /*  As stated on title, best style for vertical layout waybar config */
 
 * {
-	font-family: "JetBrainsMono Nerd Font";
-	font-weight: bold;
-	min-height: 0;
-	/* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
-	/* NOTE: Waybar v14+ ignores % font-size values */
-	font-size: 99%;
-	font-feature-settings: '"zero", "ss01", "ss02", "ss03", "ss04", "ss05", "cv31"';
+  font-family: "JetBrainsMono Nerd Font";
+  font-weight: bold;
+  min-height: 0;
+  /* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
+  /* NOTE: Waybar v14+ ignores % font-size values */
+  font-size: 99%;
+  font-feature-settings: '"zero", "ss01", "ss02", "ss03", "ss04", "ss05", "cv31"';
 }
 
 @import "../waybar/style/catppuccin-themes/mocha.css";
@@ -41,10 +41,10 @@ tooltip label {
 #workspaces button {
   color: @surface2;
   background-color: transparent;
-  	padding-top: 4px;
-	padding-bottom: 4px;
-	padding-right: 6px;
-	padding-left: 4px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-right: 6px;
+  padding-left: 4px;
 }
 
 #taskbar button.active,
@@ -126,7 +126,7 @@ tooltip label {
 #custom-weather.clearNight,
 #custom-weather.cloudyFoggyDay,
 #custom-weather.cloudyFoggyNight,
-#custom-weather.default, 
+#custom-weather.default,
 #custom-weather.rainyDay,
 #custom-weather.rainyNight,
 #custom-weather.severe,
@@ -142,7 +142,7 @@ tooltip label {
 
 #idle_inhibitor {
   color: @pink;
-    border-bottom: 8px solid rgba(0, 0, 0, 0.2);
+  border-bottom: 0px solid rgba(0, 0, 0, 0.2);
 }
 
 #mpris {
@@ -187,7 +187,6 @@ tooltip label {
 #backlight {
   color: @flamingo;
 }
-
 
 #custom-weather {
   color: @green;
