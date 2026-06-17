@@ -166,9 +166,19 @@ button.active {
 #custom-spotify,
 #custom-media,
 #custom-updater {
+  background-color: #2980b9;
+  color: #ffffff;
+  border-bottom: 8px solid #1f618d;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+#custom-weather2 {
   background-color: #343f44;
   color: #d3c6aa;
   border-bottom: 8px solid #2b3539;
+  padding-top: 2px;
+  padding-bottom: 2px;
 }
 
 #custom-swaync {
@@ -373,23 +383,23 @@ label:focus {
 
 /* Specific styling for left workspaces to match center window */
 .modules-left #workspaces button {
-  background-color: #343f44;
-  color: #d3c6aa;
-  border-bottom: 8px solid #2b3539;
+  background-color: #2980b9;
+  color: #ffffff;
+  border-bottom: 8px solid #1f618d;
   padding-top: 2px;
   padding-bottom: 2px;
 }
 
 .modules-left #workspaces button.active {
-  background-color: #4c565a;
-  border-bottom: 8px solid #3d464a;
+  background-color: #3498db;
+  border-bottom: 8px solid #2980b9;
   padding-top: 2px;
   padding-bottom: 2px;
 }
 
 .modules-left #workspaces button:hover {
-  background-color: #4c565a;
-  border-bottom: 8px solid #3d464a;
+  background-color: #3498db;
+  border-bottom: 8px solid #2980b9;
   padding-top: 2px;
   padding-bottom: 2px;
 }
