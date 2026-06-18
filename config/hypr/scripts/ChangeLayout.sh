@@ -24,6 +24,24 @@ normalize_layout() {
   esac
 }
 
+wait_for_layout() {
+  local target="$1"
+  local actual=""
+  local attempt
+
+  for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+    actual="$(get_layout)"
+    if [[ "$actual" == "$target" ]]; then
+      printf '%s\n' "$actual"
+      return 0
+    fi
+    sleep 0.03
+  done
+
+  printf '%s\n' "$actual"
+  return 1
+}
+
 persist_current_workspace_layout() {
   local target_layout="$1"
 
@@ -42,7 +60,7 @@ get_layout() {
   local ws_json layout
 
   ws_json="$(get_active_workspace_json)"
-  layout="$(jq -r '.tiledLayout // .tiled_layout // empty' <<<"$ws_json" 2>/dev/null || true)"
+  layout="$(jq -r '.tiledLayout // .tiled_layout // .layout // empty' <<<"$ws_json" 2>/dev/null || true)"
   layout="$(normalize_layout "$layout")"
 
   if [[ -z "$layout" ]]; then
@@ -147,8 +165,6 @@ set_workspace_layout_rule() {
     echo "$output" >&2
     return 1
   fi
-
-  hyprctl dispatch workspace "$workspace_selector" >/dev/null 2>&1 || true
 }
 
 next_layout() {
@@ -178,8 +194,7 @@ set_layout() {
     return 1
   fi
 
-  sleep 0.03
-  actual="$(get_layout)"
+  actual="$(wait_for_layout "$target")"
   if [[ "$actual" == "$target" ]]; then
     persist_current_workspace_layout "$target"
     if [[ "$quiet_mode" -eq 0 ]]; then
