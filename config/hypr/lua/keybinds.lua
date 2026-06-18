@@ -266,18 +266,8 @@ bind(
 -- Section: Layout and tiling controls
 bind("SUPER CTRL", "D", dispatch("layoutmsg", "removemaster"), { description = "remove master" })
 bind("SUPER", "I", dispatch("layoutmsg", "addmaster"), { description = "add master" })
-bind(
-  "SUPER",
-  "j",
-  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh cycle-next"),
-  { description = "cycle next (layout-aware)" }
-)
-bind(
-  "SUPER",
-  "k",
-  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh cycle-prev"),
-  { description = "cycle previous (layout-aware)" }
-)
+bind("SUPER", "j", dispatch("cyclenext", ""), { description = "cycle next" })
+bind("SUPER", "k", dispatch("cyclenext", "prev"), { description = "cycle previous" })
 bind("SUPER CTRL", "Return", dispatch("layoutmsg", "swapwithmaster"), { description = "swap with master" })
 bind("SUPER SHIFT", "I", dispatch("layoutmsg", "togglesplit"), { description = "toggle split (dwindle)" })
 bind("SUPER", "P", dispatch("pseudo", ""), { description = "toggle pseudo (dwindle)" })
@@ -608,30 +598,10 @@ bind("SUPER SHIFT", "Tab", dispatch("changegroupactive", "b"), { description = "
 bind("SUPER CTRL", "K", dispatch("moveintogroup", "l"), { description = "Move left into group" })
 bind("SUPER CTRL", "L", dispatch("moveintogroup", "r"), { description = "Move Right into group" })
 bind("SUPER CTRL", "H", dispatch("moveoutofgroup", ""), { description = "Move active out of group" })
-bind(
-  "SUPER",
-  "left",
-  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh focus-left"),
-  { description = "focus left (layout-aware)" }
-)
-bind(
-  "SUPER",
-  "right",
-  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh focus-right"),
-  { description = "focus right (layout-aware)" }
-)
-bind(
-  "SUPER",
-  "up",
-  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh focus-up"),
-  { description = "focus up (layout-aware)" }
-)
-bind(
-  "SUPER",
-  "down",
-  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh focus-down"),
-  { description = "focus down (layout-aware)" }
-)
+bind("SUPER", "left", dispatch("movefocus", "l"), { description = "focus left" })
+bind("SUPER", "right", dispatch("movefocus", "r"), { description = "focus right" })
+bind("SUPER", "up", dispatch("movefocus", "u"), { description = "focus up" })
+bind("SUPER", "down", dispatch("movefocus", "d"), { description = "focus down" })
 
 -- Section: Workspace navigation and assignment
 -- Keep legacy relative workspace focus script binds commented for rollback during Lua API migration.

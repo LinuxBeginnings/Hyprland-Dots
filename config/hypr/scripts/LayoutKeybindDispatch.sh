@@ -46,7 +46,13 @@ get_active_layout() {
 dispatch_quiet() {
   local dispatcher="$1"
   shift || true
-  hyprctl dispatch "$dispatcher" "$@" >/dev/null 2>&1 || true
+  local command="$dispatcher"
+  if (($# > 0)); then
+    command+=" $*"
+  fi
+  local escaped_command="${command//\\/\\\\}"
+  escaped_command="${escaped_command//\"/\\\"}"
+  hyprctl dispatch "hl.dsp.exec_raw(\"$escaped_command\")" >/dev/null 2>&1 || true
 }
 
 cycle_next() {
