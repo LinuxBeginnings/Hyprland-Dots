@@ -82,10 +82,11 @@
   - added equivalent startup command for Lua startup flow
 
   ## Updated:
+
   - Moved `UserScripts/Wallpaper*.sh` and `ZshChangeTheme.sh` to `$scriptsdir`
     - They are system scripts not intended for user modification
-  - Changed `return 1` to `exit 0` in ubuntu check in portals startup script
-    - It's been reported that this also resolves `xdg-desktop-portal` start up issue in Arch
+  - Archived `UserScripts/Tak0-Autodispatch`
+    - Not supported and no longer needed
   - Reset binding for fullscreen and maximize
     - `SUPER + F` is maximize
     - `SHIFT + SHIFT + F` is fullscreen
