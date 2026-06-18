@@ -68,5 +68,5 @@ end
 
 -- Optional startup examples retained from the original config:
 -- exec_once("mpvpaper '*' -o \"load-scripts=no no-audio --loop\" \"\"")
--- exec_once(userScripts .. "/WallpaperAutoChange.sh " .. wallDir)
+-- exec_once(scriptsDir .. "/WallpaperAutoChange.sh " .. wallDir)
 -- exec_once(userScripts .. "/RainbowBorders.sh")

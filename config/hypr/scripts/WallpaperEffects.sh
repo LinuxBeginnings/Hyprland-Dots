@@ -11,10 +11,12 @@
 terminal=kitty
 wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current"
 wallpaper_output="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_modified"
+wallpaper_base="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_base"
 SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 # shellcheck source=/dev/null
 . "$SCRIPTSDIR/WallpaperCmd.sh"
 focused_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
+per_monitor_wallpaper_base="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_base_${focused_monitor}"
 rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-wallpaper-effect.rasi"
 
 # Directory for swaync
@@ -35,31 +37,31 @@ fi
 # Define ImageMagick effects
 declare -A effects=(
     ["No Effects"]="no-effects"
-    ["Black & White"]="magick $wallpaper_current -colorspace gray -sigmoidal-contrast 10,40% $wallpaper_output"
-    ["Blurred"]="magick $wallpaper_current -blur 0x10 $wallpaper_output"
-    ["Charcoal"]="magick $wallpaper_current -charcoal 0x5 $wallpaper_output"
-    ["Edge Detect"]="magick $wallpaper_current -edge 1 $wallpaper_output"
-    ["Emboss"]="magick $wallpaper_current -emboss 0x5 $wallpaper_output"
-    ["Frame Raised"]="magick $wallpaper_current +raise 150 $wallpaper_output"
-    ["Frame Sunk"]="magick $wallpaper_current -raise 150 $wallpaper_output"
-    ["Negate"]="magick $wallpaper_current -negate $wallpaper_output"
-    ["Oil Paint"]="magick $wallpaper_current -paint 4 $wallpaper_output"
-    ["Posterize"]="magick $wallpaper_current -posterize 4 $wallpaper_output"
-    ["Polaroid"]="magick $wallpaper_current -polaroid 0 $wallpaper_output"
-    ["Sepia Tone"]="magick $wallpaper_current -sepia-tone 65% $wallpaper_output"
-    ["Solarize"]="magick $wallpaper_current -solarize 80% $wallpaper_output"
-    ["Sharpen"]="magick $wallpaper_current -sharpen 0x5 $wallpaper_output"
-    ["Vignette"]="magick $wallpaper_current -vignette 0x3 $wallpaper_output"
-    ["Vignette-black"]="magick $wallpaper_current -background black -vignette 0x3 $wallpaper_output"
-    ["Zoomed"]="magick $wallpaper_current -gravity Center -extent 1:1 $wallpaper_output"
+    ["Black & White"]="magick $wallpaper_base -colorspace gray -sigmoidal-contrast 10,40% $wallpaper_output"
+    ["Blurred"]="magick $wallpaper_base -blur 0x10 $wallpaper_output"
+    ["Charcoal"]="magick $wallpaper_base -charcoal 0x5 $wallpaper_output"
+    ["Edge Detect"]="magick $wallpaper_base -edge 1 $wallpaper_output"
+    ["Emboss"]="magick $wallpaper_base -emboss 0x5 $wallpaper_output"
+    ["Frame Raised"]="magick $wallpaper_base +raise 150 $wallpaper_output"
+    ["Frame Sunk"]="magick $wallpaper_base -raise 150 $wallpaper_output"
+    ["Negate"]="magick $wallpaper_base -negate $wallpaper_output"
+    ["Oil Paint"]="magick $wallpaper_base -paint 4 $wallpaper_output"
+    ["Posterize"]="magick $wallpaper_base -posterize 4 $wallpaper_output"
+    ["Polaroid"]="magick $wallpaper_base -polaroid 0 $wallpaper_output"
+    ["Sepia Tone"]="magick $wallpaper_base -sepia-tone 65% $wallpaper_output"
+    ["Solarize"]="magick $wallpaper_base -solarize 80% $wallpaper_output"
+    ["Sharpen"]="magick $wallpaper_base -sharpen 0x5 $wallpaper_output"
+    ["Vignette"]="magick $wallpaper_base -vignette 0x3 $wallpaper_output"
+    ["Vignette-black"]="magick $wallpaper_base -background black -vignette 0x3 $wallpaper_output"
+    ["Zoomed"]="magick $wallpaper_base -gravity Center -extent 1:1 $wallpaper_output"
 )
 
 # Function to apply no effects
 no-effects() {
     local resize_mode
-    resize_mode="$(wallpaper_resize_mode "$wallpaper_current" "$focused_monitor")"
-    "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$wallpaper_current" "${SWWW_PARAMS[@]}" || return 1
-    if ! "$SCRIPTSDIR/WallustSwww.sh" "$wallpaper_current"; then
+    resize_mode="$(wallpaper_resize_mode "$wallpaper_base" "$focused_monitor")"
+    "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$wallpaper_base" "${SWWW_PARAMS[@]}" || return 1
+    if ! "$SCRIPTSDIR/WallustSwww.sh" "$wallpaper_base"; then
         notify-send -u critical -i "$iDIR/error.png" "Wallust failed" "Wallpaper theme not refreshed"
         return 1
     fi
@@ -69,7 +71,7 @@ no-effects() {
 
     notify-send -u low -i "$iDIR/ja.png" "No wallpaper" "effects applied"
     # copying wallpaper for rofi menu
-    cp "$wallpaper_current" "$wallpaper_output"
+    cp "$wallpaper_base" "$wallpaper_output"
 }
 
 # Function to run rofi menu
@@ -84,6 +86,13 @@ main() {
 
     # Process user choice
     if [[ -n "$choice" ]]; then
+        if [[ -f "$per_monitor_wallpaper_base" ]]; then
+            wallpaper_base="$per_monitor_wallpaper_base"
+        fi
+        if [[ ! -f "$wallpaper_base" ]]; then
+            mkdir -p "$(dirname "$wallpaper_base")"
+            cp -f "$wallpaper_current" "$wallpaper_base" || true
+        fi
         if [[ "$choice" == "No Effects" ]]; then
             no-effects
         elif [[ "${effects[$choice]+exists}" ]]; then

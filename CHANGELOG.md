@@ -4,6 +4,8 @@
 
 ## Fixed
 
+- Fixed wallpaper effects it would not restore original wallpaper 
+- Fixed wallpaper selector it was resetting waybar style sheet
 - Layout code refactor: 
   - Layouts are now per monitor/workspace 
   - When you set a layout mode, i.e. scrolling 
@@ -80,6 +82,8 @@
   - added equivalent startup command for Lua startup flow
 
   ## Updated:
+  - Moved `UserScripts/Wallpaper*.sh` and `ZshChangeTheme.sh` to `$scriptsdir`
+    - They are system scripts not intended for user modification
   - Changed `return 1` to `exit 0` in ubuntu check in portals startup script
     - It's been reported that this also resolves `xdg-desktop-portal` start up issue in Arch
   - Reset binding for fullscreen and maximize

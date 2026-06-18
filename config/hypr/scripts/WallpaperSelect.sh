@@ -16,6 +16,7 @@ SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 . "$SCRIPTSDIR/WallpaperCmd.sh"
 wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current"
 wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper"
+wallpaper_base="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_base"
 
 # Directory for swaync
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
@@ -45,6 +46,7 @@ focused_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
 
 per_monitor_wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current_${focused_monitor}"
 per_monitor_wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper_${focused_monitor}"
+per_monitor_wallpaper_base="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_base_${focused_monitor}"
 
 # Ensure focused_monitor is detected
 if [[ -z "$focused_monitor" ]]; then
@@ -180,6 +182,9 @@ apply_image_wallpaper() {
   mkdir -p "$(dirname "$per_monitor_wallpaper_current")" "$(dirname "$per_monitor_wallpaper_link")"
   ln -sf "$image_path" "$per_monitor_wallpaper_link" || true
   cp -f "$image_path" "$per_monitor_wallpaper_current" || true
+  mkdir -p "$(dirname "$per_monitor_wallpaper_base")"
+  cp -f "$image_path" "$per_monitor_wallpaper_base" || true
+  cp -f "$image_path" "$wallpaper_base" || true
 
   # Run additional scripts (pass the image path to avoid cache race conditions)
   if ! "$SCRIPTSDIR/WallustSwww.sh" "$image_path"; then

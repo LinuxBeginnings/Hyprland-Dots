@@ -18,6 +18,7 @@ SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 . "$SCRIPTSDIR/WallpaperCmd.sh"
 
 focused_monitor=$(hyprctl monitors | awk '/^Monitor/{name=$2} /focused: yes/{print name}')
+wallpaper_base="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_base_${focused_monitor}"
 
 if [[ $# -lt 1 ]] || [[ ! -d $1   ]]; then
 	echo "Usage:
@@ -41,6 +42,8 @@ while true; do
 		| while read -r img; do
 			resize_mode="$(wallpaper_resize_mode "$img" "$focused_monitor")"
 			"$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$img"
+			mkdir -p "$(dirname "$wallpaper_base")"
+			cp -f "$img" "$wallpaper_base" || true
 			# Regenerate colors from the exact image path to avoid cache races
 			${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustSwww.sh "$img"
 			# Refresh UI components that depend on wallust output

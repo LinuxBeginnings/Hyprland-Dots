@@ -53,7 +53,7 @@ ensure_wallust_waybar_style() {
   local colors_file="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
   local styles_dir="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style"
   [ -f "$colors_file" ] || return 0
-  if [ -f "$waybar_style" ] && grep -q 'colors-waybar.css' "$waybar_style"; then
+  if [ -f "$waybar_style" ]; then
     return 0
   fi
   local candidates=(

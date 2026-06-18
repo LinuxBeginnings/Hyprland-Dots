@@ -132,12 +132,12 @@ local app_binds = {
   { "SUPER ALT", "B", "$HOME/.config/hypr/scripts/WaybarLayout.sh", "waybar layout menu" },
   { "SUPER", "N", "$HOME/.config/hypr/scripts/Hyprsunset.sh toggle", "Toggle Hyprsunset - night light" },
   { "SUPER SHIFT", "M", "$HOME/.config/hypr/UserScripts/RofiBeats.sh", "online music" },
-  { "SUPER", "W", "$HOME/.config/hypr/UserScripts/WallpaperSelect.sh", "select wallpaper" },
-  { "SUPER SHIFT", "W", "$HOME/.config/hypr/UserScripts/WallpaperEffects.sh", "wallpaper effects" },
-  { "CTRL ALT", "W", "$HOME/.config/hypr/UserScripts/WallpaperRandom.sh", "random wallpaper" },
+  { "SUPER", "W", "$HOME/.config/hypr/scripts/WallpaperSelect.sh", "select wallpaper" },
+  { "SUPER SHIFT", "W", "$HOME/.config/hypr/scripts/WallpaperEffects.sh", "wallpaper effects" },
+  { "CTRL ALT", "W", "$HOME/.config/hypr/scripts/WallpaperRandom.sh", "random wallpaper" },
   { "SUPER SHIFT", "K", "$HOME/.config/hypr/scripts/KeyBinds.sh", "search keybinds" },
   { "SUPER SHIFT", "A", "$HOME/.config/hypr/scripts/Animations.sh", "animations menu" },
-  { "SUPER SHIFT", "O", "$HOME/.config/hypr/UserScripts/ZshChangeTheme.sh", "change oh-my-zsh theme" },
+  { "SUPER SHIFT", "O", "$HOME/.config/hypr/scripts/ZshChangeTheme.sh", "change oh-my-zsh theme" },
   { "SUPER ALT", "C", "$HOME/.config/hypr/UserScripts/RofiCalc.sh", "calculator" },
 }
 for _, app in ipairs(app_binds) do
