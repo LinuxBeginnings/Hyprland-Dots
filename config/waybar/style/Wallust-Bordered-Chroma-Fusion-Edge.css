@@ -130,7 +130,7 @@ tooltip {
 }
 #custom-power {
   color: red;
-  padding: 0px 0px 0px 7px;
+  padding: 0px 0px 0px 0px;
   opacity: 1;
 }
 #backlight {

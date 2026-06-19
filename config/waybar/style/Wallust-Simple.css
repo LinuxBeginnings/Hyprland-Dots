@@ -167,7 +167,7 @@ tooltip {
 #custom-power {
   /*background-color: rgba(0,119,179,0.6);*/
   /*border-radius: 50px;*/
-  padding: 1px 3px;
+  padding: 0px 3px;
 }
 /*-----Indicators----*/
 #custom-hypridle.notactive,

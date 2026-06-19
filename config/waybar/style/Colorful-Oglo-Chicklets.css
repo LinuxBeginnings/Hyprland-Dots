@@ -211,7 +211,7 @@ button.active {
   background-color: #ee606a;
   color: #2d353b;
   border-bottom: 8px solid #ca4853;
-  padding-left: 10px;
+  padding-left: 2px;
 }
 
 #custom-power_vertical {

@@ -193,7 +193,7 @@ tooltip {
 
 #custom-power {
   color: @color13;
-  padding-left: 10px;
+  padding-left: 1px;
   padding-right: 2px;
   border: 2px solid @color13;
 }

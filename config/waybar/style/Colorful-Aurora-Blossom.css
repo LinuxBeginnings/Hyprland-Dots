@@ -168,7 +168,8 @@ tooltip label {
   padding-left: 6px;
 }
 #custom-power {
-  padding: 1px 3px;
+  padding-right: 2px;
+  padding-left: 2px;
 }
 /*-----Indicators----*/
 #custom-hypridle.notactive,

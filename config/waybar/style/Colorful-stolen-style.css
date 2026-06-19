@@ -253,8 +253,8 @@ window#waybar.empty #window {
 
 #custom-power {
   color: #f7768e;
-  padding-left: 8px;
-  padding-right: 17px;
+  padding-left: 6px;
+  padding-right: 10px;
 }
 
 #custom-updater {
