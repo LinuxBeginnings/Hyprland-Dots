@@ -137,7 +137,7 @@ local app_binds = {
   { "CTRL ALT", "W", "$HOME/.config/hypr/scripts/WallpaperRandom.sh", "random wallpaper" },
   { "SUPER SHIFT", "K", "$HOME/.config/hypr/scripts/KeyBinds.sh", "search keybinds" },
   { "SUPER SHIFT", "A", "$HOME/.config/hypr/scripts/Animations.sh", "animations menu" },
-  { "SUPER SHIFT", "O", "$HOME/.config/hypr/scripts/ZshChangeTheme.sh", "change oh-my-zsh theme" },
+  { "SUPER SHIFT", "R", "$HOME/.config/hypr/scripts/ZshChangeTheme.sh", "change oh-my-zsh theme" },
   { "SUPER ALT", "C", "$HOME/.config/hypr/UserScripts/RofiCalc.sh", "calculator" },
 }
 for _, app in ipairs(app_binds) do

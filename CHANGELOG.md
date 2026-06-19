@@ -4,6 +4,7 @@
 
 ## Fixed
 
+- Fixed system keybinds in LUA config
 - Fixed handling of SUPER-Q close active in LUA config
 - Fixed keybinds handingling in LUA config
 - Fixed wallpaper effects it would not restore original wallpaper 
