@@ -15,3 +15,13 @@
 --     border_size = 1,
 --   },
 -- })
+--
+
+-- Disable cursor being centered when swap workspaces
+--
+-- hl.config({
+-- 	cursor = {
+-- 		no_warps = true,
+-- 		warp_on_change_workspace = 0,
+-- 	},
+-- })
