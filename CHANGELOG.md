@@ -4,6 +4,8 @@
 
 ## Fixed
 
+
+- Fixed keybindings in scrolling layout
 - Fixed `copy.sh` not copying all lua files 
 - Fixed `WallpaperEffects.sh` in lua config it changed theme not just wallpaper 
 - Fixed system keybinds in LUA config

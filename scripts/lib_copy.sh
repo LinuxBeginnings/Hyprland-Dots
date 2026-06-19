@@ -137,6 +137,41 @@ copy_phase2() {
   install_terminal_configs "$log"
 }
 
+ensure_lua_keybinds() {
+  local log="$1"
+  local base="${DOTFILES_DIR:-.}"
+  local src_root="$base/config/hypr"
+  local dst_root="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+  local copied=0
+  local rel_dir src_dir src_file rel_path dst_file
+
+  for rel_dir in configs UserConfigs lua; do
+    src_dir="$src_root/$rel_dir"
+    [ -d "$src_dir" ] || continue
+
+    while IFS= read -r -d '' src_file; do
+      rel_path="${src_file#$src_root/}"
+      dst_file="$dst_root/$rel_path"
+
+      if [ ! -f "$dst_file" ]; then
+        mkdir -p "$(dirname "$dst_file")"
+        if cp -f "$src_file" "$dst_file" 2>&1 | tee -a "$log"; then
+          copied=1
+          echo "${NOTE:-[NOTE]} - Added missing Lua file: ${YELLOW:-}$rel_path${RESET:-}" 2>&1 | tee -a "$log"
+        else
+          echo "${ERROR:-[ERROR]} - Failed to add missing Lua file: ${YELLOW:-}$rel_path${RESET:-}" 2>&1 | tee -a "$log"
+        fi
+      fi
+    done < <(find "$src_dir" -maxdepth 1 -type f -name '*.lua' -print0)
+  done
+
+  if [ "$copied" -eq 1 ]; then
+    echo "${OK:-[OK]} - Lua fallback copy completed." 2>&1 | tee -a "$log"
+  else
+    echo "${INFO:-[INFO]} - Lua fallback check: no missing Lua files detected." 2>&1 | tee -a "$log"
+  fi
+}
+
 # Restore Animations and Monitor Profiles plus key hypr files from backup
 restore_hypr_assets() {
   local log="$1"

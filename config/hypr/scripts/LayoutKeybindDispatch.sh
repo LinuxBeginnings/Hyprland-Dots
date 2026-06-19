@@ -46,18 +46,19 @@ get_active_layout() {
 dispatch_quiet() {
   local dispatcher="$1"
   shift || true
-  local command="$dispatcher"
   if (($# > 0)); then
-    command+=" $*"
+    hyprctl dispatch "$dispatcher" "$@" >/dev/null 2>&1 || true
+  else
+    hyprctl dispatch "$dispatcher" >/dev/null 2>&1 || true
   fi
-  local escaped_command="${command//\\/\\\\}"
-  escaped_command="${escaped_command//\"/\\\"}"
-  hyprctl dispatch "hl.dsp.exec_raw(\"$escaped_command\")" >/dev/null 2>&1 || true
 }
 
 cycle_next() {
   local layout="$1"
   case "$layout" in
+  scrolling)
+    dispatch_quiet layoutmsg "focus r"
+    ;;
   monocle)
     dispatch_quiet layoutmsg cyclenext
     ;;
@@ -70,6 +71,9 @@ cycle_next() {
 cycle_prev() {
   local layout="$1"
   case "$layout" in
+  scrolling)
+    dispatch_quiet layoutmsg "focus l"
+    ;;
   monocle)
     dispatch_quiet layoutmsg cycleprev
     ;;
@@ -95,8 +99,20 @@ focus_by_layout() {
     ;;
   dwindle | scrolling)
     case "$direction" in
-    l | u) dispatch_quiet cyclenext prev ;;
-    *) dispatch_quiet cyclenext ;;
+    l | u)
+      if [[ "$layout" == "scrolling" ]]; then
+        dispatch_quiet layoutmsg "focus $direction"
+      else
+        dispatch_quiet cyclenext prev
+      fi
+      ;;
+    *)
+      if [[ "$layout" == "scrolling" ]]; then
+        dispatch_quiet layoutmsg "focus $direction"
+      else
+        dispatch_quiet cyclenext
+      fi
+      ;;
     esac
     ;;
   *)
