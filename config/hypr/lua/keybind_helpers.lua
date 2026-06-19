@@ -112,8 +112,8 @@ local function dispatch(name, args)
     return raw_dispatch_cmd(args)
   end
 
-  if name == "killactive" and window_api.close then
-    return window_api.close()
+  if name == "killactive" then
+    return exec_cmd("hyprctl dispatch killactive")
   end
   if name == "togglefloating" and window_api.float then
     return window_api.float({ action = "toggle" })

@@ -125,8 +125,8 @@ local function dispatch(name, args)
   if name == "exec" then
     return exec_cmd(args)
   end
-  if name == "killactive" and window_api.close then
-    return window_api.close()
+  if name == "killactive" then
+    return exec_cmd("hyprctl dispatch killactive")
   end
   if name == "fullscreen" then
     if window_api.fullscreen then

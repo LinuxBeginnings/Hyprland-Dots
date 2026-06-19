@@ -4,6 +4,7 @@
 
 ## Fixed
 
+- Fixed handling of SUPER-Q close active in LUA config
 - Fixed keybinds handingling in LUA config
 - Fixed wallpaper effects it would not restore original wallpaper 
 - Fixed wallpaper selector it was resetting waybar style sheet
