@@ -49,6 +49,7 @@ DEST_WORKSPACES_CONF="$DEST_HYPR_DIR/workspaces.conf"
 DEST_LUA_WORKSPACES="$DEST_HYPR_DIR/lua/workspaces.lua"
 SOURCE_LUA_ENTRY_ENABLED="$SRC_HYPR_DIR/hyprland.lua"
 SOURCE_LUA_ENTRY_DISABLED="$SRC_HYPR_DIR/hyprland.lua.disable"
+SRC_USER_LUA_TEMPLATES_DIR="$SRC_HYPR_DIR/UserConfigs"
 DEST_LUA_ENTRY="$DEST_HYPR_DIR/hyprland.lua"
 DEST_LUA_ENTRY_DISABLED="$DEST_HYPR_DIR/hyprland.lua.disable"
 SOURCE_LUA_ENTRY=""
@@ -163,6 +164,51 @@ restore_latest_conf_backup() {
   fi
 }
 
+has_active_hyprlang_content() {
+  local source_conf="$1"
+  [ -f "$source_conf" ] || return 1
+  grep -Eq '^[[:space:]]*[^#[:space:]]' "$source_conf"
+}
+
+lua_file_is_generated() {
+  local lua_path="$1"
+  [ -f "$lua_path" ] || return 1
+  grep -Eq 'auto-generated|Converted from|No active entries were found|Source reference from' "$lua_path"
+}
+
+ensure_template_for_empty_user_conf() {
+  local source_conf="$1"
+  local target_lua="$2"
+  local template_lua="$3"
+
+  [ -f "$template_lua" ] || return 0
+
+  if has_active_hyprlang_content "$source_conf"; then
+    return 0
+  fi
+
+  if [ -f "$target_lua" ] && ! lua_file_is_generated "$target_lua"; then
+    echo "[INFO] Preserving customized Lua file for empty/default source: $target_lua"
+    return 0
+  fi
+
+  cp -f "$template_lua" "$target_lua"
+  echo "[OK] Ensured template for empty/default source: $source_conf -> $target_lua"
+}
+
+ensure_templates_for_empty_user_configs() {
+  ensure_template_for_empty_user_conf "$USER_ENV_VARS" "$USER_CONFIGS_DIR/user_env.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_env.lua"
+  ensure_template_for_empty_user_conf "$USER_STARTUP_APPS" "$USER_CONFIGS_DIR/user_startup.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_startup.lua"
+  ensure_template_for_empty_user_conf "$USER_WINDOW_RULES" "$USER_CONFIGS_DIR/user_window_rules.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_window_rules.lua"
+  ensure_template_for_empty_user_conf "$USER_LAYER_RULES" "$USER_CONFIGS_DIR/user_layer_rules.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_layer_rules.lua"
+  ensure_template_for_empty_user_conf "$USER_KEYBINDS" "$USER_CONFIGS_DIR/user_keybinds.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_keybinds.lua"
+  ensure_template_for_empty_user_conf "$USER_SETTINGS" "$USER_CONFIGS_DIR/user_settings.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_settings.lua"
+  ensure_template_for_empty_user_conf "$USER_DECORATIONS" "$USER_CONFIGS_DIR/user_decorations.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_decorations.lua"
+  ensure_template_for_empty_user_conf "$USER_ANIMATIONS" "$USER_CONFIGS_DIR/user_animations.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_animations.lua"
+  ensure_template_for_empty_user_conf "$USER_LAPTOPS" "$USER_CONFIGS_DIR/user_laptops.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_laptops.lua"
+  ensure_template_for_empty_user_conf "$USER_CONFIGS_DIR/01-UserDefaults.conf" "$USER_CONFIGS_DIR/user_defaults.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_defaults.lua"
+}
+
 if [ "$YES" -eq 0 ]; then
   if [ "$REVERT" -eq 1 ]; then
     printf "[ACTION] Continue and revert Lua migration using latest legacy archives? [y/N] "
@@ -223,6 +269,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_animations.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_laptops.lua"
     echo "[DRY-RUN]   - $USER_CONFIGS_DIR/user_defaults.lua"
+    echo "[DRY-RUN] Would ensure repo Lua templates for empty/default UserConfigs/*.conf files."
     echo "[DRY-RUN]   - $DEST_LUA_MONITORS (generated from $DEST_MONITORS_CONF)"
     echo "[DRY-RUN]   - $DEST_LUA_WORKSPACES (generated from $DEST_WORKSPACES_CONF)"
     if [ -d "$USER_CONFIGS_DIR" ]; then
@@ -2085,6 +2132,7 @@ for name, source in [
             lines.append(f"-- No active entries were found in {source.name}.")
             write_file(files_out[name], lines)
 PY
+ensure_templates_for_empty_user_configs
 
 cat > "$USER_OVERRIDES_SHIM" <<'LUA'
 -- ==================================================

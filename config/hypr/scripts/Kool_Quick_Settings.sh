@@ -9,7 +9,7 @@
 # Updated for UserConfigs/configs separation
 
 # Detect active Hyprland config mode (Lua entrypoint vs legacy .conf includes)
-config_home="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 hypr_dir="$config_home/hypr"
 lua_entry="$hypr_dir/hyprland.lua"
 legacy_lua_entry="$config_home/hyprland.lua"
@@ -54,6 +54,26 @@ msg=' ⁉️ Choose what to do ⁉️'
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
 scriptsDir="$hypr_dir/scripts"
 UserScripts="$hypr_dir/UserScripts"
+user_defaults_conf="$UserConfigs/01-UserDefaults.conf"
+user_defaults_lua="$UserConfigs/user_defaults.lua"
+user_env_conf="$UserConfigs/ENVariables.conf"
+user_env_lua="$UserConfigs/user_env.lua"
+user_keybinds_conf="$UserConfigs/UserKeybinds.conf"
+user_keybinds_lua="$UserConfigs/user_keybinds.lua"
+user_startup_conf="$UserConfigs/Startup_Apps.conf"
+user_startup_lua="$UserConfigs/user_startup.lua"
+user_window_rules_conf="$UserConfigs/WindowRules.conf"
+user_window_rules_lua="$UserConfigs/user_window_rules.lua"
+user_layer_rules_conf="$UserConfigs/LayerRules.conf"
+user_layer_rules_lua="$UserConfigs/user_layer_rules.lua"
+user_settings_conf="$UserConfigs/UserSettings.conf"
+user_settings_lua="$UserConfigs/user_settings.lua"
+user_decorations_conf="$UserConfigs/UserDecorations.conf"
+user_decorations_lua="$UserConfigs/user_decorations.lua"
+user_animations_conf="$UserConfigs/UserAnimations.conf"
+user_animations_lua="$UserConfigs/user_animations.lua"
+user_laptops_conf="$UserConfigs/Laptops.conf"
+user_laptops_lua="$UserConfigs/user_laptops.lua"
 
 # Function to show info notification
 show_info() {
@@ -119,9 +139,24 @@ resolve_system_lua_file() {
     fi
 }
 
-resolve_user_defaults_lua_file() {
-    local preferred="$UserConfigs/user_defaults.lua"
-    printf '%s' "$preferred"
+resolve_mode_file() {
+    local preferred="$1"
+    local fallback="$2"
+    if [[ -f "$preferred" || ! -f "$fallback" ]]; then
+        printf '%s' "$preferred"
+    else
+        printf '%s' "$fallback"
+    fi
+}
+
+resolve_user_overlay_file() {
+    local lua_file="$1"
+    local conf_file="$2"
+    if [[ "$hypr_config_mode" == "lua" ]]; then
+        resolve_mode_file "$lua_file" "$conf_file"
+    else
+        resolve_mode_file "$conf_file" "$lua_file"
+    fi
 }
 # Function to toggle Rainbow Borders script availability and refresh UI components
 toggle_rainbow_borders() {
@@ -317,31 +352,25 @@ main() {
     # Map choices to corresponding files
     case "$choice" in
     	"Edit User Defaults")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_user_defaults_lua_file)"; else file="$UserConfigs/01-UserDefaults.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_defaults_lua" "$user_defaults_conf")" ;;
         "Edit User ENV variables")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_env.lua"; else file="$UserConfigs/ENVariables.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_env_lua" "$user_env_conf")" ;;
         "Edit User Keybinds")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_keybinds.lua"; else file="$UserConfigs/UserKeybinds.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_keybinds_lua" "$user_keybinds_conf")" ;;
         "Edit User Startup Apps (overlay)")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_startup.lua"; else file="$UserConfigs/Startup_Apps.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_startup_lua" "$user_startup_conf")" ;;
         "Edit User Window Rules (overlay)")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_window_rules.lua"; else file="$UserConfigs/WindowRules.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_window_rules_lua" "$user_window_rules_conf")" ;;
         "Edit User Layer Rules (overlay)")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_layer_rules.lua"; else file="$UserConfigs/LayerRules.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_layer_rules_lua" "$user_layer_rules_conf")" ;;
         "Edit User Settings")
-            if [[ "$hypr_config_mode" == "lua" ]]; then
-                file="$UserConfigs/user_settings.lua"
-                show_info "Lua mode detected. Edit UserConfigs/user_settings.lua for user settings."
-            else
-                file="$configs/SystemSettings.conf"
-                show_info "Editing default settings. Copy to UserConfigs/UserSettings.conf to override."
-            fi ;;
+            file="$(resolve_user_overlay_file "$user_settings_lua" "$user_settings_conf")" ;;
         "Edit User Decorations")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_decorations.lua"; else file="$UserConfigs/UserDecorations.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_decorations_lua" "$user_decorations_conf")" ;;
         "Edit User Animations")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_animations.lua"; else file="$UserConfigs/UserAnimations.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_animations_lua" "$user_animations_conf")" ;;
         "Edit User Laptop Settings")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_laptops.lua"; else file="$UserConfigs/Laptops.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_laptops_lua" "$user_laptops_conf")" ;;
         "Edit System Default Keybinds")
             if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_keybinds.lua)"; else file="$configs/Keybinds.conf"; fi ;;
         "Edit System Default Startup Apps")

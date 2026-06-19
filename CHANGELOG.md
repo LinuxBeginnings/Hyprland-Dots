@@ -4,24 +4,23 @@
 
 ## Fixed
 
-
 - Fixed keybindings in scrolling layout
-- Fixed `copy.sh` not copying all lua files 
-- Fixed `WallpaperEffects.sh` in lua config it changed theme not just wallpaper 
+- Fixed `copy.sh` not copying all lua files
+- Fixed `WallpaperEffects.sh` in lua config it changed theme not just wallpaper
 - Fixed system keybinds in LUA config
 - Fixed handling of SUPER-Q close active in LUA config
 - Fixed keybinds handingling in LUA config
-- Fixed wallpaper effects it would not restore original wallpaper 
+- Fixed wallpaper effects it would not restore original wallpaper
 - Fixed wallpaper selector it was resetting waybar style sheet
-- Layout code refactor: 
-  - Layouts are now per monitor/workspace 
-  - When you set a layout mode, i.e. scrolling 
-  - It will udpate the `~/.config/hypr/workspaces.conf` file 
+- Layout code refactor:
+  - Layouts are now per monitor/workspace
+  - When you set a layout mode, i.e. scrolling
+  - It will udpate the `~/.config/hypr/workspaces.conf` file
   - Therefore it will be persistent on next login
-  - The current layout is shown in upper left corner 
-  - This fixes issue with setting `workspaces.conf` manually 
-    - When you selected a layout from menu the bindings didn't match 
-    - Also previously the layout was globally applied 
+  - The current layout is shown in upper left corner
+  - This fixes issue with setting `workspaces.conf` manually
+    - When you selected a layout from menu the bindings didn't match
+    - Also previously the layout was globally applied
       - Thanks to `@aki` for finding and reporting this issue
 - WIP: Fixing icon spacing issues in Waybar
 - Waybar would start then be restarted at login
@@ -50,6 +49,15 @@
 
 ## Added:
 
+- Added the additional LUA UserConfig files
+  - `user_settings.lua`
+  - `Window_rules.lua`
+  - `layer_rules.lua`
+  - `user_laptops.lua`
+  - `user_env.lua`
+  - `user_defaults.lua`
+  - Etc..
+- Migration to LUA script will migrate UserConfigs to LUA format
 - Keybind `SUPER + ALT + F` to maximize window in `scrolling` layout
 - Keybind `SUPER+R` to toggle column widths in `scrolling` layout
 - Sample LUA workspace rules for setting layout per monitor/workspace
@@ -89,7 +97,6 @@
   - added equivalent startup command for Lua startup flow
 
   ## Updated:
-
   - Moved `UserScripts/Wallpaper*.sh` and `ZshChangeTheme.sh` to `$scriptsdir`
     - They are system scripts not intended for user modification
   - Archived `UserScripts/Tak0-Autodispatch`
