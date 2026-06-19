@@ -12,11 +12,14 @@ terminal=kitty
 wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current"
 wallpaper_output="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_modified"
 wallpaper_base="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_base"
+wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper"
 SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 # shellcheck source=/dev/null
 . "$SCRIPTSDIR/WallpaperCmd.sh"
 focused_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
 per_monitor_wallpaper_base="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_base_${focused_monitor}"
+per_monitor_wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current_${focused_monitor}"
+per_monitor_wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper_${focused_monitor}"
 rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-wallpaper-effect.rasi"
 
 # Directory for swaync
@@ -55,19 +58,26 @@ declare -A effects=(
     ["Vignette-black"]="magick $wallpaper_base -background black -vignette 0x3 $wallpaper_output"
     ["Zoomed"]="magick $wallpaper_base -gravity Center -extent 1:1 $wallpaper_output"
 )
+persist_wallpaper_state() {
+    local source_wallpaper="$1"
+    [ -n "$source_wallpaper" ] && [ -f "$source_wallpaper" ] || return 0
+
+    mkdir -p "$(dirname "$wallpaper_current")" "$(dirname "$wallpaper_link")"
+    cp -f "$source_wallpaper" "$wallpaper_current" || true
+    ln -sf "$source_wallpaper" "$wallpaper_link" || true
+
+    if [[ -n "$focused_monitor" ]]; then
+        cp -f "$source_wallpaper" "$per_monitor_wallpaper_current" || true
+        ln -sf "$source_wallpaper" "$per_monitor_wallpaper_link" || true
+    fi
+}
 
 # Function to apply no effects
 no-effects() {
     local resize_mode
     resize_mode="$(wallpaper_resize_mode "$wallpaper_base" "$focused_monitor")"
     "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$wallpaper_base" "${SWWW_PARAMS[@]}" || return 1
-    if ! "$SCRIPTSDIR/WallustSwww.sh" "$wallpaper_base"; then
-        notify-send -u critical -i "$iDIR/error.png" "Wallust failed" "Wallpaper theme not refreshed"
-        return 1
-    fi
-    # Refresh rofi, waybar, wallust palettes
-	sleep 0.5
-	"$SCRIPTSDIR/Refresh.sh"
+    persist_wallpaper_state "$wallpaper_base"
 
     notify-send -u low -i "$iDIR/ja.png" "No wallpaper" "effects applied"
     # copying wallpaper for rofi menu
@@ -98,24 +108,21 @@ main() {
         elif [[ "${effects[$choice]+exists}" ]]; then
             # Apply selected effect
             notify-send -u normal -i "$iDIR/ja.png"  "Applying:" "$choice effects"
-            eval "${effects[$choice]}"
+            if ! eval "${effects[$choice]}"; then
+                notify-send -u critical -i "$iDIR/error.png" "Wallpaper effect failed" "$choice could not be applied"
+                return 1
+            fi
 
             # intial kill process
             for pid in swaybg mpvpaper; do
-            killall -SIGUSR1 "$pid"
+            killall -SIGUSR1 "$pid" 2>/dev/null || true
             done
 
             sleep 1
             local resize_mode
             resize_mode="$(wallpaper_resize_mode "$wallpaper_output" "$focused_monitor")"
             "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$wallpaper_output" "${SWWW_PARAMS[@]}"
-            sleep 0.5
-            if ! "$SCRIPTSDIR/WallustSwww.sh" "$wallpaper_output"; then
-                notify-send -u critical -i "$iDIR/error.png" "Wallust failed" "Wallpaper theme not refreshed"
-                return 1
-            fi
-            # Refresh rofi, waybar, wallust palettes
-            "${SCRIPTSDIR}/Refresh.sh"
+            persist_wallpaper_state "$wallpaper_output"
             notify-send -u low -i "$iDIR/ja.png" "$choice" "effects applied"
         else
             echo "Effect '$choice' not recognized."

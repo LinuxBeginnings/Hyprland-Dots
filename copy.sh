@@ -447,6 +447,7 @@ copy_waybar "$LOG"
 printf "\n%.0s" {1..1}
 printf "${INFO} - Copying dotfiles ${SKY_BLUE}second${RESET} part\n"
 copy_phase2 "$LOG"
+ensure_lua_keybinds "$LOG"
 printf "\\n%.0s" {1..1}
 # waybar-weather config handling:
 # - install (fresh copy): always overwrite and prompt for units

@@ -4,6 +4,8 @@
 
 ## Fixed
 
+- Fixed `copy.sh` not copying all lua files 
+- Fixed `WallpaperEffects.sh` in lua config it changed theme not just wallpaper 
 - Fixed system keybinds in LUA config
 - Fixed handling of SUPER-Q close active in LUA config
 - Fixed keybinds handingling in LUA config
