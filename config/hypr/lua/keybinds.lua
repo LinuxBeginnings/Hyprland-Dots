@@ -68,7 +68,7 @@ local app_binds = {
   { "SUPER", "B", 'xdg-open "https://"', "open default browser" },
   { "SUPER", "A", "$HOME/.config/hypr/scripts/OverviewToggle.sh", "desktop overview" },
   { "SUPER", "Return", "kitty", "Open terminal" },
-  { "SUPER", "E", "thunar", "file manager" },
+  { "SUPER", "E", "$HOME/.config/hypr/scripts/LaunchThunar.sh", "file manager" },
   { "SUPER", "C", "$HOME/.config/hypr/scripts/rofi-ssh-menu.sh", "SSH session manager" },
   { "SUPER", "T", "$HOME/.config/hypr/scripts/ThemeChanger.sh", "Global theme switcher using Wallust" },
   { "SUPER", "H", "$HOME/.config/hypr/scripts/KeyHints.sh", "help / cheat sheet" },

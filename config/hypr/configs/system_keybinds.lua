@@ -225,7 +225,7 @@ bind("SUPER", "D", exec_cmd("pkill rofi || true && rofi -show drun -modi drun, f
 bind("SUPER", "B", exec_cmd("xdg-open \"https://\""), { description = "open default browser" })
 bind("SUPER", "A", exec_cmd("$HOME/.config/hypr/scripts/OverviewToggle.sh"), { description = "desktop overview" })
 bind("SUPER", "Return", exec_cmd("kitty"), { description = "Open terminal" })
-bind("SUPER", "E", exec_cmd("thunar"), { description = "file manager" })
+bind("SUPER", "E", exec_cmd("$HOME/.config/hypr/scripts/LaunchThunar.sh"), { description = "file manager" })
 bind("SUPER", "C", exec_cmd("$HOME/.config/hypr/scripts/rofi-ssh-menu.sh"), { description = "SSH session manager" })
 bind("SUPER", "T", exec_cmd("$HOME/.config/hypr/scripts/ThemeChanger.sh"), { description = "Global theme switcher using Wallust" })
 bind("SUPER", "H", exec_cmd("$HOME/.config/hypr/scripts/KeyHints.sh"), { description = "help / cheat sheet" })

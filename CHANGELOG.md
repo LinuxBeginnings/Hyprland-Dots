@@ -4,14 +4,17 @@
 
 ## Fixed
 
-- Fixed keybindings in scrolling layout
-- Fixed `copy.sh` not copying all lua files
-- Fixed `WallpaperEffects.sh` in lua config it changed theme not just wallpaper
-- Fixed system keybinds in LUA config
-- Fixed handling of SUPER-Q close active in LUA config
-- Fixed keybinds handingling in LUA config
-- Fixed wallpaper effects it would not restore original wallpaper
-- Fixed wallpaper selector it was resetting waybar style sheet
+- duplicate bindings for terminal
+- Created wrapper script for `thunar`
+  - Wasn't always starting in Debian lua config
+- keybindings in scrolling layout
+- `copy.sh` not copying all lua files
+- `WallpaperEffects.sh` in lua config it changed theme not just wallpaper
+- system keybinds in LUA config
+- handling of SUPER-Q close active in LUA config
+- keybinds handingling in LUA config
+- wallpaper effects it would not restore original wallpaper
+- wallpaper selector it was resetting waybar style sheet
 - Layout code refactor:
   - Layouts are now per monitor/workspace
   - When you set a layout mode, i.e. scrolling

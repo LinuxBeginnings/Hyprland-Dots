@@ -245,10 +245,15 @@ if [ "$DRY_RUN" -eq 1 ]; then
     fi
     if [ -f "$DEST_LUA_ENTRY_DISABLED" ]; then
       echo "[DRY-RUN] Would enable Lua entrypoint: $DEST_LUA_ENTRY_DISABLED -> $DEST_LUA_ENTRY"
+    fi
+    if [ -n "$SOURCE_LUA_ENTRY" ]; then
+      if [ -f "$DEST_LUA_ENTRY" ]; then
+        echo "[DRY-RUN] Would refresh Lua entrypoint from template: $SOURCE_LUA_ENTRY -> $DEST_LUA_ENTRY"
+      else
+        echo "[DRY-RUN] Would install Lua entrypoint: $SOURCE_LUA_ENTRY -> $DEST_LUA_ENTRY"
+      fi
     elif [ -f "$DEST_LUA_ENTRY" ]; then
-      echo "[DRY-RUN] Lua entrypoint already enabled: $DEST_LUA_ENTRY"
-    elif [ -n "$SOURCE_LUA_ENTRY" ]; then
-      echo "[DRY-RUN] Would install Lua entrypoint: $SOURCE_LUA_ENTRY -> $DEST_LUA_ENTRY"
+      echo "[DRY-RUN] Lua entrypoint already enabled: $DEST_LUA_ENTRY (no source template available to refresh)"
     fi
     echo "[DRY-RUN] Would replace Lua module directory: $DEST_HYPR_DIR/lua"
     echo "[DRY-RUN] Would generate split configs/UserConfigs Lua overlays:"
@@ -311,11 +316,12 @@ if [ -f "$DEST_LUA_ENTRY_DISABLED" ]; then
     mv "$DEST_LUA_ENTRY_DISABLED" "$DEST_LUA_ENTRY"
     echo "[OK] Enabled Lua entrypoint: $DEST_LUA_ENTRY"
   fi
-elif [ -f "$DEST_LUA_ENTRY" ]; then
-  echo "[INFO] Lua entrypoint already enabled: $DEST_LUA_ENTRY"
-elif [ -n "$SOURCE_LUA_ENTRY" ]; then
+fi
+if [ -n "$SOURCE_LUA_ENTRY" ]; then
   cp -f "$SOURCE_LUA_ENTRY" "$DEST_LUA_ENTRY"
-  echo "[OK] Installed Lua entrypoint: $SOURCE_LUA_ENTRY -> $DEST_LUA_ENTRY"
+  echo "[OK] Installed/updated Lua entrypoint: $SOURCE_LUA_ENTRY -> $DEST_LUA_ENTRY"
+elif [ -f "$DEST_LUA_ENTRY" ]; then
+  echo "[INFO] Lua entrypoint already enabled: $DEST_LUA_ENTRY (source template unavailable; keeping existing entrypoint)"
 else
   echo "[ERROR] Unable to locate a Lua entrypoint to enable." >&2
   exit 1
