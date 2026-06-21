@@ -14,6 +14,8 @@ if ! command -v hyprctl >/dev/null 2>&1; then
   exit 0
 fi
 
+LUA_CYCLE_SCRIPT="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/LuaCycleWindow.sh"
+
 normalize_layout() {
   case "$1" in
   master | dwindle | scrolling | monocle)
@@ -53,17 +55,68 @@ dispatch_quiet() {
   fi
 }
 
+get_active_window_address() {
+  if ! command -v jq >/dev/null 2>&1; then
+    printf '\n'
+    return 0
+  fi
+  hyprctl -j activewindow 2>/dev/null | jq -r '.address // empty' 2>/dev/null || true
+}
+
+dispatch_changed_focus() {
+  local before after dispatcher="$1"
+  shift || true
+  before="$(get_active_window_address)"
+  dispatch_quiet "$dispatcher" "$@"
+  after="$(get_active_window_address)"
+  [[ -n "$before" && -n "$after" && "$before" != "$after" ]]
+}
+
+direction_word() {
+  case "$1" in
+  l | left) printf 'left\n' ;;
+  r | right) printf 'right\n' ;;
+  u | up) printf 'up\n' ;;
+  d | down) printf 'down\n' ;;
+  *) printf 'right\n' ;;
+  esac
+}
+
+dispatch_lua_focus() {
+  local dir_word
+  dir_word="$(direction_word "$1")"
+  hyprctl dispatch "hl.dsp.focus({ direction = \"$dir_word\" })" >/dev/null 2>&1 || true
+}
+
+cycle_lua() {
+  local mode="${1:-next}"
+  if [[ -x "$LUA_CYCLE_SCRIPT" ]]; then
+    "$LUA_CYCLE_SCRIPT" "$mode" >/dev/null 2>&1 || true
+    return 0
+  fi
+  case "$mode" in
+  previous | prev | back) dispatch_lua_focus left ;;
+  *) dispatch_lua_focus right ;;
+  esac
+}
+
 cycle_next() {
   local layout="$1"
   case "$layout" in
   scrolling)
-    dispatch_quiet layoutmsg "focus r"
+    if ! dispatch_changed_focus layoutmsg "focus r"; then
+      dispatch_lua_focus right
+    fi
     ;;
   monocle)
-    dispatch_quiet layoutmsg cyclenext
+    if ! dispatch_changed_focus layoutmsg cyclenext; then
+      cycle_lua next
+    fi
     ;;
   *)
-    dispatch_quiet cyclenext
+    if ! dispatch_changed_focus cyclenext; then
+      cycle_lua next
+    fi
     ;;
   esac
 }
@@ -72,13 +125,19 @@ cycle_prev() {
   local layout="$1"
   case "$layout" in
   scrolling)
-    dispatch_quiet layoutmsg "focus l"
+    if ! dispatch_changed_focus layoutmsg "focus l"; then
+      dispatch_lua_focus left
+    fi
     ;;
   monocle)
-    dispatch_quiet layoutmsg cycleprev
+    if ! dispatch_changed_focus layoutmsg cycleprev; then
+      cycle_lua previous
+    fi
     ;;
   *)
-    dispatch_quiet cyclenext prev
+    if ! dispatch_changed_focus cyclenext prev; then
+      cycle_lua previous
+    fi
     ;;
   esac
 }
@@ -89,7 +148,9 @@ focus_by_layout() {
 
   case "$layout" in
   master)
-    dispatch_quiet movefocus "$direction"
+    if ! dispatch_changed_focus movefocus "$direction"; then
+      dispatch_lua_focus "$direction"
+    fi
     ;;
   monocle)
     case "$direction" in
@@ -101,22 +162,28 @@ focus_by_layout() {
     case "$direction" in
     l | u)
       if [[ "$layout" == "scrolling" ]]; then
-        dispatch_quiet layoutmsg "focus $direction"
+        if ! dispatch_changed_focus layoutmsg "focus $direction"; then
+          dispatch_lua_focus "$direction"
+        fi
       else
-        dispatch_quiet cyclenext prev
+        cycle_prev "$layout"
       fi
       ;;
     *)
       if [[ "$layout" == "scrolling" ]]; then
-        dispatch_quiet layoutmsg "focus $direction"
+        if ! dispatch_changed_focus layoutmsg "focus $direction"; then
+          dispatch_lua_focus "$direction"
+        fi
       else
-        dispatch_quiet cyclenext
+        cycle_next "$layout"
       fi
       ;;
     esac
     ;;
   *)
-    dispatch_quiet movefocus "$direction"
+    if ! dispatch_changed_focus movefocus "$direction"; then
+      dispatch_lua_focus "$direction"
+    fi
     ;;
   esac
 }
