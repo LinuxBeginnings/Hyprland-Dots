@@ -4,6 +4,7 @@
 
 ## Fixed
 
+- Pane selection bindings fail in lua configuration
 - duplicate bindings for terminal
 - Created wrapper script for `thunar`
   - Wasn't always starting in Debian lua config
@@ -52,6 +53,12 @@
 
 ## Added:
 
+- Migrated animation files from hyprlang to lua 
+- Launch scripts for `$term` and `$files`
+  - Scripts check for presence or crashes
+  - Has several fallbacks for each 
+     - kitty, ghostty, wezterm, alacritty, konsole, gnome-terminal
+     - Thunar,dolphin,nautilus, $term -e yazi
 - Added the additional LUA UserConfig files
   - `user_settings.lua`
   - `Window_rules.lua`
