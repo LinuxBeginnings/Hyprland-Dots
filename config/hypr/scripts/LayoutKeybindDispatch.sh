@@ -30,7 +30,7 @@ normalize_layout() {
 get_active_layout() {
   local layout
 
-  layout="$(hyprctl -j activeworkspace 2>/dev/null | jq -r '.tiledLayout // .tiled_layout // empty' 2>/dev/null || true)"
+  layout="$(hyprctl -j activeworkspace 2>/dev/null | jq -r '.tiledLayout // .tiled_layout // .layout // empty' 2>/dev/null || true)"
   layout="$(normalize_layout "$layout")"
 
   if [[ -z "$layout" ]]; then
