@@ -54,6 +54,7 @@
 ## Added:
 
 - Sample `starship` config files
+  - `copy.sh` now copies them to `.config/starship`
   - Will be adding menu later
 - Migrated animation files from hyprlang to lua
 - Launch scripts for `$term` and `$files`
