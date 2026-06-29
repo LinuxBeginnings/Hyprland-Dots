@@ -44,6 +44,7 @@ Options:
 Notes:
   --disable has a short flag -D to avoid clashing with -d (dry-run).
   Set HYPR_CONFIG_MODE=lua|conf|hyprlang|auto to override detection.
+  Keys must be loaded separately (e.g. ssh-add ~/.ssh/id_ed25519). AddKeysToAgent only auto-adds after first use.
 USAGE
 }
 
