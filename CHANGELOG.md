@@ -53,6 +53,8 @@
 
 ## Added:
 
+- `.config/hypr/scripts/kooldots-add-ssh-agent.sh`
+  - will create `systemd` user service to store ssh keys
 - Sample `starship` config files
   - `copy.sh` now copies them to `.config/starship`
   - Will be adding menu later
