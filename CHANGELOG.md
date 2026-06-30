@@ -132,6 +132,8 @@
 
 ---
 
+## v2.3.24
+
 ## Fixed:
 
 - `awww` default didn't work for wide screen monitors
