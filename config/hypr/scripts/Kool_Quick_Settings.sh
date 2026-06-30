@@ -322,6 +322,7 @@ Edit System Default Startup Apps
 Edit System Default Window Rules
 Edit System Default Layer Rules
 Edit System Default Settings
+Change Starship Prompt
 --- UTILITIES ---
 Set SDDM Wallpaper
 Choose Kitty Terminal Theme
@@ -381,6 +382,7 @@ main() {
             if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_layer_rules.lua)"; else file="$configs/LayerRules.conf"; fi ;;
         "Edit System Default Settings")
             if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_settings.lua)"; else file="$configs/SystemSettings.conf"; fi ;;
+        "Change Starship Prompt") "$scriptsDir/ChangeStarshipPrompt.sh" ;;
         "Set SDDM Wallpaper")
             if [[ -n "$quick_settings_monitor" ]]; then
                 "$scriptsDir/sddm_wallpaper.sh" --normal "$quick_settings_monitor"
