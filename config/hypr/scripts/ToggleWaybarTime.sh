@@ -10,8 +10,16 @@
 MODULES_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/Modules"
 notify_swaync() {
   command -v notify-send >/dev/null 2>&1 || return 0
+  export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
   local icon="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images/note.png"
-  notify-send -a "Waybar Time" -u low -t 2000 -i "$icon" "$@" >/dev/null 2>&1 || true
+  if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    local bus_path="${XDG_RUNTIME_DIR}/bus"
+    if [ -S "$bus_path" ]; then
+      export DBUS_SESSION_BUS_ADDRESS="unix:path=$bus_path"
+    fi
+  fi
+  DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
+    notify-send -a "Waybar Time" -u low -t 2000 -i "$icon" "$@" >/dev/null 2>&1 || true
 }
 
 if [ ! -f "$MODULES_FILE" ]; then
@@ -86,11 +94,7 @@ else
   mode="12H"
 fi
 
-if [ -x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/Refresh.sh" ]; then
-  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/Refresh.sh" >/dev/null 2>&1 &
-else
-  restart_waybar
-fi
+restart_waybar
 sleep 0.3
 
 notify_swaync "Switched to ${mode} format"
