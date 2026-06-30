@@ -250,6 +250,9 @@
 
 ## Added:
 
+- System menu item to toggle 12/24hr waybar clock
+  - Under Edit System Settings `SUPER + SHIFT + E`
+  - Search for `waybar`
 - `yazi` config to `copy.sh`
 - Waybar widget for layouts
   - Shows current layout
