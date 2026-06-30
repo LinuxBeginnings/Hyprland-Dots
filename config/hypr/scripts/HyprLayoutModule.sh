@@ -10,7 +10,7 @@
 IFS=$'\n\t'
 
 SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
-rofi_config="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-waybar-layout.rasi"
+rofi_config="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-layout.rasi"
 change_layout="${SCRIPTSDIR}/ChangeLayout.sh"
 layouts=(dwindle scrolling monocle master)
 
@@ -107,7 +107,7 @@ show_menu() {
 		return 0
 	fi
 
-	choice="$(printf '%s\n' "${options[@]}" | rofi -i -dmenu -p "Workspace layout" -mesg "Applies to active workspace only" -selected-row "$default_row" -config "$rofi_config")"
+	choice="$(printf '%s\n' "${options[@]}" | rofi -i -dmenu -p "Workspace layout" -mesg "Select layout for this workspace" -selected-row "$default_row" -config "$rofi_config")"
 	[[ -z "$choice" ]] && exit 0
 
 	case "$choice" in

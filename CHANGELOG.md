@@ -53,6 +53,7 @@
 
 ## Added:
 
+- `config/rofi/config-layout.rasi` menu for Change Layout menu
 - `.config/hypr/scripts/kooldots-add-ssh-agent.sh`
   - will create `systemd` user service to store ssh keys
 - Sample `starship` config files
