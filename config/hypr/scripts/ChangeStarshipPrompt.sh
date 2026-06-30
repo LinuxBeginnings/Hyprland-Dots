@@ -12,7 +12,7 @@ STARSHIP_DIR="$CONFIG_HOME/starship"
 HYPR_STARSHIP_DIR="$CONFIG_HOME/hypr/starship"
 STARSHIP_CONFIG="$CONFIG_HOME/starship.toml"
 BACKUP_FILE="$STARSHIP_CONFIG.original"
-ROFI_THEME="$CONFIG_HOME/rofi/config-layout.rasi"
+ROFI_THEME="$CONFIG_HOME/rofi/config-starship.rasi"
 RESTORE_LABEL="Retore orignal prompt"
 
 is_starship_enabled() {
@@ -49,7 +49,7 @@ if [[ -f "$BACKUP_FILE" ]]; then
   rofi_options+=("$RESTORE_LABEL")
 fi
 
-selection="$(printf '%s\n' "${rofi_options[@]}" | rofi -dmenu -i -p "Select Starship prompt" -theme "$ROFI_THEME")"
+selection="$(printf '%s\n' "${rofi_options[@]}" | rofi -dmenu -i -p "Select Starship Prompt" -mesg "Select Starship Prompt" -theme "$ROFI_THEME")"
 
 if [[ -z "$selection" ]]; then
   exit 0
