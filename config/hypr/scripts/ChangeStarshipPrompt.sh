@@ -15,15 +15,8 @@ BACKUP_FILE="$STARSHIP_CONFIG.original"
 ROFI_THEME="$CONFIG_HOME/rofi/config-starship.rasi"
 RESTORE_LABEL="Retore orignal prompt"
 
-is_starship_enabled() {
-  if [[ -n "${STARSHIP_SHELL:-}" ]]; then
-    return 0
-  fi
-  pgrep -x starship >/dev/null 2>&1
-}
-
-if ! is_starship_enabled; then
-  echo "starship not enabled"
+if ! command -v starship >/dev/null 2>&1; then
+  echo "starship is not installed"
   exit 1
 fi
 
