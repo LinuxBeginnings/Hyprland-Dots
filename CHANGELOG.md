@@ -53,6 +53,9 @@
 
 ## Added:
 
+- Rofi menu to select starship prompt
+  - Requires that starship is already configured and running
+  - The menu is in the Quick Settings Menu `SUPER SHIFT E`
 - `config/rofi/config-layout.rasi` menu for Change Layout menu
 - `.config/hypr/scripts/kooldots-add-ssh-agent.sh`
   - will create `systemd` user service to store ssh keys
