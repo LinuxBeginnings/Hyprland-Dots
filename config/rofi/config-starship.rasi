@@ -13,7 +13,7 @@ mainbox {
 /* ---- Window ---- */
 window {
   width: 520px;
-  height: 640px;
+  height: 715;
 }
 
 /* ---- Entry ---- */
