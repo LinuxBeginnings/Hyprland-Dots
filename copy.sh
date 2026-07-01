@@ -165,6 +165,55 @@ express_supported() {
   fi
   version_gte "$current_version" "$MIN_EXPRESS_VERSION"
 }
+config_home() {
+  echo "${XDG_CONFIG_HOME:-$HOME/.config}"
+}
+
+is_kooldots_config() {
+  local hypr_dir
+  hypr_dir="$(config_home)/hypr"
+  [ -d "$hypr_dir" ] || return 1
+  find "$hypr_dir" -maxdepth 1 -type f -name 'v*.*.*' -print -quit | grep -q .
+}
+
+is_oem_lua_config() {
+  local cfg_home
+  cfg_home="$(config_home)"
+  [ -f "$cfg_home/hyprland.lua" ] || [ -f "$cfg_home/hypr/hyprland.lua" ]
+}
+
+require_kooldots_for_upgrade() {
+  if is_kooldots_config; then
+    return 0
+  fi
+  echo "${WARN} Existing KoolDots config not deteced - run fresh install"
+  return 1
+}
+
+prepare_fresh_install_hypr() {
+  local log="${1:-/dev/null}"
+  local cfg_home
+  local hypr_dir
+  local backup_suffix
+  cfg_home="$(config_home)"
+  hypr_dir="$cfg_home/hypr"
+
+  if ! is_kooldots_config && ! is_oem_lua_config; then
+    return 0
+  fi
+
+  backup_suffix="$(get_backup_dirname)"
+
+  if [ -d "$hypr_dir" ]; then
+    mv "$hypr_dir" "${hypr_dir}-${backup_suffix}" 2>&1 | tee -a "$log"
+    echo "${NOTE} - Backed up existing hypr config to ${hypr_dir}-${backup_suffix}" 2>&1 | tee -a "$log"
+  fi
+
+  if [ -f "$cfg_home/hyprland.lua" ]; then
+    mv "$cfg_home/hyprland.lua" "$cfg_home/hyprland.lua-${backup_suffix}" 2>&1 | tee -a "$log"
+    echo "${NOTE} - Backed up existing hyprland.lua to ${cfg_home}/hyprland.lua-${backup_suffix}" 2>&1 | tee -a "$log"
+  fi
+}
 print_usage() {
   cat <<'EOF'
 Usage: copy.sh [--upgrade] [--express-upgrade] [--help]
@@ -230,6 +279,9 @@ if [ -z "$RUN_MODE" ]; then
         EXPRESS_MODE=0
         ;;
       upgrade)
+        if ! require_kooldots_for_upgrade; then
+          continue
+        fi
         RUN_MODE="upgrade"
         UPGRADE_MODE=1
         EXPRESS_MODE=0
@@ -237,6 +289,9 @@ if [ -z "$RUN_MODE" ]; then
       express)
         if [ "$EXPRESS_SUPPORTED" -eq 0 ]; then
           echo "${WARN} Express mode requires installed dotfiles v${MIN_EXPRESS_VERSION} or newer. Please choose another option."
+          continue
+        fi
+        if ! require_kooldots_for_upgrade; then
           continue
         fi
         RUN_MODE="express"
@@ -260,6 +315,12 @@ if [ -z "$RUN_MODE" ]; then
   else
     echo "${NOTE} Menu helper not found; defaulting to install workflow."
     RUN_MODE="install"
+  fi
+fi
+
+if [ "$RUN_MODE" = "upgrade" ] || [ "$RUN_MODE" = "express" ]; then
+  if ! require_kooldots_for_upgrade; then
+    exit 1
   fi
 fi
 
@@ -341,6 +402,9 @@ if [ "$UPGRADE_MODE" -eq 1 ]; then
 fi
 if [ "$EXPRESS_MODE" -eq 1 ]; then
   echo "${INFO} Express mode enabled. Optional restore prompts will be skipped." 2>&1 | tee -a "$LOG"
+fi
+if [ "$RUN_MODE" = "install" ]; then
+  prepare_fresh_install_hypr "$LOG"
 fi
 
 detect_nvidia_adjust "$LOG"

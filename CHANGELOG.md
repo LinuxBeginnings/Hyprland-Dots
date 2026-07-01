@@ -53,6 +53,11 @@
 
 ## Added:
 
+- Check for existing `KoolDots` installations
+  - Distros are now shipping hyprland with LUA workflow
+  - Previous `copy.sh` did not disable `~/.config/hypr/hyprland.lua`
+  - After KoolDots installation it would not start, resulting in black screen
+  - Now checks for this and backs up `.config/hypr` directory
 - Rofi menu to select starship prompt
   - Requires that starship is already configured and running
   - The menu is in the Quick Settings Menu `SUPER SHIFT E`
