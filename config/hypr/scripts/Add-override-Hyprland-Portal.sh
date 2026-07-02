@@ -14,7 +14,7 @@ SCRIPT_NAME="$(basename "$0")"
 DRY_RUN=0
 ACTION="apply"
 
-OVERRIDE_DIR="$HOME/.config/systemd/user/xdg-desktop-portal.service.d"
+OVERRIDE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/xdg-desktop-portal.service.d"
 OVERRIDE_FILE="$OVERRIDE_DIR/override.conf"
 PORTAL_UNITS=(
   "xdg-desktop-portal.service"

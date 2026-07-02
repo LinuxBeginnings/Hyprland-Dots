@@ -7,7 +7,7 @@
 # ==================================================
 # Start wallpaper daemon, preferring awww with swww fallback
 
-SCRIPTSDIR="$HOME/.config/hypr/scripts"
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 # shellcheck source=/dev/null
 . "$SCRIPTSDIR/WallpaperCmd.sh"
 
@@ -21,8 +21,8 @@ for _ in {1..50}; do
   sleep 0.1
 done
 
-wallpaper_link="$HOME/.config/rofi/.current_wallpaper"
-wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
+wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper"
+wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current"
 
 read_cached_wallpaper() {
   local cache_file="$1"
@@ -40,8 +40,8 @@ get_monitors() {
 
 apply_wallpaper_for_monitor() {
   local monitor="$1"
-  local per_monitor_link="$HOME/.config/rofi/.current_wallpaper_${monitor}"
-  local per_monitor_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current_${monitor}"
+  local per_monitor_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper_${monitor}"
+  local per_monitor_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current_${monitor}"
   local wallpaper_path=""
 
   # Prefer per-monitor symlink target if valid

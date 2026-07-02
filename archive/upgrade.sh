@@ -81,25 +81,25 @@ LOG="Upgrade-Logs/upgrade-$(date +%d-%H%M%S)_upgrade_dotfiles.log"
 
 # source and target versions
 source_dir="config"
-target_dir="$HOME/.config"
+target_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
 
 # Specify the update source directories, their corresponding target directories, and their exclusions
 declare -A directories=(
-    ["config/hypr/"]="$HOME/.config/hypr/"
-    ["config/kitty/"]="$HOME/.config/kitty/"
-    ["config/Kvantum/"]="$HOME/.config/Kvantum/"
-    ["config/nvim/"]="$HOME/.config/nvim/"
-    ["config/qt5ct/"]="$HOME/.config/qt5ct"
-    ["config/qt6ct/"]="$HOME/.config/qt6ct/"
-    ["config/rofi/"]="$HOME/.config/rofi/"
-    ["config/swaync/"]="$HOME/.config/swaync/"
-    ["config/waybar/"]="$HOME/.config/waybar/"
-    ["config/cava/"]="$HOME/.config/cava/"
-    ["config/ags/"]="$HOME/.config/ags/"
-    ["config/quickshell/"]="$HOME/.config/quickshell/"
-    ["config/fastfetch/"]="$HOME/.config/fastfetch/"
-    ["config/wallust/"]="$HOME/.config/wallust/"
-    ["config/wlogout/"]="$HOME/.config/wlogout/"
+    ["config/hypr/"]="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/"
+    ["config/kitty/"]="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/"
+    ["config/Kvantum/"]="${XDG_CONFIG_HOME:-$HOME/.config}/Kvantum/"
+    ["config/nvim/"]="${XDG_CONFIG_HOME:-$HOME/.config}/nvim/"
+    ["config/qt5ct/"]="${XDG_CONFIG_HOME:-$HOME/.config}/qt5ct"
+    ["config/qt6ct/"]="${XDG_CONFIG_HOME:-$HOME/.config}/qt6ct/"
+    ["config/rofi/"]="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/"
+    ["config/swaync/"]="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/"
+    ["config/waybar/"]="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/"
+    ["config/cava/"]="${XDG_CONFIG_HOME:-$HOME/.config}/cava/"
+    ["config/ags/"]="${XDG_CONFIG_HOME:-$HOME/.config}/ags/"
+    ["config/quickshell/"]="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/"
+    ["config/fastfetch/"]="${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch/"
+    ["config/wallust/"]="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/"
+    ["config/wlogout/"]="${XDG_CONFIG_HOME:-$HOME/.config}/wlogout/"
     # Add more directories to compare as needed
 )
 
@@ -128,7 +128,7 @@ create_backup() {
     local target_dir="$1"
     local backup_suffix="-b4-upgrade"
     local target_base=$(basename "$target_dir")
-    local backup_dir="$HOME/.config/${target_base}${backup_suffix}"
+    local backup_dir="${XDG_CONFIG_HOME:-$HOME/.config}/${target_base}${backup_suffix}"
 
     if [ -d "$backup_dir" ]; then
         echo "$NOTE Updating existing backup of the $target_dir..."
@@ -144,7 +144,7 @@ create_backup() {
 # Check if the version file exists in target directory, if not exit
 target_version_file=$(find "$target_dir/hypr" -name 'v*' | sort -V | tail -n 1)
 if [ -z "$target_version_file" ]; then
-    echo "$ERROR Version number not found in ~/.config/hypr/" 2>&1 | tee -a "$LOG"
+    echo "$ERROR Version number not found in ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/" 2>&1 | tee -a "$LOG"
     echo "$ERROR Upgrade your dots first by running ./copy.sh" 2>&1 | tee -a "$LOG"
     exit 1
 fi
@@ -200,10 +200,10 @@ if version_gt "$latest_version" "$stored_version"; then
         echo "$NOTE Files or directories updated successfully to version $latest_version" 2>&1 | tee -a "$LOG"
 
         # Set some files as executable
-        chmod +x "$HOME/.config/hypr/scripts/"* 2>&1 | tee -a "$LOG"
-        chmod +x "$HOME/.config/hypr/UserScripts/"* 2>&1 | tee -a "$LOG"
+        chmod +x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/"* 2>&1 | tee -a "$LOG"
+        chmod +x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserScripts/"* 2>&1 | tee -a "$LOG"
         # Set executable for initial-boot.sh
-        chmod +x "$HOME/.config/hypr/initial-boot.sh" 2>&1 | tee -a "$LOG"
+        chmod +x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/initial-boot.sh" 2>&1 | tee -a "$LOG"
         
     else
         echo "$MAGENTA Upgrade declined. No files or directories changed" 2>&1 | tee -a "$LOG"
@@ -215,7 +215,7 @@ fi
 printf "\n%.0s" {1..3}
 echo "$(tput bold)$(tput setaf 3)ATTENTION!!!! VERY IMPORTANT NOTICE!!!! $(tput sgr0)" 
 echo "$(tput bold)$(tput setaf 7)If you updated waybar directory, and you have your own waybar layout and styles $(tput sgr0)"
-echo "$(tput bold)$(tput setaf 7)Copy those files from the created backup ~/.config/waybar-b4-upgrade $(tput sgr0)"
+echo "$(tput bold)$(tput setaf 7)Copy those files from the created backup ${XDG_CONFIG_HOME:-$HOME/.config}/waybar-b4-upgrade $(tput sgr0)"
 echo "$(tput bold)$(tput setaf 7)Make sure to set your waybar and style before logout or reboot $(tput sgr0)"
 echo "$(tput bold)$(tput setaf 7)SUPER CTRL B for Waybar Styles and SUPER ALT B for Waybar Layout $(tput sgr0)"
 printf "\n%.0s" {1..3}

@@ -7,7 +7,7 @@
 # ==================================================
 # Script to manage UserConfigs and UserConfigsBak
 
-HYPR_CONFIG_DIR="$HOME/.config/hypr"
+HYPR_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
 USER_CONFIGS="$HYPR_CONFIG_DIR/UserConfigs"
 USER_CONFIGS_BAK="$HYPR_CONFIG_DIR/UserConfigsBak"
 

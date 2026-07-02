@@ -7,7 +7,7 @@
 # ==================================================
 # Toggle waybar-weather units between metric and imperial
 
-CONFIG_FILE="$HOME/.config/waybar-weather/config.toml"
+CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/waybar-weather/config.toml"
 
 if [ ! -f "$CONFIG_FILE" ]; then
   notify-send "Weather units" "Config not found: $CONFIG_FILE"

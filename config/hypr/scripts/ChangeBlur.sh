@@ -7,7 +7,7 @@
 # ==================================================
 # Script for changing blurs on the fly
 
-notif="$HOME/.config/swaync/images"
+notif="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
 
 STATE=$(hyprctl -j getoption decoration:blur:passes | jq ".int")
 

@@ -10,13 +10,35 @@
 # Nvidia tweaks: uncomments envs and adjusts hardware cursor setting.
 detect_nvidia_adjust() {
   local log="$1"
-  if lspci -k | grep -A 2 -E "(VGA|3D)" | grep -iq nvidia; then
+  local pci_info
+  local has_nvidia=0
+  local has_intel=0
+  local has_amd=0
+  pci_info="$(lspci -k | grep -A 2 -E "(VGA|3D)" || true)"
+  if echo "$pci_info" | grep -iq nvidia; then
+    has_nvidia=1
+  fi
+  if echo "$pci_info" | grep -iq intel; then
+    has_intel=1
+  fi
+  if echo "$pci_info" | grep -Eiq 'amd|advanced micro devices|ati'; then
+    has_amd=1
+  fi
+  if [ "$has_nvidia" -eq 1 ]; then
     echo "${INFO:-[INFO]} Nvidia GPU detected. Setting up proper env's and configs" 2>&1 | tee -a "$log" || true
     sed -i '/env = LIBVA_DRIVER_NAME,nvidia/s/^#//' config/hypr/configs/ENVariables.conf
     sed -i '/env = __GLX_VENDOR_LIBRARY_NAME,nvidia/s/^#//' config/hypr/configs/ENVariables.conf
     sed -i '/env = NVD_BACKEND,direct/s/^#//' config/hypr/configs/ENVariables.conf
     sed -i '/env = GSK_RENDERER,ngl/s/^#//' config/hypr/configs/ENVariables.conf
-    sed -i 's/^\([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*\)2/\1 1/' config/hypr/configs/SystemSettings.conf
+    if [ "$has_intel" -eq 1 ] || [ "$has_amd" -eq 1 ]; then
+      echo "${INFO:-[INFO]} Hybrid GPU detected (Intel/NVIDIA or AMD/NVIDIA). Applying cursor handoff fixes." 2>&1 | tee -a "$log" || true
+      sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 0/' config/hypr/configs/SystemSettings.conf
+      sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 0/' config/hypr/lua/settings.lua
+      sed -i '/hyprctl setcursor/s/^#//' config/hypr/configs/Startup_Apps.conf
+    else
+      sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/configs/SystemSettings.conf
+      sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/lua/settings.lua
+    fi
   fi
 }
 
@@ -42,6 +64,46 @@ detect_nixos_adjust() {
     touch "$OVERLAY_SA" "$DISABLE_SA"
     grep -qx 'exec-once = $scriptsDir/Polkit-NixOS.sh' "$OVERLAY_SA" || echo 'exec-once = $scriptsDir/Polkit-NixOS.sh' >>"$OVERLAY_SA"
     grep -qx '\$scriptsDir/Polkit.sh' "$DISABLE_SA" || echo '$scriptsDir/Polkit.sh' >>"$DISABLE_SA"
+  fi
+}
+# Qt Quick Controls style safety: enable Hyprland style only when module exists.
+adjust_qt_quick_controls_style() {
+  local log="$1"
+  local env_conf="config/hypr/configs/ENVariables.conf"
+  local env_lua="config/hypr/lua/env.lua"
+  local style="Basic"
+  local qt_style_override="Fusion"
+  local has_kvantum_qml=0
+
+  if find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/org/hyprland/style' -print -quit 2>/dev/null | grep -q .; then
+    style="org.hyprland.style"
+  elif command -v dpkg >/dev/null 2>&1 && dpkg -s qml6-module-org-hyprland-style >/dev/null 2>&1; then
+    style="org.hyprland.style"
+  fi
+
+  if find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/kvantum' -print -quit 2>/dev/null | grep -q .; then
+    has_kvantum_qml=1
+    qt_style_override="kvantum"
+  fi
+
+  if [ -f "$env_conf" ]; then
+    sed -i -E "s|^env = QT_QUICK_CONTROLS_STYLE,.*$|env = QT_QUICK_CONTROLS_STYLE,${style}|" "$env_conf"
+    sed -i -E "s|^env = QT_STYLE_OVERRIDE,.*$|env = QT_STYLE_OVERRIDE,${qt_style_override}|" "$env_conf"
+  fi
+  if [ -f "$env_lua" ]; then
+    sed -i -E "s|^hl\\.env\\(\"QT_QUICK_CONTROLS_STYLE\", \".*\"\\)$|hl.env(\"QT_QUICK_CONTROLS_STYLE\", \"${style}\")|" "$env_lua"
+    sed -i -E "s|^hl\\.env\\(\"QT_STYLE_OVERRIDE\", \".*\"\\)$|hl.env(\"QT_STYLE_OVERRIDE\", \"${qt_style_override}\")|" "$env_lua"
+  fi
+
+  if [ "$style" = "org.hyprland.style" ]; then
+    echo "${INFO:-[INFO]} hyprland Qt style module detected. Using QT_QUICK_CONTROLS_STYLE=$style" 2>&1 | tee -a "$log" || true
+  else
+    echo "${WARN:-[WARN]} hyprland Qt style module not found. Using QT_QUICK_CONTROLS_STYLE=Basic to avoid Qt app crashes." 2>&1 | tee -a "$log" || true
+  fi
+  if [ "$has_kvantum_qml" -eq 1 ]; then
+    echo "${INFO:-[INFO]} Kvantum QML module detected. Using QT_STYLE_OVERRIDE=kvantum" 2>&1 | tee -a "$log" || true
+  else
+    echo "${WARN:-[WARN]} Kvantum QML module not found. Using QT_STYLE_OVERRIDE=Fusion as fallback." 2>&1 | tee -a "$log" || true
   fi
 }
 

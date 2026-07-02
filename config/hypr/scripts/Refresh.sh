@@ -7,8 +7,8 @@
 # ==================================================
 # Scripts for refreshing ags, waybar, rofi, swaync, wallust
 
-SCRIPTSDIR=$HOME/.config/hypr/scripts
-UserScripts=$HOME/.config/hypr/UserScripts
+SCRIPTSDIR=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts
+UserScripts=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserScripts
 
 # Define file_exists function
 file_exists() {
@@ -32,10 +32,10 @@ pkill -f 'waybar-cava\..*\.conf' 2>/dev/null || true
 
 
 # quit ags & relaunch ags
-#ags -q && ags &
+ags -q && ags &
 
 # quit quickshell & relaunch quickshell
-#pkill qs && qs &
+pkill qs && qs &
 
 # some process to kill (exclude waybar to avoid restart loops)
 for pid in $(pidof rofi swaync ags swaybg); do

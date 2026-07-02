@@ -125,14 +125,26 @@ local function dispatch(name, args)
   if name == "exec" then
     return exec_cmd(args)
   end
-  if name == "killactive" and window_api.close then
-    return window_api.close()
-  end
-  if name == "fullscreen" and window_api.fullscreen then
-    if args == "1" then
-      return window_api.fullscreen({ mode = "maximized" })
+  if name == "killactive" then
+    if window_api.close then
+      return window_api.close()
     end
-    return window_api.fullscreen({ mode = "fullscreen" })
+    if window_api.kill then
+      return window_api.kill()
+    end
+    return raw_dispatch_cmd("killactive")
+  end
+  if name == "fullscreen" then
+    if window_api.fullscreen then
+      if args == "1" then
+        return window_api.fullscreen({ mode = "maximized" })
+      end
+      return window_api.fullscreen({ mode = "fullscreen" })
+    end
+    if args == "1" then
+      return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\" })'")
+    end
+    return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"fullscreen\" })'")
   end
   if name == "movefocus" and dsp and dsp.focus then
     return function()

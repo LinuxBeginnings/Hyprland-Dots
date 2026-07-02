@@ -2,7 +2,7 @@
 set -u
 set -o pipefail
 
-ROFI_CONFIG="${HOME}/.config/rofi/config-emacs-keybinds.rasi"
+ROFI_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-emacs-keybinds.rasi"
 CACHE_FILE="${HOME}/.cache/rofi-emacs-keybinds.txt"
 
 if [[ ! -s "${CACHE_FILE}" ]]; then

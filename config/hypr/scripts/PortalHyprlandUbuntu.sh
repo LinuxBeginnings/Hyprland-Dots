@@ -17,8 +17,8 @@ if [[ -r /etc/os-release ]]; then
         || "${ID:-}" == "zorin" \
         || "${ID:-}" == "rhino" \
         || "${ID_LIKE:-}" == *ubuntu* ]]; then
-    if [[ -x "$HOME/.config/hypr/scripts/PortalHyprland.sh" ]]; then
-      "$HOME/.config/hypr/scripts/PortalHyprland.sh"
+    if [[ -x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/PortalHyprland.sh" ]]; then
+      "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/PortalHyprland.sh"
     fi
   fi
 fi

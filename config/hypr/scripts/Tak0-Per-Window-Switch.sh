@@ -19,12 +19,12 @@
 ##################################################################
 
 MAP_FILE="$HOME/.cache/kb_layout_per_window"
-ICON="$HOME/.config/swaync/images/ja.png"
+ICON="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images/ja.png"
 SCRIPT_NAME="$(basename "$0")"
 SCRIPT_PATH="$(readlink -f "$0")"
 
 # Detect active Hyprland config mode
-config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+config_home="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
 hypr_dir="$config_home/hypr"
 lua_entry="$hypr_dir/hyprland.lua"
 legacy_lua_entry="$config_home/hyprland.lua"

@@ -7,7 +7,7 @@
 # ==================================================
 set -euo pipefail
 
-XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
 swayIconDir="${XDG_CONFIG_HOME}/swaync/icons"
 
 #// Credits to sl1ng for the orginal script. Rewritten by Vyle.

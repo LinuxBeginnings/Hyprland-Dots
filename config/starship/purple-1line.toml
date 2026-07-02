@@ -1,0 +1,79 @@
+add_newline = true
+format = "$nix_shell$hostname$directory$git_branch$git_state$git_status\n$character"
+palette = "base16"
+
+[character]
+error_symbol = "[❯](red)"
+success_symbol = "[❯](#c76aeb)"
+vimcmd_symbol = "[❮](cyan)"
+
+[directory]
+style = "#c76aeb"
+
+[git_branch]
+format = "on [$symbol$branch]($style)[](#4e3593) "
+style = "fg:#c76aeb bg:#4e3593"
+symbol = "[](#4e3593) "
+
+[git_state]
+format = "([$state( $progress_current/$progress_total)]($style)) "
+style = "bright-black"
+
+[git_status]
+conflicted = ""
+deleted = ""
+format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](218)($ahead_behind$stashed)]($style)"
+renamed = ""
+stashed = "≡"
+style = "cyan"
+
+[nix_shell]
+format = "[$symbol]($style) "
+style = ""
+symbol = "🐚"
+
+[palettes.base16]
+base00 = "#191837"
+base01 = "#4e3593"
+base02 = "#7d4fcd"
+base03 = "#da72f3"
+base04 = "#ef99ff"
+base05 = "#f1dafd"
+base06 = "#fcecf6"
+base07 = "#fbeeff"
+base08 = "#ba6eeb"
+base09 = "#c668f1"
+base0A = "#c86ae2"
+base0B = "#f243e6"
+base0C = "#c36ced"
+base0D = "#c76aeb"
+base0E = "#b274ea"
+base0F = "#ec43e7"
+base10 = "#191837"
+base11 = "#191837"
+base12 = "#ba6eeb"
+base13 = "#c86ae2"
+base14 = "#f243e6"
+base15 = "#c36ced"
+base16 = "#c76aeb"
+base17 = "#b274ea"
+black = "#191837"
+blue = "#c76aeb"
+bright-black = "#da72f3"
+bright-blue = "#c76aeb"
+bright-cyan = "#c36ced"
+bright-green = "#f243e6"
+bright-magenta = "#b274ea"
+bright-purple = "#b274ea"
+bright-red = "#ba6eeb"
+bright-white = "#fbeeff"
+bright-yellow = "#c86ae2"
+brown = "#ec43e7"
+cyan = "#c36ced"
+green = "#f243e6"
+magenta = "#b274ea"
+orange = "#c668f1"
+purple = "#b274ea"
+red = "#ba6eeb"
+white = "#f1dafd"
+yellow = "#c86ae2"

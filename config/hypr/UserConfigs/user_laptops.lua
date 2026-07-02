@@ -1,0 +1,12 @@
+-- ==================================================
+--  KoolDots (2026)
+--  Project URL: https://github.com/LinuxBeginnings
+--  License: GNU GPLv3
+--  SPDX-License-Identifier: GPL-3.0-or-later
+-- ==================================================
+-- User laptop overrides template.
+-- Add lid/display behavior here if you need laptop-specific logic.
+
+-- Examples:
+-- hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = "1" })
+-- hl.monitor({ output = "eDP-1", disabled = true })

@@ -11,6 +11,36 @@ local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") ..
 local hyprDir = configHome .. "/hypr"
 local systemDir = hyprDir .. "/configs"
 local userDir = configHome .. "/hypr/UserConfigs"
+local function has_kvantum_qml_module()
+  local cmd = "find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/kvantum' -print -quit 2>/dev/null"
+  local pipe = io.popen(cmd, "r")
+  if not pipe then
+    return false
+  end
+  local output = pipe:read("*a") or ""
+  pipe:close()
+  return output:match("%S") ~= nil
+end
+
+local function apply_qt_style_fallbacks()
+  if not hl or not hl.env then
+    return
+  end
+
+  if has_kvantum_qml_module() then
+    return
+  end
+
+  local style_override = (os.getenv("QT_STYLE_OVERRIDE") or ""):lower()
+  if style_override == "kvantum" or style_override == "kvantum-dark" then
+    hl.env("QT_STYLE_OVERRIDE", "Fusion")
+  end
+
+  local quick_controls = (os.getenv("QT_QUICK_CONTROLS_STYLE") or ""):lower()
+  if quick_controls == "kvantum" then
+    hl.env("QT_QUICK_CONTROLS_STYLE", "Basic")
+  end
+end
 
 local function load_optional(path)
   local ok, err = pcall(dofile, path)
@@ -61,6 +91,7 @@ end
 if not loaded_user_split then
   load_optional(userDir .. "/user_overrides.lua") -- legacy single-file support
 end
+apply_qt_style_fallbacks()
 
 -- Legacy compatibility: import UserKeybinds.conf when user_keybinds.lua is missing.
 do

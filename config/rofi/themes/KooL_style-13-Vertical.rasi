@@ -95,7 +95,7 @@ inputbar {
     border-radius:              10px;
     border-color:               @border-color;
 	background-color:		    @background;
-    background-image:           url("~/.config/rofi/.current_wallpaper", width);
+    background-image:           url("~/.config/rofi/.current_wallpaper_focused", width);
     children:                   [ "textbox-prompt-colon","entry" ];
     border:                     0px;
 }

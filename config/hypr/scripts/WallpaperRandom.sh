@@ -9,11 +9,12 @@
 
 PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
 wallDIR="$PICTURES_DIR/wallpapers"
-SCRIPTSDIR="$HOME/.config/hypr/scripts"
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 # shellcheck source=/dev/null
 . "$SCRIPTSDIR/WallpaperCmd.sh"
 
 focused_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
+wallpaper_base="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_base_${focused_monitor}"
 
 PICS=($(find -L "${wallDIR}" -type f \( -name "*.jpg" -o -name "*.jpeg" -o -name "*.png" -o -name "*.pnm" -o -name "*.tga" -o -name "*.tiff" -o -name "*.webp" -o -name "*.bmp" -o -name "*.farbfeld" -o -name "*.gif" \)))
 RANDOMPICS=${PICS[ $RANDOM % ${#PICS[@]} ]}
@@ -36,6 +37,8 @@ resize_mode="$(wallpaper_resize_mode "$RANDOMPICS" "$focused_monitor")"
 "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$RANDOMPICS" "${SWWW_PARAMS[@]}"
 
 wait $!
+mkdir -p "$(dirname "$wallpaper_base")"
+cp -f "$RANDOMPICS" "$wallpaper_base" || true
 if ! "$SCRIPTSDIR/WallustSwww.sh" "$RANDOMPICS"; then
   notify-send -u critical "Wallust failed" "Wallpaper theme not refreshed"
   exit 1

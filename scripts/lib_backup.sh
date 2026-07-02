@@ -30,12 +30,12 @@ backup_dir() {
   mv "$dir" "${dir}-backup-${backup_suffix}" 2>&1 | tee -a "$log"
 }
 
-# Cleanup old backups under ~/.config, keeping the newest for each base dir.
+# Cleanup old backups under ${XDG_CONFIG_HOME:-$HOME/.config}, keeping the newest for each base dir.
 # mode: "auto" (no prompts) or "prompt" (asks before delete); log optional.
 cleanup_backups() {
   local mode="${1:-prompt}"
   local log="${2:-/dev/null}"
-  local CONFIG_DIR="$HOME/.config"
+  local CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
   local BACKUP_PREFIX="-backup"
 
   for DIR in "$CONFIG_DIR"/*; do

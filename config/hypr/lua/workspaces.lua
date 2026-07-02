@@ -10,3 +10,7 @@
 
 -- Example:
 -- hl.workspace_rule({ workspace = "1", monitor = "eDP-1" })
+-- hl.workspace_rule({ workspace = "1", monitor = "HDMI-A-1", layout = "scrolling" })
+-- hl.workspace_rule({ workspace = "1", monitor = "HDMI-A-1", layout = "dwindle" })
+-- hl.workspace_rule({ workspace = "1", monitor = "HDMI-A-1", layout = "master" })
+-- hl.workspace_rule({ workspace = "1", monitor = "HDMI-A-1", layout = "monocle" })

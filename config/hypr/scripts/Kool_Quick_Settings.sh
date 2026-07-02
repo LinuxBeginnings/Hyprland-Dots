@@ -49,11 +49,31 @@ fi
 # variables
 configs="$hypr_dir/configs"
 UserConfigs="$hypr_dir/UserConfigs"
-rofi_theme="$HOME/.config/rofi/config-edit.rasi"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-edit.rasi"
 msg=' ⁉️ Choose what to do ⁉️'
-iDIR="$HOME/.config/swaync/images"
+iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
 scriptsDir="$hypr_dir/scripts"
 UserScripts="$hypr_dir/UserScripts"
+user_defaults_conf="$UserConfigs/01-UserDefaults.conf"
+user_defaults_lua="$UserConfigs/user_defaults.lua"
+user_env_conf="$UserConfigs/ENVariables.conf"
+user_env_lua="$UserConfigs/user_env.lua"
+user_keybinds_conf="$UserConfigs/UserKeybinds.conf"
+user_keybinds_lua="$UserConfigs/user_keybinds.lua"
+user_startup_conf="$UserConfigs/Startup_Apps.conf"
+user_startup_lua="$UserConfigs/user_startup.lua"
+user_window_rules_conf="$UserConfigs/WindowRules.conf"
+user_window_rules_lua="$UserConfigs/user_window_rules.lua"
+user_layer_rules_conf="$UserConfigs/LayerRules.conf"
+user_layer_rules_lua="$UserConfigs/user_layer_rules.lua"
+user_settings_conf="$UserConfigs/UserSettings.conf"
+user_settings_lua="$UserConfigs/user_settings.lua"
+user_decorations_conf="$UserConfigs/UserDecorations.conf"
+user_decorations_lua="$UserConfigs/user_decorations.lua"
+user_animations_conf="$UserConfigs/UserAnimations.conf"
+user_animations_lua="$UserConfigs/user_animations.lua"
+user_laptops_conf="$UserConfigs/Laptops.conf"
+user_laptops_lua="$UserConfigs/user_laptops.lua"
 
 # Function to show info notification
 show_info() {
@@ -62,6 +82,22 @@ show_info() {
     else
         notify-send "Info" "$1"
     fi
+}
+
+get_context_monitor_name() {
+    if ! command -v hyprctl >/dev/null 2>&1; then
+        return 1
+    fi
+    local monitor=""
+    if command -v jq >/dev/null 2>&1; then
+        monitor="$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.monitor // empty' | head -n1)"
+        if [[ -z "$monitor" ]]; then
+            monitor="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused) | .name' | head -n1)"
+        fi
+    else
+        monitor="$(hyprctl monitors 2>/dev/null | awk '/^Monitor/{name=$2} /focused: yes/{print name; exit}')"
+    fi
+    printf '%s' "$monitor"
 }
 
 # Determine whether an editor command is terminal-based (TUI)
@@ -103,9 +139,24 @@ resolve_system_lua_file() {
     fi
 }
 
-resolve_user_defaults_lua_file() {
-    local preferred="$UserConfigs/user_defaults.lua"
-    printf '%s' "$preferred"
+resolve_mode_file() {
+    local preferred="$1"
+    local fallback="$2"
+    if [[ -f "$preferred" || ! -f "$fallback" ]]; then
+        printf '%s' "$preferred"
+    else
+        printf '%s' "$fallback"
+    fi
+}
+
+resolve_user_overlay_file() {
+    local lua_file="$1"
+    local conf_file="$2"
+    if [[ "$hypr_config_mode" == "lua" ]]; then
+        resolve_mode_file "$lua_file" "$conf_file"
+    else
+        resolve_mode_file "$conf_file" "$lua_file"
+    fi
 }
 # Function to toggle Rainbow Borders script availability and refresh UI components
 toggle_rainbow_borders() {
@@ -271,6 +322,7 @@ Edit System Default Startup Apps
 Edit System Default Window Rules
 Edit System Default Layer Rules
 Edit System Default Settings
+Change Starship Prompt
 --- UTILITIES ---
 Set SDDM Wallpaper
 Choose Kitty Terminal Theme
@@ -280,11 +332,13 @@ Configure Workspace Rules (nwg-displays)
 GTK Settings (nwg-look)
 QT Apps Settings (qt6ct)
 QT Apps Settings (qt5ct)
+Set Hyprlock Wallpaper
 Choose Hyprland Animations
 Choose Monitor Profiles
 Choose Rofi Themes
 Search for Keybinds
 Toggle Waybar Weather units (C/F)
+Toggle Waybar Clock (12H/24H)
 Toggle Game Mode
 Switch Dark-Light Theme
 Rainbow Borders Mode
@@ -293,36 +347,32 @@ EOF
 
 # Main function to handle menu selection
 main() {
+    local quick_settings_monitor
+    quick_settings_monitor="$(get_context_monitor_name)"
     choice=$(menu | rofi -i -dmenu -config $rofi_theme -mesg "$msg")
     
     # Map choices to corresponding files
     case "$choice" in
     	"Edit User Defaults")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_user_defaults_lua_file)"; else file="$UserConfigs/01-UserDefaults.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_defaults_lua" "$user_defaults_conf")" ;;
         "Edit User ENV variables")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_env.lua"; else file="$UserConfigs/ENVariables.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_env_lua" "$user_env_conf")" ;;
         "Edit User Keybinds")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_keybinds.lua"; else file="$UserConfigs/UserKeybinds.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_keybinds_lua" "$user_keybinds_conf")" ;;
         "Edit User Startup Apps (overlay)")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_startup.lua"; else file="$UserConfigs/Startup_Apps.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_startup_lua" "$user_startup_conf")" ;;
         "Edit User Window Rules (overlay)")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_window_rules.lua"; else file="$UserConfigs/WindowRules.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_window_rules_lua" "$user_window_rules_conf")" ;;
         "Edit User Layer Rules (overlay)")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_layer_rules.lua"; else file="$UserConfigs/LayerRules.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_layer_rules_lua" "$user_layer_rules_conf")" ;;
         "Edit User Settings")
-            if [[ "$hypr_config_mode" == "lua" ]]; then
-                file="$UserConfigs/user_settings.lua"
-                show_info "Lua mode detected. Edit UserConfigs/user_settings.lua for user settings."
-            else
-                file="$configs/SystemSettings.conf"
-                show_info "Editing default settings. Copy to UserConfigs/UserSettings.conf to override."
-            fi ;;
+            file="$(resolve_user_overlay_file "$user_settings_lua" "$user_settings_conf")" ;;
         "Edit User Decorations")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_decorations.lua"; else file="$UserConfigs/UserDecorations.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_decorations_lua" "$user_decorations_conf")" ;;
         "Edit User Animations")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_animations.lua"; else file="$UserConfigs/UserAnimations.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_animations_lua" "$user_animations_conf")" ;;
         "Edit User Laptop Settings")
-            if [[ "$hypr_config_mode" == "lua" ]]; then file="$UserConfigs/user_laptops.lua"; else file="$UserConfigs/Laptops.conf"; fi ;;
+            file="$(resolve_user_overlay_file "$user_laptops_lua" "$user_laptops_conf")" ;;
         "Edit System Default Keybinds")
             if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_keybinds.lua)"; else file="$configs/Keybinds.conf"; fi ;;
         "Edit System Default Startup Apps")
@@ -333,7 +383,14 @@ main() {
             if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_layer_rules.lua)"; else file="$configs/LayerRules.conf"; fi ;;
         "Edit System Default Settings")
             if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_settings.lua)"; else file="$configs/SystemSettings.conf"; fi ;;
-        "Set SDDM Wallpaper") $scriptsDir/sddm_wallpaper.sh --normal ;;
+        "Change Starship Prompt") "$scriptsDir/ChangeStarshipPrompt.sh" ;;
+        "Set SDDM Wallpaper")
+            if [[ -n "$quick_settings_monitor" ]]; then
+                "$scriptsDir/sddm_wallpaper.sh" --normal "$quick_settings_monitor"
+            else
+                "$scriptsDir/sddm_wallpaper.sh" --normal
+            fi
+            ;;
         "Choose Kitty Terminal Theme") $scriptsDir/Kitty_themes.sh ;;
         "Choose Ghostty Terminal Theme") $scriptsDir/Ghostty_themes.sh ;;
         "Configure Monitors (nwg-displays)") 
@@ -366,11 +423,19 @@ main() {
                 exit 1
             fi
             qt5ct ;;
+        "Set Hyprlock Wallpaper")
+            if [[ -n "$quick_settings_monitor" ]]; then
+                "$scriptsDir/HyprlockWallpaperSelect.sh" "$quick_settings_monitor"
+            else
+                "$scriptsDir/HyprlockWallpaperSelect.sh"
+            fi
+            ;;
         "Choose Hyprland Animations") $scriptsDir/Animations.sh ;;
         "Choose Monitor Profiles") $scriptsDir/MonitorProfiles.sh ;;
         "Choose Rofi Themes") $scriptsDir/RofiThemeSelector.sh ;;
         "Search for Keybinds") $scriptsDir/KeyBinds.sh ;;
         "Toggle Waybar Weather units (C/F)") $scriptsDir/Toggle-weather-waybar-units.sh ;;
+        "Toggle Waybar Clock (12H/24H)") $scriptsDir/ToggleWaybarTime.sh ;;
         "Toggle Game Mode") $scriptsDir/GameMode.sh ;;
         "Switch Dark-Light Theme") $scriptsDir/DarkLight.sh ;;
         "Rainbow Borders Mode") rainbow_borders_menu ;;

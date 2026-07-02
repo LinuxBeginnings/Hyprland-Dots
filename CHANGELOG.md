@@ -2,12 +2,142 @@
 
 ## v2.3.25
 
+## Fixed
+
+- Pane selection bindings fail in lua configuration
+- duplicate bindings for terminal
+- Created wrapper script for `thunar`
+  - Wasn't always starting in Debian lua config
+- keybindings in scrolling layout
+- `copy.sh` not copying all lua files
+- `WallpaperEffects.sh` in lua config it changed theme not just wallpaper
+- system keybinds in LUA config
+- handling of SUPER-Q close active in LUA config
+- keybinds handingling in LUA config
+- wallpaper effects it would not restore original wallpaper
+- wallpaper selector it was resetting waybar style sheet
+- Layout code refactor:
+  - Layouts are now per monitor/workspace
+  - When you set a layout mode, i.e. scrolling
+  - It will udpate the `~/.config/hypr/workspaces.conf` file
+  - Therefore it will be persistent on next login
+  - The current layout is shown in upper left corner
+  - This fixes issue with setting `workspaces.conf` manually
+    - When you selected a layout from menu the bindings didn't match
+    - Also previously the layout was globally applied
+      - Thanks to `@aki` for finding and reporting this issue
+- WIP: Fixing icon spacing issues in Waybar
+- Waybar would start then be restarted at login
+  - Changed start order, `ThemeMode.sh` runs before waybar start
+  - This restores users dark/light theme choice before waybar starts
+- LUA: `QT_STYLE_OVERRIDE` in LUA was hard coded to `kvantum`
+- LUA: Fixed `LuaAutoReload.sh` wasn't activating changes on save
+- LUA: `lua_user_overides.lua` wasn't loading `system_keybinds.lua`
+- `xdg-desktop-portal-hyprland` shows failed after CachyOS update
+  - A regression bug in CachyOS is causing the issue
+  - Screensharing doesn't work as a result
+  - I created a script to create and override until they release the fix
+    - In the `Hyprland-Dots` directory
+      - Often located in `~/Arch-Hyprland=/Hyprland-Dots`
+    - Run the script `config/hypr/scripts/Add-override-Hyprland-Portal.sh`
+      - I will also be uploading the script to the Discord server
+- NVIDIA Hybrid laptops have issues with cursors and GDM
+  - Added more defensive code with fallbacks
+- Dynamic wallpaper is now also per monitor
 ## Fixed:
 
 - Disabled LayerRule for swaync
   - Caused execessive blurring of background
 - WindowRule for `qcalculate-gtk`
   - Had same rule as `gnome-calculator` needed own sizing
+- Hybrid NVIDIA cursor handoff improvements
+  - Enables Xcursor fallbacks and optional setcursor refresh on hybrid laptops
+
+## Added:
+
+- Check for existing `KoolDots` installations
+  - Distros are now shipping hyprland with LUA workflow
+  - Previous `copy.sh` did not disable `~/.config/hypr/hyprland.lua`
+  - After KoolDots installation it would not start, resulting in black screen
+  - Now checks for this and backs up `.config/hypr` directory
+- Rofi menu to select starship prompt
+  - Requires that starship is already configured and running
+  - The menu is in the Quick Settings Menu `SUPER SHIFT E`
+- `config/rofi/config-layout.rasi` menu for Change Layout menu
+- `.config/hypr/scripts/kooldots-add-ssh-agent.sh`
+  - will create `systemd` user service to store ssh keys
+- Sample `starship` config files
+  - `copy.sh` now copies them to `.config/starship`
+  - Will be adding menu later
+- Migrated animation files from hyprlang to lua
+- Launch scripts for `$term` and `$files`
+  - Scripts check for presence or crashes
+  - Has several fallbacks for each
+    - kitty, ghostty, wezterm, alacritty, konsole, gnome-terminal
+    - Thunar,dolphin,nautilus, $term -e yazi
+- Added the additional LUA UserConfig files
+  - `user_settings.lua`
+  - `Window_rules.lua`
+  - `layer_rules.lua`
+  - `user_laptops.lua`
+  - `user_env.lua`
+  - `user_defaults.lua`
+  - Etc..
+- Migration to LUA script will migrate UserConfigs to LUA format
+- Keybind `SUPER + ALT + F` to maximize window in `scrolling` layout
+- Keybind `SUPER+R` to toggle column widths in `scrolling` layout
+- Sample LUA workspace rules for setting layout per monitor/workspace
+  ```lua
+      hl.workspace_rule({ workspace = "1", monitor = "HDMI-A-1", layout = "scrolling" })
+      hl.workspace_rule({ workspace = "1", monitor = "HDMI-A-1", layout = "dwindle" })
+      hl.workspace_rule({ workspace = "1", monitor = "HDMI-A-1", layout = "master" })
+      hl.workspace_rule({ workspace = "1", monitor = "HDMI-A-1", layout = "monocle" })
+  ```
+- Sample `hyprlang` (.conf) versions also
+  ```ini
+      workspace = 1, monitor:HDMI-A-1, layout:scrolling
+      workspace = 1, monitor:HDMI-A-1, layout:dwindle
+      workspace = 1, monitor:HDMI-A-1, layout:master
+      workspace = 1, monitor:HDMI-A-1, layout:monocle
+  ```
+- Menu item in Quick settings, (SUPERSHIFT + E) to set Hyprlock background
+- Dark / Light theme toggle is now persistant
+  - At startup it checks and restores selection
+  - `config/hypr/scripts/DarkLight.sh`
+  - added persistent state file:` ${XDG_STATE_HOME:-$HOME/.local/state}/hypr/theme_mode`
+  - keeps legacy sync with` ~/.cache/.theme_mode` for compatibility
+  - defaults to Dark when no saved state exists
+  - added flags:
+  - `--apply-current`
+  - `--mode Dark|Light`
+  - `--no-notify`
+  - `--preserve-wallpaper`
+  - kept normal toggle behavior for manual use
+  - `config/hypr/scripts/ApplyThemeMode.sh`
+  - startup helper that runs:
+  - `DarkLight.sh --apply-current --preserve-wallpaper --no-notify`
+  - `config/hypr/configs/Startup_Apps.conf`
+  - added startup call to re-apply saved mode:
+  - `exec-once = sh -c 'sleep 4; sh $HOME/.config/hypr/scripts/ApplyThemeMode.sh'`
+  - `config/hypr/lua/startup.lua`
+  - added equivalent startup command for Lua startup flow
+
+  ## Updated:
+  - Moved `UserScripts/Wallpaper*.sh` and `ZshChangeTheme.sh` to `$scriptsdir`
+    - They are system scripts not intended for user modification
+  - Archived `UserScripts/Tak0-Autodispatch`
+    - Not supported and no longer needed
+  - Reset binding for fullscreen and maximize
+    - `SUPER + F` is maximize
+    - `SHIFT + SHIFT + F` is fullscreen
+    - Now works in all layouts
+  - Enabled 12 min timer on turning off monitor
+    - For a very long that's been disabled by default
+    - The suspend option is still disabled
+  - Changed `$HOME` to `${XDG_CONFIG_HOME:$HOME}`
+    - Compliant with standard especially with `UWSM`
+
+---
 - `Hyprlock.conf` and `Hyprlock-1080.conf` were removed, re-added
 
 ## v2.3.24
@@ -128,6 +258,9 @@
 
 ## Added:
 
+- System menu item to toggle 12/24hr waybar clock
+  - Under Edit System Settings `SUPER + SHIFT + E`
+  - Search for `waybar`
 - `yazi` config to `copy.sh`
 - Waybar widget for layouts
   - Shows current layout

@@ -38,7 +38,7 @@
 #     RB_ONCE        1 to apply once and exit (no animation; default: 0)
 #
 #   Example (slower animation):
-#     RB_INTERVAL=1.5 RB_STEP_DEG=12 ~/.config/hypr/UserScripts/RainbowBorders-low-cpu.sh &
+#     RB_INTERVAL=1.5 RB_STEP_DEG=12 ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserScripts/RainbowBorders-low-cpu.sh &
 #
 # Notes
 #   - This focuses on the active border only. Animating inactive borders too

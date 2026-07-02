@@ -198,7 +198,7 @@ tooltip label {
 
 #custom-power {
   color: #cc3436;
-  padding: 0px 0px 0px 6px;
+  padding: 0px 0px 0px 0px;
 }
 
 #custom-launcher {
@@ -353,7 +353,7 @@ label:focus {
 #custom-hypridle.notactive,
 #idle_inhibitor.activated {
   color: #39ff14;
-  border-bottom: 8px solid rgba(0, 0, 0, 0.2);
+  border-bottom: 0px solid rgba(0, 0, 0, 0.2);
 }
 
 #temperature {

@@ -1,97 +1,96 @@
 /* ----------- 💫 https://github.com/LinuxBeginnings 💫 -------- */
 /* Wallust Bordered - Chroma Simple */
 
-@import '../../.config/waybar/wallust/colors-waybar.css';
-
+@import "../../.config/waybar/wallust/colors-waybar.css";
 
 * {
-	font-family: "JetBrainsMono Nerd Font";
-	font-weight: bold;
-	/* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
-	/* NOTE: Waybar v14+ ignores % font-size values */
-	font-size: 99%;
-    min-height: 0;
+  font-family: "JetBrainsMono Nerd Font";
+  font-weight: bold;
+  /* set font-size to 100% if font scaling is set to 1.00 using nwg-look */
+  /* NOTE: Waybar v14+ ignores % font-size values */
+  font-size: 99%;
+  min-height: 0;
 }
 
 /* Make group buttons themselves use readable text */
 #group-audio,
 #group-mobo_drawer {
-    background: @background;
-    color: @color15;
-    border: 2px solid @color13;
+  background: @background;
+  color: @color15;
+  border: 2px solid @color13;
 }
 
 window#waybar {
-    background-color: transparent;
-    color: @foreground;
-    padding-left: 15px;
-    padding-right: 15px;
-    /* Waybar scaling: adjust font-size to scale the bar */
-    font-size: 14px;
+  background-color: transparent;
+  color: @foreground;
+  padding-left: 15px;
+  padding-right: 15px;
+  /* Waybar scaling: adjust font-size to scale the bar */
+  font-size: 14px;
 }
 
 window#waybar.empty,
 window#waybar.empty #window {
-    background-color: transparent;
-    padding: 0px;
-    border: 0px;
-    /* Waybar scaling: adjust font-size to scale the bar */
-    font-size: 14px;
+  background-color: transparent;
+  padding: 0px;
+  border: 0px;
+  /* Waybar scaling: adjust font-size to scale the bar */
+  font-size: 14px;
 }
 
 tooltip {
-    background-color: @background;
-    color: @foreground;
-    border-radius: 10px;
-    border-width: 1.5px;
-    border-style: solid;
-    border-color: @color13;
-    transition: 0.3s;
-    opacity: 0.9;
+  background-color: @background;
+  color: @foreground;
+  border-radius: 10px;
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: @color13;
+  transition: 0.3s;
+  opacity: 0.9;
 }
 
 #taskbar button,
 #workspaces {
-	border-radius: 20px;
-    background: @background;
-    opacity: 1;
-    padding: 0px 10px;
-    margin: 0;
-    margin-top: 5px;
-	border: 2px solid @color12;
+  border-radius: 20px;
+  background: @background;
+  opacity: 1;
+  padding: 0px 10px;
+  margin: 0;
+  margin-top: 5px;
+  border: 2px solid @color12;
 }
 
 #workspaces button {
-    color: @color10;
-    box-shadow: none;
-	text-shadow: none;
-    padding-right: 12px;
-    border-radius: 9px;
-    animation: gradient_f 20s ease-in infinite;
-    transition: all 0.5s cubic-bezier(.55,-0.68,.48,1.682);
+  color: @color10;
+  box-shadow: none;
+  text-shadow: none;
+  padding-right: 12px;
+  border-radius: 9px;
+  animation: gradient_f 20s ease-in infinite;
+  transition: all 0.5s cubic-bezier(0.55, -0.68, 0.48, 1.682);
 }
 
 #taskbar button.active,
 #workspaces button.active {
-    color: @color12;
-    padding-right: 12px;
-    background-color: @background;
-    animation: gradient_f 20s ease-in infinite;
-    transition: all 0.3s cubic-bezier(.55,-0.68,.48,1.682);
+  color: @color12;
+  padding-right: 12px;
+  background-color: @background;
+  animation: gradient_f 20s ease-in infinite;
+  transition: all 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682);
 }
 
 #workspaces button.urgent {
-    color: #11111b;
-    border-radius: 10px;
+  color: #11111b;
+  border-radius: 10px;
 }
 
 #taskbar button:hover,
 #workspaces button:hover {
-    color: @color12;
-    padding-left: 0px;
-    padding-right: 2px;
-    animation: gradient_f 20s ease-in infinite;
-    transition: all 0.3s cubic-bezier(.55,-0.68,.48,1.682);
+  color: @color12;
+  padding-left: 0px;
+  padding-right: 2px;
+  animation: gradient_f 20s ease-in infinite;
+  transition: all 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682);
 }
 
 #backlight,
@@ -156,140 +155,138 @@ tooltip {
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay {
-	border-radius: 20px;
-    background: @background;
-    opacity: 1;
-    padding: 0px 10px;
-    margin: 0;
-    margin-top: 5px;
-	border: 2px solid @color13;
+  border-radius: 20px;
+  background: @background;
+  opacity: 1;
+  padding: 0px 10px;
+  margin: 0;
+  margin-top: 5px;
+  border: 2px solid @color13;
 }
 
-
 #cpu {
-    border: 2px solid @color5;
-	color: @foreground;
-    background: @color12;
+  border: 2px solid @color5;
+  color: @foreground;
+  background: @color12;
 }
 
 #memory {
-	color: @foreground;
-    background: @color12;
+  color: @foreground;
+  background: @color12;
 }
 
 #disk {
-	color: @foreground;
-    background: @color12;
-    border: 2px solid @color13;
+  color: @foreground;
+  background: @color12;
+  border: 2px solid @color13;
 }
 
-#temperature{
-	color: @foreground;
-    background: @color12;
+#temperature {
+  color: @foreground;
+  background: @color12;
 }
 
 #temperature.critical {
-    color: red;
-	border: 2px solid red;
+  color: red;
+  border: 2px solid red;
 }
 
 #custom-power {
-    color: @color13;
-    padding-left: 10px;
-	padding-right: 2px;
-	border: 2px solid @color13;
+  color: @color13;
+  padding-left: 1px;
+  padding-right: 2px;
+  border: 2px solid @color13;
 }
 
 #backlight {
-    color: @color14;
-    padding-right: 5px;
+  color: @color14;
+  padding-right: 5px;
 }
 
 #tray {
-    border-radius: 20px;
-    margin-right: 5px;
-/*    padding: 0px 4px; */
-    padding-left: 15px;
-    padding-right: 15px;
-    border: 2px solid @color7;
+  border-radius: 20px;
+  margin-right: 5px;
+  /*    padding: 0px 4px; */
+  padding-left: 15px;
+  padding-right: 15px;
+  border: 2px solid @color7;
 }
 
 #mpris {
-    padding-left: 16px;	
+  padding-left: 16px;
 }
 #tray.empty {
-    background-color: transparent;
-    border-color: transparent;
-    border: 0px;
+  background-color: transparent;
+  border-color: transparent;
+  border: 0px;
 }
 
 #window {
-    margin-left: 5px;
-    margin-right: 5px;
-    border: 2px solid @color9;
+  margin-left: 5px;
+  margin-right: 5px;
+  border: 2px solid @color9;
 }
 
 #clock {
-    color: @color13;
+  color: @color13;
 }
 
 #clock:hover {
-    color: @color13;
-    background: @background;
-    border: 2px solid @color13;
+  color: @color13;
+  background: @background;
+  border: 2px solid @color13;
 }
 
-
 #bluetooth {
-    color: @color12;
-    margin-right: 10px
-} 
+  color: @color12;
+  margin-right: 10px;
+}
 
 #pulseaudio.microphone,
 #pulseaudio {
-    background-color: @color12;
-    color: @color15;
-	border: 2px solid @color13;
+  background-color: @color12;
+  color: @color15;
+  border: 2px solid @color13;
 }
 
 #pulseaudio.muted {
-    color: @color13;
-    padding-right: 20px;
+  color: @color13;
+  padding-right: 20px;
 }
 
 #battery {
-    color: @color10;
-    margin-right: 5px;
-    padding-right: 15px;
-	border: 2px solid @color14;
+  color: @color10;
+  margin-right: 5px;
+  padding-right: 15px;
+  border: 2px solid @color14;
 }
 
 /*-----Indicators----*/
 #custom-hypridle.notactive,
 #idle_inhibitor.activated {
-	color: #39FF14;
-    border-bottom: 8px solid rgba(0, 0, 0, 0.2);
+  color: #39ff14;
+  border-bottom: 0px solid rgba(0, 0, 0, 0.2);
 }
 
 #battery.good {
-    color: @color14;
-	border: 2px solid @color15;
+  color: @color14;
+  border: 2px solid @color15;
 }
 
 #battery.warning {
-    color: @color13;
-    border-left: 0px;
-	border: 2px solid @color12;
+  color: @color13;
+  border-left: 0px;
+  border: 2px solid @color12;
 }
 
 #battery.charging {
-    color: @color10;
+  color: @color10;
 }
 
 #battery.critical {
-    color: @color13;
-    border-left: 0px;
-	border: 2px solid @color8;
+  color: @color13;
+  border-left: 0px;
+  border: 2px solid @color8;
 }
 
 @keyframes blink {
@@ -302,7 +299,7 @@ tooltip {
   background-color: red;
   color: white;
   animation-name: blink;
-  animation-duration: 3.0s;
+  animation-duration: 3s;
   animation-timing-function: steps(12);
   animation-iteration-count: infinite;
   animation-direction: alternate;
@@ -310,33 +307,33 @@ tooltip {
 }
 
 #custom-weather {
-    color: @color12;
-    border-right: 0px;
-    margin-left: 0px;
-    margin-right: 5px;
+  color: @color12;
+  border-right: 0px;
+  margin-left: 0px;
+  margin-right: 5px;
 }
 
 #backlight-slider slider,
 #pulseaudio-slider slider {
-	min-width: 0px;
-	min-height: 0px;
-	opacity: 0;
-	background-image: none;
-	border: none;
-	box-shadow: none;
+  min-width: 0px;
+  min-height: 0px;
+  opacity: 0;
+  background-image: none;
+  border: none;
+  box-shadow: none;
 }
 
 #backlight-slider trough,
 #pulseaudio-slider trough {
-	min-width: 80px;
-	min-height: 5px;
-	border-radius: 5px;
+  min-width: 80px;
+  min-height: 5px;
+  border-radius: 5px;
 }
 
 #backlight-slider highlight,
 #pulseaudio-slider highlight {
-	min-height: 10px;
-	border-radius: 5px;
+  min-height: 10px;
+  border-radius: 5px;
 }
 
 /* Ensure group drawer modules match base style (avoid bright per-module colors) */
@@ -347,9 +344,9 @@ tooltip {
 #group-mobo_drawer #power-profiles-daemon,
 #group-mobo_drawer #memory,
 #group-mobo_drawer #disk {
-    background-color: @background;
-    color: @color15;
-    border: 2px solid @color13;
+  background-color: @background;
+  color: @color15;
+  border: 2px solid @color13;
 }
 
 /* Global overrides for this style (match other widgets: dark bg + light text) */
@@ -360,9 +357,9 @@ tooltip {
 #disk,
 #temperature,
 #power-profiles-daemon {
-    background-color: @background;
-    color: @color15;
-    border: 2px solid @color13;
+  background-color: @background;
+  color: @color15;
+  border: 2px solid @color13;
 }
 
 /* --- tray readability override (global) --- */

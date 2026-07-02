@@ -7,14 +7,14 @@
 # ==================================================
 # Ghostty theme selector
 
-config_file="$HOME/.config/ghostty/config"
-iDIR="$HOME/.config/swaync/images"
-rofi_theme_primary="$HOME/.config/rofi/config-ghostty-theme.rasi"
-rofi_theme_fallback="$HOME/.config/rofi/config-edit.rasi"
-wallust_include_path="$HOME/.config/ghostty/wallust.conf"
+config_file="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config"
+iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
+rofi_theme_primary="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-ghostty-theme.rasi"
+rofi_theme_fallback="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-edit.rasi"
+wallust_include_path="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf"
 wallust_option_label="Set by wallpaper"
 default_option_label="Default - no color"
-wallust_refresh_script="$HOME/.config/hypr/scripts/WallustSwww.sh"
+wallust_refresh_script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustSwww.sh"
 
 notify_user() {
   local icon="$1"

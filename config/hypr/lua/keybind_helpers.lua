@@ -112,17 +112,29 @@ local function dispatch(name, args)
     return raw_dispatch_cmd(args)
   end
 
-  if name == "killactive" and window_api.close then
-    return window_api.close()
+  if name == "killactive" then
+    if window_api.close then
+      return window_api.close()
+    end
+    if window_api.kill then
+      return window_api.kill()
+    end
+    return raw_dispatch_cmd("killactive")
   end
   if name == "togglefloating" and window_api.float then
     return window_api.float({ action = "toggle" })
   end
-  if name == "fullscreen" and window_api.fullscreen then
-    if args == "1" then
-      return window_api.fullscreen({ mode = "maximized" })
+  if name == "fullscreen" then
+    if window_api.fullscreen then
+      if args == "1" then
+        return window_api.fullscreen({ mode = "maximized" })
+      end
+      return window_api.fullscreen({ mode = "fullscreen" })
     end
-    return window_api.fullscreen({ mode = "fullscreen" })
+    if args == "1" then
+      return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\" })'")
+    end
+    return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"fullscreen\" })'")
   end
   if name == "pseudo" and window_api.pseudo then
     return window_api.pseudo()
@@ -315,6 +327,7 @@ local keys_to_unbind = {
   "SUPER + V",
   "SUPER + W",
   "SUPER + P",
+  "SUPER + R",
   "SUPER + N",
   "SUPER + T",
   "SUPER + X",

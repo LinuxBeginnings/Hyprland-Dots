@@ -10,8 +10,8 @@
 # Used by automatic wallpaper change
 # Modified inorder to refresh rofi background, Wallust, SwayNC only
 
-SCRIPTSDIR=$HOME/.config/hypr/scripts
-UserScripts=$HOME/.config/hypr/UserScripts
+SCRIPTSDIR=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts
+UserScripts=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserScripts
 
 # Define file_exists function
 file_exists() {
@@ -31,10 +31,10 @@ for _prs in "${_ps[@]}"; do
 done
 
 # quit ags & relaunch ags
-#ags -q && ags &
+ags -q && ags &
 
 # quit quickshell & relaunch quickshell
-#pkill qs && qs &
+pkill qs && qs &
 
 
 # reload swaync

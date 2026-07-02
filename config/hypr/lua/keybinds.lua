@@ -59,18 +59,33 @@ keybind_helpers.unbind_default_keys()
 -- ==================================================
 -- Section: Application launchers and utility scripts
 local app_binds = {
-  { "SUPER", "D", "pkill rofi || true && rofi -show drun -modi drun,filebrowser,run,window", "app launcher" },
+  {
+    "SUPER",
+    "D",
+    "pkill rofi || true; $HOME/.config/hypr/scripts/RofiFocusedWallpaperLink.sh >/dev/null 2>&1 || true; rofi -show drun -modi drun,filebrowser,run,window",
+    "app launcher",
+  },
   { "SUPER", "B", 'xdg-open "https://"', "open default browser" },
   { "SUPER", "A", "$HOME/.config/hypr/scripts/OverviewToggle.sh", "desktop overview" },
-  { "SUPER", "Return", "kitty", "Open terminal" },
-  { "SUPER", "E", "thunar", "file manager" },
+  { "SUPER", "Return", "$HOME/.config/hypr/scripts/LaunchTerminal.sh '$term'", "Open terminal" },
+  {
+    "SUPER",
+    "E",
+    "$HOME/.config/hypr/scripts/LaunchFileManager.sh '$files' '$term'",
+    "file manager",
+  },
   { "SUPER", "C", "$HOME/.config/hypr/scripts/rofi-ssh-menu.sh", "SSH session manager" },
   { "SUPER", "T", "$HOME/.config/hypr/scripts/ThemeChanger.sh", "Global theme switcher using Wallust" },
   { "SUPER", "H", "$HOME/.config/hypr/scripts/KeyHints.sh", "help / cheat sheet" },
   { "SUPER ALT", "R", "$HOME/.config/hypr/scripts/Refresh.sh", "refresh bar and menus" },
   { "SUPER ALT", "E", "$HOME/.config/hypr/scripts/RofiEmoji.sh", "emoji menu" },
   { "SUPER", "S", "$HOME/.config/hypr/scripts/RofiSearch.sh", "web search" },
-  { "SUPER CTRL", "S", "rofi -show window", "window switcher" },
+  {
+    "SUPER CTRL",
+    "S",
+    "$HOME/.config/hypr/scripts/RofiFocusedWallpaperLink.sh >/dev/null 2>&1 || true; rofi -show window",
+    "window switcher",
+  },
   { "SUPER ALT", "O", "$HOME/.config/hypr/scripts/ChangeBlur.sh", "toggle blur" },
   { "SUPER SHIFT", "G", "$HOME/.config/hypr/scripts/GameMode.sh", "toggle game mode" },
   { "SUPER ALT", "L", "$HOME/.config/hypr/scripts/ChangeLayout.sh toggle", "toggle layouts" },
@@ -122,12 +137,12 @@ local app_binds = {
   { "SUPER ALT", "B", "$HOME/.config/hypr/scripts/WaybarLayout.sh", "waybar layout menu" },
   { "SUPER", "N", "$HOME/.config/hypr/scripts/Hyprsunset.sh toggle", "Toggle Hyprsunset - night light" },
   { "SUPER SHIFT", "M", "$HOME/.config/hypr/UserScripts/RofiBeats.sh", "online music" },
-  { "SUPER", "W", "$HOME/.config/hypr/UserScripts/WallpaperSelect.sh", "select wallpaper" },
-  { "SUPER SHIFT", "W", "$HOME/.config/hypr/UserScripts/WallpaperEffects.sh", "wallpaper effects" },
-  { "CTRL ALT", "W", "$HOME/.config/hypr/UserScripts/WallpaperRandom.sh", "random wallpaper" },
+  { "SUPER", "W", "$HOME/.config/hypr/scripts/WallpaperSelect.sh", "select wallpaper" },
+  { "SUPER SHIFT", "W", "$HOME/.config/hypr/scripts/WallpaperEffects.sh", "wallpaper effects" },
+  { "CTRL ALT", "W", "$HOME/.config/hypr/scripts/WallpaperRandom.sh", "random wallpaper" },
   { "SUPER SHIFT", "K", "$HOME/.config/hypr/scripts/KeyBinds.sh", "search keybinds" },
   { "SUPER SHIFT", "A", "$HOME/.config/hypr/scripts/Animations.sh", "animations menu" },
-  { "SUPER SHIFT", "O", "$HOME/.config/hypr/UserScripts/ZshChangeTheme.sh", "change oh-my-zsh theme" },
+  { "SUPER SHIFT", "R", "$HOME/.config/hypr/scripts/ZshChangeTheme.sh", "change oh-my-zsh theme" },
   { "SUPER ALT", "C", "$HOME/.config/hypr/UserScripts/RofiCalc.sh", "calculator" },
 }
 for _, app in ipairs(app_binds) do
@@ -196,7 +211,7 @@ end
 
 -- Section: Window/session controls
 bind("SUPER SHIFT", "F", dispatch("fullscreen", ""), { description = "fullscreen" })
-bind("SUPER CTRL", "F", dispatch("fullscreen", "1"), { description = "maximize window" })
+bind("SUPER", "F", dispatch("fullscreen", "1"), { description = "maximize window" })
 bind("SUPER", "SPACE", dispatch("togglefloating", ""), { description = "Float current window" })
 bind("SUPER CTRL", "O", dispatch("setprop", "active opaque toggle"), { description = "toggle active window opacity" })
 bind(
@@ -256,12 +271,17 @@ bind(
 -- Section: Layout and tiling controls
 bind("SUPER CTRL", "D", dispatch("layoutmsg", "removemaster"), { description = "remove master" })
 bind("SUPER", "I", dispatch("layoutmsg", "addmaster"), { description = "add master" })
-bind("SUPER", "j", exec_cmd("$HOME/.config/hypr/scripts/LuaCycleWindow.sh next"), { description = "cycle next" })
+bind(
+  "SUPER",
+  "j",
+  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh cycle-next"),
+  { description = "cycle next (layout-aware)" }
+)
 bind(
   "SUPER",
   "k",
-  exec_cmd("$HOME/.config/hypr/scripts/LuaCycleWindow.sh previous"),
-  { description = "cycle previous" }
+  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh cycle-prev"),
+  { description = "cycle previous (layout-aware)" }
 )
 bind("SUPER CTRL", "Return", dispatch("layoutmsg", "swapwithmaster"), { description = "swap with master" })
 bind("SUPER SHIFT", "I", dispatch("layoutmsg", "togglesplit"), { description = "toggle split (dwindle)" })
@@ -305,6 +325,88 @@ bind(
   ),
   { description = "toggle scrolling V/H" }
 )
+local col_width_presets = { 0.25, 0.33, 0.5, 0.66, 0.75, 1.0 }
+local function _as_number(v)
+  if type(v) == "number" then
+    return v
+  end
+  if type(v) == "string" then
+    return tonumber(v)
+  end
+  return nil
+end
+local function _window_width(win)
+  if type(win) ~= "table" then
+    return nil
+  end
+  local sz = win.size
+  if type(sz) == "number" then
+    return sz
+  end
+  if type(sz) == "table" then
+    return _as_number(sz[1] or sz.width or sz.w)
+  end
+  return nil
+end
+local function _monitor_width(win)
+  local mon = type(win) == "table" and win.monitor or nil
+  if type(mon) == "table" then
+    local w = _as_number(mon.width or mon.w or (type(mon.size) == "table" and (mon.size[1] or mon.size.width)))
+    if w ~= nil then
+      return w
+    end
+  end
+  if hl.get_active_monitor then
+    local active_mon = hl.get_active_monitor()
+    if type(active_mon) == "table" then
+      local w = _as_number(active_mon.width or active_mon.w or (type(active_mon.size) == "table" and (active_mon.size[1] or active_mon.size.width)))
+      if w ~= nil then
+        return w
+      end
+    end
+  end
+  return nil
+end
+bind("SUPER", "R", function()
+  local ws = hl.get_active_workspace and hl.get_active_workspace() or nil
+  local ws_layout = ws and (ws.tiled_layout or ws.tiledLayout) or nil
+  if ws_layout ~= "scrolling" then
+    return
+  end
+
+  local w = hl.get_active_window and hl.get_active_window() or nil
+  local col = w ~= nil and w.layout and w.layout.column or nil
+  local current_width = nil
+  if type(col) == "table" then
+    current_width = _as_number(col.width)
+  else
+    current_width = _as_number(col)
+  end
+  if type(current_width) ~= "number" then
+    local ww = _window_width(w)
+    local mw = _monitor_width(w)
+    if type(ww) == "number" and type(mw) == "number" and mw > 0 then
+      current_width = ww / mw
+    end
+  end
+  if type(current_width) ~= "number" or current_width <= 0 then
+    return
+  end
+  if current_width > 1 then
+    current_width = 1
+  end
+
+  local closest, best = 1, math.huge
+  for i, v in ipairs(col_width_presets) do
+    local diff = math.abs(v - current_width)
+    if diff < best then
+      best, closest = diff, i
+    end
+  end
+
+  local nextIdx = closest % #col_width_presets + 1
+  hl.dispatch(hl.dsp.layout("colresize " .. tostring(col_width_presets[nextIdx])))
+end, { description = "cycle column width preset (scrolling)" })
 bind("ALT", "Tab", exec_cmd("$HOME/.config/hypr/scripts/LuaCycleWindow.sh next"), { description = "cycle next window" })
 
 -- Section: Audio, media, and hardware keys
@@ -511,10 +613,30 @@ bind("SUPER SHIFT", "Tab", dispatch("changegroupactive", "b"), { description = "
 bind("SUPER CTRL", "K", dispatch("moveintogroup", "l"), { description = "Move left into group" })
 bind("SUPER CTRL", "L", dispatch("moveintogroup", "r"), { description = "Move Right into group" })
 bind("SUPER CTRL", "H", dispatch("moveoutofgroup", ""), { description = "Move active out of group" })
-bind("SUPER", "left", dispatch("movefocus", "l"), { description = "focus left" })
-bind("SUPER", "right", dispatch("movefocus", "r"), { description = "focus right" })
-bind("SUPER", "up", dispatch("movefocus", "u"), { description = "focus up" })
-bind("SUPER", "down", dispatch("movefocus", "d"), { description = "focus down" })
+bind(
+  "SUPER",
+  "left",
+  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh focus-left"),
+  { description = "focus left (layout-aware)" }
+)
+bind(
+  "SUPER",
+  "right",
+  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh focus-right"),
+  { description = "focus right (layout-aware)" }
+)
+bind(
+  "SUPER",
+  "up",
+  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh focus-up"),
+  { description = "focus up (layout-aware)" }
+)
+bind(
+  "SUPER",
+  "down",
+  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh focus-down"),
+  { description = "focus down (layout-aware)" }
+)
 
 -- Section: Workspace navigation and assignment
 -- Keep legacy relative workspace focus script binds commented for rollback during Lua API migration.
