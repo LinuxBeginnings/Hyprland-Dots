@@ -4,6 +4,9 @@
 
 ## Fixed:
 
+- Some animation bezier values out-of-range
+  - Fixed both hyprlang and lua config files
+
 ## Updated:
 
 ## Changed:

@@ -6,13 +6,13 @@ hl.config({
   },
 })
 
-hl.curve("wind", { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.05 } } })
-hl.curve("winIn", { type = "bezier", points = { { 0.1, 1.1 }, { 0.1, 1.1 } } })
-hl.curve("winOut", { type = "bezier", points = { { 0.3, -0.3 }, { 0, 1 } } })
+hl.curve("wind", { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.00 } } })
+hl.curve("winIn", { type = "bezier", points = { { 0.1, 1.0 }, { 0.1, 1.0 } } })
+hl.curve("winOut", { type = "bezier", points = { { 0.3, 0.0 }, { 0, 1 } } })
 hl.curve("liner", { type = "bezier", points = { { 1, 1 }, { 1, 1 } } })
-hl.curve("overshot", { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.05 } } })
+hl.curve("overshot", { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.00 } } })
 hl.curve("smoothOut", { type = "bezier", points = { { 0.5, 0 }, { 0.99, 0.99 } } })
-hl.curve("smoothIn", { type = "bezier", points = { { 0.5, -0.5 }, { 0.68, 1.5 } } })
+hl.curve("smoothIn", { type = "bezier", points = { { 0.5, 0.0 }, { 0.68, 1.0 } } })
 
 hl.animation({ leaf = "windows", enabled = true, speed = 6, bezier = "wind", style = "slide" })
 hl.animation({ leaf = "windowsIn", enabled = true, speed = 5, bezier = "winIn", style = "slide" })
