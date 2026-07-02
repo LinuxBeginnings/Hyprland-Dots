@@ -9,7 +9,7 @@
 -- - config/hypr/configs/ENVariables.conf
 -- - config/hypr/UserConfigs/ENVariables.conf (active values only)
 
-hl.env("DOTS_VERSION", "2.3.25")
+hl.env("DOTS_VERSION", "2.3.26")
 hl.env("GDK_BACKEND", "wayland,x11,*")
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")
 hl.env("CLUTTER_BACKEND", "wayland")

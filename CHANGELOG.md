@@ -1,5 +1,13 @@
 # Changelog — KoolDots
 
+## v2.3.26
+
+## Fixed:
+
+## Updated:
+
+## Changed:
+
 ## v2.3.25
 
 ## Fixed
@@ -44,6 +52,7 @@
 - NVIDIA Hybrid laptops have issues with cursors and GDM
   - Added more defensive code with fallbacks
 - Dynamic wallpaper is now also per monitor
+
 ## Fixed:
 
 - Disabled LayerRule for swaync
@@ -138,6 +147,7 @@
     - Compliant with standard especially with `UWSM`
 
 ---
+
 - `Hyprlock.conf` and `Hyprlock-1080.conf` were removed, re-added
 
 ## v2.3.24
