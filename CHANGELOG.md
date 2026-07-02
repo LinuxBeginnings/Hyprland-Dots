@@ -44,6 +44,8 @@
 - NVIDIA Hybrid laptops have issues with cursors and GDM
   - Added more defensive code with fallbacks
 - Dynamic wallpaper is now also per monitor
+## Fixed:
+
 - Disabled LayerRule for swaync
   - Caused execessive blurring of background
 - WindowRule for `qcalculate-gtk`
@@ -136,6 +138,7 @@
     - Compliant with standard especially with `UWSM`
 
 ---
+- `Hyprlock.conf` and `Hyprlock-1080.conf` were removed, re-added
 
 ## v2.3.24
 
