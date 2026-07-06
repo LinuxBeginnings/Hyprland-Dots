@@ -61,7 +61,7 @@ GDK_BACKEND=$BACKEND yad \
   "CTRL ALT L" "screen lock" "(hyprlock)" \
   "CTRL ALT Del" "Hyprland Exit" "(NOTE: Hyprland Will exit immediately)" \
   " SHIFT F" "Fullscreen" "Toggles to full screen" \
-  " CTL F" "Fake Fullscreen" "Toggles to fake full screen" \
+  " F" "Fake Fullscreen" "Toggles to fake full screen" \
   " ALT L" "Toggle Dwindle|Scrolling|Monocle|Master layouts" "Active workspace layout" \
   " SPACEBAR" "Toggle float" "single window" \
   " ALT SPACEBAR" "Toggle all windows to float" "all windows" \
