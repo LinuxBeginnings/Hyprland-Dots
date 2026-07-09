@@ -191,8 +191,10 @@
 		"class<microsoft-edge>": " ",
 		"class<Chromium|Thorium|[Cc]hrome>": " ",
 		"class<brave-browser>": "🦁 ",
+		"class<brave-origin>": "🦁 ",
 		"class<tor browser>": " ",
 		"class<firefox-developer-edition>": "🦊 ",
+		"class<helium>": "󰇧 ",
 
 		"class<kitty|konsole|[Aa]lacritty>": " ",
 		"class<kitty-dropterm>": " ",
@@ -254,6 +256,7 @@
 		"class<com-jetpackduba-gitnuro-MainKt>": " ",
 		"title<.*Gitnuro.*>": " ",
 		"class<mousepad>": " ",
+		"class<org.gnome.Evince>": "󰈦 ",
 		"class<libreoffice-writer>": " ",
 		"class<libreoffice-startcenter>": "󰏆 ",
 		"class<libreoffice-calc>": " ",
