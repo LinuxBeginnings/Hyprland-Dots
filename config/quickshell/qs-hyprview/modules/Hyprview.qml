@@ -23,7 +23,7 @@ PanelWindow {
     property bool specialActive: false
     property bool animateWindows: false
     property var lastPositions: {}
-    property real backdropOpacity: 0.12
+    property real backdropOpacity: 0.2
 
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
