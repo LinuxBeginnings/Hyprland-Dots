@@ -45,25 +45,23 @@ apply_layer_rule({
 apply_layer_rule({
   name = "layerrule-004",
   match = {
-    namespace = "wallpaper",
+    namespace = "quickshell:expose",
   },
-  blur = true,
-  ignore_alpha = 0,
+  dim_around = true,
 })
 
 apply_layer_rule({
   name = "layerrule-005",
   match = {
-    namespace = "swaync-control-center",
+    namespace = "quickshell:expose",
   },
   blur = true,
-  ignore_alpha = 0,
 })
 
 apply_layer_rule({
   name = "layerrule-006",
   match = {
-    namespace = "swaync-notification-window",
+    namespace = "wallpaper",
   },
   blur = true,
   ignore_alpha = 0,
@@ -72,7 +70,7 @@ apply_layer_rule({
 apply_layer_rule({
   name = "layerrule-007",
   match = {
-    namespace = "com.aurora.keybinds_help",
+    namespace = "swaync-control-center",
   },
   blur = true,
   ignore_alpha = 0,
@@ -80,6 +78,24 @@ apply_layer_rule({
 
 apply_layer_rule({
   name = "layerrule-008",
+  match = {
+    namespace = "swaync-notification-window",
+  },
+  blur = true,
+  ignore_alpha = 0,
+})
+
+apply_layer_rule({
+  name = "layerrule-009",
+  match = {
+    namespace = "com.aurora.keybinds_help",
+  },
+  blur = true,
+  ignore_alpha = 0,
+})
+
+apply_layer_rule({
+  name = "layerrule-010",
   match = {
     namespace = "logout_dialog",
   },
