@@ -56,6 +56,7 @@ apply_layer_rule({
     namespace = "quickshell:expose",
   },
   blur = true,
+  ignore_alpha = 0,
 })
 
 apply_layer_rule({
