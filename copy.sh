@@ -662,12 +662,18 @@ if command -v qs >/dev/null 2>&1; then
     esac
   fi
 
-  # Ensure overview subdirectory exists and is up to date
+  # Ensure overview and qs-hyprview subdirectories exist
   DIRPATH_OVERVIEW="$DIRPATH_QS/overview"
   if [ ! -d "$DIRPATH_OVERVIEW" ] && [ -d "$DOTFILES_DIR/config/quickshell/overview" ]; then
     echo "${INFO} - Copying quickshell overview config..." 2>&1 | tee -a "$LOG"
     cp -r "$DOTFILES_DIR/config/quickshell/overview" "$DIRPATH_QS/" 2>&1 | tee -a "$LOG"
     echo "${OK} - Quickshell overview config copied successfully" 2>&1 | tee -a "$LOG"
+  fi
+  DIRPATH_QS_HYPRVIEW="$DIRPATH_QS/qs-hyprview"
+  if [ ! -d "$DIRPATH_QS_HYPRVIEW" ] && [ -d "$DOTFILES_DIR/config/quickshell/qs-hyprview" ]; then
+    echo "${INFO} - Copying quickshell qs-hyprview config..." 2>&1 | tee -a "$LOG"
+    cp -r "$DOTFILES_DIR/config/quickshell/qs-hyprview" "$DIRPATH_QS/" 2>&1 | tee -a "$LOG"
+    echo "${OK} - Quickshell qs-hyprview config copied successfully" 2>&1 | tee -a "$LOG"
   fi
 
   # Check for old quickshell startup commands and update them

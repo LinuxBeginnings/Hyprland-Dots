@@ -2,6 +2,13 @@
 
 ## v2.3.26
 
+## Added: 
+ - `qs-hyprview` an alternative to quickshell `overview`
+   - `CTRL-TAB` to activate 
+   - Has search filter 
+   - Optional layouts available 
+     - Edit system keybinds to change the layout 
+
 ## Fixed:
 
 - Some animation bezier values out-of-range
