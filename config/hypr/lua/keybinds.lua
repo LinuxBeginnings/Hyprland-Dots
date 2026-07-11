@@ -330,16 +330,13 @@ local qs_hyprview_layout = "smartgrid"
 bind(
   "CTRL",
   "tab",
-  exec_cmd("qs ipc -c qs-hyprview call expose toggle " .. qs_hyprview_layout),
+  exec_cmd(
+    "hyprctl keyword layerrule \"match:namespace quickshell:expose, blur on, ignore_alpha 0\" && "
+      .. "qs ipc -c qs-hyprview call expose toggle "
+      .. qs_hyprview_layout
+  ),
   { description = "qs-hyprview toggle" }
 )
-bind(
-  "CTRL",
-  "tab",
-  exec_cmd("qs ipc -c qs-hyprview call expose open " .. qs_hyprview_layout),
-  { description = "qs-hyprview open" }
-)
-bind("CTRL", "tab", exec_cmd("qs ipc -c qs-hyprview call expose close"), { description = "qs-hyprview close" })
 local col_width_presets = { 0.25, 0.33, 0.5, 0.66, 0.75, 1.0 }
 local function _as_number(v)
   if type(v) == "number" then

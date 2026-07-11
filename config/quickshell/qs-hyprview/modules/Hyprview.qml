@@ -23,13 +23,14 @@ PanelWindow {
     property bool specialActive: false
     property bool animateWindows: false
     property var lastPositions: {}
+    property real backdropOpacity: 0.12
 
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
     visible: isActive
 
     // LayerShell Configs
-    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.exclusiveZone: -1
     WlrLayershell.keyboardFocus: isActive ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     WlrLayershell.namespace: "quickshell:expose"
@@ -151,6 +152,14 @@ PanelWindow {
         id: mainScope
         anchors.fill: parent
         focus: true
+
+        Rectangle {
+            anchors.fill: parent
+            color: "#000000"
+            opacity: root.isActive ? root.backdropOpacity : 0
+            visible: root.isActive && root.backdropOpacity > 0
+            z: -2
+        }
 
         Keys.onPressed: (event) => {
             if (!root.isActive) return
