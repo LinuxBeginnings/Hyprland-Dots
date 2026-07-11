@@ -2,12 +2,14 @@
 
 ## v2.3.26
 
-## Added: 
- - `qs-hyprview` an alternative to quickshell `overview`
-   - `CTRL-TAB` to activate 
-   - Has search filter 
-   - Optional layouts available 
-     - Edit system keybinds to change the layout 
+## Added:
+
+- `qs-hyprview` an alternative to quickshell `overview`
+  - `CTRL-TAB` to activate
+  - Has search filter
+  - Optional layouts available
+    - Edit system keybinds to change the layout
+  - Added blur and dimming to layerrules for `qs-hyprview`
 
 ## Fixed:
 
@@ -16,8 +18,8 @@
 
 ## Updated:
 
-- QuickShell overview to current version 
-  - One issue fixed is moving apps between workspaces 
+- QuickShell overview to current version
+  - One issue fixed is moving apps between workspaces
   - `overview` has not been updated in this project for a long time
 
 ## Changed:
