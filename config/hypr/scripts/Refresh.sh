@@ -9,6 +9,7 @@
 
 SCRIPTSDIR=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts
 UserScripts=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserScripts
+QS_TEXTINPUT_LOG_RULE="qt.qpa.wayland.textinput.warning=false"
 
 # Define file_exists function
 file_exists() {
@@ -35,7 +36,7 @@ pkill -f 'waybar-cava\..*\.conf' 2>/dev/null || true
 ags -q && ags &
 
 # quit quickshell & relaunch quickshell
-pkill qs && qs &
+pkill qs && qs --log-rules "$QS_TEXTINPUT_LOG_RULE" &
 
 # some process to kill (exclude waybar to avoid restart loops)
 for pid in $(pidof rofi swaync ags swaybg); do

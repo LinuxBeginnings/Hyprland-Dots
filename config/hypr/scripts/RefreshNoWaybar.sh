@@ -12,6 +12,7 @@
 
 SCRIPTSDIR=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts
 UserScripts=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserScripts
+QS_TEXTINPUT_LOG_RULE="qt.qpa.wayland.textinput.warning=false"
 
 # Define file_exists function
 file_exists() {
@@ -34,7 +35,7 @@ done
 ags -q && ags &
 
 # quit quickshell & relaunch quickshell
-pkill qs && qs &
+pkill qs && qs --log-rules "$QS_TEXTINPUT_LOG_RULE" &
 
 
 # reload swaync
