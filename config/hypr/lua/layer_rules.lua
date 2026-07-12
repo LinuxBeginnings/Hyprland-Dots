@@ -57,6 +57,7 @@ apply_layer_rule({
   },
   blur = true,
   ignore_alpha = 0,
+  xray = true,
 })
 
 apply_layer_rule({

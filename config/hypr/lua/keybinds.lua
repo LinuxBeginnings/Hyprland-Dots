@@ -326,13 +326,14 @@ bind(
   { description = "toggle scrolling V/H" }
 )
 -- Section: qs-hyprview expose controls
+-- "smartgrid", "justified", "masonry", "bands", "hero", "spiral"
+-- "satellite", "staggered", "columnar", "vortex", "random"
 local qs_hyprview_layout = "smartgrid"
 bind(
   "CTRL",
   "tab",
   exec_cmd(
-    "hyprctl keyword layerrule \"match:namespace quickshell:expose, blur on, ignore_alpha 0\" && "
-      .. "qs ipc -c qs-hyprview call expose toggle "
+    "qs -c qs-hyprview ipc call expose toggle "
       .. qs_hyprview_layout
   ),
   { description = "qs-hyprview toggle" }

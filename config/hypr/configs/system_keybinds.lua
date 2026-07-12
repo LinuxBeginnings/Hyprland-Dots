@@ -305,6 +305,18 @@ bind("SUPER ALT", "period", dispatch("layoutmsg", "swapcol r"), { description = 
 bind("SUPER ALT", "H", exec_cmd("hyprctl keyword scrolling:direction right"), { description = "Horizonal scroll right" })
 bind("SUPER ALT", "V", exec_cmd("hyprctl keyword scrolling:direction down"), { description = "Vertical Scroll down" })
 bind("SUPER ALT", "S", exec_cmd("bash -c '[[ $(hyprctl getoption scrolling:direction -j | jq -r \".str\") == \"right\" ]] && hyprctl keyword scrolling:direction down || hyprctl keyword scrolling:direction right'"), { description = "toggle scrolling V/H" })
+-- "smartgrid", "justified", "masonry", "bands", "hero", "spiral"
+-- "satellite", "staggered", "columnar", "vortex", "random"
+local qs_hyprview_layout = "smartgrid"
+bind(
+  "CTRL",
+  "tab",
+  exec_cmd(
+    "qs -c qs-hyprview ipc call expose toggle "
+      .. qs_hyprview_layout
+  ),
+  { description = "qs-hyprview toggle" }
+)
 bind("ALT", "Tab", dispatch("cyclenext", ""), { description = "cycle next window" })
 bind("ALT", "Tab", dispatch("bringactivetotop", ""), { description = "bring active to top" })
 bind("", "xf86audioraisevolume", exec_cmd("$HOME/.config/hypr/scripts/Volume.sh --inc"), { description = "volume up", locked = true, ["repeat"] = true })
