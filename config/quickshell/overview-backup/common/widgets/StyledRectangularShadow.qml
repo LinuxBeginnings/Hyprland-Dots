@@ -3,7 +3,6 @@ import QtQuick.Effects
 import ".."
 
 RectangularShadow {
-    required property var target
     anchors.fill: target
     radius: 20
     blur: 0.9 * Appearance.sizes.elevationMargin
