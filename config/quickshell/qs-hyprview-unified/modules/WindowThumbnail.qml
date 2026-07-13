@@ -208,13 +208,12 @@ Item {
             }
         }
 
-        RectangularShadow {
+        Rectangle {
             anchors.fill: parent
-            radius: 16
-            blur: 24
-            spread: 10
+            anchors.margins: -8
+            radius: 22
             color: "#55000000"
-            cached: true
+            z: -1
         }
 
         Loader {
