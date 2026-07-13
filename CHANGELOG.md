@@ -18,6 +18,9 @@
 
 ## Updated:
 
+- Added script to toggle `qs-hyprview` 
+  - It checks that it's running and if not restarts it
+- Quickshell config files now compatible with all debian versions
 - QuickShell config files were blocked on Trixie
   - Trixie now supports quickshell, removed block
 - QuickShell overview to current version

@@ -333,7 +333,7 @@ bind(
   "CTRL",
   "tab",
   exec_cmd(
-    "qs -c qs-hyprview ipc call expose toggle "
+    "$HOME/.config/hypr/scripts/toggle-qs-hyprview.sh "
       .. qs_hyprview_layout
   ),
   { description = "qs-hyprview toggle" }
