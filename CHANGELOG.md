@@ -18,6 +18,8 @@
 
 ## Updated:
 
+- QuickShell config files were blocked on Trixie
+  - Trixie now supports quickshell, removed block
 - QuickShell overview to current version
   - One issue fixed is moving apps between workspaces
   - `overview` has not been updated in this project for a long time
