@@ -311,10 +311,7 @@ local qs_hyprview_layout = "smartgrid"
 bind(
   "CTRL",
   "tab",
-  exec_cmd(
-    "qs -c qs-hyprview ipc call expose toggle "
-      .. qs_hyprview_layout
-  ),
+  exec_cmd("$scriptsDir/toggle-qs-hyprview.sh"),
   { description = "qs-hyprview toggle" }
 )
 bind("ALT", "Tab", dispatch("cyclenext", ""), { description = "cycle next window" })
