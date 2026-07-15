@@ -10,6 +10,7 @@
   - Optional layouts available
     - Edit system keybinds to change the layout
   - Added blur and dimming to layerrules for `qs-hyprview`
+  - Sample values for LUA `user_startup.lua` file
 
 ## Fixed:
 
@@ -18,7 +19,7 @@
 
 ## Updated:
 
-- Added script to toggle `qs-hyprview` 
+- Added script to toggle `qs-hyprview`
   - It checks that it's running and if not restarts it
 - Quickshell config files now compatible with all debian versions
 - QuickShell config files were blocked on Trixie
