@@ -182,6 +182,9 @@ seed_upgrade_userconfigs() {
   local runtime_kitty="$cfg_home/kitty/kitty.conf"
   local runtime_ghostty="$cfg_home/ghostty/config"
   local runtime_hyprview="$userconfigs_dir/hyprview-layout.conf"
+  if [ "${RUN_MODE:-}" = "install" ] && [ ! -d "$cfg_home/hypr" ]; then
+    return
+  fi
 
   mkdir -p "$userconfigs_dir"
 
@@ -376,9 +379,8 @@ restore_hypr_assets() {
   local BACKUP_HYPR_PATH_PRIMARY="$HYPR_DIR-backup-$BACKUP_DIR"
   local BACKUP_HYPR_PATH_LEGACY="$HYPR_DIR-$BACKUP_DIR"
   local BACKUP_HYPR_PATH="$BACKUP_HYPR_PATH_PRIMARY"
-
-  # Fresh install flow may back up to hypr-<suffix>; prefer that when present.
-  if [ -d "$BACKUP_HYPR_PATH_LEGACY" ]; then
+  # Fresh install flow may back up to hypr-<suffix>; use it as fallback.
+  if [ ! -d "$BACKUP_HYPR_PATH" ] && [ -d "$BACKUP_HYPR_PATH_LEGACY" ]; then
     BACKUP_HYPR_PATH="$BACKUP_HYPR_PATH_LEGACY"
   fi
 
@@ -398,7 +400,8 @@ restore_hypr_assets() {
     if [ "$express_mode" -eq 1 ]; then
       echo "${NOTE:-[NOTE]} Express mode: skipping automatic restoration of animations and monitor profile directories." 2>&1 | tee -a "$log"
       if [ -d "$BACKUP_HYPR_PATH/wallpaper_effects" ]; then
-        cp -r "$BACKUP_HYPR_PATH/wallpaper_effects" "$HYPR_DIR/" 2>&1 | tee -a "$log"
+        mkdir -p "$HYPR_DIR/wallpaper_effects"
+        rsync -a "$BACKUP_HYPR_PATH/wallpaper_effects/" "$HYPR_DIR/wallpaper_effects/" 2>&1 | tee -a "$log"
         echo "${OK:-[OK]} - Restored directory: ${MAGENTA:-}wallpaper_effects${RESET:-}" 2>&1 | tee -a "$log"
       fi
     else
@@ -409,7 +412,12 @@ restore_hypr_assets() {
       for DIR_RESTORE in "${DIR_B[@]}"; do
         local BACKUP_SUBDIR="$BACKUP_HYPR_PATH/$DIR_RESTORE"
         if [ -d "$BACKUP_SUBDIR" ]; then
-          cp -r "$BACKUP_SUBDIR" "$HYPR_DIR/" 2>&1 | tee -a "$log"
+          if [ "$DIR_RESTORE" = "wallpaper_effects" ]; then
+            mkdir -p "$HYPR_DIR/wallpaper_effects"
+            rsync -a "$BACKUP_SUBDIR/" "$HYPR_DIR/wallpaper_effects/" 2>&1 | tee -a "$log"
+          else
+            cp -r "$BACKUP_SUBDIR" "$HYPR_DIR/" 2>&1 | tee -a "$log"
+          fi
           echo "${OK:-[OK]} - Restored directory: ${MAGENTA:-}$DIR_RESTORE${RESET:-}" 2>&1 | tee -a "$log"
         fi
       done
@@ -705,9 +713,11 @@ restore_user_configs() {
         "monitors.lua"
         "Startup_Apps.conf"
         "UserDecorations.conf"
+        "UserDecorations.lua"
         "UserAnimations.conf"
         "UserKeybinds.conf"
         "UserSettings.conf"
+        "UserSettings.lua"
         "workspaces.lua"
         "WindowRules.conf"
       )
@@ -750,6 +760,31 @@ restore_user_configs() {
     fi
   fi
 
+  # Never overwrite core user overlay files during upgrades.
+  if [ "${RUN_MODE:-}" != "install" ]; then
+    local ALWAYS_PRESERVE=(
+      "UserDecorations.conf"
+      "UserDecorations.lua"
+      "UserSettings.conf"
+      "UserSettings.lua"
+      "kitty.conf"
+      "ghostty.conf"
+    )
+    local PRESERVE_FILE
+    for PRESERVE_FILE in "${ALWAYS_PRESERVE[@]}"; do
+      local PRESERVE_SRC=""
+      if [ -f "$BACKUP_DIR_PATH_PRIMARY/$PRESERVE_FILE" ]; then
+        PRESERVE_SRC="$BACKUP_DIR_PATH_PRIMARY/$PRESERVE_FILE"
+      elif [ -f "$BACKUP_DIR_PATH_LEGACY/$PRESERVE_FILE" ]; then
+        PRESERVE_SRC="$BACKUP_DIR_PATH_LEGACY/$PRESERVE_FILE"
+      fi
+      if [ -n "$PRESERVE_SRC" ]; then
+        mkdir -p "$DIRPATH/UserConfigs"
+        cp -f "$PRESERVE_SRC" "$DIRPATH/UserConfigs/$PRESERVE_FILE" 2>&1 | tee -a "$log"
+        echo "${OK:-[OK]} - Preserved UserConfigs/$PRESERVE_FILE from backup." 2>&1 | tee -a "$log"
+      fi
+    done
+  fi
   if [ -d "$BACKUP_CONFIGS_PATH" ]; then
     local restored_system_lua=0
     local lua_file
