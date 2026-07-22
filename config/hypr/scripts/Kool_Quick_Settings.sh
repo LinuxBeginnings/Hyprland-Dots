@@ -496,15 +496,15 @@ EOF
 show_main_menu() {
     cat <<EOF
 [ Settings ]
-[[ Quick Links]]
 [[ User Settings ]]
-Set User Keybinds
+[[ Quick Links]]
 [[ System Settings ]]
 Set User Decorations
 [[ Toggle Options ]]
 Set Hyprlock paper
 [[ Misc ]]
 Set User ENV variables
+Set User Keybinds
 EOF
 }
 
