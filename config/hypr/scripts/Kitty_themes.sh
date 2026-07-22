@@ -163,6 +163,7 @@ while true; do
   done
   rofi_input_list_trimmed="${rofi_input_list%\\n}"
 
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
   chosen_selection_from_rofi=$(echo -e "$rofi_input_list_trimmed" |
     rofi -dmenu -i \
       -no-custom \

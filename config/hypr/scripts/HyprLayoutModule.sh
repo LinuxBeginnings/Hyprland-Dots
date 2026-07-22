@@ -107,6 +107,7 @@ show_menu() {
 		return 0
 	fi
 
+	"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 	choice="$(printf '%s\n' "${options[@]}" | rofi -i -dmenu -p "Workspace layout" -mesg "Select layout for this workspace" -selected-row "$default_row" -config "$rofi_config")"
 	[[ -z "$choice" ]] && exit 0
 

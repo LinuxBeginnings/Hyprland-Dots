@@ -68,4 +68,5 @@ if [[ -f "/tmp/hypr_keybind_suggestions_file" ]]; then
 fi
 
 # use rofi to display the keybinds
+"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 printf '%s\n' "$display_keybinds" | rofi -dmenu -i -config "$rofi_theme" -mesg "$msg"

@@ -41,6 +41,7 @@ rofi_options=("${available_prompts[@]}")
 if [[ -f "$BACKUP_FILE" ]]; then
   rofi_options+=("$RESTORE_LABEL")
 fi
+"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 
 selection="$(printf '%s\n' "${rofi_options[@]}" | rofi -dmenu -i -p "Select Starship Prompt" -mesg "Select Starship Prompt" -theme "$ROFI_THEME")"
 

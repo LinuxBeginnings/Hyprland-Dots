@@ -234,7 +234,7 @@ end
 bind(
   "SUPER",
   "D",
-  exec_cmd("pkill rofi || true && rofi -show drun -modi drun, filebrowser, run, window"),
+  exec_cmd("pkill rofi || true; $HOME/.config/hypr/scripts/RofiFocusedWallpaperLink.sh >/dev/null 2>&1 || true; rofi -show drun -modi drun, filebrowser,run,window"),
   { description = "app launcher" }
 )
 bind("SUPER", "B", exec_cmd('xdg-open "https://"'), { description = "open default browser" })
@@ -262,7 +262,12 @@ bind("SUPER", "H", exec_cmd("$HOME/.config/hypr/scripts/KeyHints.sh"), { descrip
 bind("SUPER ALT", "R", exec_cmd("$HOME/.config/hypr/scripts/Refresh.sh"), { description = "refresh bar and menus" })
 bind("SUPER ALT", "E", exec_cmd("$HOME/.config/hypr/scripts/RofiEmoji.sh"), { description = "emoji menu" })
 bind("SUPER", "S", exec_cmd("$HOME/.config/hypr/scripts/RofiSearch.sh"), { description = "web search" })
-bind("SUPER CTRL", "S", exec_cmd("rofi -show window"), { description = "window switcher" })
+bind(
+  "SUPER CTRL",
+  "S",
+  exec_cmd("$HOME/.config/hypr/scripts/RofiFocusedWallpaperLink.sh >/dev/null 2>&1 || true; rofi -show window"),
+  { description = "window switcher" }
+)
 bind("SUPER ALT", "O", exec_cmd("$HOME/.config/hypr/scripts/ChangeBlur.sh"), { description = "toggle blur" })
 bind("SUPER SHIFT", "G", exec_cmd("$HOME/.config/hypr/scripts/GameMode.sh"), { description = "toggle game mode" })
 bind(

@@ -15,6 +15,7 @@ if pidof rofi > /dev/null; then
   pkill rofi
 fi
 
+"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 sed '1,/^# # DATA # #$/d' "$0" | \
 rofi -i -dmenu -mesg "$msg" -config $rofi_theme | \
 awk '{print $1}' | \

@@ -509,6 +509,7 @@ rofi_cmd=(rofi -i -show -dmenu -mesg "$menu_message" -theme-str "$rofi_override"
 if [[ -f "$rofi_theme" ]]; then
     rofi_cmd+=(-config "$rofi_theme")
 fi
+"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 
 choice="$(menu | "${rofi_cmd[@]}")"
 choice="${choice#"${choice%%[![:space:]]*}"}"

@@ -236,6 +236,7 @@ rainbow_borders_menu() {
   # Build options and prompt
   local options="Disable Rainbow Borders\nWallust Color\nOriginal Rainbow\nGradient Flow"
   local choice
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
   choice=$(printf "%b" "$options" | rofi -i -dmenu -config "$rofi_theme" -mesg "Rainbow Borders: current = $current_display")
 
   [[ -z "$choice" ]] && return
@@ -503,6 +504,7 @@ EOF
   esac
 
   local sub_choice=""
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
   sub_choice=$(
     {
       printf "%s\n" "$options"
@@ -535,6 +537,7 @@ EOF
 main() {
   local quick_settings_monitor choice
   quick_settings_monitor="$(get_context_monitor_name)"
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 
   choice=$(
     show_main_menu | rofi -i -dmenu -config "$rofi_theme" \

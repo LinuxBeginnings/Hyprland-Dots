@@ -45,6 +45,7 @@ if [[ -z "$animations_list" ]]; then
 fi
 
 # Rofi Menu
+"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 chosen_file=$(echo "$animations_list" | rofi -i -dmenu -config "$rofi_theme" -mesg "$msg")
 
 # Check if a file was selected

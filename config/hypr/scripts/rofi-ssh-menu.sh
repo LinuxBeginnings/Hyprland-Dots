@@ -90,6 +90,7 @@ if pgrep -x "rofi" >/dev/null 2>&1; then
   pkill rofi
 fi
 
+"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 selection="$(printf '%s\n' "${menu_entries}" | rofi -dmenu -i -p "SSH" -mesg "${MSG}" -config "${ROFI_CONFIG}")"
 
 if [[ -z "${selection}" ]]; then

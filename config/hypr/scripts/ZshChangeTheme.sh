@@ -37,6 +37,7 @@ menu() {
 }
 
 main() {
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
     choice=$(menu | ${rofi_command})
 
     # if nothing selected, script won't change anything
