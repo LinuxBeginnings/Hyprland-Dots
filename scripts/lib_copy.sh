@@ -9,11 +9,16 @@
 
 copy_phase1() {
   local log="$1"
+  local run_mode="${2:-${RUN_MODE:-}}"
   local base="${DOTFILES_DIR:-.}"
   local dirs="fastfetch kitty rofi swaync"
   for DIR2 in $dirs; do
     local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/$DIR2"
     if [ -d "$DIRPATH" ]; then
+      if [ "$run_mode" = "express" ]; then
+        echo -e "${NOTE:-[NOTE]} - Express mode: keeping existing ${YELLOW:-}$DIR2${RESET:-} config." 2>&1 | tee -a "$log"
+        continue
+      fi
       while true; do
         printf "\n${INFO:-[INFO]} Found ${YELLOW:-}$DIR2${RESET:-} config found in ${XDG_CONFIG_HOME:-$HOME/.config}/\n"
         echo -n "${CAT:-[ACTION]} Do you want to replace ${YELLOW:-}$DIR2${RESET:-} config? (y/n): "
@@ -206,7 +211,13 @@ restore_hypr_assets() {
     fi
 
     if [ "$express_mode" -eq 1 ]; then
-      echo "${NOTE:-[NOTE]} Express mode: skipping automatic restoration of animations and monitor profile directories." 2>&1 | tee -a "$log"
+      echo "${NOTE:-[NOTE]} Express mode: preserving existing wallpaper effects from backup and skipping animations/monitor profile restores." 2>&1 | tee -a "$log"
+      local BACKUP_WALLPAPER_DIR="$BACKUP_HYPR_PATH/wallpaper_effects"
+      if [ -d "$BACKUP_WALLPAPER_DIR" ]; then
+        rm -rf "$HYPR_DIR/wallpaper_effects"
+        cp -r "$BACKUP_WALLPAPER_DIR" "$HYPR_DIR/" 2>&1 | tee -a "$log"
+        echo "${OK:-[OK]} - Restored directory: ${MAGENTA:-}wallpaper_effects${RESET:-}" 2>&1 | tee -a "$log"
+      fi
     else
       echo -e "\n${NOTE:-[NOTE]} Restoring ${SKY_BLUE:-}Animations & Monitor Profiles${RESET:-} into ${YELLOW:-}$HYPR_DIR${RESET:-}..."
 
