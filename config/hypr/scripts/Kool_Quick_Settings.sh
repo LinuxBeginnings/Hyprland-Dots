@@ -310,9 +310,9 @@ handle_choice() {
     case "$choice" in
         "Edit User Defaults")
             file="$(resolve_user_overlay_file "$user_defaults_lua" "$user_defaults_conf")" ;;
-        "Edit User ENV variables")
+        "Edit User ENV variables"|"Set User ENV variables")
             file="$(resolve_user_overlay_file "$user_env_lua" "$user_env_conf")" ;;
-        "Edit User Keybinds")
+        "Edit User Keybinds"|"Set User Keybinds")
             file="$(resolve_user_overlay_file "$user_keybinds_lua" "$user_keybinds_conf")" ;;
         "Edit User Startup Apps (overlay)")
             file="$(resolve_user_overlay_file "$user_startup_lua" "$user_startup_conf")" ;;
@@ -322,7 +322,7 @@ handle_choice() {
             file="$(resolve_user_overlay_file "$user_layer_rules_lua" "$user_layer_rules_conf")" ;;
         "Edit User Settings")
             file="$(resolve_user_overlay_file "$user_settings_lua" "$user_settings_conf")" ;;
-        "Edit User Decorations")
+        "Edit User Decorations"|"Set User Decorations")
             file="$(resolve_user_overlay_file "$user_decorations_lua" "$user_decorations_conf")" ;;
         "Edit User Animations")
             file="$(resolve_user_overlay_file "$user_animations_lua" "$user_animations_conf")" ;;
@@ -378,7 +378,7 @@ handle_choice() {
                 return
             fi
             qt5ct ;;
-        "Set Hyprlock Wallpaper")
+        "Set Hyprlock Wallpaper"|"Set Hyprlock paper")
             if [[ -n "$quick_settings_monitor" ]]; then
                 "$scriptsDir/HyprlockWallpaperSelect.sh" "$quick_settings_monitor"
             else
@@ -419,7 +419,7 @@ show_category_menu() {
     local options=""
 
     case "$category" in
-        "User")
+        "[[ User Settings ]]")
             options=$(cat <<EOF
 Edit User Defaults
 Edit User Keybinds
@@ -434,7 +434,7 @@ Edit User Laptop Settings
 EOF
 )
             ;;
-        "System Defaults")
+        "[[ System Settings ]]")
             options=$(cat <<EOF
 Edit System Default Keybinds
 Edit System Default Startup Apps
@@ -444,7 +444,7 @@ Edit System Default Settings
 EOF
 )
             ;;
-        "Toggles")
+        "[[ Toggle Options ]]")
             options=$(cat <<EOF
 Toggle Waybar Weather units (C/F)
 Toggle Waybar Clock (12H/24H)
@@ -452,7 +452,7 @@ Toggle Game Mode
 EOF
 )
             ;;
-        "Utilities")
+        "[[ Misc ]]")
             options=$(cat <<EOF
 Change Starship Prompt
 Set SDDM Wallpaper
@@ -479,21 +479,32 @@ EOF
     esac
 
     local sub_choice=""
-    sub_choice=$(printf "%s\n" "$options" | rofi -i -dmenu -config "$rofi_theme" -mesg "$category")
+    sub_choice=$(
+        {
+            printf "%s\n" "$options"
+            printf "\n"
+            printf "[ SUPER+SHIFT+E to return to main menu ]\n"
+        } | rofi -i -dmenu -config "$rofi_theme" \
+            -mesg "$category" \
+            -theme-str 'listview { lines: 8; }'
+    )
     [[ -z "$sub_choice" ]] && return
+    [[ "$sub_choice" == "[ SUPER+SHIFT+E to return to main menu ]" ]] && return
     handle_choice "$sub_choice" "$quick_settings_monitor"
 }
 
 show_main_menu() {
     cat <<EOF
-User
-Quick Links
-System Defaults
-Edit User Keybinds
-Toggles
-Edit User Decorations
-Utilities
-Set Hyprlock Wallpaper
+[ Settings ]
+[[ Quick Links]]
+[[ User Settings ]]
+Set User Keybinds
+[[ System Settings ]]
+Set User Decorations
+[[ Toggle Options ]]
+Set Hyprlock paper
+[[ Misc ]]
+Set User ENV variables
 EOF
 }
 
@@ -504,17 +515,17 @@ main() {
     choice=$(
         show_main_menu | rofi -i -dmenu -config "$rofi_theme" \
             -mesg "Left: Categories • Right: Quick Links" \
-            -theme-str 'listview { columns: 2; lines: 4; }'
+            -theme-str 'listview { columns: 2; lines: 5; }'
     )
 
     case "$choice" in
-        "User"|"System Defaults"|"Toggles"|"Utilities")
+        "[[ User Settings ]]"|"[[ System Settings ]]"|"[[ Toggle Options ]]"|"[[ Misc ]]")
             show_category_menu "$choice" "$quick_settings_monitor"
             ;;
-        "Quick Links")
+        "[ Settings ]"|"[[ Quick Links]]")
             return
             ;;
-        "Edit User Keybinds"|"Edit User Decorations"|"Set Hyprlock Wallpaper")
+        "Set User Keybinds"|"Set User Decorations"|"Set Hyprlock paper"|"Set User ENV variables")
             handle_choice "$choice" "$quick_settings_monitor"
             ;;
         *)
