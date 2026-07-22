@@ -136,6 +136,31 @@ else
   exit 1
 fi
 
+# Optional helper fallbacks
+# Some releases may not ship runtime-state helpers yet. Define no-op
+# fallbacks so upgrade/install can continue without crashing.
+if ! declare -f seed_upgrade_userconfigs >/dev/null 2>&1; then
+  seed_upgrade_userconfigs() {
+    local log="${1:-/dev/null}"
+    echo "${NOTE} seed_upgrade_userconfigs helper unavailable; skipping seed step." 2>&1 | tee -a "$log"
+  }
+fi
+if ! declare -f capture_upgrade_runtime_selection_state >/dev/null 2>&1; then
+  capture_upgrade_runtime_selection_state() { :; }
+fi
+if ! declare -f capture_runtime_personal_state >/dev/null 2>&1; then
+  capture_runtime_personal_state() { :; }
+fi
+if ! declare -f preserve_custom_sddm_configs >/dev/null 2>&1; then
+  preserve_custom_sddm_configs() { :; }
+fi
+if ! declare -f restore_upgrade_runtime_selection_state >/dev/null 2>&1; then
+  restore_upgrade_runtime_selection_state() { :; }
+fi
+if ! declare -f restore_runtime_personal_state >/dev/null 2>&1; then
+  restore_runtime_personal_state() { :; }
+fi
+
 # Ensure we operate from the dotfiles root so relative paths resolve.
 cd "$SCRIPT_DIR" || {
   echo "${ERROR} Failed to cd to $SCRIPT_DIR"
