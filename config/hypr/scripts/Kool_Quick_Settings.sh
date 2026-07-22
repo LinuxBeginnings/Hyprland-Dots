@@ -302,58 +302,13 @@ rainbow_borders_menu() {
     # No notifications; mode is shown in the menu
 }
 
-# Function to display the menu options without numbers
-menu() {
-    cat <<EOF
---- USER CUSTOMIZATIONS ---
-Edit User Defaults
-Edit User Keybinds
-Edit User ENV variables
-Edit User Startup Apps (overlay)
-Edit User Window Rules (overlay)
-Edit User Layer Rules (overlay)
-Edit User Settings
-Edit User Decorations
-Edit User Animations
-Edit User Laptop Settings
---- SYSTEM DEFAULTS  ---
-Edit System Default Keybinds
-Edit System Default Startup Apps
-Edit System Default Window Rules
-Edit System Default Layer Rules
-Edit System Default Settings
-Change Starship Prompt
---- UTILITIES ---
-Set SDDM Wallpaper
-Choose Kitty Terminal Theme
-Choose Ghostty Terminal Theme
-Configure Monitors (nwg-displays)
-Configure Workspace Rules (nwg-displays)
-GTK Settings (nwg-look)
-QT Apps Settings (qt6ct)
-QT Apps Settings (qt5ct)
-Set Hyprlock Wallpaper
-Choose Hyprland Animations
-Choose Monitor Profiles
-Choose Rofi Themes
-Search for Keybinds
-Toggle Waybar Weather units (C/F)
-Toggle Waybar Clock (12H/24H)
-Toggle Game Mode
-Switch Dark-Light Theme
-Rainbow Borders Mode
-EOF
-}
+handle_choice() {
+    local choice="$1"
+    local quick_settings_monitor="$2"
+    local file=""
 
-# Main function to handle menu selection
-main() {
-    local quick_settings_monitor
-    quick_settings_monitor="$(get_context_monitor_name)"
-    choice=$(menu | rofi -i -dmenu -config $rofi_theme -mesg "$msg")
-    
-    # Map choices to corresponding files
     case "$choice" in
-    	"Edit User Defaults")
+        "Edit User Defaults")
             file="$(resolve_user_overlay_file "$user_defaults_lua" "$user_defaults_conf")" ;;
         "Edit User ENV variables")
             file="$(resolve_user_overlay_file "$user_env_lua" "$user_env_conf")" ;;
@@ -391,36 +346,36 @@ main() {
                 "$scriptsDir/sddm_wallpaper.sh" --normal
             fi
             ;;
-        "Choose Kitty Terminal Theme") $scriptsDir/Kitty_themes.sh ;;
-        "Choose Ghostty Terminal Theme") $scriptsDir/Ghostty_themes.sh ;;
-        "Configure Monitors (nwg-displays)") 
+        "Choose Kitty Terminal Theme") "$scriptsDir/Kitty_themes.sh" ;;
+        "Choose Ghostty Terminal Theme") "$scriptsDir/Ghostty_themes.sh" ;;
+        "Configure Monitors (nwg-displays)")
             if ! command -v nwg-displays &>/dev/null; then
                 notify-send -i "$iDIR/error.png" "E-R-R-O-R" "Install nwg-displays first"
-                exit 1
+                return
             fi
             nwg-displays ;;
-        "Configure Workspace Rules (nwg-displays)") 
+        "Configure Workspace Rules (nwg-displays)")
             if ! command -v nwg-displays &>/dev/null; then
                 notify-send -i "$iDIR/error.png" "E-R-R-O-R" "Install nwg-displays first"
-                exit 1
+                return
             fi
             nwg-displays ;;
-		"GTK Settings (nwg-look)") 
+        "GTK Settings (nwg-look)")
             if ! command -v nwg-look &>/dev/null; then
                 notify-send -i "$iDIR/error.png" "E-R-R-O-R" "Install nwg-look first"
-                exit 1
+                return
             fi
             nwg-look ;;
-		"QT Apps Settings (qt6ct)") 
+        "QT Apps Settings (qt6ct)")
             if ! command -v qt6ct &>/dev/null; then
                 notify-send -i "$iDIR/error.png" "E-R-R-O-R" "Install qt6ct first"
-                exit 1
+                return
             fi
             qt6ct ;;
-		"QT Apps Settings (qt5ct)") 
+        "QT Apps Settings (qt5ct)")
             if ! command -v qt5ct &>/dev/null; then
                 notify-send -i "$iDIR/error.png" "E-R-R-O-R" "Install qt5ct first"
-                exit 1
+                return
             fi
             qt5ct ;;
         "Set Hyprlock Wallpaper")
@@ -430,19 +385,18 @@ main() {
                 "$scriptsDir/HyprlockWallpaperSelect.sh"
             fi
             ;;
-        "Choose Hyprland Animations") $scriptsDir/Animations.sh ;;
-        "Choose Monitor Profiles") $scriptsDir/MonitorProfiles.sh ;;
-        "Choose Rofi Themes") $scriptsDir/RofiThemeSelector.sh ;;
-        "Search for Keybinds") $scriptsDir/KeyBinds.sh ;;
-        "Toggle Waybar Weather units (C/F)") $scriptsDir/Toggle-weather-waybar-units.sh ;;
-        "Toggle Waybar Clock (12H/24H)") $scriptsDir/ToggleWaybarTime.sh ;;
-        "Toggle Game Mode") $scriptsDir/GameMode.sh ;;
-        "Switch Dark-Light Theme") $scriptsDir/DarkLight.sh ;;
+        "Choose Hyprland Animations") "$scriptsDir/Animations.sh" ;;
+        "Choose Monitor Profiles") "$scriptsDir/MonitorProfiles.sh" ;;
+        "Choose Rofi Themes") "$scriptsDir/RofiThemeSelector.sh" ;;
+        "Search for Keybinds") "$scriptsDir/KeyBinds.sh" ;;
+        "Toggle Waybar Weather units (C/F)") "$scriptsDir/Toggle-weather-waybar-units.sh" ;;
+        "Toggle Waybar Clock (12H/24H)") "$scriptsDir/ToggleWaybarTime.sh" ;;
+        "Toggle Game Mode") "$scriptsDir/GameMode.sh" ;;
+        "Switch Dark-Light Theme") "$scriptsDir/DarkLight.sh" ;;
         "Rainbow Borders Mode") rainbow_borders_menu ;;
-        *) return ;;  # Do nothing for invalid choices
+        *) return ;;
     esac
 
-    # Open selected file using configured editor
     if [ -n "$file" ]; then
         local -a edit_cmd term_cmd visual_cmd selected_cmd
         read -r -a edit_cmd <<< "$edit"
@@ -457,6 +411,116 @@ main() {
             "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
         fi
     fi
+}
+
+show_category_menu() {
+    local category="$1"
+    local quick_settings_monitor="$2"
+    local options=""
+
+    case "$category" in
+        "User")
+            options=$(cat <<EOF
+Edit User Defaults
+Edit User Keybinds
+Edit User ENV variables
+Edit User Startup Apps (overlay)
+Edit User Window Rules (overlay)
+Edit User Layer Rules (overlay)
+Edit User Settings
+Edit User Decorations
+Edit User Animations
+Edit User Laptop Settings
+EOF
+)
+            ;;
+        "System Defaults")
+            options=$(cat <<EOF
+Edit System Default Keybinds
+Edit System Default Startup Apps
+Edit System Default Window Rules
+Edit System Default Layer Rules
+Edit System Default Settings
+EOF
+)
+            ;;
+        "Toggles")
+            options=$(cat <<EOF
+Toggle Waybar Weather units (C/F)
+Toggle Waybar Clock (12H/24H)
+Toggle Game Mode
+EOF
+)
+            ;;
+        "Utilities")
+            options=$(cat <<EOF
+Change Starship Prompt
+Set SDDM Wallpaper
+Choose Kitty Terminal Theme
+Choose Ghostty Terminal Theme
+Configure Monitors (nwg-displays)
+Configure Workspace Rules (nwg-displays)
+GTK Settings (nwg-look)
+QT Apps Settings (qt6ct)
+QT Apps Settings (qt5ct)
+Set Hyprlock Wallpaper
+Choose Hyprland Animations
+Choose Monitor Profiles
+Choose Rofi Themes
+Search for Keybinds
+Switch Dark-Light Theme
+Rainbow Borders Mode
+EOF
+)
+            ;;
+        *)
+            return
+            ;;
+    esac
+
+    local sub_choice=""
+    sub_choice=$(printf "%s\n" "$options" | rofi -i -dmenu -config "$rofi_theme" -mesg "$category")
+    [[ -z "$sub_choice" ]] && return
+    handle_choice "$sub_choice" "$quick_settings_monitor"
+}
+
+show_main_menu() {
+    cat <<EOF
+User
+Quick Links
+System Defaults
+Edit User Keybinds
+Toggles
+Edit User Decorations
+Utilities
+Set Hyprlock Wallpaper
+EOF
+}
+
+main() {
+    local quick_settings_monitor choice
+    quick_settings_monitor="$(get_context_monitor_name)"
+
+    choice=$(
+        show_main_menu | rofi -i -dmenu -config "$rofi_theme" \
+            -mesg "Left: Categories • Right: Quick Links" \
+            -theme-str 'listview { columns: 2; lines: 4; }'
+    )
+
+    case "$choice" in
+        "User"|"System Defaults"|"Toggles"|"Utilities")
+            show_category_menu "$choice" "$quick_settings_monitor"
+            ;;
+        "Quick Links")
+            return
+            ;;
+        "Edit User Keybinds"|"Edit User Decorations"|"Set Hyprlock Wallpaper")
+            handle_choice "$choice" "$quick_settings_monitor"
+            ;;
+        *)
+            return
+            ;;
+    esac
 }
 
 # Check if rofi is already running
