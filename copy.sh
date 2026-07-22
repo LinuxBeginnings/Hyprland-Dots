@@ -505,6 +505,7 @@ if [ ! -d "${XDG_CONFIG_HOME:-$HOME/.config}" ]; then
 fi
 seed_upgrade_userconfigs "$LOG"
 capture_upgrade_runtime_selection_state
+capture_runtime_personal_state "$LOG"
 
 printf "${INFO} - copying dotfiles ${SKY_BLUE}first${RESET} part\n"
 copy_phase1 "$LOG" "$RUN_MODE"
@@ -698,6 +699,7 @@ restore_user_scripts "$LOG" "$EXPRESS_MODE"
 printf "\n%.0s" {1..1}
 
 restore_hypr_files "$LOG" "$EXPRESS_MODE"
+restore_runtime_personal_state "$LOG"
 printf "\n%.0s" {1..1}
 printf "\n%.0s" {1..1}
 
@@ -880,7 +882,11 @@ wallust_args=()
 if [ -f "$DOTFILES_DIR/config/hypr/scripts/WallustConfig.sh" ]; then
   . "$DOTFILES_DIR/config/hypr/scripts/WallustConfig.sh"
 fi
-wallust "${wallust_args[@]}" run -s "$wallpaper" 2>&1 | tee -a "$LOG"
+if [ "$RUN_MODE" != "install" ] && [ "${KOOLDOTS_RUNTIME_THEME_RESTORED:-0}" -eq 1 ]; then
+  echo "${NOTE} Preserved existing Wallust/global theme colors from pre-upgrade state; skipping wallust regeneration." 2>&1 | tee -a "$LOG"
+else
+  wallust "${wallust_args[@]}" run -s "$wallpaper" 2>&1 | tee -a "$LOG"
+fi
 if is_nixos && ! command -v waybar-weather >/dev/null 2>&1; then
   echo "${WARN} waybar-weather binary is missing." 2>&1 | tee -a "$LOG"
   echo "Install the current NixOS-Hyprland version to install waybar-weather applet for Waybar" 2>&1 | tee -a "$LOG"

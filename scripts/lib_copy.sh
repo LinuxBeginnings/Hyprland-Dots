@@ -248,6 +248,78 @@ capture_upgrade_runtime_selection_state() {
   export KOOLDOTS_PREV_ROFI_THEME_PATH
 }
 
+capture_runtime_personal_state() {
+  local log="$1"
+  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local backup_dir
+  local state_dir
+  local src rel dest
+
+  backup_dir=$(get_backup_dirname)
+  state_dir="${XDG_CACHE_HOME:-$HOME/.cache}/kooldots-runtime-state-$backup_dir"
+  KOOLDOTS_RUNTIME_STATE_DIR="$state_dir"
+  KOOLDOTS_RUNTIME_THEME_RESTORED=0
+  export KOOLDOTS_RUNTIME_STATE_DIR
+  export KOOLDOTS_RUNTIME_THEME_RESTORED
+
+  rm -rf "$state_dir"
+  mkdir -p "$state_dir"
+
+  local files_to_capture=(
+    "$cfg_home/kitty/kitty.conf"
+    "$cfg_home/hypr/UserConfigs/kitty.conf"
+    "$cfg_home/hypr/wallpaper_effects/.wallpaper_current"
+    "$cfg_home/hypr/wallpaper_effects/.wallpaper_modified"
+    "$cfg_home/hypr/wallust/wallust-hyprland.conf"
+    "$cfg_home/rofi/wallust/colors-rofi.rasi"
+    "$cfg_home/waybar/wallust/colors-waybar.css"
+    "$cfg_home/kitty/kitty-themes/01-Wallust.conf"
+  )
+
+  for src in "${files_to_capture[@]}"; do
+    [ -f "$src" ] || continue
+    rel="${src#$cfg_home/}"
+    [ "$rel" != "$src" ] || continue
+    dest="$state_dir/$rel"
+    mkdir -p "$(dirname "$dest")"
+    cp -f "$src" "$dest" 2>/dev/null || true
+  done
+
+  echo "${INFO:-[INFO]} - Captured runtime personalization state." 2>&1 | tee -a "$log"
+}
+
+restore_runtime_personal_state() {
+  local log="$1"
+  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local state_dir="${KOOLDOTS_RUNTIME_STATE_DIR:-}"
+  local snapshot rel dest
+  local restored_theme=0
+
+  [ -d "$state_dir" ] || return 0
+
+  while IFS= read -r -d '' snapshot; do
+    rel="${snapshot#$state_dir/}"
+    dest="$cfg_home/$rel"
+    mkdir -p "$(dirname "$dest")"
+    if cp -f "$snapshot" "$dest" 2>&1 | tee -a "$log"; then
+      case "$rel" in
+      hypr/wallust/wallust-hyprland.conf | rofi/wallust/colors-rofi.rasi | waybar/wallust/colors-waybar.css | kitty/kitty-themes/01-Wallust.conf)
+        restored_theme=1
+        ;;
+      esac
+    fi
+  done < <(find "$state_dir" -type f -print0)
+
+  if [ -f "$cfg_home/kitty/kitty.conf" ] && [ ! -f "$cfg_home/hypr/UserConfigs/kitty.conf" ]; then
+    mkdir -p "$cfg_home/hypr/UserConfigs"
+    cp -f "$cfg_home/kitty/kitty.conf" "$cfg_home/hypr/UserConfigs/kitty.conf" 2>&1 | tee -a "$log" || true
+  fi
+
+  KOOLDOTS_RUNTIME_THEME_RESTORED="$restored_theme"
+  export KOOLDOTS_RUNTIME_THEME_RESTORED
+  echo "${INFO:-[INFO]} - Restored runtime personalization state." 2>&1 | tee -a "$log"
+}
+
 restore_upgrade_runtime_selection_state() {
   local log="$1"
   local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
