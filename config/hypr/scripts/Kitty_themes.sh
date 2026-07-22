@@ -107,14 +107,11 @@ apply_kitty_theme_to_config() {
   local include_target
   include_target="include ${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty-themes/$(basename "$theme_file_path_to_apply")"
 
-  if grep -q -E '^[#[:space:]]*include[[:space:]]+.*kitty-themes/.*\.conf' "$temp_kitty_config_file"; then
-    sed -i -E "s|^[#[:space:]]*include[[:space:]]+.*kitty-themes/.*\.conf|$include_target|g" "$temp_kitty_config_file"
-  else
-    if [ -s "$temp_kitty_config_file" ] && [ "$(tail -c1 "$temp_kitty_config_file")" != "" ]; then
-      echo >>"$temp_kitty_config_file"
-    fi
-    echo "$include_target" >>"$temp_kitty_config_file"
+  sed -i -E '/^[[:space:]]*include[[:space:]]+.*kitty-themes\/.*\.conf[[:space:]]*$/d' "$temp_kitty_config_file"
+  if [ -s "$temp_kitty_config_file" ] && [ "$(tail -c1 "$temp_kitty_config_file")" != "" ]; then
+    echo >>"$temp_kitty_config_file"
   fi
+  echo "$include_target" >>"$temp_kitty_config_file"
 
   cp "$temp_kitty_config_file" "$kitty_config"
   rm "$temp_kitty_config_file"
