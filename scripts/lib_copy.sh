@@ -32,6 +32,9 @@ copy_phase1() {
                 cp -n "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/" >>"$log" 2>&1 || true
               done || true
             fi
+            if [ -f "$DIRPATH-backup-$BACKUP_DIR/config.rasi" ]; then
+              cp -f "$DIRPATH-backup-$BACKUP_DIR/config.rasi" "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config.rasi" >>"$log" 2>&1 || true
+            fi
             if [ -f "$DIRPATH-backup-$BACKUP_DIR/0-shared-fonts.rasi" ]; then
               cp "$DIRPATH-backup-$BACKUP_DIR/0-shared-fonts.rasi" "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/0-shared-fonts.rasi" >>"$log" 2>&1
             fi
@@ -169,6 +172,126 @@ ensure_lua_keybinds() {
     echo "${OK:-[OK]} - Lua fallback copy completed." 2>&1 | tee -a "$log"
   else
     echo "${INFO:-[INFO]} - Lua fallback check: no missing Lua files detected." 2>&1 | tee -a "$log"
+  fi
+}
+seed_upgrade_userconfigs() {
+  local log="$1"
+  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local userconfigs_dir="$cfg_home/hypr/UserConfigs"
+  local repo_userconfigs="${DOTFILES_DIR:-.}/config/hypr/UserConfigs"
+  local runtime_kitty="$cfg_home/kitty/kitty.conf"
+  local runtime_ghostty="$cfg_home/ghostty/config"
+  local runtime_hyprview="$userconfigs_dir/hyprview-layout.conf"
+
+  if [ "${RUN_MODE:-}" = "install" ]; then
+    return
+  fi
+
+  mkdir -p "$userconfigs_dir"
+
+  if [ ! -f "$userconfigs_dir/kitty.conf" ] && [ -f "$runtime_kitty" ]; then
+    cp -f "$runtime_kitty" "$userconfigs_dir/kitty.conf" 2>&1 | tee -a "$log"
+    echo "${NOTE:-[NOTE]} - Seeded UserConfigs/kitty.conf from current kitty config." 2>&1 | tee -a "$log"
+  fi
+
+  if [ ! -f "$userconfigs_dir/ghostty.conf" ] && [ -f "$runtime_ghostty" ]; then
+    cp -f "$runtime_ghostty" "$userconfigs_dir/ghostty.conf" 2>&1 | tee -a "$log"
+    echo "${NOTE:-[NOTE]} - Seeded UserConfigs/ghostty.conf from current ghostty/config." 2>&1 | tee -a "$log"
+  fi
+
+  if [ ! -f "$runtime_hyprview" ] && [ -f "$repo_userconfigs/hyprview-layout.conf" ]; then
+    cp -f "$repo_userconfigs/hyprview-layout.conf" "$runtime_hyprview" 2>&1 | tee -a "$log"
+    echo "${NOTE:-[NOTE]} - Seeded UserConfigs/hyprview-layout.conf from repo default." 2>&1 | tee -a "$log"
+  fi
+}
+
+capture_upgrade_runtime_selection_state() {
+  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local waybar_config_link="$cfg_home/waybar/config"
+  local waybar_style_link="$cfg_home/waybar/style.css"
+  local rofi_config="$cfg_home/rofi/config.rasi"
+
+  KOOLDOTS_PREV_WAYBAR_CONFIG_TARGET=""
+  KOOLDOTS_PREV_WAYBAR_STYLE_TARGET=""
+  KOOLDOTS_PREV_ROFI_THEME_PATH=""
+
+  if [ "${RUN_MODE:-}" = "install" ]; then
+    export KOOLDOTS_PREV_WAYBAR_CONFIG_TARGET
+    export KOOLDOTS_PREV_WAYBAR_STYLE_TARGET
+    export KOOLDOTS_PREV_ROFI_THEME_PATH
+    return
+  fi
+
+  if [ -e "$waybar_config_link" ]; then
+    if [ -L "$waybar_config_link" ]; then
+      KOOLDOTS_PREV_WAYBAR_CONFIG_TARGET="$(readlink -f "$waybar_config_link" 2>/dev/null || true)"
+    else
+      KOOLDOTS_PREV_WAYBAR_CONFIG_TARGET="$waybar_config_link"
+    fi
+  fi
+
+  if [ -e "$waybar_style_link" ]; then
+    if [ -L "$waybar_style_link" ]; then
+      KOOLDOTS_PREV_WAYBAR_STYLE_TARGET="$(readlink -f "$waybar_style_link" 2>/dev/null || true)"
+    else
+      KOOLDOTS_PREV_WAYBAR_STYLE_TARGET="$waybar_style_link"
+    fi
+  fi
+
+  if [ -f "$rofi_config" ]; then
+    KOOLDOTS_PREV_ROFI_THEME_PATH="$(
+      awk -F'"' '/^[[:space:]]*@theme[[:space:]]*"/ {print $2}' "$rofi_config" | tail -n1
+    )"
+  fi
+
+  export KOOLDOTS_PREV_WAYBAR_CONFIG_TARGET
+  export KOOLDOTS_PREV_WAYBAR_STYLE_TARGET
+  export KOOLDOTS_PREV_ROFI_THEME_PATH
+}
+
+restore_upgrade_runtime_selection_state() {
+  local log="$1"
+  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local waybar_config_link="$cfg_home/waybar/config"
+  local waybar_style_link="$cfg_home/waybar/style.css"
+  local rofi_config="$cfg_home/rofi/config.rasi"
+  local waybar_configs_dir="$cfg_home/waybar/configs"
+  local waybar_style_dir="$cfg_home/waybar/style"
+  local target
+  local target_base
+
+  if [ "${RUN_MODE:-}" = "install" ]; then
+    return
+  fi
+
+  target="${KOOLDOTS_PREV_WAYBAR_CONFIG_TARGET:-}"
+  if [ -n "$target" ]; then
+    if [ -e "$target" ]; then
+      ln -sf "$target" "$waybar_config_link" 2>&1 | tee -a "$log"
+    else
+      target_base="$(basename "$target")"
+      if [ -e "$waybar_configs_dir/$target_base" ]; then
+        ln -sf "$waybar_configs_dir/$target_base" "$waybar_config_link" 2>&1 | tee -a "$log"
+      fi
+    fi
+  fi
+
+  target="${KOOLDOTS_PREV_WAYBAR_STYLE_TARGET:-}"
+  if [ -n "$target" ]; then
+    if [ -e "$target" ]; then
+      ln -sf "$target" "$waybar_style_link" 2>&1 | tee -a "$log"
+    else
+      target_base="$(basename "$target")"
+      if [ -e "$waybar_style_dir/$target_base" ]; then
+        ln -sf "$waybar_style_dir/$target_base" "$waybar_style_link" 2>&1 | tee -a "$log"
+      fi
+    fi
+  fi
+
+  if [ -n "${KOOLDOTS_PREV_ROFI_THEME_PATH:-}" ] && [ -f "$rofi_config" ]; then
+    sed -i -E 's/^([[:space:]]*@theme)/\/\/\1/' "$rofi_config" 2>/dev/null || true
+    printf '\n@theme "%s"\n' "$KOOLDOTS_PREV_ROFI_THEME_PATH" >>"$rofi_config"
+    echo "${NOTE:-[NOTE]} - Restored previous Rofi theme selection." 2>&1 | tee -a "$log"
   fi
 }
 
@@ -606,29 +729,7 @@ restore_user_scripts() {
 
 restore_terminal_configs() {
   local log="$1"
-  local express_mode="$2"
-
-  local GHOSTTY_DIR="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}/ghostty"
-  local BACKUP_DIR
-  BACKUP_DIR=$(get_backup_dirname)
-  local GHOSTTY_BACKUP="$GHOSTTY_DIR-backup-$BACKUP_DIR"
-
-  if [ -d "$GHOSTTY_BACKUP" ] && [ "$express_mode" -eq 1 ]; then
-    echo "${NOTE:-[NOTE]} Express mode: skipping Ghostty restore prompt." 2>&1 | tee -a "$log"
-    return
-  fi
-
-  if [ -d "$GHOSTTY_BACKUP" ] && [ "$express_mode" -eq 0 ]; then
-    echo -e "${NOTE:-[NOTE]} Restore previous ${MAGENTA:-}Ghostty${RESET:-} config?" 2>&1 | tee -a "$log"
-    read -r -p "${CAT:-[ACTION]} Do you want to restore Ghostty config from backup? (y/N): " restore_ghostty
-    if [[ "$restore_ghostty" == [Yy]* ]]; then
-      rm -rf "$GHOSTTY_DIR"
-      cp -a "$GHOSTTY_BACKUP" "$GHOSTTY_DIR" 2>&1 | tee -a "$log"
-      echo "${OK:-[OK]} - Ghostty config restored." 2>&1 | tee -a "$log"
-    else
-      echo "${NOTE:-[NOTE]} - Skipped restoring Ghostty config." 2>&1 | tee -a "$log"
-    fi
-  fi
+  echo "${NOTE:-[NOTE]} - Terminal config restore prompts removed; UserConfigs now preserves kitty/ghostty settings." 2>&1 | tee -a "$log"
 }
 restore_hypr_files() {
   local log="$1"

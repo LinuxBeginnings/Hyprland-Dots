@@ -503,6 +503,8 @@ if [ ! -d "${XDG_CONFIG_HOME:-$HOME/.config}" ]; then
   echo "${ERROR} - ${XDG_CONFIG_HOME:-$HOME/.config} directory does not exist. Creating it now."
   mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}" && echo "Directory created successfully." || echo "Failed to create directory."
 fi
+seed_upgrade_userconfigs "$LOG"
+capture_upgrade_runtime_selection_state
 
 printf "${INFO} - copying dotfiles ${SKY_BLUE}first${RESET} part\n"
 copy_phase1 "$LOG" "$RUN_MODE"
@@ -693,8 +695,6 @@ printf "\\n%.0s" {1..1}
 
 restore_user_scripts "$LOG" "$EXPRESS_MODE"
 printf "\n%.0s" {1..1}
-restore_terminal_configs "$LOG" "$EXPRESS_MODE"
-printf "\\n%.0s" {1..1}
 
 restore_hypr_files "$LOG" "$EXPRESS_MODE"
 printf "\n%.0s" {1..1}
@@ -769,17 +769,21 @@ fi
 # - If the symlink points somewhere else (or is broken), reset it to the new default.
 WAYBAR_CONFIG_LINK="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/config"
 WAYBAR_CONFIG_TARGET="$config_file"
-if [ -e "$WAYBAR_CONFIG_TARGET" ]; then
-  if [ -L "$WAYBAR_CONFIG_LINK" ]; then
-    current_target=$(readlink "$WAYBAR_CONFIG_LINK" || true)
-    if [ "$current_target" != "$WAYBAR_CONFIG_TARGET" ] || [ ! -e "$WAYBAR_CONFIG_LINK" ]; then
+if [ "$RUN_MODE" = "install" ]; then
+  if [ -e "$WAYBAR_CONFIG_TARGET" ]; then
+    if [ -L "$WAYBAR_CONFIG_LINK" ]; then
+      current_target=$(readlink "$WAYBAR_CONFIG_LINK" || true)
+      if [ "$current_target" != "$WAYBAR_CONFIG_TARGET" ] || [ ! -e "$WAYBAR_CONFIG_LINK" ]; then
+        ln -sf "$WAYBAR_CONFIG_TARGET" "$WAYBAR_CONFIG_LINK" 2>&1 | tee -a "$LOG"
+      fi
+    else
       ln -sf "$WAYBAR_CONFIG_TARGET" "$WAYBAR_CONFIG_LINK" 2>&1 | tee -a "$LOG"
     fi
   else
-    ln -sf "$WAYBAR_CONFIG_TARGET" "$WAYBAR_CONFIG_LINK" 2>&1 | tee -a "$LOG"
+    echo "${WARN} Waybar default config target not found at $WAYBAR_CONFIG_TARGET; leaving $WAYBAR_CONFIG_LINK as-is." 2>&1 | tee -a "$LOG"
   fi
 else
-  echo "${WARN} Waybar default config target not found at $WAYBAR_CONFIG_TARGET; leaving $WAYBAR_CONFIG_LINK as-is." 2>&1 | tee -a "$LOG"
+  restore_upgrade_runtime_selection_state "$LOG"
 fi
 
 # Remove inappropriate waybar configs
@@ -858,17 +862,19 @@ fi
 # - If the symlink points somewhere else (or is broken), reset it to the new default.
 WAYBAR_STYLE_LINK="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
 WAYBAR_STYLE_TARGET="$waybar_style"
-if [ -e "$WAYBAR_STYLE_TARGET" ]; then
-  if [ -L "$WAYBAR_STYLE_LINK" ]; then
-    current_target=$(readlink "$WAYBAR_STYLE_LINK" || true)
-    if [ "$current_target" != "$WAYBAR_STYLE_TARGET" ] || [ ! -e "$WAYBAR_STYLE_LINK" ]; then
+if [ "$RUN_MODE" = "install" ]; then
+  if [ -e "$WAYBAR_STYLE_TARGET" ]; then
+    if [ -L "$WAYBAR_STYLE_LINK" ]; then
+      current_target=$(readlink "$WAYBAR_STYLE_LINK" || true)
+      if [ "$current_target" != "$WAYBAR_STYLE_TARGET" ] || [ ! -e "$WAYBAR_STYLE_LINK" ]; then
+        ln -sf "$WAYBAR_STYLE_TARGET" "$WAYBAR_STYLE_LINK" 2>&1 | tee -a "$LOG"
+      fi
+    else
       ln -sf "$WAYBAR_STYLE_TARGET" "$WAYBAR_STYLE_LINK" 2>&1 | tee -a "$LOG"
     fi
   else
-    ln -sf "$WAYBAR_STYLE_TARGET" "$WAYBAR_STYLE_LINK" 2>&1 | tee -a "$LOG"
+    echo "${WARN} Waybar default style target not found at $WAYBAR_STYLE_TARGET; leaving $WAYBAR_STYLE_LINK as-is." 2>&1 | tee -a "$LOG"
   fi
-else
-  echo "${WARN} Waybar default style target not found at $WAYBAR_STYLE_TARGET; leaving $WAYBAR_STYLE_LINK as-is." 2>&1 | tee -a "$LOG"
 fi
 
 printf "\n%.0s" {1..1}
