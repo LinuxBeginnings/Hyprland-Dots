@@ -183,10 +183,6 @@ seed_upgrade_userconfigs() {
   local runtime_ghostty="$cfg_home/ghostty/config"
   local runtime_hyprview="$userconfigs_dir/hyprview-layout.conf"
 
-  if [ "${RUN_MODE:-}" = "install" ]; then
-    return
-  fi
-
   mkdir -p "$userconfigs_dir"
 
   if [ ! -f "$userconfigs_dir/kitty.conf" ] && [ -f "$runtime_kitty" ]; then
@@ -325,15 +321,16 @@ preserve_custom_sddm_configs() {
   local log="$1"
   local hypr_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
   local backup_dir
+  local backup_hypr_path_primary
+  local backup_hypr_path_legacy
   local backup_hypr_path
   local sddm_theme_conf=""
   local sddm_theme=""
   local rel_file=""
 
   backup_dir=$(get_backup_dirname)
-  backup_hypr_path="$hypr_dir-backup-$backup_dir"
-
-  [ -d "$backup_hypr_path" ] || return 0
+  backup_hypr_path_primary="$hypr_dir-backup-$backup_dir"
+  backup_hypr_path_legacy="$hypr_dir-$backup_dir"
 
   if ! command -v sddm >/dev/null 2>&1; then
     if ! command -v systemctl >/dev/null 2>&1 || ! systemctl list-unit-files 2>/dev/null | grep -q '^sddm\.service'; then
@@ -354,11 +351,16 @@ preserve_custom_sddm_configs() {
   esac
 
   for rel_file in scripts/sddm_wallpaper.sh; do
-    if [ -f "$backup_hypr_path/$rel_file" ]; then
-      mkdir -p "$(dirname "$hypr_dir/$rel_file")"
-      cp -f "$backup_hypr_path/$rel_file" "$hypr_dir/$rel_file" 2>&1 | tee -a "$log"
-      echo "${NOTE:-[NOTE]} - Preserved existing $rel_file for custom SDDM theme '${sddm_theme}'." 2>&1 | tee -a "$log"
+    backup_hypr_path=""
+    if [ -f "$backup_hypr_path_primary/$rel_file" ]; then
+      backup_hypr_path="$backup_hypr_path_primary"
+    elif [ -f "$backup_hypr_path_legacy/$rel_file" ]; then
+      backup_hypr_path="$backup_hypr_path_legacy"
     fi
+    [ -n "$backup_hypr_path" ] || continue
+    mkdir -p "$(dirname "$hypr_dir/$rel_file")"
+    cp -f "$backup_hypr_path/$rel_file" "$hypr_dir/$rel_file" 2>&1 | tee -a "$log"
+    echo "${NOTE:-[NOTE]} - Preserved existing $rel_file for custom SDDM theme '${sddm_theme}'." 2>&1 | tee -a "$log"
   done
 }
 
@@ -371,7 +373,14 @@ restore_hypr_assets() {
   local CONFIG_HOME="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
-  local BACKUP_HYPR_PATH="$HYPR_DIR-backup-$BACKUP_DIR"
+  local BACKUP_HYPR_PATH_PRIMARY="$HYPR_DIR-backup-$BACKUP_DIR"
+  local BACKUP_HYPR_PATH_LEGACY="$HYPR_DIR-$BACKUP_DIR"
+  local BACKUP_HYPR_PATH="$BACKUP_HYPR_PATH_PRIMARY"
+
+  # Fresh install flow may back up to hypr-<suffix>; prefer that when present.
+  if [ -d "$BACKUP_HYPR_PATH_LEGACY" ]; then
+    BACKUP_HYPR_PATH="$BACKUP_HYPR_PATH_LEGACY"
+  fi
 
   if [ -d "$BACKUP_HYPR_PATH" ]; then
     local backup_mode="conf"
@@ -614,8 +623,12 @@ restore_user_configs() {
   local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
-  local BACKUP_DIR_PATH="$DIRPATH-backup-$BACKUP_DIR/UserConfigs"
-  local BACKUP_CONFIGS_PATH="$DIRPATH-backup-$BACKUP_DIR/configs"
+  local BACKUP_DIR_PATH_PRIMARY="$DIRPATH-backup-$BACKUP_DIR/UserConfigs"
+  local BACKUP_DIR_PATH_LEGACY="$DIRPATH-$BACKUP_DIR/UserConfigs"
+  local BACKUP_CONFIGS_PATH_PRIMARY="$DIRPATH-backup-$BACKUP_DIR/configs"
+  local BACKUP_CONFIGS_PATH_LEGACY="$DIRPATH-$BACKUP_DIR/configs"
+  local BACKUP_DIR_PATH="$BACKUP_DIR_PATH_PRIMARY"
+  local BACKUP_CONFIGS_PATH="$BACKUP_CONFIGS_PATH_PRIMARY"
 
   if [ -z "$BACKUP_DIR" ]; then
     echo "${ERROR:-[ERROR]} - Backup directory name is empty. Exiting." 2>&1 | tee -a "$log"
@@ -623,12 +636,23 @@ restore_user_configs() {
   fi
 
   if [ "${RUN_MODE:-}" = "install" ]; then
-    if [ -d "$BACKUP_DIR_PATH" ]; then
+    if [ -d "$BACKUP_DIR_PATH_LEGACY" ] || [ -d "$BACKUP_DIR_PATH_PRIMARY" ]; then
       echo "${NOTE:-[NOTE]} Preserving existing UserConfigs directory during install." 2>&1 | tee -a "$log"
-      rsync -a "$BACKUP_DIR_PATH/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
+      if [ -d "$BACKUP_DIR_PATH_LEGACY" ]; then
+        rsync -a "$BACKUP_DIR_PATH_LEGACY/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
+      fi
+      if [ -d "$BACKUP_DIR_PATH_PRIMARY" ]; then
+        rsync -a "$BACKUP_DIR_PATH_PRIMARY/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
+      fi
       echo "${OK:-[OK]} - UserConfigs directory preserved." 2>&1 | tee -a "$log"
     fi
     return
+  fi
+  if [ ! -d "$BACKUP_DIR_PATH" ] && [ -d "$BACKUP_DIR_PATH_LEGACY" ]; then
+    BACKUP_DIR_PATH="$BACKUP_DIR_PATH_LEGACY"
+  fi
+  if [ ! -d "$BACKUP_CONFIGS_PATH" ] && [ -d "$BACKUP_CONFIGS_PATH_LEGACY" ]; then
+    BACKUP_CONFIGS_PATH="$BACKUP_CONFIGS_PATH_LEGACY"
   fi
 
   if [ -d "$BACKUP_DIR_PATH" ]; then
@@ -802,17 +826,22 @@ restore_hypr_files() {
   local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
-  local BACKUP_DIR_PATH_F="$DIRPATH-backup-$BACKUP_DIR"
+  local BACKUP_DIR_PATH_F_PRIMARY="$DIRPATH-backup-$BACKUP_DIR"
+  local BACKUP_DIR_PATH_F_LEGACY="$DIRPATH-$BACKUP_DIR"
   local FILES_TO_PRESERVE=("hyprlock.conf" "hypridle.conf")
   local FILE_RESTORE
 
   # keep signature compatibility; prompts for these files are removed
   : "$express_mode"
-
-  [ -d "$BACKUP_DIR_PATH_F" ] || return
+  if [ ! -d "$BACKUP_DIR_PATH_F_PRIMARY" ] && [ ! -d "$BACKUP_DIR_PATH_F_LEGACY" ]; then
+    return
+  fi
 
   for FILE_RESTORE in "${FILES_TO_PRESERVE[@]}"; do
-    local BACKUP_FILE="$BACKUP_DIR_PATH_F/$FILE_RESTORE"
+    local BACKUP_FILE="$BACKUP_DIR_PATH_F_PRIMARY/$FILE_RESTORE"
+    if [ ! -f "$BACKUP_FILE" ] && [ -f "$BACKUP_DIR_PATH_F_LEGACY/$FILE_RESTORE" ]; then
+      BACKUP_FILE="$BACKUP_DIR_PATH_F_LEGACY/$FILE_RESTORE"
+    fi
     if [ -f "$BACKUP_FILE" ]; then
       if cp -f "$BACKUP_FILE" "$DIRPATH/$FILE_RESTORE"; then
         echo "${OK:-[OK]} - Preserved existing $FILE_RESTORE from backup." 2>&1 | tee -a "$log"
