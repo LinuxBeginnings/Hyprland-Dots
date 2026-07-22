@@ -839,6 +839,9 @@ restore_user_configs() {
       "UserDecorations.lua"
       "UserSettings.conf"
       "UserSettings.lua"
+      "WindowRules.conf"
+      "WindowRules.lua"
+      "WindowRules.disable"
       "kitty.conf"
       "ghostty.conf"
     )
