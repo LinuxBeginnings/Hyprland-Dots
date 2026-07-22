@@ -497,14 +497,14 @@ show_main_menu() {
     cat <<EOF
 [ Settings ]
 [[ User Settings ]]
-[[ Quick Links]]
 [[ System Settings ]]
-Set User Decorations
 [[ Toggle Options ]]
-Set Hyprlock paper
 [[ Misc ]]
-Set User ENV variables
+[[ Quick Links]]
 Set User Keybinds
+Set User Decorations
+Set Hyprlock paper
+Set User ENV variables
 EOF
 }
 
