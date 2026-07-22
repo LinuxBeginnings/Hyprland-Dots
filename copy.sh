@@ -149,7 +149,46 @@ if ! declare -f capture_upgrade_runtime_selection_state >/dev/null 2>&1; then
   capture_upgrade_runtime_selection_state() { :; }
 fi
 if ! declare -f capture_runtime_personal_state >/dev/null 2>&1; then
-  capture_runtime_personal_state() { :; }
+  capture_runtime_personal_state() {
+    local log="${1:-/dev/null}"
+    local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local cache_home="${XDG_CACHE_HOME:-$HOME/.cache}"
+    local rofi_link="$cfg_home/rofi/.current_wallpaper"
+    local wallpaper_current="$cfg_home/hypr/wallpaper_effects/.wallpaper_current"
+    local state_dir="$cache_home/kooldots-copy"
+    local state_file="$state_dir/wallpaper-current-$$"
+    local resolved=""
+
+    mkdir -p "$state_dir"
+
+    KOOLDOTS_RUNTIME_WALLPAPER_STATE_FILE="$state_file"
+    KOOLDOTS_RUNTIME_WALLPAPER_SOURCE=""
+    KOOLDOTS_RUNTIME_INITIAL_STARTUP_MARKER=0
+    export KOOLDOTS_RUNTIME_WALLPAPER_STATE_FILE KOOLDOTS_RUNTIME_WALLPAPER_SOURCE KOOLDOTS_RUNTIME_INITIAL_STARTUP_MARKER
+
+    if [ -f "$cfg_home/hypr/.initial_startup_done" ]; then
+      KOOLDOTS_RUNTIME_INITIAL_STARTUP_MARKER=1
+      export KOOLDOTS_RUNTIME_INITIAL_STARTUP_MARKER
+    fi
+
+    if [ -L "$rofi_link" ]; then
+      resolved="$(readlink -f "$rofi_link" 2>/dev/null || true)"
+    fi
+
+    if [ -n "$resolved" ] && [ -f "$resolved" ]; then
+      cp -f "$resolved" "$state_file" 2>/dev/null || true
+      KOOLDOTS_RUNTIME_WALLPAPER_SOURCE="$resolved"
+      export KOOLDOTS_RUNTIME_WALLPAPER_SOURCE
+      echo "${NOTE} Captured current wallpaper from rofi link: $resolved" 2>&1 | tee -a "$log"
+    elif [ -f "$wallpaper_current" ]; then
+      cp -f "$wallpaper_current" "$state_file" 2>/dev/null || true
+      KOOLDOTS_RUNTIME_WALLPAPER_SOURCE="$wallpaper_current"
+      export KOOLDOTS_RUNTIME_WALLPAPER_SOURCE
+      echo "${NOTE} Captured current wallpaper from $wallpaper_current" 2>&1 | tee -a "$log"
+    else
+      rm -f "$state_file" 2>/dev/null || true
+    fi
+  }
 fi
 if ! declare -f preserve_custom_sddm_configs >/dev/null 2>&1; then
   preserve_custom_sddm_configs() { :; }
@@ -158,7 +197,35 @@ if ! declare -f restore_upgrade_runtime_selection_state >/dev/null 2>&1; then
   restore_upgrade_runtime_selection_state() { :; }
 fi
 if ! declare -f restore_runtime_personal_state >/dev/null 2>&1; then
-  restore_runtime_personal_state() { :; }
+  restore_runtime_personal_state() {
+    local log="${1:-/dev/null}"
+    local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local wallpaper_current="$cfg_home/hypr/wallpaper_effects/.wallpaper_current"
+    local rofi_link="$cfg_home/rofi/.current_wallpaper"
+    local state_file="${KOOLDOTS_RUNTIME_WALLPAPER_STATE_FILE:-}"
+    local source_path="${KOOLDOTS_RUNTIME_WALLPAPER_SOURCE:-}"
+
+    if [ "${KOOLDOTS_RUNTIME_INITIAL_STARTUP_MARKER:-0}" -eq 1 ]; then
+      mkdir -p "$cfg_home/hypr"
+      touch "$cfg_home/hypr/.initial_startup_done" 2>/dev/null || true
+    fi
+
+    if [ -n "$state_file" ] && [ -f "$state_file" ]; then
+      mkdir -p "$(dirname "$wallpaper_current")" "$(dirname "$rofi_link")"
+      cp -f "$state_file" "$wallpaper_current" 2>/dev/null || true
+
+      if [ -n "$source_path" ] && [ -f "$source_path" ]; then
+        ln -snf "$source_path" "$rofi_link" 2>/dev/null || true
+        echo "${INFO} Runtime wallpaper source restored from: $source_path" 2>&1 | tee -a "$log"
+      else
+        ln -snf "$wallpaper_current" "$rofi_link" 2>/dev/null || true
+        echo "${INFO} Runtime wallpaper source restored from: $wallpaper_current" 2>&1 | tee -a "$log"
+      fi
+
+      echo "${OK} Restored runtime wallpaper state after copy." 2>&1 | tee -a "$log"
+      rm -f "$state_file" 2>/dev/null || true
+    fi
+  }
 fi
 
 # Ensure we operate from the dotfiles root so relative paths resolve.
@@ -907,7 +974,9 @@ wallust_args=()
 if [ -f "$DOTFILES_DIR/config/hypr/scripts/WallustConfig.sh" ]; then
   . "$DOTFILES_DIR/config/hypr/scripts/WallustConfig.sh"
 fi
-if [ "$RUN_MODE" != "install" ] && [ "${KOOLDOTS_RUNTIME_THEME_RESTORED:-0}" -eq 1 ]; then
+if [ "$EXPRESS_MODE" -eq 1 ]; then
+  echo "${NOTE} Express upgrade selected: skipping wallust run entirely." 2>&1 | tee -a "$LOG"
+elif [ "$RUN_MODE" != "install" ] && [ "${KOOLDOTS_RUNTIME_THEME_RESTORED:-0}" -eq 1 ]; then
   echo "${NOTE} Preserved existing Wallust/global theme colors from pre-upgrade state; skipping wallust regeneration." 2>&1 | tee -a "$LOG"
 else
   wallust "${wallust_args[@]}" run -s "$wallpaper" 2>&1 | tee -a "$LOG"

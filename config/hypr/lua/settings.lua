@@ -159,7 +159,7 @@ hl.config({
 hl.config({
   cursor = {
     sync_gsettings_theme = true,
-    no_hardware_cursors =  0,
+    no_hardware_cursors =     0,
     enable_hyprcursor = true,
     warp_on_change_workspace = 2,
     no_warps = true,

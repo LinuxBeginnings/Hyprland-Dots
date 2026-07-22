@@ -218,6 +218,10 @@ restore_hypr_assets() {
         cp -r "$BACKUP_WALLPAPER_DIR" "$HYPR_DIR/" 2>&1 | tee -a "$log"
         echo "${OK:-[OK]} - Restored directory: ${MAGENTA:-}wallpaper_effects${RESET:-}" 2>&1 | tee -a "$log"
       fi
+      if [ -f "$BACKUP_HYPR_PATH/.initial_startup_done" ]; then
+        cp -f "$BACKUP_HYPR_PATH/.initial_startup_done" "$HYPR_DIR/.initial_startup_done" 2>&1 | tee -a "$log"
+        echo "${OK:-[OK]} - Preserved initial startup marker to avoid first-boot resets." 2>&1 | tee -a "$log"
+      fi
     else
       echo -e "\n${NOTE:-[NOTE]} Restoring ${SKY_BLUE:-}Animations & Monitor Profiles${RESET:-} into ${YELLOW:-}$HYPR_DIR${RESET:-}..."
 
