@@ -339,6 +339,9 @@ handle_choice() {
   "Edit User Laptop Settings")
     file="$(resolve_user_overlay_file "$user_laptops_lua" "$user_laptops_conf")"
     ;;
+  "Select Hyprview Layout")
+    "$scriptsDir/select-hyprview-layout.sh"
+    ;;
   "Edit System Default Keybinds")
     if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_keybinds.lua)"; else file="$configs/Keybinds.conf"; fi
     ;;
@@ -453,6 +456,7 @@ Edit User Settings
 Edit User Decorations
 Edit User Animations
 Edit User Laptop Settings
+Select Hyprview Layout
 EOF
     )
     ;;

@@ -11,14 +11,20 @@
     - Edit system keybinds to change the layout
   - Added blur and dimming to layerrules for `qs-hyprview`
   - Sample values for LUA `user_startup.lua` file
+- `select-hyprview-layout.sh`
+  - Runs rofi menu to select `qs-hyprview` layout
+  - Stores value in `.config/hypr/UserConfigs/hyprview-layout.conf`
+    - This prevents overwrite on updates
 
 ## Fixed:
 
+- Background image in rofi didn't get updated in LUA workflow
 - Some animation bezier values out-of-range
   - Fixed both hyprlang and lua config files
 
 ## Updated:
 
+- Quick Settings menu into submenus and quick links
 - Added script to toggle `qs-hyprview`
   - It checks that it's running and if not restarts it
 - Quickshell config files now compatible with all debian versions
