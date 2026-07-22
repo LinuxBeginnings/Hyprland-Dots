@@ -20,6 +20,8 @@
 
 ## Fixed:
 
+- `copy.sh` was ovewritting sddm background and wallpaper
+  - Also removed prompt for `Hypridle` restore
 - Background image in rofi didn't get updated in LUA workflow
 - Some animation bezier values out-of-range
   - Fixed both hyprlang and lua config files

@@ -295,6 +295,73 @@ restore_upgrade_runtime_selection_state() {
   fi
 }
 
+detect_sddm_theme_config_file() {
+  local candidate=""
+  for candidate in /etc/sddm.conf.d/theme.conf.user /etc/sddm.conf /etc/sddm.conf.d/*.conf; do
+    [ -f "$candidate" ] || continue
+    if grep -qE '^[[:space:]]*Current[[:space:]]*=' "$candidate" 2>/dev/null; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+detect_sddm_current_theme() {
+  local conf_file="$1"
+  [ -f "$conf_file" ] || return 1
+  awk -F= '
+    /^[[:space:]]*Current[[:space:]]*=/ {
+      value=$2
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+      gsub(/^"|"$/, "", value)
+      print value
+      exit
+    }
+  ' "$conf_file"
+}
+
+preserve_custom_sddm_configs() {
+  local log="$1"
+  local hypr_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+  local backup_dir
+  local backup_hypr_path
+  local sddm_theme_conf=""
+  local sddm_theme=""
+  local rel_file=""
+
+  backup_dir=$(get_backup_dirname)
+  backup_hypr_path="$hypr_dir-backup-$backup_dir"
+
+  [ -d "$backup_hypr_path" ] || return 0
+
+  if ! command -v sddm >/dev/null 2>&1; then
+    if ! command -v systemctl >/dev/null 2>&1 || ! systemctl list-unit-files 2>/dev/null | grep -q '^sddm\.service'; then
+      return 0
+    fi
+  fi
+
+  sddm_theme_conf="$(detect_sddm_theme_config_file 2>/dev/null || true)"
+  [ -n "$sddm_theme_conf" ] || return 0
+
+  sddm_theme="$(detect_sddm_current_theme "$sddm_theme_conf" 2>/dev/null || true)"
+  [ -n "$sddm_theme" ] || return 0
+
+  case "$sddm_theme" in
+  simple_sddm_2 | simple-sddm | sequoia_2)
+    return 0
+    ;;
+  esac
+
+  for rel_file in scripts/sddm_wallpaper.sh; do
+    if [ -f "$backup_hypr_path/$rel_file" ]; then
+      mkdir -p "$(dirname "$hypr_dir/$rel_file")"
+      cp -f "$backup_hypr_path/$rel_file" "$hypr_dir/$rel_file" 2>&1 | tee -a "$log"
+      echo "${NOTE:-[NOTE]} - Preserved existing $rel_file for custom SDDM theme '${sddm_theme}'." 2>&1 | tee -a "$log"
+    fi
+  done
+}
+
 # Restore Animations and Monitor Profiles plus key hypr files from backup
 restore_hypr_assets() {
   local log="$1"
@@ -321,17 +388,14 @@ restore_hypr_assets() {
 
     if [ "$express_mode" -eq 1 ]; then
       echo "${NOTE:-[NOTE]} Express mode: skipping automatic restoration of animations and monitor profile directories." 2>&1 | tee -a "$log"
+      if [ -d "$BACKUP_HYPR_PATH/wallpaper_effects" ]; then
+        cp -r "$BACKUP_HYPR_PATH/wallpaper_effects" "$HYPR_DIR/" 2>&1 | tee -a "$log"
+        echo "${OK:-[OK]} - Restored directory: ${MAGENTA:-}wallpaper_effects${RESET:-}" 2>&1 | tee -a "$log"
+      fi
     else
       echo -e "\n${NOTE:-[NOTE]} Restoring ${SKY_BLUE:-}Animations & Monitor Profiles${RESET:-} into ${YELLOW:-}$HYPR_DIR${RESET:-}..."
-
-      # Fresh installs should apply repo defaults; do not restore a previous wallpaper.
-      # RUN_MODE is set by copy.sh (install|upgrade|express) and is visible here.
-      local DIR_B=("Monitor_Profiles" "animations")
-      if [ "${RUN_MODE:-}" != "install" ]; then
-        DIR_B+=("wallpaper_effects")
-      else
-        echo "${NOTE:-[NOTE]} Fresh install: skipping restore of wallpaper_effects so default wallpaper applies." 2>&1 | tee -a "$log"
-      fi
+      # Preserve runtime wallpaper/monitor state whenever a previous hypr backup exists.
+      local DIR_B=("Monitor_Profiles" "animations" "wallpaper_effects")
 
       for DIR_RESTORE in "${DIR_B[@]}"; do
         local BACKUP_SUBDIR="$BACKUP_HYPR_PATH/$DIR_RESTORE"
@@ -739,34 +803,22 @@ restore_hypr_files() {
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_DIR_PATH_F="$DIRPATH-backup-$BACKUP_DIR"
-  local FILES_2_RESTORE=("hyprlock.conf" "hypridle.conf")
+  local FILES_TO_PRESERVE=("hyprlock.conf" "hypridle.conf")
+  local FILE_RESTORE
 
-  if [ -d "$BACKUP_DIR_PATH_F" ] && [ "$express_mode" -eq 1 ]; then
-    echo "${NOTE:-[NOTE]} Express mode: skipping individual hypr file restoration prompts." 2>&1 | tee -a "$log"
-    return
-  fi
+  # keep signature compatibility; prompts for these files are removed
+  : "$express_mode"
 
-  if [ -d "$BACKUP_DIR_PATH_F" ] && [ "$express_mode" -eq 0 ]; then
-    echo -e "${NOTE:-[NOTE]} Restoring some files in ${MAGENTA:-}${XDG_CONFIG_HOME:-$HOME/.config}/hypr directory${RESET:-}..." 2>&1 | tee -a "$log"
+  [ -d "$BACKUP_DIR_PATH_F" ] || return
 
-    for FILE_RESTORE in "${FILES_2_RESTORE[@]}"; do
-      local BACKUP_FILE="$BACKUP_DIR_PATH_F/$FILE_RESTORE"
-      if [ -f "$BACKUP_FILE" ]; then
-        echo -e "\n${INFO:-[INFO]} Found ${YELLOW:-}$FILE_RESTORE${RESET:-} in hypr backup..."
-        read -r -p "${CAT:-[ACTION]} Do you want to restore ${YELLOW:-}$FILE_RESTORE${RESET:-} from backup? (y/N): " file2restore
-
-        if [[ "$file2restore" == [Yy]* ]]; then
-          if cp "$BACKUP_FILE" "$DIRPATH/$FILE_RESTORE"; then
-            echo "${OK:-[OK]} - $FILE_RESTORE restored!" 2>&1 | tee -a "$log"
-          else
-            echo "${ERROR:-[ERROR]} - Failed to restore $FILE_RESTORE!" 2>&1 | tee -a "$log"
-          fi
-        else
-          echo "${NOTE:-[NOTE]} - Skipped restoring $FILE_RESTORE." 2>&1 | tee -a "$log"
-        fi
+  for FILE_RESTORE in "${FILES_TO_PRESERVE[@]}"; do
+    local BACKUP_FILE="$BACKUP_DIR_PATH_F/$FILE_RESTORE"
+    if [ -f "$BACKUP_FILE" ]; then
+      if cp -f "$BACKUP_FILE" "$DIRPATH/$FILE_RESTORE"; then
+        echo "${OK:-[OK]} - Preserved existing $FILE_RESTORE from backup." 2>&1 | tee -a "$log"
       else
-        echo "${NOTE:-[NOTE]} - Backup file $BACKUP_FILE does not exist. Skipping." 2>&1 | tee -a "$log"
+        echo "${ERROR:-[ERROR]} - Failed to preserve existing $FILE_RESTORE from backup." 2>&1 | tee -a "$log"
       fi
-    done
-  fi
+    fi
+  done
 }

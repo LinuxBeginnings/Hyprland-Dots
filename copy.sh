@@ -513,6 +513,7 @@ copy_waybar "$LOG"
 printf "\n%.0s" {1..1}
 printf "${INFO} - Copying dotfiles ${SKY_BLUE}second${RESET} part\n"
 copy_phase2 "$LOG"
+preserve_custom_sddm_configs "$LOG"
 ensure_lua_keybinds "$LOG"
 printf "\\n%.0s" {1..1}
 # waybar-weather config handling:
@@ -797,11 +798,20 @@ rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/[TOP] Default$config_re
 printf "\n%.0s" {1..1}
 
 # for SDDM (simple_sddm_2)
+sddm_theme_conf_file="$(detect_sddm_theme_config_file 2>/dev/null || true)"
+sddm_current_theme=""
+if [ -n "$sddm_theme_conf_file" ]; then
+  sddm_current_theme="$(detect_sddm_current_theme "$sddm_theme_conf_file" 2>/dev/null || true)"
+fi
 sddm_simple_sddm_2="/usr/share/sddm/themes/simple_sddm_2"
-if [ -d "$sddm_simple_sddm_2" ]; then
-  # Apply the current wallpaper as SDDM background without prompting
-  sudo -n cp -r "$DOTFILES_DIR/config/hypr/wallpaper_effects/.wallpaper_current" "/usr/share/sddm/themes/simple_sddm_2/Backgrounds/default" || true
+if [ "$sddm_current_theme" = "simple_sddm_2" ] && [ -d "$sddm_simple_sddm_2" ] && [ -f "$wallpaper" ]; then
+  # Apply the runtime wallpaper as SDDM background without prompting
+  sudo -n cp -f "$wallpaper" "$sddm_simple_sddm_2/Backgrounds/default" || true
   echo "${NOTE} Current wallpaper applied as default SDDM background" 2>&1 | tee -a "$LOG"
+else
+  if [ -n "$sddm_current_theme" ] && [ "$sddm_current_theme" != "simple_sddm_2" ]; then
+    echo "${NOTE} Skipping SDDM default background copy (active theme: $sddm_current_theme)." 2>&1 | tee -a "$LOG"
+  fi
 fi
 
 # additional wallpapers
