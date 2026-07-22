@@ -128,9 +128,11 @@ apply_kitty_theme_to_config() {
     log_debug "wallust_refresh_background_started"
   fi
   if pidof kitty >/dev/null 2>&1; then
+    if command -v kitty >/dev/null 2>&1; then
+      kitty @ load-config >/dev/null 2>&1 || true
+    fi
     if [ "$apply_mode" = "apply" ] && [ "$is_wallpaper_mode" -eq 0 ] && command -v kitty >/dev/null 2>&1; then
       (
-        kitty @ load-config >/dev/null 2>&1 || true
         kitty @ set-colors --all --configured "$theme_file_path_to_apply" >/dev/null 2>&1 || true
       ) &
     fi
@@ -228,6 +230,10 @@ while true; do
       log_debug "resolved_enter index=$current_selection_index theme='${theme_to_preview_now}'"
       if ! apply_kitty_theme_to_config "$theme_to_preview_now" "preview"; then
         echo "$original_kitty_config_content_backup" >"$kitty_config"
+        sync_runtime_kitty_config
+        if command -v kitty >/dev/null 2>&1; then
+          kitty @ load-config >/dev/null 2>&1 || true
+        fi
         for pid_kitty in $(pidof kitty); do if [ -n "$pid_kitty" ]; then kill -SIGUSR1 "$pid_kitty"; fi; done
         notify_user "$iDIR/error.png" "Preview Error" "Failed to apply $theme_to_preview_now. Reverted."
         exit 1
@@ -239,6 +245,10 @@ while true; do
   elif [ $rofi_exit_code -eq 1 ]; then
     notify_user "$iDIR/note.png" "Kitty Theme" "Selection cancelled. Reverting to original theme."
     echo "$original_kitty_config_content_backup" >"$kitty_config"
+    sync_runtime_kitty_config
+    if command -v kitty >/dev/null 2>&1; then
+      kitty @ load-config >/dev/null 2>&1 || true
+    fi
     for pid_kitty in $(pidof kitty); do if [ -n "$pid_kitty" ]; then kill -SIGUSR1 "$pid_kitty"; fi; done
     break
   elif [ $rofi_exit_code -ge 10 ] && [ $rofi_exit_code -le 28 ]; then # custom keybindings
@@ -250,6 +260,10 @@ while true; do
   else
     notify_user "$iDIR/error.png" "Rofi Error" "Unexpected Rofi exit ($rofi_exit_code). Reverting."
     echo "$original_kitty_config_content_backup" >"$kitty_config"
+    sync_runtime_kitty_config
+    if command -v kitty >/dev/null 2>&1; then
+      kitty @ load-config >/dev/null 2>&1 || true
+    fi
     for pid_kitty in $(pidof kitty); do if [ -n "$pid_kitty" ]; then kill -SIGUSR1 "$pid_kitty"; fi; done
     break
   fi
