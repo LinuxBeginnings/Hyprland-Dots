@@ -26,6 +26,10 @@
 
 ## Updated:
 
+- `copy.sh` to not overwrite all configs on update
+  - rofi menu, kitty/ghostty theme, waybar, wallpaper, etc.
+  - Also remove restore options for kitty /ghostty
+    - Those config files are in UserConfigs now
 - Quick Settings menu into submenus and quick links
 - Added script to toggle `qs-hyprview`
   - It checks that it's running and if not restarts it
