@@ -4,6 +4,8 @@
 
 ## Added:
 
+- `kitty.conf` and `ghostty/config` are now saved to `UserConfigs` directory
+  - If file is gone or can't be read it will fall back to defaults
 - `qs-hyprview` an alternative to quickshell `overview`
   - `CTRL-TAB` to activate
   - Has search filter

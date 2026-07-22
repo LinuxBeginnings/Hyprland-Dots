@@ -53,6 +53,13 @@ SRC_USER_LUA_TEMPLATES_DIR="$SRC_HYPR_DIR/UserConfigs"
 DEST_LUA_ENTRY="$DEST_HYPR_DIR/hyprland.lua"
 DEST_LUA_ENTRY_DISABLED="$DEST_HYPR_DIR/hyprland.lua.disable"
 SOURCE_LUA_ENTRY=""
+USER_CONFIGS_PRESERVED_CONFS=(
+  "kitty.conf"
+  "ghostty.conf"
+  "hyprview-layout.conf"
+  "LaptopDisplay.conf"
+  "WorkSpaceRules.conf"
+)
 
 usage() {
   cat <<USAGE
@@ -137,6 +144,8 @@ restore_latest_conf_backup() {
   local legacy_root="$target_dir/$LEGACY_CONFIGS_DIR_NAME"
   local moved=0
   local file
+  local basename
+  local keep
   local archives=()
 
   [ -d "$target_dir" ] || return 0
@@ -2210,13 +2219,27 @@ move_conf_files_to_legacy() {
   local source_dir="$1"
   local legacy_dir="$2"
   local label="$3"
+  shift 3
+  local -a preserved_confs=("$@")
   local moved=0
   local file
+  local basename
+  local keep
+  local preserved
 
   [ -d "$source_dir" ] || return 0
   mkdir -p "$legacy_dir"
 
   while IFS= read -r -d '' file; do
+    basename="$(basename "$file")"
+    keep=0
+    for preserved in "${preserved_confs[@]}"; do
+      if [ "$basename" = "$preserved" ]; then
+        keep=1
+        break
+      fi
+    done
+    [ "$keep" -eq 1 ] && continue
     mv "$file" "$legacy_dir/"
     moved=1
   done < <(find "$source_dir" -maxdepth 1 -type f -name '*.conf' -print0)
@@ -2253,11 +2276,11 @@ print_conversion_coverage_summary() {
 [INFO]     - $DEST_HYPR_DIR/hyprlock.conf, hyprlock-1080p.conf, hyprlock-2k.conf
 [INFO]     - $DEST_HYPR_DIR/hyprland.conf (fallback/non-Lua entrypoint)
 [INFO]     - $DEST_HYPR_DIR/Monitor_Profiles/*.conf and $DEST_HYPR_DIR/animations/*.conf (preset profiles)
+[INFO]     - $USER_CONFIGS_DIR/kitty.conf, $USER_CONFIGS_DIR/ghostty.conf, $USER_CONFIGS_DIR/hyprview-layout.conf
 [INFO]     - $USER_CONFIGS_DIR/LaptopDisplay.conf and $USER_CONFIGS_DIR/WorkSpaceRules.conf (legacy/helper files)
 SUMMARY
 }
-
-move_conf_files_to_legacy "$USER_CONFIGS_DIR" "$USER_CONFIGS_LEGACY_DIR" "$USER_CONFIGS_DIR"
+move_conf_files_to_legacy "$USER_CONFIGS_DIR" "$USER_CONFIGS_LEGACY_DIR" "$USER_CONFIGS_DIR" "${USER_CONFIGS_PRESERVED_CONFS[@]}"
 move_conf_files_to_legacy "$CONFIGS_DIR" "$CONFIGS_LEGACY_DIR" "$CONFIGS_DIR"
 print_conversion_coverage_summary
 

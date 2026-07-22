@@ -25,7 +25,9 @@ theme_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
 theme_state_file="$theme_state_dir/theme_mode"
 legacy_theme_state_file="$HOME/.cache/.theme_mode"
 
-kitty_conf="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty.conf"
+user_kitty_conf="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/kitty.conf"
+fallback_kitty_conf="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty.conf"
+kitty_conf="$user_kitty_conf"
 
 wallust_config="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust.toml"
 pallete_dark="dark16"
@@ -38,6 +40,24 @@ apply_saved_mode=0
 notify_enabled=1
 preserve_wallpaper=0
 forced_mode=""
+
+ensure_managed_kitty_conf() {
+    if [[ -f "$user_kitty_conf" && -r "$user_kitty_conf" ]]; then
+        kitty_conf="$user_kitty_conf"
+        return 0
+    fi
+
+    if [[ -r "$fallback_kitty_conf" ]]; then
+        mkdir -p "$(dirname "$user_kitty_conf")" 2>/dev/null || true
+        cp -f "$fallback_kitty_conf" "$user_kitty_conf" 2>/dev/null || true
+        if [[ -f "$user_kitty_conf" && -r "$user_kitty_conf" ]]; then
+            kitty_conf="$user_kitty_conf"
+            return 0
+        fi
+    fi
+
+    kitty_conf="$fallback_kitty_conf"
+}
 
 normalize_mode() {
     case "$1" in
@@ -185,14 +205,19 @@ if command -v ags >/dev/null 2>&1; then
 fi
 
 # kitty background color change
+ensure_managed_kitty_conf
 if [ "$next_mode" = "Dark" ]; then
-    sed -i '/^foreground /s/^foreground .*/foreground #dddddd/' "${kitty_conf}"
-	sed -i '/^background /s/^background .*/background #000000/' "${kitty_conf}"
-	sed -i '/^cursor /s/^cursor .*/cursor #dddddd/' "${kitty_conf}"
+    if [[ -w "$kitty_conf" ]]; then
+        sed -i '/^foreground /s/^foreground .*/foreground #dddddd/' "${kitty_conf}"
+	    sed -i '/^background /s/^background .*/background #000000/' "${kitty_conf}"
+	    sed -i '/^cursor /s/^cursor .*/cursor #dddddd/' "${kitty_conf}"
+    fi
 else
-	sed -i '/^foreground /s/^foreground .*/foreground #000000/' "${kitty_conf}"
-	sed -i '/^background /s/^background .*/background #dddddd/' "${kitty_conf}"
-	sed -i '/^cursor /s/^cursor .*/cursor #000000/' "${kitty_conf}"
+    if [[ -w "$kitty_conf" ]]; then
+	    sed -i '/^foreground /s/^foreground .*/foreground #000000/' "${kitty_conf}"
+	    sed -i '/^background /s/^background .*/background #dddddd/' "${kitty_conf}"
+	    sed -i '/^cursor /s/^cursor .*/cursor #000000/' "${kitty_conf}"
+    fi
 fi
 
 for pid_kitty in $(pidof kitty); do

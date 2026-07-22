@@ -9,11 +9,31 @@
 
 # Define directories and variables
 kitty_themes_DiR="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty-themes" # Kitty Themes Directory
-kitty_config="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty.conf"
+user_kitty_config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/kitty.conf"
+fallback_kitty_config="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty.conf"
+kitty_config="$user_kitty_config"
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images" # For notifications
 rofi_theme_for_this_script="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-kitty-theme.rasi"
 wallust_refresh_script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustSwww.sh"
 debug_log="${XDG_CACHE_HOME:-$HOME/.cache}/kooldots-kitty-themes.log"
+
+ensure_managed_kitty_config() {
+  if [ -f "$user_kitty_config" ] && [ -r "$user_kitty_config" ]; then
+    kitty_config="$user_kitty_config"
+    return 0
+  fi
+
+  if [ -r "$fallback_kitty_config" ]; then
+    mkdir -p "$(dirname "$user_kitty_config")" 2>/dev/null || true
+    cp -f "$fallback_kitty_config" "$user_kitty_config" 2>/dev/null || true
+    if [ -f "$user_kitty_config" ] && [ -r "$user_kitty_config" ]; then
+      kitty_config="$user_kitty_config"
+      return 0
+    fi
+  fi
+
+  kitty_config="$fallback_kitty_config"
+}
 
 # --- Helper Functions ---
 notify_user() {
@@ -124,6 +144,11 @@ fi
 
 if [ ! -f "$rofi_theme_for_this_script" ]; then
   notify_user "$iDIR/error.png" "Rofi Config Missing" "Rofi theme for Kitty selector not found at: $rofi_theme_for_this_script."
+  exit 1
+fi
+ensure_managed_kitty_config
+if [ ! -f "$kitty_config" ] || [ ! -r "$kitty_config" ]; then
+  notify_user "$iDIR/error.png" "E-R-R-O-R" "Kitty config not found: $kitty_config"
   exit 1
 fi
 

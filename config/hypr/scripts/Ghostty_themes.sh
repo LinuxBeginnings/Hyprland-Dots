@@ -7,7 +7,9 @@
 # ==================================================
 # Ghostty theme selector
 
-config_file="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config"
+user_ghostty_config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/ghostty.conf"
+fallback_ghostty_config="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config"
+config_file="$user_ghostty_config"
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
 rofi_theme_primary="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-ghostty-theme.rasi"
 rofi_theme_fallback="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-edit.rasi"
@@ -33,8 +35,26 @@ refresh_wallpaper_theme() {
   fi
   pkill -SIGUSR2 ghostty >/dev/null 2>&1 || true
 }
+ensure_managed_ghostty_config() {
+  if [[ -f "$user_ghostty_config" && -r "$user_ghostty_config" ]]; then
+    config_file="$user_ghostty_config"
+    return 0
+  fi
 
-if [[ ! -f "$config_file" ]]; then
+  if [[ -r "$fallback_ghostty_config" ]]; then
+    mkdir -p "$(dirname "$user_ghostty_config")" 2>/dev/null || true
+    cp -f "$fallback_ghostty_config" "$user_ghostty_config" 2>/dev/null || true
+    if [[ -f "$user_ghostty_config" && -r "$user_ghostty_config" ]]; then
+      config_file="$user_ghostty_config"
+      return 0
+    fi
+  fi
+
+  config_file="$fallback_ghostty_config"
+}
+
+ensure_managed_ghostty_config
+if [[ ! -f "$config_file" || ! -r "$config_file" ]]; then
   notify_user "$iDIR/error.png" "Ghostty Theme" "Config not found: $config_file"
   exit 1
 fi
