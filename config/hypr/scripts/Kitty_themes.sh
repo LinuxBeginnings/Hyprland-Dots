@@ -126,7 +126,7 @@ apply_kitty_theme_to_config() {
   fi
   if pidof kitty >/dev/null 2>&1; then
     if command -v kitty >/dev/null 2>&1; then
-      kitty @ load-config >/dev/null 2>&1 || true
+      (kitty @ load-config >/dev/null 2>&1 || true) &
     fi
     if [ "$apply_mode" = "apply" ] && [ "$is_wallpaper_mode" -eq 0 ] && command -v kitty >/dev/null 2>&1; then
       (
@@ -229,7 +229,7 @@ while true; do
         echo "$original_kitty_config_content_backup" >"$kitty_config"
         sync_runtime_kitty_config
         if command -v kitty >/dev/null 2>&1; then
-          kitty @ load-config >/dev/null 2>&1 || true
+          (kitty @ load-config >/dev/null 2>&1 || true) &
         fi
         for pid_kitty in $(pidof kitty); do if [ -n "$pid_kitty" ]; then kill -SIGUSR1 "$pid_kitty"; fi; done
         notify_user "$iDIR/error.png" "Preview Error" "Failed to apply $theme_to_preview_now. Reverted."
@@ -244,7 +244,7 @@ while true; do
     echo "$original_kitty_config_content_backup" >"$kitty_config"
     sync_runtime_kitty_config
     if command -v kitty >/dev/null 2>&1; then
-      kitty @ load-config >/dev/null 2>&1 || true
+      (kitty @ load-config >/dev/null 2>&1 || true) &
     fi
     for pid_kitty in $(pidof kitty); do if [ -n "$pid_kitty" ]; then kill -SIGUSR1 "$pid_kitty"; fi; done
     break

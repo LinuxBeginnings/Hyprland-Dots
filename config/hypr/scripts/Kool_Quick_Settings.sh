@@ -534,6 +534,41 @@ show_main_menu() {
   printf '%s\n' "Set User Decorations"
   printf '%s\n' "Set Hyprlock paper"
   printf '%s\n' "Set User ENV variables"
+  printf '%s\n' "Edit User Defaults"
+  printf '%s\n' "Edit User Keybinds"
+  printf '%s\n' "Edit User ENV variables"
+  printf '%s\n' "Edit User Startup Apps (overlay)"
+  printf '%s\n' "Edit User Window Rules (overlay)"
+  printf '%s\n' "Edit User Layer Rules (overlay)"
+  printf '%s\n' "Edit User Settings"
+  printf '%s\n' "Edit User Decorations"
+  printf '%s\n' "Edit User Animations"
+  printf '%s\n' "Edit User Laptop Settings"
+  printf '%s\n' "Select Hyprview Layout"
+  printf '%s\n' "Edit System Default Keybinds"
+  printf '%s\n' "Edit System Default Startup Apps"
+  printf '%s\n' "Edit System Default Window Rules"
+  printf '%s\n' "Edit System Default Layer Rules"
+  printf '%s\n' "Edit System Default Settings"
+  printf '%s\n' "Toggle Waybar Weather units (C/F)"
+  printf '%s\n' "Toggle Waybar Clock (12H/24H)"
+  printf '%s\n' "Toggle Game Mode"
+  printf '%s\n' "Change Starship Prompt"
+  printf '%s\n' "Set SDDM Wallpaper"
+  printf '%s\n' "Choose Kitty Terminal Theme"
+  printf '%s\n' "Choose Ghostty Terminal Theme"
+  printf '%s\n' "Configure Monitors (nwg-displays)"
+  printf '%s\n' "Configure Workspace Rules (nwg-displays)"
+  printf '%s\n' "GTK Settings (nwg-look)"
+  printf '%s\n' "QT Apps Settings (qt6ct)"
+  printf '%s\n' "QT Apps Settings (qt5ct)"
+  printf '%s\n' "Set Hyprlock Wallpaper"
+  printf '%s\n' "Choose Hyprland Animations"
+  printf '%s\n' "Choose Monitor Profiles"
+  printf '%s\n' "Choose Rofi Themes"
+  printf '%s\n' "Search for Keybinds"
+  printf '%s\n' "Switch Dark-Light Theme"
+  printf '%s\n' "Rainbow Borders Mode"
 }
 
 main() {
@@ -558,7 +593,7 @@ main() {
     handle_choice "$choice" "$quick_settings_monitor"
     ;;
   *)
-    return
+    handle_choice "$choice" "$quick_settings_monitor"
     ;;
   esac
 }
