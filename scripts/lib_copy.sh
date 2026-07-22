@@ -32,9 +32,6 @@ copy_phase1() {
                 cp -n "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/" >>"$log" 2>&1 || true
               done || true
             fi
-            if [ -f "$DIRPATH-backup-$BACKUP_DIR/config.rasi" ]; then
-              cp -f "$DIRPATH-backup-$BACKUP_DIR/config.rasi" "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config.rasi" >>"$log" 2>&1 || true
-            fi
             if [ -f "$DIRPATH-backup-$BACKUP_DIR/0-shared-fonts.rasi" ]; then
               cp "$DIRPATH-backup-$BACKUP_DIR/0-shared-fonts.rasi" "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/0-shared-fonts.rasi" >>"$log" 2>&1
             fi
@@ -174,287 +171,18 @@ ensure_lua_keybinds() {
     echo "${INFO:-[INFO]} - Lua fallback check: no missing Lua files detected." 2>&1 | tee -a "$log"
   fi
 }
-seed_upgrade_userconfigs() {
-  local log="$1"
-  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-  local userconfigs_dir="$cfg_home/hypr/UserConfigs"
-  local repo_userconfigs="${DOTFILES_DIR:-.}/config/hypr/UserConfigs"
-  local runtime_kitty="$cfg_home/kitty/kitty.conf"
-  local runtime_ghostty="$cfg_home/ghostty/config"
-  local runtime_hyprview="$userconfigs_dir/hyprview-layout.conf"
-  if [ "${RUN_MODE:-}" = "install" ] && [ ! -d "$cfg_home/hypr" ]; then
-    return
-  fi
-
-  mkdir -p "$userconfigs_dir"
-
-  if [ ! -f "$userconfigs_dir/kitty.conf" ] && [ -f "$runtime_kitty" ]; then
-    cp -f "$runtime_kitty" "$userconfigs_dir/kitty.conf" 2>&1 | tee -a "$log"
-    echo "${NOTE:-[NOTE]} - Seeded UserConfigs/kitty.conf from current kitty config." 2>&1 | tee -a "$log"
-  fi
-
-  if [ ! -f "$userconfigs_dir/ghostty.conf" ] && [ -f "$runtime_ghostty" ]; then
-    cp -f "$runtime_ghostty" "$userconfigs_dir/ghostty.conf" 2>&1 | tee -a "$log"
-    echo "${NOTE:-[NOTE]} - Seeded UserConfigs/ghostty.conf from current ghostty/config." 2>&1 | tee -a "$log"
-  fi
-
-  if [ ! -f "$runtime_hyprview" ] && [ -f "$repo_userconfigs/hyprview-layout.conf" ]; then
-    cp -f "$repo_userconfigs/hyprview-layout.conf" "$runtime_hyprview" 2>&1 | tee -a "$log"
-    echo "${NOTE:-[NOTE]} - Seeded UserConfigs/hyprview-layout.conf from repo default." 2>&1 | tee -a "$log"
-  fi
-}
-
-capture_upgrade_runtime_selection_state() {
-  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-  local waybar_config_link="$cfg_home/waybar/config"
-  local waybar_style_link="$cfg_home/waybar/style.css"
-  local rofi_config="$cfg_home/rofi/config.rasi"
-
-  KOOLDOTS_PREV_WAYBAR_CONFIG_TARGET=""
-  KOOLDOTS_PREV_WAYBAR_STYLE_TARGET=""
-  KOOLDOTS_PREV_ROFI_THEME_PATH=""
-
-  if [ "${RUN_MODE:-}" = "install" ]; then
-    export KOOLDOTS_PREV_WAYBAR_CONFIG_TARGET
-    export KOOLDOTS_PREV_WAYBAR_STYLE_TARGET
-    export KOOLDOTS_PREV_ROFI_THEME_PATH
-    return
-  fi
-
-  if [ -e "$waybar_config_link" ]; then
-    if [ -L "$waybar_config_link" ]; then
-      KOOLDOTS_PREV_WAYBAR_CONFIG_TARGET="$(readlink -f "$waybar_config_link" 2>/dev/null || true)"
-    else
-      KOOLDOTS_PREV_WAYBAR_CONFIG_TARGET="$waybar_config_link"
-    fi
-  fi
-
-  if [ -e "$waybar_style_link" ]; then
-    if [ -L "$waybar_style_link" ]; then
-      KOOLDOTS_PREV_WAYBAR_STYLE_TARGET="$(readlink -f "$waybar_style_link" 2>/dev/null || true)"
-    else
-      KOOLDOTS_PREV_WAYBAR_STYLE_TARGET="$waybar_style_link"
-    fi
-  fi
-
-  if [ -f "$rofi_config" ]; then
-    KOOLDOTS_PREV_ROFI_THEME_PATH="$(
-      awk -F'"' '/^[[:space:]]*@theme[[:space:]]*"/ {print $2}' "$rofi_config" | tail -n1
-    )"
-  fi
-
-  export KOOLDOTS_PREV_WAYBAR_CONFIG_TARGET
-  export KOOLDOTS_PREV_WAYBAR_STYLE_TARGET
-  export KOOLDOTS_PREV_ROFI_THEME_PATH
-}
-
-capture_runtime_personal_state() {
-  local log="$1"
-  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-  local backup_dir
-  local state_dir
-  local src rel dest
-
-  backup_dir=$(get_backup_dirname)
-  state_dir="${XDG_CACHE_HOME:-$HOME/.cache}/kooldots-runtime-state-$backup_dir"
-  KOOLDOTS_RUNTIME_STATE_DIR="$state_dir"
-  KOOLDOTS_RUNTIME_THEME_RESTORED=0
-  export KOOLDOTS_RUNTIME_STATE_DIR
-  export KOOLDOTS_RUNTIME_THEME_RESTORED
-
-  rm -rf "$state_dir"
-  mkdir -p "$state_dir"
-
-  local files_to_capture=(
-    "$cfg_home/kitty/kitty.conf"
-    "$cfg_home/hypr/UserConfigs/kitty.conf"
-    "$cfg_home/hypr/wallpaper_effects/.wallpaper_current"
-    "$cfg_home/hypr/wallpaper_effects/.wallpaper_modified"
-    "$cfg_home/hypr/wallust/wallust-hyprland.conf"
-    "$cfg_home/rofi/wallust/colors-rofi.rasi"
-    "$cfg_home/waybar/wallust/colors-waybar.css"
-    "$cfg_home/kitty/kitty-themes/01-Wallust.conf"
-  )
-
-  for src in "${files_to_capture[@]}"; do
-    [ -f "$src" ] || continue
-    rel="${src#$cfg_home/}"
-    [ "$rel" != "$src" ] || continue
-    dest="$state_dir/$rel"
-    mkdir -p "$(dirname "$dest")"
-    cp -f "$src" "$dest" 2>/dev/null || true
-  done
-
-  echo "${INFO:-[INFO]} - Captured runtime personalization state." 2>&1 | tee -a "$log"
-}
-
-restore_runtime_personal_state() {
-  local log="$1"
-  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-  local state_dir="${KOOLDOTS_RUNTIME_STATE_DIR:-}"
-  local snapshot rel dest
-  local restored_theme=0
-
-  [ -d "$state_dir" ] || return 0
-
-  while IFS= read -r -d '' snapshot; do
-    rel="${snapshot#$state_dir/}"
-    dest="$cfg_home/$rel"
-    mkdir -p "$(dirname "$dest")"
-    if cp -f "$snapshot" "$dest" 2>&1 | tee -a "$log"; then
-      case "$rel" in
-      hypr/wallust/wallust-hyprland.conf | rofi/wallust/colors-rofi.rasi | waybar/wallust/colors-waybar.css | kitty/kitty-themes/01-Wallust.conf)
-        restored_theme=1
-        ;;
-      esac
-    fi
-  done < <(find "$state_dir" -type f -print0)
-
-  if [ -f "$cfg_home/kitty/kitty.conf" ] && [ ! -f "$cfg_home/hypr/UserConfigs/kitty.conf" ]; then
-    mkdir -p "$cfg_home/hypr/UserConfigs"
-    cp -f "$cfg_home/kitty/kitty.conf" "$cfg_home/hypr/UserConfigs/kitty.conf" 2>&1 | tee -a "$log" || true
-  fi
-
-  KOOLDOTS_RUNTIME_THEME_RESTORED="$restored_theme"
-  export KOOLDOTS_RUNTIME_THEME_RESTORED
-  echo "${INFO:-[INFO]} - Restored runtime personalization state." 2>&1 | tee -a "$log"
-}
-
-restore_upgrade_runtime_selection_state() {
-  local log="$1"
-  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-  local waybar_config_link="$cfg_home/waybar/config"
-  local waybar_style_link="$cfg_home/waybar/style.css"
-  local rofi_config="$cfg_home/rofi/config.rasi"
-  local waybar_configs_dir="$cfg_home/waybar/configs"
-  local waybar_style_dir="$cfg_home/waybar/style"
-  local target
-  local target_base
-
-  if [ "${RUN_MODE:-}" = "install" ]; then
-    return
-  fi
-
-  target="${KOOLDOTS_PREV_WAYBAR_CONFIG_TARGET:-}"
-  if [ -n "$target" ]; then
-    if [ -e "$target" ]; then
-      ln -sf "$target" "$waybar_config_link" 2>&1 | tee -a "$log"
-    else
-      target_base="$(basename "$target")"
-      if [ -e "$waybar_configs_dir/$target_base" ]; then
-        ln -sf "$waybar_configs_dir/$target_base" "$waybar_config_link" 2>&1 | tee -a "$log"
-      fi
-    fi
-  fi
-
-  target="${KOOLDOTS_PREV_WAYBAR_STYLE_TARGET:-}"
-  if [ -n "$target" ]; then
-    if [ -e "$target" ]; then
-      ln -sf "$target" "$waybar_style_link" 2>&1 | tee -a "$log"
-    else
-      target_base="$(basename "$target")"
-      if [ -e "$waybar_style_dir/$target_base" ]; then
-        ln -sf "$waybar_style_dir/$target_base" "$waybar_style_link" 2>&1 | tee -a "$log"
-      fi
-    fi
-  fi
-
-  if [ -n "${KOOLDOTS_PREV_ROFI_THEME_PATH:-}" ] && [ -f "$rofi_config" ]; then
-    sed -i -E 's/^([[:space:]]*@theme)/\/\/\1/' "$rofi_config" 2>/dev/null || true
-    printf '\n@theme "%s"\n' "$KOOLDOTS_PREV_ROFI_THEME_PATH" >>"$rofi_config"
-    echo "${NOTE:-[NOTE]} - Restored previous Rofi theme selection." 2>&1 | tee -a "$log"
-  fi
-}
-
-detect_sddm_theme_config_file() {
-  local candidate=""
-  for candidate in /etc/sddm.conf.d/theme.conf.user /etc/sddm.conf /etc/sddm.conf.d/*.conf; do
-    [ -f "$candidate" ] || continue
-    if grep -qE '^[[:space:]]*Current[[:space:]]*=' "$candidate" 2>/dev/null; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done
-  return 1
-}
-
-detect_sddm_current_theme() {
-  local conf_file="$1"
-  [ -f "$conf_file" ] || return 1
-  awk -F= '
-    /^[[:space:]]*Current[[:space:]]*=/ {
-      value=$2
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
-      gsub(/^"|"$/, "", value)
-      print value
-      exit
-    }
-  ' "$conf_file"
-}
-
-preserve_custom_sddm_configs() {
-  local log="$1"
-  local hypr_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
-  local backup_dir
-  local backup_hypr_path_primary
-  local backup_hypr_path_legacy
-  local backup_hypr_path
-  local sddm_theme_conf=""
-  local sddm_theme=""
-  local rel_file=""
-
-  backup_dir=$(get_backup_dirname)
-  backup_hypr_path_primary="$hypr_dir-backup-$backup_dir"
-  backup_hypr_path_legacy="$hypr_dir-$backup_dir"
-
-  if ! command -v sddm >/dev/null 2>&1; then
-    if ! command -v systemctl >/dev/null 2>&1 || ! systemctl list-unit-files 2>/dev/null | grep -q '^sddm\.service'; then
-      return 0
-    fi
-  fi
-
-  sddm_theme_conf="$(detect_sddm_theme_config_file 2>/dev/null || true)"
-  [ -n "$sddm_theme_conf" ] || return 0
-
-  sddm_theme="$(detect_sddm_current_theme "$sddm_theme_conf" 2>/dev/null || true)"
-  [ -n "$sddm_theme" ] || return 0
-
-  case "$sddm_theme" in
-  simple_sddm_2 | simple-sddm | sequoia_2)
-    return 0
-    ;;
-  esac
-
-  for rel_file in scripts/sddm_wallpaper.sh; do
-    backup_hypr_path=""
-    if [ -f "$backup_hypr_path_primary/$rel_file" ]; then
-      backup_hypr_path="$backup_hypr_path_primary"
-    elif [ -f "$backup_hypr_path_legacy/$rel_file" ]; then
-      backup_hypr_path="$backup_hypr_path_legacy"
-    fi
-    [ -n "$backup_hypr_path" ] || continue
-    mkdir -p "$(dirname "$hypr_dir/$rel_file")"
-    cp -f "$backup_hypr_path/$rel_file" "$hypr_dir/$rel_file" 2>&1 | tee -a "$log"
-    echo "${NOTE:-[NOTE]} - Preserved existing $rel_file for custom SDDM theme '${sddm_theme}'." 2>&1 | tee -a "$log"
-  done
-}
 
 # Restore Animations and Monitor Profiles plus key hypr files from backup
 restore_hypr_assets() {
   local log="$1"
   local express_mode="$2"
+  local base="${DOTFILES_DIR:-.}"
 
   local HYPR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
   local CONFIG_HOME="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
-  local BACKUP_HYPR_PATH_PRIMARY="$HYPR_DIR-backup-$BACKUP_DIR"
-  local BACKUP_HYPR_PATH_LEGACY="$HYPR_DIR-$BACKUP_DIR"
-  local BACKUP_HYPR_PATH="$BACKUP_HYPR_PATH_PRIMARY"
-  # Fresh install flow may back up to hypr-<suffix>; use it as fallback.
-  if [ ! -d "$BACKUP_HYPR_PATH" ] && [ -d "$BACKUP_HYPR_PATH_LEGACY" ]; then
-    BACKUP_HYPR_PATH="$BACKUP_HYPR_PATH_LEGACY"
-  fi
+  local BACKUP_HYPR_PATH="$HYPR_DIR-backup-$BACKUP_DIR"
 
   if [ -d "$BACKUP_HYPR_PATH" ]; then
     local backup_mode="conf"
@@ -462,34 +190,39 @@ restore_hypr_assets() {
       backup_mode="lua"
     fi
 
-    # Preserve active Lua entrypoint automatically to avoid dropping users
-    # back to hyprland.conf after an upgrade.
-    if [ -f "$BACKUP_HYPR_PATH/hyprland.lua" ]; then
+    # Preserve Lua entrypoint after upgrade, preferring the current template
+    # shipped in the repo to avoid restoring stale/broken entrypoints.
+    local LUA_ENTRY_TEMPLATE="$base/config/hypr/hyprland.lua"
+    local LUA_ENTRY_TEMPLATE_DISABLED="$base/config/hypr/hyprland.lua.disable"
+    if [ -f "$LUA_ENTRY_TEMPLATE" ]; then
+      cp -f "$LUA_ENTRY_TEMPLATE" "$HYPR_DIR/hyprland.lua" 2>&1 | tee -a "$log"
+      echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}hyprland.lua${RESET:-} (from repo template)" 2>&1 | tee -a "$log"
+    elif [ -f "$LUA_ENTRY_TEMPLATE_DISABLED" ]; then
+      cp -f "$LUA_ENTRY_TEMPLATE_DISABLED" "$HYPR_DIR/hyprland.lua" 2>&1 | tee -a "$log"
+      echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}hyprland.lua${RESET:-} (from repo .disable template)" 2>&1 | tee -a "$log"
+    elif [ -f "$BACKUP_HYPR_PATH/hyprland.lua" ]; then
       cp -f "$BACKUP_HYPR_PATH/hyprland.lua" "$HYPR_DIR/hyprland.lua" 2>&1 | tee -a "$log"
-      echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}hyprland.lua${RESET:-}" 2>&1 | tee -a "$log"
+      echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}hyprland.lua${RESET:-} (from backup)" 2>&1 | tee -a "$log"
     fi
 
     if [ "$express_mode" -eq 1 ]; then
       echo "${NOTE:-[NOTE]} Express mode: skipping automatic restoration of animations and monitor profile directories." 2>&1 | tee -a "$log"
-      if [ -d "$BACKUP_HYPR_PATH/wallpaper_effects" ]; then
-        mkdir -p "$HYPR_DIR/wallpaper_effects"
-        rsync -a "$BACKUP_HYPR_PATH/wallpaper_effects/" "$HYPR_DIR/wallpaper_effects/" 2>&1 | tee -a "$log"
-        echo "${OK:-[OK]} - Restored directory: ${MAGENTA:-}wallpaper_effects${RESET:-}" 2>&1 | tee -a "$log"
-      fi
     else
       echo -e "\n${NOTE:-[NOTE]} Restoring ${SKY_BLUE:-}Animations & Monitor Profiles${RESET:-} into ${YELLOW:-}$HYPR_DIR${RESET:-}..."
-      # Preserve runtime wallpaper/monitor state whenever a previous hypr backup exists.
-      local DIR_B=("Monitor_Profiles" "animations" "wallpaper_effects")
+
+      # Fresh installs should apply repo defaults; do not restore a previous wallpaper.
+      # RUN_MODE is set by copy.sh (install|upgrade|express) and is visible here.
+      local DIR_B=("Monitor_Profiles" "animations")
+      if [ "${RUN_MODE:-}" != "install" ]; then
+        DIR_B+=("wallpaper_effects")
+      else
+        echo "${NOTE:-[NOTE]} Fresh install: skipping restore of wallpaper_effects so default wallpaper applies." 2>&1 | tee -a "$log"
+      fi
 
       for DIR_RESTORE in "${DIR_B[@]}"; do
         local BACKUP_SUBDIR="$BACKUP_HYPR_PATH/$DIR_RESTORE"
         if [ -d "$BACKUP_SUBDIR" ]; then
-          if [ "$DIR_RESTORE" = "wallpaper_effects" ]; then
-            mkdir -p "$HYPR_DIR/wallpaper_effects"
-            rsync -a "$BACKUP_SUBDIR/" "$HYPR_DIR/wallpaper_effects/" 2>&1 | tee -a "$log"
-          else
-            cp -r "$BACKUP_SUBDIR" "$HYPR_DIR/" 2>&1 | tee -a "$log"
-          fi
+          cp -r "$BACKUP_SUBDIR" "$HYPR_DIR/" 2>&1 | tee -a "$log"
           echo "${OK:-[OK]} - Restored directory: ${MAGENTA:-}$DIR_RESTORE${RESET:-}" 2>&1 | tee -a "$log"
         fi
       done
@@ -703,12 +436,8 @@ restore_user_configs() {
   local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
-  local BACKUP_DIR_PATH_PRIMARY="$DIRPATH-backup-$BACKUP_DIR/UserConfigs"
-  local BACKUP_DIR_PATH_LEGACY="$DIRPATH-$BACKUP_DIR/UserConfigs"
-  local BACKUP_CONFIGS_PATH_PRIMARY="$DIRPATH-backup-$BACKUP_DIR/configs"
-  local BACKUP_CONFIGS_PATH_LEGACY="$DIRPATH-$BACKUP_DIR/configs"
-  local BACKUP_DIR_PATH="$BACKUP_DIR_PATH_PRIMARY"
-  local BACKUP_CONFIGS_PATH="$BACKUP_CONFIGS_PATH_PRIMARY"
+  local BACKUP_DIR_PATH="$DIRPATH-backup-$BACKUP_DIR/UserConfigs"
+  local BACKUP_CONFIGS_PATH="$DIRPATH-backup-$BACKUP_DIR/configs"
 
   if [ -z "$BACKUP_DIR" ]; then
     echo "${ERROR:-[ERROR]} - Backup directory name is empty. Exiting." 2>&1 | tee -a "$log"
@@ -716,23 +445,12 @@ restore_user_configs() {
   fi
 
   if [ "${RUN_MODE:-}" = "install" ]; then
-    if [ -d "$BACKUP_DIR_PATH_LEGACY" ] || [ -d "$BACKUP_DIR_PATH_PRIMARY" ]; then
+    if [ -d "$BACKUP_DIR_PATH" ]; then
       echo "${NOTE:-[NOTE]} Preserving existing UserConfigs directory during install." 2>&1 | tee -a "$log"
-      if [ -d "$BACKUP_DIR_PATH_LEGACY" ]; then
-        rsync -a "$BACKUP_DIR_PATH_LEGACY/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
-      fi
-      if [ -d "$BACKUP_DIR_PATH_PRIMARY" ]; then
-        rsync -a "$BACKUP_DIR_PATH_PRIMARY/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
-      fi
+      rsync -a "$BACKUP_DIR_PATH/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
       echo "${OK:-[OK]} - UserConfigs directory preserved." 2>&1 | tee -a "$log"
     fi
     return
-  fi
-  if [ ! -d "$BACKUP_DIR_PATH" ] && [ -d "$BACKUP_DIR_PATH_LEGACY" ]; then
-    BACKUP_DIR_PATH="$BACKUP_DIR_PATH_LEGACY"
-  fi
-  if [ ! -d "$BACKUP_CONFIGS_PATH" ] && [ -d "$BACKUP_CONFIGS_PATH_LEGACY" ]; then
-    BACKUP_CONFIGS_PATH="$BACKUP_CONFIGS_PATH_LEGACY"
   fi
 
   if [ -d "$BACKUP_DIR_PATH" ]; then
@@ -785,11 +503,9 @@ restore_user_configs() {
         "monitors.lua"
         "Startup_Apps.conf"
         "UserDecorations.conf"
-        "UserDecorations.lua"
         "UserAnimations.conf"
         "UserKeybinds.conf"
         "UserSettings.conf"
-        "UserSettings.lua"
         "workspaces.lua"
         "WindowRules.conf"
       )
@@ -832,34 +548,6 @@ restore_user_configs() {
     fi
   fi
 
-  # Never overwrite core user overlay files during upgrades.
-  if [ "${RUN_MODE:-}" != "install" ]; then
-    local ALWAYS_PRESERVE=(
-      "UserDecorations.conf"
-      "UserDecorations.lua"
-      "UserSettings.conf"
-      "UserSettings.lua"
-      "WindowRules.conf"
-      "WindowRules.lua"
-      "WindowRules.disable"
-      "kitty.conf"
-      "ghostty.conf"
-    )
-    local PRESERVE_FILE
-    for PRESERVE_FILE in "${ALWAYS_PRESERVE[@]}"; do
-      local PRESERVE_SRC=""
-      if [ -f "$BACKUP_DIR_PATH_PRIMARY/$PRESERVE_FILE" ]; then
-        PRESERVE_SRC="$BACKUP_DIR_PATH_PRIMARY/$PRESERVE_FILE"
-      elif [ -f "$BACKUP_DIR_PATH_LEGACY/$PRESERVE_FILE" ]; then
-        PRESERVE_SRC="$BACKUP_DIR_PATH_LEGACY/$PRESERVE_FILE"
-      fi
-      if [ -n "$PRESERVE_SRC" ]; then
-        mkdir -p "$DIRPATH/UserConfigs"
-        cp -f "$PRESERVE_SRC" "$DIRPATH/UserConfigs/$PRESERVE_FILE" 2>&1 | tee -a "$log"
-        echo "${OK:-[OK]} - Preserved UserConfigs/$PRESERVE_FILE from backup." 2>&1 | tee -a "$log"
-      fi
-    done
-  fi
   if [ -d "$BACKUP_CONFIGS_PATH" ]; then
     local restored_system_lua=0
     local lua_file
@@ -927,7 +615,29 @@ restore_user_scripts() {
 
 restore_terminal_configs() {
   local log="$1"
-  echo "${NOTE:-[NOTE]} - Terminal config restore prompts removed; UserConfigs now preserves kitty/ghostty settings." 2>&1 | tee -a "$log"
+  local express_mode="$2"
+
+  local GHOSTTY_DIR="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}/ghostty"
+  local BACKUP_DIR
+  BACKUP_DIR=$(get_backup_dirname)
+  local GHOSTTY_BACKUP="$GHOSTTY_DIR-backup-$BACKUP_DIR"
+
+  if [ -d "$GHOSTTY_BACKUP" ] && [ "$express_mode" -eq 1 ]; then
+    echo "${NOTE:-[NOTE]} Express mode: skipping Ghostty restore prompt." 2>&1 | tee -a "$log"
+    return
+  fi
+
+  if [ -d "$GHOSTTY_BACKUP" ] && [ "$express_mode" -eq 0 ]; then
+    echo -e "${NOTE:-[NOTE]} Restore previous ${MAGENTA:-}Ghostty${RESET:-} config?" 2>&1 | tee -a "$log"
+    read -r -p "${CAT:-[ACTION]} Do you want to restore Ghostty config from backup? (y/N): " restore_ghostty
+    if [[ "$restore_ghostty" == [Yy]* ]]; then
+      rm -rf "$GHOSTTY_DIR"
+      cp -a "$GHOSTTY_BACKUP" "$GHOSTTY_DIR" 2>&1 | tee -a "$log"
+      echo "${OK:-[OK]} - Ghostty config restored." 2>&1 | tee -a "$log"
+    else
+      echo "${NOTE:-[NOTE]} - Skipped restoring Ghostty config." 2>&1 | tee -a "$log"
+    fi
+  fi
 }
 restore_hypr_files() {
   local log="$1"
@@ -936,28 +646,35 @@ restore_hypr_files() {
   local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
-  local BACKUP_DIR_PATH_F_PRIMARY="$DIRPATH-backup-$BACKUP_DIR"
-  local BACKUP_DIR_PATH_F_LEGACY="$DIRPATH-$BACKUP_DIR"
-  local FILES_TO_PRESERVE=("hyprlock.conf" "hypridle.conf")
-  local FILE_RESTORE
+  local BACKUP_DIR_PATH_F="$DIRPATH-backup-$BACKUP_DIR"
+  local FILES_2_RESTORE=("hyprlock.conf" "hypridle.conf")
 
-  # keep signature compatibility; prompts for these files are removed
-  : "$express_mode"
-  if [ ! -d "$BACKUP_DIR_PATH_F_PRIMARY" ] && [ ! -d "$BACKUP_DIR_PATH_F_LEGACY" ]; then
+  if [ -d "$BACKUP_DIR_PATH_F" ] && [ "$express_mode" -eq 1 ]; then
+    echo "${NOTE:-[NOTE]} Express mode: skipping individual hypr file restoration prompts." 2>&1 | tee -a "$log"
     return
   fi
 
-  for FILE_RESTORE in "${FILES_TO_PRESERVE[@]}"; do
-    local BACKUP_FILE="$BACKUP_DIR_PATH_F_PRIMARY/$FILE_RESTORE"
-    if [ ! -f "$BACKUP_FILE" ] && [ -f "$BACKUP_DIR_PATH_F_LEGACY/$FILE_RESTORE" ]; then
-      BACKUP_FILE="$BACKUP_DIR_PATH_F_LEGACY/$FILE_RESTORE"
-    fi
-    if [ -f "$BACKUP_FILE" ]; then
-      if cp -f "$BACKUP_FILE" "$DIRPATH/$FILE_RESTORE"; then
-        echo "${OK:-[OK]} - Preserved existing $FILE_RESTORE from backup." 2>&1 | tee -a "$log"
+  if [ -d "$BACKUP_DIR_PATH_F" ] && [ "$express_mode" -eq 0 ]; then
+    echo -e "${NOTE:-[NOTE]} Restoring some files in ${MAGENTA:-}${XDG_CONFIG_HOME:-$HOME/.config}/hypr directory${RESET:-}..." 2>&1 | tee -a "$log"
+
+    for FILE_RESTORE in "${FILES_2_RESTORE[@]}"; do
+      local BACKUP_FILE="$BACKUP_DIR_PATH_F/$FILE_RESTORE"
+      if [ -f "$BACKUP_FILE" ]; then
+        echo -e "\n${INFO:-[INFO]} Found ${YELLOW:-}$FILE_RESTORE${RESET:-} in hypr backup..."
+        read -r -p "${CAT:-[ACTION]} Do you want to restore ${YELLOW:-}$FILE_RESTORE${RESET:-} from backup? (y/N): " file2restore
+
+        if [[ "$file2restore" == [Yy]* ]]; then
+          if cp "$BACKUP_FILE" "$DIRPATH/$FILE_RESTORE"; then
+            echo "${OK:-[OK]} - $FILE_RESTORE restored!" 2>&1 | tee -a "$log"
+          else
+            echo "${ERROR:-[ERROR]} - Failed to restore $FILE_RESTORE!" 2>&1 | tee -a "$log"
+          fi
+        else
+          echo "${NOTE:-[NOTE]} - Skipped restoring $FILE_RESTORE." 2>&1 | tee -a "$log"
+        fi
       else
-        echo "${ERROR:-[ERROR]} - Failed to preserve existing $FILE_RESTORE from backup." 2>&1 | tee -a "$log"
+        echo "${NOTE:-[NOTE]} - Backup file $BACKUP_FILE does not exist. Skipping." 2>&1 | tee -a "$log"
       fi
-    fi
-  done
+    done
+  fi
 }
