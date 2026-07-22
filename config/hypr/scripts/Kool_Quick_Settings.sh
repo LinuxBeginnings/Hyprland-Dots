@@ -443,7 +443,7 @@ show_category_menu() {
   local options=""
 
   case "$category" in
-  "[ User Settings ]")
+  "[[ User Settings ]]")
     options=$(
       cat <<EOF
 Edit User Defaults

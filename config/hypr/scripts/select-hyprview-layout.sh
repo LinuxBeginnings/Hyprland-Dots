@@ -53,7 +53,7 @@ fi
 choice="$(
   printf '%s\n' "${layouts[@]}" | rofi -i -dmenu -config "$rofi_theme" \
     -p "Hyprview Layout" \
-    -mesg "Select Hyprview layout" \
+    -mesg "Current layout: $current_layout" \
     -selected-row "$default_row"
 )"
 
