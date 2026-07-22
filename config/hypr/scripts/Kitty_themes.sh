@@ -35,6 +35,13 @@ ensure_managed_kitty_config() {
   kitty_config="$fallback_kitty_config"
 }
 
+sync_runtime_kitty_config() {
+  if [ "$kitty_config" != "$fallback_kitty_config" ] && [ -r "$kitty_config" ]; then
+    mkdir -p "$(dirname "$fallback_kitty_config")" 2>/dev/null || true
+    cp -f "$kitty_config" "$fallback_kitty_config" 2>/dev/null || true
+  fi
+}
+
 # --- Helper Functions ---
 notify_user() {
   notify-send -u low -i "$1" "$2" "$3"
@@ -98,10 +105,10 @@ apply_kitty_theme_to_config() {
   cp "$kitty_config" "$temp_kitty_config_file"
 
   local include_target
-  include_target="include ./kitty-themes/$(basename "$theme_file_path_to_apply")"
+  include_target="include ${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty-themes/$(basename "$theme_file_path_to_apply")"
 
-  if grep -q -E '^[#[:space:]]*include\s+\./kitty-themes/.*\.conf' "$temp_kitty_config_file"; then
-    sed -i -E "s|^([#[:space:]]*include\s+\./kitty-themes/).*\.conf|$include_target|g" "$temp_kitty_config_file"
+  if grep -q -E '^[#[:space:]]*include[[:space:]]+.*kitty-themes/.*\.conf' "$temp_kitty_config_file"; then
+    sed -i -E "s|^[#[:space:]]*include[[:space:]]+.*kitty-themes/.*\.conf|$include_target|g" "$temp_kitty_config_file"
   else
     if [ -s "$temp_kitty_config_file" ] && [ "$(tail -c1 "$temp_kitty_config_file")" != "" ]; then
       echo >>"$temp_kitty_config_file"
@@ -111,6 +118,7 @@ apply_kitty_theme_to_config() {
 
   cp "$temp_kitty_config_file" "$kitty_config"
   rm "$temp_kitty_config_file"
+  sync_runtime_kitty_config
   local trigger_wallust_refresh=0
   if [ "$theme_name_to_apply" = "Set by wallpaper" ] && [ -x "$wallust_refresh_script" ]; then
     trigger_wallust_refresh=1
@@ -151,6 +159,7 @@ if [ ! -f "$kitty_config" ] || [ ! -r "$kitty_config" ]; then
   notify_user "$iDIR/error.png" "E-R-R-O-R" "Kitty config not found: $kitty_config"
   exit 1
 fi
+sync_runtime_kitty_config
 
 original_kitty_config_content_backup=$(cat "$kitty_config")
 
@@ -163,7 +172,19 @@ if [ ${#available_theme_names[@]} -eq 0 ]; then
 fi
 
 current_selection_index=0
-current_active_theme_name=$(awk -F'include ./kitty-themes/|\\.conf' '/^[[:space:]]*include \\.\/kitty-themes\/.*\\.conf/{print $2; exit}' "$kitty_config")
+current_active_theme_name=$(
+  awk '
+    /^[[:space:]]*include[[:space:]]+.*kitty-themes\/.*\.conf/ {
+      line=$0
+      sub(/^[[:space:]]*include[[:space:]]+/, "", line)
+      gsub(/^"|"$/, "", line)
+      gsub(/^.*\//, "", line)
+      sub(/\.conf$/, "", line)
+      print line
+      exit
+    }
+  ' "$kitty_config"
+)
 if [ "$current_active_theme_name" = "01-Wallust" ]; then
   current_active_theme_name="Set by wallpaper"
 elif [ "$current_active_theme_name" = "00-Default" ]; then

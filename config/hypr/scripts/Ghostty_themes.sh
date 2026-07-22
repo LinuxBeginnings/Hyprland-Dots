@@ -52,12 +52,19 @@ ensure_managed_ghostty_config() {
 
   config_file="$fallback_ghostty_config"
 }
+sync_runtime_ghostty_config() {
+  if [[ "$config_file" != "$fallback_ghostty_config" && -r "$config_file" ]]; then
+    mkdir -p "$(dirname "$fallback_ghostty_config")" 2>/dev/null || true
+    cp -f "$config_file" "$fallback_ghostty_config" 2>/dev/null || true
+  fi
+}
 
 ensure_managed_ghostty_config
 if [[ ! -f "$config_file" || ! -r "$config_file" ]]; then
   notify_user "$iDIR/error.png" "Ghostty Theme" "Config not found: $config_file"
   exit 1
 fi
+sync_runtime_ghostty_config
 
 rofi_config_args=()
 if [[ -f "$rofi_theme_primary" ]]; then
@@ -155,6 +162,7 @@ END {
 }
 ' "$config_file" > "$tmp_file"
   mv "$tmp_file" "$config_file"
+  sync_runtime_ghostty_config
   refresh_wallpaper_theme
   notify_user "$iDIR/ja.png" "Ghostty Theme Applied" "$wallust_option_label"
   exit 0
@@ -187,6 +195,7 @@ END {
 }
 ' "$config_file" > "$tmp_file"
   mv "$tmp_file" "$config_file"
+  sync_runtime_ghostty_config
 
   pkill -SIGUSR2 ghostty >/dev/null 2>&1 || true
   notify_user "$iDIR/ja.png" "Ghostty Theme Applied" "$default_option_label"
@@ -242,6 +251,7 @@ END {
 }' "$config_file" > "$tmp_file"
 
 mv "$tmp_file" "$config_file"
+sync_runtime_ghostty_config
 
 pkill -SIGUSR2 ghostty >/dev/null 2>&1 || true
 
