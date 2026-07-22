@@ -524,7 +524,7 @@ show_main_menu() {
 [[ System Settings ]]
 [[ Toggle Options ]]
 [[ Misc ]]
-[[ Quick Links]]
+[ Quick Links]
 Set User Keybinds
 Set User Decorations
 Set Hyprlock paper
