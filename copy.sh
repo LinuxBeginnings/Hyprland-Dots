@@ -225,6 +225,20 @@ if ! declare -f restore_runtime_personal_state >/dev/null 2>&1; then
       echo "${OK} Restored runtime wallpaper state after copy." 2>&1 | tee -a "$log"
       rm -f "$state_file" 2>/dev/null || true
     fi
+
+    if [ -L "$rofi_link" ]; then
+      local resolved_link=""
+      resolved_link="$(readlink -f "$rofi_link" 2>/dev/null || true)"
+      if [ -z "$resolved_link" ] || [ ! -f "$resolved_link" ]; then
+        if [ -f "$wallpaper_current" ]; then
+          ln -snf "$wallpaper_current" "$rofi_link" 2>/dev/null || true
+          echo "${NOTE} Repaired broken rofi wallpaper link to wallpaper_current fallback." 2>&1 | tee -a "$log"
+        fi
+      fi
+    elif [ ! -e "$rofi_link" ] && [ -f "$wallpaper_current" ]; then
+      ln -snf "$wallpaper_current" "$rofi_link" 2>/dev/null || true
+      echo "${NOTE} Initialized rofi wallpaper link from wallpaper_current fallback." 2>&1 | tee -a "$log"
+    fi
   }
 fi
 
@@ -270,8 +284,17 @@ is_kooldots_config() {
 
 is_oem_lua_config() {
   local cfg_home
+  local hypr_dir
   cfg_home="$(config_home)"
-  [ -f "$cfg_home/hyprland.lua" ] || [ -f "$cfg_home/hypr/hyprland.lua" ]
+  hypr_dir="$cfg_home/hypr"
+
+  # Explicit Hyprlang workflow marker:
+  # if hyprland.lua.disable exists and hyprland.lua does not, treat host as conf mode.
+  if [ -f "$hypr_dir/hyprland.lua.disable" ] && [ ! -f "$hypr_dir/hyprland.lua" ]; then
+    return 1
+  fi
+
+  [ -f "$cfg_home/hyprland.lua" ] || [ -f "$hypr_dir/hyprland.lua" ]
 }
 
 require_kooldots_for_upgrade() {

@@ -42,7 +42,7 @@ end
 -- Prefer lifecycle-hook orchestration for clarity while keeping exec_once
 -- reliability semantics for real-world startup behavior.
 local startup_commands = {
-  scriptsDir .. "/WallpaperDaemon.sh",
+  "sleep 2; $HOME/.config/hypr/scripts/WallpaperDaemon.sh; $HOME/.config/hypr/scripts/ApplyThemeMode.sh; $HOME/.config/hypr/scripts/WaybarStartup.sh",
   "$HOME/.config/hypr/initial-boot.sh",
   "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP",
   "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP",
@@ -52,8 +52,6 @@ local startup_commands = {
   -- "nm-tray",
   "swaync",
   scriptsDir .. "/PortalHyprland.sh",
-  "sh $HOME/.config/hypr/scripts/ApplyThemeMode.sh",
-  "sh " .. scriptsDir .. "/WaybarStartup.sh",
   'qs --log-rules "qt.qpa.wayland.textinput.warning=false" -c overview',
   'qs --log-rules "qt.qpa.wayland.textinput.warning=false" -p $HOME/.config/quickshell/qs-hyprview',
   "hypridle",

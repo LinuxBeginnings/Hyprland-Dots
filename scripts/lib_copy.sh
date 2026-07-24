@@ -184,30 +184,35 @@ restore_hypr_assets() {
   local base="${DOTFILES_DIR:-.}"
 
   local HYPR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
-  local CONFIG_HOME="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_HYPR_PATH="$HYPR_DIR-backup-$BACKUP_DIR"
 
   if [ -d "$BACKUP_HYPR_PATH" ]; then
     local backup_mode="conf"
-    if [ -f "$BACKUP_HYPR_PATH/hyprland.lua" ] || [ -f "$CONFIG_HOME/hyprland.lua" ]; then
+    local backup_lua_entry="$BACKUP_HYPR_PATH/hyprland.lua"
+    local backup_lua_disabled="$BACKUP_HYPR_PATH/hyprland.lua.disable"
+    if [ -f "$backup_lua_entry" ]; then
       backup_mode="lua"
+    elif [ -f "$backup_lua_disabled" ]; then
+      # Explicit conf marker used by migrate-hypr-to-lua.sh while Lua is disabled.
+      backup_mode="conf"
     fi
 
-    # Preserve Lua entrypoint after upgrade, preferring the current template
-    # shipped in the repo to avoid restoring stale/broken entrypoints.
+    # Preserve Lua entrypoint only when the backup was already using Lua mode.
+    # Do not auto-enable Lua on conf-based hosts.
     local LUA_ENTRY_TEMPLATE="$base/config/hypr/hyprland.lua"
-    local LUA_ENTRY_TEMPLATE_DISABLED="$base/config/hypr/hyprland.lua.disable"
-    if [ -f "$LUA_ENTRY_TEMPLATE" ]; then
-      cp -f "$LUA_ENTRY_TEMPLATE" "$HYPR_DIR/hyprland.lua" 2>&1 | tee -a "$log"
-      echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}hyprland.lua${RESET:-} (from repo template)" 2>&1 | tee -a "$log"
-    elif [ -f "$LUA_ENTRY_TEMPLATE_DISABLED" ]; then
-      cp -f "$LUA_ENTRY_TEMPLATE_DISABLED" "$HYPR_DIR/hyprland.lua" 2>&1 | tee -a "$log"
-      echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}hyprland.lua${RESET:-} (from repo .disable template)" 2>&1 | tee -a "$log"
-    elif [ -f "$BACKUP_HYPR_PATH/hyprland.lua" ]; then
-      cp -f "$BACKUP_HYPR_PATH/hyprland.lua" "$HYPR_DIR/hyprland.lua" 2>&1 | tee -a "$log"
-      echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}hyprland.lua${RESET:-} (from backup)" 2>&1 | tee -a "$log"
+    if [ "$backup_mode" = "lua" ]; then
+      if [ -f "$LUA_ENTRY_TEMPLATE" ]; then
+        cp -f "$LUA_ENTRY_TEMPLATE" "$HYPR_DIR/hyprland.lua" 2>&1 | tee -a "$log"
+        echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}hyprland.lua${RESET:-} (lua mode preserved from repo template)" 2>&1 | tee -a "$log"
+      elif [ -f "$BACKUP_HYPR_PATH/hyprland.lua" ]; then
+        cp -f "$BACKUP_HYPR_PATH/hyprland.lua" "$HYPR_DIR/hyprland.lua" 2>&1 | tee -a "$log"
+        echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}hyprland.lua${RESET:-} (lua mode preserved from backup)" 2>&1 | tee -a "$log"
+      fi
+    else
+      rm -f "$HYPR_DIR/hyprland.lua" 2>/dev/null || true
+      echo "${NOTE:-[NOTE]} - Conf mode detected; skipping Lua entrypoint restore." 2>&1 | tee -a "$log"
     fi
 
     if [ "$express_mode" -eq 1 ]; then
