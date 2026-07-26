@@ -260,6 +260,7 @@
 		"class<libreoffice-writer>": " ",
 		"class<libreoffice-startcenter>": "󰏆 ",
 		"class<libreoffice-calc>": " ",
+		"class<libreoffice-impress>": "󰐩",
 		"title<.*nvim ~.*>": " ",
 		"title<.*vim.*>": " ",
 		"title<.*nvim.*>": " ",
