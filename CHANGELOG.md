@@ -4,6 +4,7 @@
 
 ## Added:
 
+- Option for event drive disable of eDP-1 on lid close
 - `kitty.conf` and `ghostty/config` are now saved to `UserConfigs` directory
   - If file is gone or can't be read it will fall back to defaults
 - `qs-hyprview` an alternative to quickshell `overview`
