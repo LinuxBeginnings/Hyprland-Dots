@@ -330,12 +330,9 @@ bind(
 -- "satellite", "staggered", "columnar", "vortex", "random"
 local qs_hyprview_layout = "smartgrid"
 bind(
-  "CTRL",
+  "ALT",
   "tab",
-  exec_cmd(
-    "$HOME/.config/hypr/scripts/toggle-qs-hyprview.sh "
-      .. qs_hyprview_layout
-  ),
+  exec_cmd("$HOME/.config/hypr/scripts/toggle-qs-hyprview.sh " .. qs_hyprview_layout),
   { description = "qs-hyprview toggle" }
 )
 local col_width_presets = { 0.25, 0.33, 0.5, 0.66, 0.75, 1.0 }
@@ -372,7 +369,11 @@ local function _monitor_width(win)
   if hl.get_active_monitor then
     local active_mon = hl.get_active_monitor()
     if type(active_mon) == "table" then
-      local w = _as_number(active_mon.width or active_mon.w or (type(active_mon.size) == "table" and (active_mon.size[1] or active_mon.size.width)))
+      local w = _as_number(
+        active_mon.width
+          or active_mon.w
+          or (type(active_mon.size) == "table" and (active_mon.size[1] or active_mon.size.width))
+      )
       if w ~= nil then
         return w
       end
@@ -561,25 +562,10 @@ bind(
 --   exec_cmd("bash $HOME/.config/hypr/scripts/ResizeActive.sh 0 50"),
 --   { description = "resize down (+50)" }
 -- )
-bind(
-  "SUPER SHIFT",
-  "left",
-  dispatch("resizeactive", "-50 0"),
-  { description = "resize left (-50)" }
-)
-bind(
-  "SUPER SHIFT",
-  "right",
-  dispatch("resizeactive", "50 0"),
-  { description = "resize right (+50)" }
-)
+bind("SUPER SHIFT", "left", dispatch("resizeactive", "-50 0"), { description = "resize left (-50)" })
+bind("SUPER SHIFT", "right", dispatch("resizeactive", "50 0"), { description = "resize right (+50)" })
 bind("SUPER SHIFT", "up", dispatch("resizeactive", "0 -50"), { description = "resize up (-50)" })
-bind(
-  "SUPER SHIFT",
-  "down",
-  dispatch("resizeactive", "0 50"),
-  { description = "resize down (+50)" }
-)
+bind("SUPER SHIFT", "down", dispatch("resizeactive", "0 50"), { description = "resize down (+50)" })
 -- Keep legacy directional move script binds commented for rollback during Lua API migration.
 -- Native movewindow dispatch below replaces LuaMoveWindowDirectional.sh usage.
 -- bind(

@@ -29,6 +29,8 @@
 
 ## Updated:
 
+- Moved `qs-hyprview` to `alt - tab`
+  - Won't conflict with `alt - tab` used in applications
 - `copy.sh` to not overwrite all configs on update
   - rofi menu, kitty/ghostty theme, waybar, wallpaper, etc.
   - Also remove restore options for kitty /ghostty
