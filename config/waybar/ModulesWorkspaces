@@ -192,6 +192,7 @@
 		"class<Chromium|Thorium|[Cc]hrome>": " ",
 		"class<brave-browser>": "🦁 ",
 		"class<brave-origin>": "🦁 ",
+		"class<brave-origin-beta>": "🦁 ",
 		"class<tor browser>": " ",
 		"class<firefox-developer-edition>": "🦊 ",
 		"class<helium>": "󰇧 ",
