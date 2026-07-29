@@ -330,7 +330,7 @@ bind(
 -- "satellite", "staggered", "columnar", "vortex", "random"
 local qs_hyprview_layout = "smartgrid"
 bind(
-  "ALT",
+  "SUPER SHIFT",
   "tab",
   exec_cmd("$HOME/.config/hypr/scripts/toggle-qs-hyprview.sh " .. qs_hyprview_layout),
   { description = "qs-hyprview toggle" }
