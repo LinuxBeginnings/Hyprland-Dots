@@ -4,6 +4,7 @@
 
 ## Added:
 
+- `docs/Keybinds.md` a layout of all the default keybinds
 - Option for event drive disable of eDP-1 on lid close
 - `kitty.conf` and `ghostty/config` are now saved to `UserConfigs` directory
   - If file is gone or can't be read it will fall back to defaults
@@ -21,6 +22,7 @@
 
 ## Fixed:
 
+- Duplicate keybinds
 - `copy.sh` was ovewritting sddm background and wallpaper
   - Also removed prompt for `Hypridle` restore
 - Background image in rofi didn't get updated in LUA workflow

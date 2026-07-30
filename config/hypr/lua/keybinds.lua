@@ -142,7 +142,7 @@ local app_binds = {
   { "CTRL ALT", "W", "$HOME/.config/hypr/scripts/WallpaperRandom.sh", "random wallpaper" },
   { "SUPER SHIFT", "K", "$HOME/.config/hypr/scripts/KeyBinds.sh", "search keybinds" },
   { "SUPER SHIFT", "A", "$HOME/.config/hypr/scripts/Animations.sh", "animations menu" },
-  { "SUPER SHIFT", "R", "$HOME/.config/hypr/scripts/ZshChangeTheme.sh", "change oh-my-zsh theme" },
+  { "SUPER SHIFT", "O", "$HOME/.config/hypr/scripts/ZshChangeTheme.sh", "change oh-my-zsh theme" },
   { "SUPER ALT", "C", "$HOME/.config/hypr/UserScripts/RofiCalc.sh", "calculator" },
 }
 for _, app in ipairs(app_binds) do
@@ -316,7 +316,7 @@ bind(
   exec_cmd("hyprctl keyword scrolling:direction right"),
   { description = "Horizonal scroll right" }
 )
-bind("SUPER ALT", "V", exec_cmd("hyprctl keyword scrolling:direction down"), { description = "Vertical Scroll down" })
+bind("SUPER CTRL", "V", exec_cmd("hyprctl keyword scrolling:direction down"), { description = "Vertical Scroll down" })
 bind(
   "SUPER ALT",
   "S",
@@ -609,8 +609,7 @@ bind("SUPER", "G", dispatch("togglegroup", ""), { description = "toggle group" }
 bind("SUPER", "Tab", dispatch("changegroupactive", "f"), { description = "Change Group Forward" })
 bind("SUPER CTRL", "tab", dispatch("changegroupactive", ""), { description = "change active in group" })
 bind("SUPER SHIFT", "Tab", dispatch("changegroupactive", "b"), { description = "Change Group Back" })
-bind("SUPER CTRL", "K", dispatch("moveintogroup", "l"), { description = "Move left into group" })
-bind("SUPER CTRL", "L", dispatch("moveintogroup", "r"), { description = "Move Right into group" })
+bind("SUPER CTRL", "J", dispatch("moveintogroup", "l"), { description = "Move left into group" })
 bind("SUPER CTRL", "H", dispatch("moveoutofgroup", ""), { description = "Move active out of group" })
 bind(
   "SUPER",
