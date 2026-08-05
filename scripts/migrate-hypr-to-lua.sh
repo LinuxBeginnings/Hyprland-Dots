@@ -1112,6 +1112,46 @@ def emit_rule(rule_type, rule):
     lines.append("})")
     return "\n".join(lines)
 
+def normalize_bind_mods(mods):
+    """Uppercase known modifiers for Hyprland Lua key chords.
+
+    Hyprlang accepts mixed-case modifiers (e.g. "shift"), but hl.bind keysyms
+    require canonical names like SHIFT/CTRL/ALT/SUPER.
+    """
+    if not mods:
+        return ""
+    tokens = re.split(r"\s+", mods.strip())
+    known = {
+        "super": "SUPER",
+        "super_l": "SUPER_L",
+        "super_r": "SUPER_R",
+        "shift": "SHIFT",
+        "shift_l": "SHIFT_L",
+        "shift_r": "SHIFT_R",
+        "ctrl": "CTRL",
+        "control": "CTRL",
+        "ctrl_l": "CTRL_L",
+        "ctrl_r": "CTRL_R",
+        "control_l": "CTRL_L",
+        "control_r": "CTRL_R",
+        "alt": "ALT",
+        "alt_l": "ALT_L",
+        "alt_r": "ALT_R",
+        "meta": "META",
+        "meta_l": "META_L",
+        "meta_r": "META_R",
+        "mod2": "MOD2",
+        "mod3": "MOD3",
+        "mod5": "MOD5",
+    }
+    normalized = []
+    for token in tokens:
+        if not token:
+            continue
+        key = token.lower()
+        normalized.append(known.get(key, token))
+    return " ".join(normalized)
+
 def parse_keybinds(path, *, variables=None, visited=None):
     if not path.exists():
         return []
@@ -1164,7 +1204,8 @@ def parse_keybinds(path, *, variables=None, visited=None):
         if unbind:
             parts = [expand(part.strip()) for part in unbind.group(1).split(",")]
             if len(parts) >= 2:
-                converted.append(f"unbind({lua_string(parts[0])}, {lua_string(parts[1])})")
+                mods = normalize_bind_mods(parts[0])
+                converted.append(f"unbind({lua_string(mods)}, {lua_string(parts[1])})")
             continue
 
         bind = re.match(r"^(bind[a-z]*)\s*=\s*(.+)$", line)
@@ -1184,6 +1225,8 @@ def parse_keybinds(path, *, variables=None, visited=None):
                 args = ", ".join(part for part in parts[3:] if part)
             else:
                 continue
+
+            mods = normalize_bind_mods(mods)
 
             opts = []
             if description:
@@ -1444,8 +1487,43 @@ system_keybind_lines = [
     "  return (value or \"\"):gsub(\"^%s+\", \"\"):gsub(\"%s+$\", \"\")",
     "end",
     "",
+    "local function normalize_mods(mods)",
+    "  mods = trim(mods)",
+    "  if mods == \"\" then",
+    "    return \"\"",
+    "  end",
+    "  local known = {",
+    "    super = \"SUPER\",",
+    "    super_l = \"SUPER_L\",",
+    "    super_r = \"SUPER_R\",",
+    "    shift = \"SHIFT\",",
+    "    shift_l = \"SHIFT_L\",",
+    "    shift_r = \"SHIFT_R\",",
+    "    ctrl = \"CTRL\",",
+    "    control = \"CTRL\",",
+    "    ctrl_l = \"CTRL_L\",",
+    "    ctrl_r = \"CTRL_R\",",
+    "    control_l = \"CTRL_L\",",
+    "    control_r = \"CTRL_R\",",
+    "    alt = \"ALT\",",
+    "    alt_l = \"ALT_L\",",
+    "    alt_r = \"ALT_R\",",
+    "    meta = \"META\",",
+    "    meta_l = \"META_L\",",
+    "    meta_r = \"META_R\",",
+    "    mod2 = \"MOD2\",",
+    "    mod3 = \"MOD3\",",
+    "    mod5 = \"MOD5\",",
+    "  }",
+    "  local parts = {}",
+    "  for token in mods:gmatch(\"%S+\") do",
+    "    parts[#parts + 1] = known[token:lower()] or token",
+    "  end",
+    "  return table.concat(parts, \" \")",
+    "end",
+    "",
     "local function chord(mods, key)",
-    "  mods = trim(mods):gsub(\"%s+\", \" + \")",
+    "  mods = normalize_mods(mods):gsub(\"%s+\", \" + \")",
     "  key = trim(key)",
     "  if mods == \"\" then",
     "    return key",
@@ -1487,7 +1565,7 @@ system_keybind_lines = [
     "    [\"code:18\"] = \"9\",",
     "    [\"code:19\"] = \"0\",",
     "  }",
-    "  if mods:match(\"SHIFT\") and shifted_number_keys[key] then",
+    "  if mods:upper():match(\"SHIFT\") and shifted_number_keys[key] then",
     "    local number_key = number_keys[key]",
     "    if number_key then",
     "      return { shifted_number_keys[key], number_key }",

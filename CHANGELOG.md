@@ -22,7 +22,9 @@
 
 ## Fixed:
 
-- Duplicate keybinds
+- Fixed lua migrate script to force uppercase `SHIFT`
+  - LUA API doesn't allow `shift`
+- Duplicate keybinds:wq
 - `copy.sh` was ovewritting sddm background and wallpaper
   - Also removed prompt for `Hypridle` restore
 - Background image in rofi didn't get updated in LUA workflow

@@ -225,8 +225,43 @@ local function dispatch(name, args)
   return raw_dispatch_cmd(name)
 end
 
+local function normalize_mods(mods)
+  mods = trim(mods)
+  if mods == "" then
+    return ""
+  end
+  local known = {
+    super = "SUPER",
+    super_l = "SUPER_L",
+    super_r = "SUPER_R",
+    shift = "SHIFT",
+    shift_l = "SHIFT_L",
+    shift_r = "SHIFT_R",
+    ctrl = "CTRL",
+    control = "CTRL",
+    ctrl_l = "CTRL_L",
+    ctrl_r = "CTRL_R",
+    control_l = "CTRL_L",
+    control_r = "CTRL_R",
+    alt = "ALT",
+    alt_l = "ALT_L",
+    alt_r = "ALT_R",
+    meta = "META",
+    meta_l = "META_L",
+    meta_r = "META_R",
+    mod2 = "MOD2",
+    mod3 = "MOD3",
+    mod5 = "MOD5",
+  }
+  local parts = {}
+  for token in mods:gmatch("%S+") do
+    parts[#parts + 1] = known[token:lower()] or token
+  end
+  return table.concat(parts, " ")
+end
+
 local function chord(mods, key)
-  mods = trim(mods):gsub("%s+", " + ")
+  mods = normalize_mods(mods):gsub("%s+", " + ")
   key = trim(key)
   key = key:gsub("^xf86", "XF86")
   local key_aliases = {
@@ -261,7 +296,7 @@ local function chord(mods, key)
     ["code:18"] = "9",
     ["code:19"] = "0",
   }
-  if mods:match("SHIFT") and shifted_number_keys[key] then
+  if mods:upper():match("SHIFT") and shifted_number_keys[key] then
     key = shifted_number_keys[key]
   else
     key = number_keys[key] or key
@@ -278,7 +313,7 @@ local function bind(mods, key, fn, opts)
   else
     hl.bind(chord(mods, key), fn)
   end
-  if mods:match("SHIFT") then
+  if mods:upper():match("SHIFT") then
     local number_key = ({
       ["code:10"] = "1",
       ["code:11"] = "2",
