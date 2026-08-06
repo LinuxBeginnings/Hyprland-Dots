@@ -79,6 +79,8 @@ actcheckbox=black,cyan
 '
 fi
 MIN_EXPRESS_VERSION="2.3.18"
+# Hyprland Lua config requires Hyprland 0.55+.
+MIN_LUA_HYPRLAND_VERSION="0.55"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$SCRIPT_DIR"
 export DOTFILES_DIR
@@ -250,6 +252,51 @@ cd "$SCRIPT_DIR" || {
 
 version_gte() {
   [ "$1" = "$(echo -e "$1\n$2" | sort -V | tail -n1)" ]
+}
+
+# Parse installed Hyprland version (e.g. 0.55.4) from hyprctl/Hyprland.
+get_hyprland_version() {
+  local ver=""
+  local raw=""
+
+  if command -v hyprctl >/dev/null 2>&1; then
+    raw="$(hyprctl version 2>/dev/null | head -n1 || true)"
+  fi
+  if [ -z "$raw" ] && command -v Hyprland >/dev/null 2>&1; then
+    raw="$(Hyprland --version 2>/dev/null | head -n1 || true)"
+  fi
+  if [ -z "$raw" ] && command -v hyprland >/dev/null 2>&1; then
+    raw="$(hyprland --version 2>/dev/null | head -n1 || true)"
+  fi
+
+  # Prefer Tag: vX.Y.Z when present in full output
+  if command -v hyprctl >/dev/null 2>&1; then
+    ver="$(hyprctl version 2>/dev/null | sed -n 's/^Tag: v\([0-9][0-9.]*\).*/\1/p' | head -n1 || true)"
+  fi
+  if [ -z "$ver" ] && [ -n "$raw" ]; then
+    ver="$(printf '%s\n' "$raw" | sed -n 's/.*[Hh]yprland[[:space:]]\+v\?\([0-9][0-9.]*\).*/\1/p' | head -n1)"
+  fi
+
+  printf '%s' "$ver"
+}
+
+hyprland_supports_lua() {
+  local ver
+  ver="$(get_hyprland_version)"
+  if [ -z "$ver" ]; then
+    return 1
+  fi
+  version_gte "$ver" "$MIN_LUA_HYPRLAND_VERSION"
+}
+
+warn_hyprland_too_low_for_lua() {
+  local log="${1:-/dev/null}"
+  local ver
+  ver="$(get_hyprland_version)"
+  if [ -z "$ver" ]; then
+    ver="unknown"
+  fi
+  echo "${WARN} Hyprland Version ${ver} is too low. Installing Hyprlang config, upgrade Hyprland and re-run copy.sh" 2>&1 | tee -a "$log"
 }
 
 get_installed_dotfiles_version() {
@@ -613,8 +660,15 @@ printf "\n%.0s" {1..1}
 prompt_express_upgrade "$EXPRESS_SUPPORTED" "$LOG"
 
 # Upgrade/express: confirm Hyprlang -> Lua migration (default yes).
+# Lua requires Hyprland 0.55+; otherwise stay on Hyprlang.
 if [ "$RUN_MODE" = "upgrade" ] || [ "$RUN_MODE" = "express" ]; then
-  prompt_lua_migration "$LOG"
+  if hyprland_supports_lua; then
+    prompt_lua_migration "$LOG"
+  else
+    MIGRATE_HYPR_TO_LUA=0
+    export MIGRATE_HYPR_TO_LUA
+    warn_hyprland_too_low_for_lua "$LOG"
+  fi
 fi
 
 set -e
@@ -637,9 +691,14 @@ printf "${INFO} - Copying dotfiles ${SKY_BLUE}second${RESET} part\n"
 copy_phase2 "$LOG"
 preserve_custom_sddm_configs "$LOG"
 ensure_lua_keybinds "$LOG"
-# Fresh copy defaults to Lua config (Hyprland next release is Lua-only).
+# Fresh copy defaults to Lua config when Hyprland is 0.55+.
+# Older Hyprland keeps Hyprlang (.conf) entrypoint.
 if [ "$RUN_MODE" = "install" ]; then
-  enable_fresh_install_lua_config "$LOG"
+  if hyprland_supports_lua; then
+    enable_fresh_install_lua_config "$LOG"
+  else
+    warn_hyprland_too_low_for_lua "$LOG"
+  fi
 fi
 printf "\\n%.0s" {1..1}
 # waybar-weather config handling:

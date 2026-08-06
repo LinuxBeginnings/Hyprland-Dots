@@ -114,7 +114,6 @@ Source: `config/hypr/configs/Keybinds.conf`
 - `SUPER + G` — Toggle group
 - `SUPER + Tab` — Group forward
 - `SUPER + SHIFT + Tab` — Group back
-- `SUPER + CTRL + Tab` — Change active in group
 - `SUPER + CTRL + J` — Move into group (left)
 - `SUPER + CTRL + L` — Move into group (right)
 - `SUPER + CTRL + H` — Move out of group
@@ -143,7 +142,7 @@ Source: `config/hypr/configs/Keybinds.conf`
 - `SUPER + CTRL + F9/F10/F11/F12` — Move current workspace to monitor left/right/up/down
 
 ## Overview / Alt-Tab
-- `SUPER + SHIFT + Tab` — Toggle qs-hyprview
+- `SUPER + CTRL + Tab` — Hyprview Toggle
 - `ALT + Tab` — Cycle next + bring active to top (intentional pair)
 
 ## Screenshots

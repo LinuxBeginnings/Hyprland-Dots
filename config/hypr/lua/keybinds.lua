@@ -325,16 +325,10 @@ bind(
   ),
   { description = "toggle scrolling V/H" }
 )
--- Section: qs-hyprview expose controls
+-- Section: Hyprview expose controls
 -- "smartgrid", "justified", "masonry", "bands", "hero", "spiral"
 -- "satellite", "staggered", "columnar", "vortex", "random"
-local qs_hyprview_layout = "smartgrid"
-bind(
-  "SUPER SHIFT",
-  "tab",
-  exec_cmd("$HOME/.config/hypr/scripts/toggle-qs-hyprview.sh " .. qs_hyprview_layout),
-  { description = "qs-hyprview toggle" }
-)
+-- Bound later (after SUPER SHIFT/CTRL tab workspace/group binds) so the combo is not overwritten.
 local col_width_presets = { 0.25, 0.33, 0.5, 0.66, 0.75, 1.0 }
 local function _as_number(v)
   if type(v) == "number" then
@@ -607,7 +601,6 @@ bind(
 )
 bind("SUPER", "G", dispatch("togglegroup", ""), { description = "toggle group" })
 bind("SUPER", "Tab", dispatch("changegroupactive", "f"), { description = "Change Group Forward" })
-bind("SUPER CTRL", "tab", dispatch("changegroupactive", ""), { description = "change active in group" })
 bind("SUPER SHIFT", "Tab", dispatch("changegroupactive", "b"), { description = "Change Group Back" })
 bind("SUPER CTRL", "J", dispatch("moveintogroup", "l"), { description = "Move left into group" })
 bind("SUPER CTRL", "H", dispatch("moveoutofgroup", ""), { description = "Move active out of group" })
@@ -653,6 +646,14 @@ bind(
 -- )
 bind("SUPER", "tab", dispatch("workspace", "e+1"), { description = "next workspace" })
 bind("SUPER SHIFT", "tab", dispatch("workspace", "e-1"), { description = "previous workspace" })
+-- Hyprview: SUPER CTRL+Tab (avoids SUPER SHIFT+Tab used by previous workspace / group back)
+local qs_hyprview_layout = "smartgrid"
+bind(
+  "SUPER CTRL",
+  "tab",
+  exec_cmd("$HOME/.config/hypr/scripts/toggle-qs-hyprview.sh " .. qs_hyprview_layout),
+  { description = "Hyprview Toggle" }
+)
 bind("SUPER SHIFT", "U", dispatch("movetoworkspace", "special"), { description = "move to special workspace" })
 bind("SUPER", "U", dispatch("togglespecialworkspace", ""), { description = "toggle special workspace" })
 bind("SUPER", "code:10", dispatch("workspace", "1"), { description = "workspace 1" })
