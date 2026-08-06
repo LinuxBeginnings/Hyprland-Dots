@@ -142,6 +142,75 @@ copy_phase2() {
   install_terminal_configs "$log"
 }
 
+# Fresh install default: enable Hyprland Lua entrypoint (next release is Lua-only).
+enable_fresh_install_lua_config() {
+  local log="${1:-/dev/null}"
+  local hypr_dir
+  local src_entry
+  local base="${DOTFILES_DIR:-.}"
+  hypr_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+  src_entry="$base/config/hypr/hyprland.lua.disable"
+
+  mkdir -p "$hypr_dir"
+
+  if [ -f "$hypr_dir/hyprland.lua" ]; then
+    rm -f "$hypr_dir/hyprland.lua.disable" 2>/dev/null || true
+    echo "${OK:-[OK]} - Fresh install: Hyprland Lua entrypoint already enabled." 2>&1 | tee -a "$log"
+    return 0
+  fi
+
+  if [ -f "$hypr_dir/hyprland.lua.disable" ]; then
+    mv -f "$hypr_dir/hyprland.lua.disable" "$hypr_dir/hyprland.lua"
+    echo "${OK:-[OK]} - Fresh install: enabled default Hyprland Lua config (hyprland.lua)." 2>&1 | tee -a "$log"
+    return 0
+  fi
+
+  if [ -f "$src_entry" ]; then
+    cp -f "$src_entry" "$hypr_dir/hyprland.lua"
+    echo "${OK:-[OK]} - Fresh install: installed default Hyprland Lua entrypoint from repo template." 2>&1 | tee -a "$log"
+    return 0
+  fi
+
+  echo "${WARN:-[WARN]} - Fresh install: no hyprland.lua template found; left Hyprlang entrypoint as-is." 2>&1 | tee -a "$log"
+  return 1
+}
+
+# Run scripts/migrate-hypr-to-lua.sh after upgrade restores when approved.
+migrate_hypr_to_lua_if_needed() {
+  local log="${1:-/dev/null}"
+  local migrate_flag="${2:-${MIGRATE_HYPR_TO_LUA:-0}}"
+  local base="${DOTFILES_DIR:-.}"
+  local migrate_script="$base/scripts/migrate-hypr-to-lua.sh"
+  local hypr_dir
+  hypr_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+
+  if [ "$migrate_flag" != "1" ]; then
+    echo "${NOTE:-[NOTE]} - LUA migration skipped by user choice." 2>&1 | tee -a "$log"
+    return 0
+  fi
+
+  if [ ! -x "$migrate_script" ] && [ -f "$migrate_script" ]; then
+    chmod +x "$migrate_script" 2>/dev/null || true
+  fi
+
+  if [ ! -f "$migrate_script" ]; then
+    echo "${ERROR:-[ERROR]} - Migration script not found: $migrate_script" 2>&1 | tee -a "$log"
+    return 1
+  fi
+
+  echo "${INFO:-[INFO]} - Migrating Hyprlang configuration to LUA via migrate-hypr-to-lua.sh..." 2>&1 | tee -a "$log"
+  if "$migrate_script" --yes 2>&1 | tee -a "$log"; then
+    echo "${OK:-[OK]} - Hyprland configuration migrated to LUA." 2>&1 | tee -a "$log"
+    return 0
+  fi
+
+  echo "${ERROR:-[ERROR]} - LUA migration failed. Hyprlang config may still be active." 2>&1 | tee -a "$log"
+  if [ -f "$hypr_dir/hyprland.lua.disable" ] && [ ! -f "$hypr_dir/hyprland.lua" ]; then
+    echo "${NOTE:-[NOTE]} - Lua entrypoint remains disabled at $hypr_dir/hyprland.lua.disable" 2>&1 | tee -a "$log"
+  fi
+  return 1
+}
+
 ensure_lua_keybinds() {
   local log="$1"
   local base="${DOTFILES_DIR:-.}"

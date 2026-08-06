@@ -34,6 +34,10 @@
 
 ## Updated:
 
+- `copy.sh`
+  - Defaults to LUA on Fresh Install
+  - Upgrades and express upgrade now migrate Hyprlang to LUA
+  - It will also convert UserConfigs/\*.conf to LUA
 - Moved `qs-hyprview` to `alt - tab`
   - Won't conflict with `alt - tab` used in applications
 - `copy.sh` to not overwrite all configs on update

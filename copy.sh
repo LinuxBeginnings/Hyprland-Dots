@@ -343,6 +343,7 @@ EOF
 
 UPGRADE_MODE=0
 EXPRESS_MODE=0
+MIGRATE_HYPR_TO_LUA=0
 RUN_MODE=""
 
 while [[ $# -gt 0 ]]; do
@@ -611,6 +612,11 @@ printf "\n%.0s" {1..1}
 printf "\n%.0s" {1..1}
 prompt_express_upgrade "$EXPRESS_SUPPORTED" "$LOG"
 
+# Upgrade/express: confirm Hyprlang -> Lua migration (default yes).
+if [ "$RUN_MODE" = "upgrade" ] || [ "$RUN_MODE" = "express" ]; then
+  prompt_lua_migration "$LOG"
+fi
+
 set -e
 
 # Check if the ${XDG_CONFIG_HOME:-$HOME/.config}/ directory exists
@@ -631,6 +637,10 @@ printf "${INFO} - Copying dotfiles ${SKY_BLUE}second${RESET} part\n"
 copy_phase2 "$LOG"
 preserve_custom_sddm_configs "$LOG"
 ensure_lua_keybinds "$LOG"
+# Fresh copy defaults to Lua config (Hyprland next release is Lua-only).
+if [ "$RUN_MODE" = "install" ]; then
+  enable_fresh_install_lua_config "$LOG"
+fi
 printf "\\n%.0s" {1..1}
 # waybar-weather config handling:
 # - install (fresh copy): always overwrite and prompt for units
@@ -815,6 +825,10 @@ printf "\n%.0s" {1..1}
 
 restore_hypr_files "$LOG" "$EXPRESS_MODE"
 restore_runtime_personal_state "$LOG"
+# After restores, migrate restored Hyprlang customizations to Lua when approved.
+if [ "$RUN_MODE" = "upgrade" ] || [ "$RUN_MODE" = "express" ]; then
+  migrate_hypr_to_lua_if_needed "$LOG" "${MIGRATE_HYPR_TO_LUA:-0}" || true
+fi
 printf "\n%.0s" {1..1}
 printf "\n%.0s" {1..1}
 

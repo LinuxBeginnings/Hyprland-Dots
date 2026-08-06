@@ -218,6 +218,52 @@ apply_sddm_12h_format_sequoia() {
 }
 
 
+# Confirm Hyprlang -> Lua migration during upgrade/express workflows.
+# Sets MIGRATE_HYPR_TO_LUA=1 (default yes) or 0 when the user declines.
+prompt_lua_migration() {
+  local log="${1:-/dev/null}"
+  local hypr_dir
+  hypr_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+
+  MIGRATE_HYPR_TO_LUA=1
+
+  # Already on Lua entrypoint: still refresh/migrate overlays after upgrade copy.
+  if [ -f "$hypr_dir/hyprland.lua" ]; then
+    echo "${NOTE:-[NOTE]} Existing Hyprland Lua config detected; migration will refresh Lua overlays after upgrade." 2>&1 | tee -a "$log"
+    export MIGRATE_HYPR_TO_LUA
+    return 0
+  fi
+
+  printf "\n%.0s" {1..1}
+  echo "${WARNING:-[WARN]} Hyprland will be LUA-only in the next release.${RESET:-}"
+  echo "${NOTE:-[NOTE]} This upgrade will migrate your Hyprlang (.conf) configuration to LUA."
+  echo "${NOTE:-[NOTE]} A backup is created first; hyprland.conf remains as fallback."
+  while true; do
+    if ! read -r -p "${CAT:-[ACTION]} Configuration will be migrated to LUA. Continue? (Y/n): " lua_migrate_choice </dev/tty; then
+      echo "${WARN:-[WARN]} Unable to read input; defaulting to migrate to LUA." 2>&1 | tee -a "$log"
+      break
+    fi
+    case "$lua_migrate_choice" in
+    [Yy] | [Yy][Ee][Ss] | "")
+      MIGRATE_HYPR_TO_LUA=1
+      echo "${INFO:-[INFO]} LUA migration approved for this upgrade." 2>&1 | tee -a "$log"
+      break
+      ;;
+    [Nn] | [Nn][Oo])
+      MIGRATE_HYPR_TO_LUA=0
+      echo "${WARN:-[WARN]} Skipping LUA migration; remaining on Hyprlang (.conf) for now." 2>&1 | tee -a "$log"
+      echo "${NOTE:-[NOTE]} You can migrate later with: scripts/migrate-hypr-to-lua.sh" 2>&1 | tee -a "$log"
+      break
+      ;;
+    *)
+      echo "${WARN:-[WARN]} Please answer Y or n."
+      ;;
+    esac
+  done
+
+  export MIGRATE_HYPR_TO_LUA
+}
+
 # Express upgrade confirmation; may set EXPRESS_MODE=1.
 prompt_express_upgrade() {
   local express_supported="$1"
