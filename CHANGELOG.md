@@ -22,6 +22,7 @@
 
 ## Fixed:
 
+- Fixed `RainbowBorders` script to work with LUA config
 - Fixed lua migrate script to force uppercase `SHIFT`
   - LUA API doesn't allow `shift`
 - Duplicate keybinds:wq

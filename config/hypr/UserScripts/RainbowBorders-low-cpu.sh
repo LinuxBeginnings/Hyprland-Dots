@@ -186,13 +186,61 @@ if [[ "$RB_RESTORE" == "1" && "$RB_ONCE" != "1" ]]; then
   fi
 fi
 
+# Apply a border color value under conf or Lua Hyprland modes.
+# Prefer hyprctl keyword (legacy). On Lua parsers, fall back to hl.config via eval.
+apply_border_value() {
+  local option="$1"
+  local value="$2"
+  local out angle colors_str c lua_colors expr
+  local -a colors=()
+
+  if out="$(hyprctl keyword "$option" $value 2>&1)"; then
+    return 0
+  fi
+
+  # Parse "c1 c2 ... Ndeg" or bare colors into Lua gradient table.
+  angle="0"
+  for c in $value; do
+    if [[ "$c" =~ ^([0-9]+)deg$ ]]; then
+      angle="${BASH_REMATCH[1]}"
+    else
+      colors+=("$c")
+    fi
+  done
+  ((${#colors[@]} > 0)) || {
+    log "WARN: cannot parse border value for Lua fallback: $value (keyword: $out)"
+    return 1
+  }
+
+  lua_colors=""
+  for c in "${colors[@]}"; do
+    [[ -n "$lua_colors" ]] && lua_colors+=", "
+    lua_colors+="\"${c}\""
+  done
+
+  case "$option" in
+  general:col.active_border)
+    expr="hl.config({ general = { col = { active_border = { colors = { ${lua_colors} }, angle = ${angle} } } } })"
+    ;;
+  general:col.inactive_border)
+    expr="hl.config({ general = { col = { inactive_border = { colors = { ${lua_colors} }, angle = ${angle} } } } })"
+    ;;
+  *)
+    log "WARN: unsupported option for Lua fallback: $option (keyword: $out)"
+    return 1
+    ;;
+  esac
+
+  if out="$(hyprctl eval "$expr" 2>&1)"; then
+    return 0
+  fi
+  log "WARN: failed to apply border via eval: $out"
+  return 1
+}
+
 restore_previous() {
   if [[ "$RB_RESTORE" == "1" && -n "${PREV_VALUE:-}" ]]; then
-    if [[ "$RB_MODE" == "socat" ]]; then
-      printf 'keyword %s %s\n' "$RB_TARGET" "$PREV_VALUE" | socat - "UNIX-CONNECT:$RB_SOCK" >/dev/null 2>&1 || true
-    else
-      hyprctl keyword "$RB_TARGET" "$PREV_VALUE" >/dev/null 2>&1 || true
-    fi
+    apply_border_value "$RB_TARGET" "$PREV_VALUE" >/dev/null 2>&1 || true
   fi
 }
 
@@ -213,11 +261,9 @@ STEP=$(( RB_STEP_DEG % 360 ))
 
 write_border() {
   local a="$1"
-  if [[ "$RB_MODE" == "socat" ]]; then
-    printf 'keyword %s %s %sdeg\n' "$RB_TARGET" "$RB_COLORS" "$a" | socat - "UNIX-CONNECT:$RB_SOCK" >/dev/null 2>&1 || true
-  else
-    hyprctl keyword "$RB_TARGET" "$RB_COLORS ${a}deg" >/dev/null 2>&1 || true
-  fi
+  # Always go through apply_border_value so Lua config mode works.
+  # (socat keyword transport is rejected under non-legacy/Lua parsers.)
+  apply_border_value "$RB_TARGET" "$RB_COLORS ${a}deg" >/dev/null 2>&1 || true
 }
 
 if [[ "$RB_ONCE" == "1" ]]; then
