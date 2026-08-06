@@ -158,15 +158,90 @@ resolve_user_overlay_file() {
     resolve_mode_file "$conf_file" "$lua_file"
   fi
 }
-# Function to toggle Rainbow Borders script availability and refresh UI components
-toggle_rainbow_borders() {
-  local rainbow_script="$UserScripts/RainbowBorders.sh"
-  local disabled_sh_bak="${rainbow_script}.bak"              # RainbowBorders.sh.bak
-  local disabled_bak_sh="$UserScripts/RainbowBorders.bak.sh" # RainbowBorders.bak.sh (created by copy.sh when disabled)
-  local refresh_script="$scriptsDir/Refresh.sh"
-  local status=""
+rainbow_mode_file() {
+  printf '%s' "$UserScripts/rainbow-borders.mode"
+}
 
-  # If both disabled variants exist, keep the newer one to avoid ambiguity
+rainbow_write_mode() {
+  local mode="$1"
+  printf '%s\n' "$mode" >"$(rainbow_mode_file)"
+}
+
+rainbow_read_mode() {
+  local mode_file rainbow_script lowcpu_script lockfile
+  mode_file="$(rainbow_mode_file)"
+  rainbow_script="$UserScripts/RainbowBorders.sh"
+  lowcpu_script="$UserScripts/RainbowBorders-low-cpu.sh"
+  lockfile="${RB_LOCKFILE:-/tmp/hypr-rainbowborders.lock}"
+
+  if [[ -f "$mode_file" ]]; then
+    tr -d '[:space:]' <"$mode_file"
+    return
+  fi
+
+  # Backward-compatible detection when no mode file exists yet.
+  if [[ -f "$lockfile" ]]; then
+    local oldpid
+    oldpid="$(cat "$lockfile" 2>/dev/null || true)"
+    if [[ -n "${oldpid:-}" ]] && kill -0 "$oldpid" 2>/dev/null; then
+      printf '%s' "low_cpu"
+      return
+    fi
+  fi
+  if pgrep -f 'RainbowBorders-low-cpu\.sh' >/dev/null 2>&1; then
+    printf '%s' "low_cpu"
+    return
+  fi
+  if [[ -f "$rainbow_script" ]]; then
+    local effect
+    effect=$(grep -E '^EFFECT_TYPE=' "$rainbow_script" 2>/dev/null | sed -E 's/^EFFECT_TYPE="?([^"]*)"?/\1/' | head -n1)
+    if [[ -n "$effect" ]]; then
+      printf '%s' "$effect"
+      return
+    fi
+    printf '%s' "unknown"
+    return
+  fi
+  printf '%s' "disabled"
+}
+
+stop_lowcpu_rainbow() {
+  local lockfile="${RB_LOCKFILE:-/tmp/hypr-rainbowborders.lock}"
+  local oldpid=""
+  if [[ -f "$lockfile" ]]; then
+    oldpid="$(cat "$lockfile" 2>/dev/null || true)"
+    if [[ -n "${oldpid:-}" ]] && kill -0 "$oldpid" 2>/dev/null; then
+      kill "$oldpid" >/dev/null 2>&1 || true
+      sleep 0.1
+      kill -0 "$oldpid" 2>/dev/null && kill -9 "$oldpid" >/dev/null 2>&1 || true
+    fi
+    rm -f "$lockfile" >/dev/null 2>&1 || true
+  fi
+  pkill -f 'RainbowBorders-low-cpu\.sh' >/dev/null 2>&1 || true
+}
+
+start_lowcpu_rainbow() {
+  local lowcpu_script="$UserScripts/RainbowBorders-low-cpu.sh"
+  if [[ ! -x "$lowcpu_script" ]]; then
+    if [[ -f "$lowcpu_script" ]]; then
+      chmod +x "$lowcpu_script" >/dev/null 2>&1 || true
+    fi
+  fi
+  if [[ ! -x "$lowcpu_script" ]]; then
+    show_info "RainbowBorders-low-cpu.sh not found in $UserScripts."
+    return 1
+  fi
+  stop_lowcpu_rainbow
+  # Animated loop; keep classic one-shot script disabled so Refresh won't overwrite.
+  "$lowcpu_script" >/dev/null 2>&1 &
+  return 0
+}
+
+ensure_classic_rainbow_enabled() {
+  local rainbow_script="$UserScripts/RainbowBorders.sh"
+  local disabled_sh_bak="${rainbow_script}.bak"
+  local disabled_bak_sh="$UserScripts/RainbowBorders.bak.sh"
+
   if [[ -f "$disabled_sh_bak" && -f "$disabled_bak_sh" ]]; then
     if [[ "$disabled_sh_bak" -nt "$disabled_bak_sh" ]]; then
       rm -f "$disabled_bak_sh"
@@ -176,33 +251,87 @@ toggle_rainbow_borders() {
   fi
 
   if [[ -f "$rainbow_script" ]]; then
-    # Currently enabled -> disable to canonical .sh.bak
-    if mv "$rainbow_script" "$disabled_sh_bak"; then
-      status="disabled"
-      if command -v hyprctl &>/dev/null; then
-        hyprctl reload >/dev/null 2>&1 || true
+    return 0
+  fi
+  if [[ -f "$disabled_sh_bak" ]]; then
+    mv "$disabled_sh_bak" "$rainbow_script" || return 1
+    return 0
+  fi
+  if [[ -f "$disabled_bak_sh" ]]; then
+    mv "$disabled_bak_sh" "$rainbow_script" || return 1
+    return 0
+  fi
+  return 1
+}
+
+disable_classic_rainbow() {
+  local rainbow_script="$UserScripts/RainbowBorders.sh"
+  local disabled_sh_bak="${rainbow_script}.bak"
+  if [[ -f "$rainbow_script" ]]; then
+    mv "$rainbow_script" "$disabled_sh_bak" || return 1
+  fi
+  return 0
+}
+
+set_classic_effect_type() {
+  local rainbow_script="$UserScripts/RainbowBorders.sh"
+  local mode="$1"
+  if grep -q '^EFFECT_TYPE=' "$rainbow_script" 2>/dev/null; then
+    sed -i 's/^EFFECT_TYPE=.*/EFFECT_TYPE="'"$mode"'"/' "$rainbow_script"
+  else
+    if head -n1 "$rainbow_script" | grep -q '^#!'; then
+      sed -i '1a EFFECT_TYPE="'"$mode"'"' "$rainbow_script"
+    else
+      sed -i '1i EFFECT_TYPE="'"$mode"'"' "$rainbow_script"
+    fi
+  fi
+}
+
+# Function to toggle Rainbow Borders script availability and refresh UI components
+toggle_rainbow_borders() {
+  local rainbow_script="$UserScripts/RainbowBorders.sh"
+  local refresh_script="$scriptsDir/Refresh.sh"
+  local status=""
+  local current
+
+  current="$(rainbow_read_mode)"
+  if [[ "$current" == "disabled" ]]; then
+    # Prefer restoring classic script; if missing, start low-cpu when available.
+    if ensure_classic_rainbow_enabled; then
+      rainbow_write_mode "gradient_flow"
+      set_classic_effect_type "gradient_flow"
+      status="enabled"
+    elif [[ -x "$UserScripts/RainbowBorders-low-cpu.sh" || -f "$UserScripts/RainbowBorders-low-cpu.sh" ]]; then
+      if start_lowcpu_rainbow; then
+        rainbow_write_mode "low_cpu"
+        status="enabled (low cpu)"
+      else
+        return
       fi
-    fi
-  elif [[ -f "$disabled_sh_bak" ]]; then
-    # Disabled (.sh.bak) -> enable
-    if mv "$disabled_sh_bak" "$rainbow_script"; then
-      status="enabled"
-    fi
-  elif [[ -f "$disabled_bak_sh" ]]; then
-    # Disabled (.bak.sh) -> enable (normalize to .sh)
-    if mv "$disabled_bak_sh" "$rainbow_script"; then
-      status="enabled"
+    else
+      show_info "RainbowBorders script not found in $UserScripts (checked .sh, .sh.bak, .bak.sh, low-cpu)."
+      return
     fi
   else
-    show_info "RainbowBorders script not found in $UserScripts (checked .sh, .sh.bak, .bak.sh)."
-    return
+    stop_lowcpu_rainbow
+    disable_classic_rainbow || true
+    rainbow_write_mode "disabled"
+    status="disabled"
+    if command -v hyprctl &>/dev/null; then
+      hyprctl reload >/dev/null 2>&1 || true
+    fi
   fi
 
   # Run refresh if available, otherwise apply borders directly
   if [[ -x "$refresh_script" ]]; then
     "$refresh_script" >/dev/null 2>&1 &
-  elif [[ "$current" != "disabled" && -x "$rainbow_script" ]]; then
-    "$rainbow_script" >/dev/null 2>&1 &
+  elif [[ "$status" == enabled* ]]; then
+    current="$(rainbow_read_mode)"
+    if [[ "$current" == "low_cpu" ]]; then
+      start_lowcpu_rainbow >/dev/null 2>&1 || true
+    elif [[ -x "$rainbow_script" ]]; then
+      "$rainbow_script" >/dev/null 2>&1 &
+    fi
   fi
 
   if [[ -n "$status" ]]; then
@@ -210,19 +339,16 @@ toggle_rainbow_borders() {
   fi
 }
 
-# Submenu to choose Rainbow Borders mode (disable, wallust_random, rainbow, gradient_flow)
+# Submenu to choose Rainbow Borders mode
+# (disable, wallust_random, rainbow, gradient_flow, low_cpu)
 rainbow_borders_menu() {
   local rainbow_script="$UserScripts/RainbowBorders.sh"
-  local disabled_sh_bak="${rainbow_script}.bak"
-  local disabled_bak_sh="$UserScripts/RainbowBorders.bak.sh"
+  local lowcpu_script="$UserScripts/RainbowBorders-low-cpu.sh"
   local refresh_script="$scriptsDir/Refresh.sh"
 
   # Determine current mode/status (internal)
-  local current="disabled"
-  if [[ -f "$rainbow_script" ]]; then
-    current=$(grep -E '^EFFECT_TYPE=' "$rainbow_script" 2>/dev/null | sed -E 's/^EFFECT_TYPE="?([^"]*)"?/\1/')
-    [[ -z "$current" ]] && current="unknown"
-  fi
+  local current
+  current="$(rainbow_read_mode)"
 
   # Map internal mode to friendly display
   local current_display="$current"
@@ -230,24 +356,23 @@ rainbow_borders_menu() {
   wallust_random) current_display="Wallust Color" ;;
   rainbow) current_display="Original Rainbow" ;;
   gradient_flow) current_display="Gradient Flow" ;;
+  low_cpu) current_display="Low CPU Rainbow" ;;
   disabled) current_display="Disabled" ;;
   esac
 
   # Build options and prompt
-  local options="Disable Rainbow Borders\nWallust Color\nOriginal Rainbow\nGradient Flow"
+  local options="Disable Rainbow Borders\nWallust Color\nOriginal Rainbow\nGradient Flow\nLow CPU Rainbow"
   local choice
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
   choice=$(printf "%b" "$options" | rofi -i -dmenu -config "$rofi_theme" -mesg "Rainbow Borders: current = $current_display")
 
   [[ -z "$choice" ]] && return
 
-  local previous="$current"
-
   case "$choice" in
   "Disable Rainbow Borders")
-    if [[ -f "$rainbow_script" ]]; then
-      mv "$rainbow_script" "$disabled_sh_bak"
-    fi
+    stop_lowcpu_rainbow
+    disable_classic_rainbow || true
+    rainbow_write_mode "disabled"
     current="disabled"
     if command -v hyprctl &>/dev/null; then
       hyprctl reload >/dev/null 2>&1 || true
@@ -260,43 +385,47 @@ rainbow_borders_menu() {
     "Original Rainbow") mode="rainbow" ;;
     "Gradient Flow") mode="gradient_flow" ;;
     esac
-    # Ensure script is enabled
-    if [[ ! -f "$rainbow_script" ]]; then
-      if [[ -f "$disabled_sh_bak" ]]; then
-        mv "$disabled_sh_bak" "$rainbow_script"
-      elif [[ -f "$disabled_bak_sh" ]]; then
-        mv "$disabled_bak_sh" "$rainbow_script"
-      else
-        show_info "RainbowBorders script not found in $UserScripts."
-        return
-      fi
-    fi
 
-    # Update EFFECT_TYPE in place; insert if missing
-    if grep -q '^EFFECT_TYPE=' "$rainbow_script" 2>/dev/null; then
-      sed -i 's/^EFFECT_TYPE=.*/EFFECT_TYPE="'"$mode"'"/' "$rainbow_script"
-    else
-      if head -n1 "$rainbow_script" | grep -q '^#!'; then
-        sed -i '1a EFFECT_TYPE="'"$mode"'"' "$rainbow_script"
-      else
-        sed -i '1i EFFECT_TYPE="'"$mode"'"' "$rainbow_script"
-      fi
+    stop_lowcpu_rainbow
+    if ! ensure_classic_rainbow_enabled; then
+      show_info "RainbowBorders script not found in $UserScripts."
+      return
     fi
-    # Set current to chosen mode
+    set_classic_effect_type "$mode"
+    rainbow_write_mode "$mode"
     current="$mode"
+    ;;
+  "Low CPU Rainbow")
+    # Animated low-overhead loop from RainbowBorders-low-cpu.sh
+    if [[ ! -f "$lowcpu_script" ]]; then
+      show_info "RainbowBorders-low-cpu.sh not found in $UserScripts."
+      return
+    fi
+    # Keep classic one-shot disabled while low-cpu animation owns the border.
+    disable_classic_rainbow || true
+    if ! start_lowcpu_rainbow; then
+      return
+    fi
+    rainbow_write_mode "low_cpu"
+    current="low_cpu"
     ;;
   *)
     return
     ;;
   esac
 
-  # Run refresh if available
+  # Run refresh if available (Refresh.sh honors rainbow-borders.mode)
   if [[ -x "$refresh_script" ]]; then
     "$refresh_script" >/dev/null 2>&1 &
   fi
 
   # Apply mode immediately (in case refresh doesn't trigger it)
-  if [[ "$current" != "disabled" && -x "$rainbow_script" ]]; then
+  if [[ "$current" == "low_cpu" ]]; then
+    # already started above; ensure still running
+    if ! pgrep -f 'RainbowBorders-low-cpu\.sh' >/dev/null 2>&1; then
+      start_lowcpu_rainbow >/dev/null 2>&1 || true
+    fi
+  elif [[ "$current" != "disabled" && -x "$rainbow_script" ]]; then
     "$rainbow_script" >/dev/null 2>&1 &
   fi
 

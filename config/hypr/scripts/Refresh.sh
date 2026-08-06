@@ -84,10 +84,21 @@ swaync >/dev/null 2>&1 &
 # reload swaync
 swaync-client --reload-config
 
-# Relaunching rainbow borders if the script exists
+# Relaunching rainbow borders based on selected mode
 sleep 1
-if file_exists "${UserScripts}/RainbowBorders.sh"; then
-  ${UserScripts}/RainbowBorders.sh &
+rainbow_mode_file="${UserScripts}/rainbow-borders.mode"
+rainbow_mode=""
+if [[ -f "$rainbow_mode_file" ]]; then
+  rainbow_mode="$(tr -d '[:space:]' <"$rainbow_mode_file")"
+fi
+if [[ "$rainbow_mode" == "low_cpu" ]]; then
+  pkill -f 'RainbowBorders-low-cpu\.sh' >/dev/null 2>&1 || true
+  rm -f /tmp/hypr-rainbowborders.lock >/dev/null 2>&1 || true
+  if file_exists "${UserScripts}/RainbowBorders-low-cpu.sh"; then
+    "${UserScripts}/RainbowBorders-low-cpu.sh" >/dev/null 2>&1 &
+  fi
+elif file_exists "${UserScripts}/RainbowBorders.sh"; then
+  "${UserScripts}/RainbowBorders.sh" &
 fi
 
 exit 0

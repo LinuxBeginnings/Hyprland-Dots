@@ -194,7 +194,11 @@ apply_border_value() {
   local out angle colors_str c lua_colors expr
   local -a colors=()
 
-  if out="$(hyprctl keyword "$option" $value 2>&1)"; then
+  # Note: under Lua config mode hyprctl may exit 0 while still printing
+  # "keyword can't work with non-legacy parsers", so check output too.
+  out="$(hyprctl keyword "$option" $value 2>&1)"
+  rc=$?
+  if [[ $rc -eq 0 && "$out" != *"non-legacy parsers"* && "$out" != *"Use eval"* && "$out" != *"error"* && "$out" != *"invalid"* ]]; then
     return 0
   fi
 

@@ -50,8 +50,26 @@ function wallust_random() {
 }
 
 # ---------- RAINBOW COLORS ----------
+# Fixed spectrum so "Original Rainbow" is visibly multi-hue (not random pastels).
+RAINBOW_PALETTE=(
+  "0xffff0000" "0xffff8000" "0xffffff00" "0xff80ff00" "0xff00ff00"
+  "0xff00ff80" "0xff00ffff" "0xff0080ff" "0xff0000ff" "0xff8000ff"
+)
 function random_hex() {
+  # Keep name for compatibility; prefer palette entry by index when available.
+  if ((${#RAINBOW_PALETTE[@]} > 0)); then
+    echo "${RAINBOW_PALETTE[RANDOM % ${#RAINBOW_PALETTE[@]}]}"
+    return
+  fi
   echo "0xff$(openssl rand -hex 3)"
+}
+function rainbow_color() {
+  local idx="${1:-0}"
+  if ((${#RAINBOW_PALETTE[@]} > 0)); then
+    echo "${RAINBOW_PALETTE[idx % ${#RAINBOW_PALETTE[@]}]}"
+    return
+  fi
+  random_hex
 }
 
 # ---------- FLOW MODE ----------
@@ -89,6 +107,8 @@ function get_color() {
     wallust_random
   elif [[ "$EFFECT_TYPE" == "gradient_flow" && ${#WALLUST_COLORS[@]} -ge 16 ]]; then
     gradient_flow_color "$1"
+  elif [[ "$EFFECT_TYPE" == "rainbow" ]]; then
+    rainbow_color "$1"
   else
     random_hex
   fi
@@ -113,8 +133,12 @@ set_gradient_border() {
 
   ((${#colors[@]} > 0)) || return 1
 
-  # Legacy conf mode
-  if out="$(hyprctl keyword "$option" "${colors[@]}" "${angle}deg" 2>&1)"; then
+  # Legacy conf mode.
+  # Note: under Lua config mode hyprctl may exit 0 while still printing
+  # "keyword can't work with non-legacy parsers", so check output too.
+  out="$(hyprctl keyword "$option" "${colors[@]}" "${angle}deg" 2>&1)"
+  rc=$?
+  if [[ $rc -eq 0 && "$out" != *"non-legacy parsers"* && "$out" != *"Use eval"* && "$out" != *"error"* && "$out" != *"invalid"* ]]; then
     return 0
   fi
 
