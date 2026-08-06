@@ -22,6 +22,8 @@
 
 ## Fixed:
 
+- Fixed `Spring-Curves.lua`
+  - Hyprland v0.56+ changed springs timing
 - Fixed `RainbowBorders` script to work with LUA config
 - Fixed lua migrate script to force uppercase `SHIFT`
   - LUA API doesn't allow `shift`
