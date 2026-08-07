@@ -40,6 +40,7 @@ apply_saved_mode=0
 notify_enabled=1
 preserve_wallpaper=0
 forced_mode=""
+no_restart=0
 
 ensure_managed_kitty_conf() {
     if [[ -f "$user_kitty_conf" && -r "$user_kitty_conf" ]]; then
@@ -92,14 +93,18 @@ while [ $# -gt 0 ]; do
         --preserve-wallpaper)
             preserve_wallpaper=1
             ;;
+        --no-restart)
+            no_restart=1
+            ;;
         --help)
             cat <<'EOF'
-Usage: DarkLight.sh [--apply-current] [--mode Dark|Light] [--no-notify] [--preserve-wallpaper]
+Usage: DarkLight.sh [--apply-current] [--mode Dark|Light] [--no-notify] [--preserve-wallpaper] [--no-restart]
   (no args)            Toggle between Dark and Light and persist selection
   --apply-current      Re-apply saved mode (defaults to Dark when unset)
   --mode <mode>        Force target mode to Dark or Light
   --no-notify          Suppress notifications
   --preserve-wallpaper Keep current wallpaper instead of choosing random Dynamic-Wallpapers image
+  --no-restart         Apply theme settings only; skip killing processes and running Refresh.sh
 EOF
             exit 0
             ;;
@@ -107,10 +112,13 @@ EOF
     shift
 done
 
-# intial kill process
-for pid in waybar rofi swaync ags swaybg; do
-    killall -SIGUSR1 "$pid"
-done
+# Signal running processes to prepare for theme change.
+# Skip hiding waybar on startup (--no-restart) so it stays visible while colors regenerate.
+if [ "$no_restart" -eq 0 ]; then
+    for pid in waybar rofi swaync ags swaybg; do
+        killall -SIGUSR1 "$pid"
+    done
+fi
 
 
 # Initialize wallpaper daemon if needed
@@ -342,19 +350,24 @@ set_custom_gtk_theme "$next_mode"
 update_theme_mode
 
 
-${SCRIPTSDIR}/WallustSwww.sh &&
+${SCRIPTSDIR}/WallustSwww.sh
 
-sleep 2
-# kill process
-for pid1 in waybar rofi swaync ags swaybg; do
-    killall "$pid1"
-done
+if [ "$no_restart" -eq 0 ]; then
+    sleep 2
+    # kill process
+    for pid1 in waybar rofi swaync ags swaybg; do
+        killall "$pid1"
+    done
+    sleep 1
+    ${SCRIPTSDIR}/Refresh.sh
+    sleep 0.5
+else
+    # Reload waybar in-place so it picks up the newly generated wallust colors.
+    # SIGUSR2 = reload config/CSS without restarting the process.
+    systemctl --user reload waybar.service 2>/dev/null || killall -SIGUSR2 waybar 2>/dev/null || true
+fi
 
-sleep 1
-${SCRIPTSDIR}/Refresh.sh 
-
-sleep 0.5
-# Display notifications for theme and icon changes 
+# Display notifications for theme and icon changes
 [ "$notify_enabled" -eq 1 ] && notify-send -u low -i "$notif" " Themes switched to:" " $next_mode Mode"
 
 exit 0
