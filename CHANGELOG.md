@@ -31,6 +31,8 @@
 
 ## Fixed:
 
+- Updated startup sequence, wallpaper, theme scripts to remove waybar startup delays
+- Default LUA startup file updated to match Hyprlang changes made for waybar
 - LUA migration script properly edits `~/.config/hypr/UserConfigs/monitors.lua`
 - LUA migration script failed to translate disabled monitors to LUA format 
   - I.e. for `eDP-1` laptop screens
@@ -39,7 +41,7 @@
 - Fixed `RainbowBorders` script to work with LUA config
 - Fixed lua migrate script to force uppercase `SHIFT`
   - LUA API doesn't allow `shift`
-- Duplicate keybinds:wq
+- Duplicate keybinds
 - `copy.sh` was ovewritting sddm background and wallpaper
   - Also removed prompt for `Hypridle` restore
 - Background image in rofi didn't get updated in LUA workflow
