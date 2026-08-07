@@ -47,6 +47,7 @@
 
 ## Updated:
 
+- Shortened `waybar` startup time
 - `copy.sh`
   - Defaults to LUA on Fresh Install
   - Upgrades and express upgrade now migrate Hyprlang to LUA

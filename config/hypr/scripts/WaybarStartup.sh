@@ -16,7 +16,7 @@ is_waybar_running() {
     pgrep -x "waybar" >/dev/null 2>&1 || pgrep -x '\.waybar-wrapped' >/dev/null 2>&1
 }
 wait_for_waybar() {
-    for _ in $(seq 1 30); do
+    for _ in $(seq 1 80); do
         is_waybar_running && return 0
         sleep 0.1
     done
@@ -115,11 +115,9 @@ start_waybar_via_systemd() {
 }
 
 main() {
-    # Allow key startup services to settle before launching Waybar.
-    sleep 1
     wait_for_wayland || true
     sync_portal_env
-    start_portal_services || true
+    # Portal services are already started by PortalHyprland.sh; no need to wait here.
     ensure_wallust_waybar_colors || true
 
     is_waybar_running && exit 0
