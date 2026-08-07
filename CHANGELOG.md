@@ -4,6 +4,15 @@
 
 ## Added:
 
+- Selecting `zsh` now updates `.zprofile`
+
+  ```sh 
+    if [ -f /etc/profile ]; then
+       source /etc/profile
+    fi
+  ```
+  - This should help resolve flatpak apps not showing in rofi menu 
+  - Thanks to `@jfabernathy` for finding it 
 - `docs/Keybinds.md` a layout of all the default keybinds
 - Option for event drive disable of eDP-1 on lid close
 - `kitty.conf` and `ghostty/config` are now saved to `UserConfigs` directory

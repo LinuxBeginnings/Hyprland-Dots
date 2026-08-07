@@ -142,6 +142,46 @@ adjust_qt_quick_controls_style() {
   fi
 }
 
+# Ensure ~/.zprofile (zsh) and ~/.profile (bash) source /etc/profile.
+# On Debian with zsh, /etc/profile sets up flatpak XDG data dirs so flatpak
+# apps appear in the rofi menu. Without this entry the rofi app menu is often
+# missing all flatpak-installed applications.
+ensure_shell_profile_sources_etc_profile() {
+  local log="${1:-/dev/null}"
+  local user_shell
+  local entry_marker='source /etc/profile'
+  local entry
+  entry="$(printf 'if [ -f /etc/profile ]; then\n    source /etc/profile\nfi')"
+
+  user_shell="$(basename "${SHELL:-bash}")"
+
+  _add_etc_profile_entry() {
+    local profile_file="$1"
+    local plog="$2"
+    if [ ! -f "$profile_file" ]; then
+      echo "${NOTE:-[NOTE]} Creating $profile_file and adding /etc/profile source entry (fixes flatpak in rofi on Debian)" 2>&1 | tee -a "$plog"
+      printf '\n# Source /etc/profile to ensure system paths (e.g. flatpak) are available\n%s\n' "$entry" > "$profile_file"
+    elif ! grep -qF "$entry_marker" "$profile_file"; then
+      echo "${NOTE:-[NOTE]} Adding /etc/profile source entry to $profile_file (fixes flatpak in rofi on Debian)" 2>&1 | tee -a "$plog"
+      printf '\n# Source /etc/profile to ensure system paths (e.g. flatpak) are available\n%s\n' "$entry" >> "$profile_file"
+    else
+      echo "${INFO:-[INFO]} $profile_file already sources /etc/profile; no changes needed." 2>&1 | tee -a "$plog"
+    fi
+  }
+
+  # zsh: check ~/.zprofile when the user's shell is zsh
+  if [ "$user_shell" = "zsh" ]; then
+    echo "${INFO:-[INFO]} zsh detected - checking ~/.zprofile for /etc/profile source entry..." 2>&1 | tee -a "$log"
+    _add_etc_profile_entry "$HOME/.zprofile" "$log"
+  fi
+
+  # bash: check ~/.profile when bash is the default shell and the file already exists
+  if [ "$user_shell" = "bash" ] && [ -f "$HOME/.profile" ]; then
+    echo "${INFO:-[INFO]} bash detected - checking ~/.profile for /etc/profile source entry..." 2>&1 | tee -a "$log"
+    _add_etc_profile_entry "$HOME/.profile" "$log"
+  fi
+}
+
 # Decide waybar config/style based on chassis type. Echoes chosen config path.
 detect_waybar_config() {
   if hostnamectl | grep -q 'Chassis: desktop'; then

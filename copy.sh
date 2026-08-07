@@ -1082,6 +1082,9 @@ if is_nixos && ! command -v waybar-weather >/dev/null 2>&1; then
   echo "Install the current NixOS-Hyprland version to install waybar-weather applet for Waybar" 2>&1 | tee -a "$LOG"
 fi
 
+# Ensure shell profile sources /etc/profile (fixes flatpak not showing in rofi on Debian)
+ensure_shell_profile_sources_etc_profile "$LOG"
+
 printf "\n%.0s" {1..2}
 printf "${OK} GREAT! KooL's Hyprland-Dots is now Loaded & Ready !!! "
 printf "\n%.0s" {1..1}
