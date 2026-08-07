@@ -530,6 +530,8 @@ def parse_startup(path, *, variables=None, visited=None):
     return entries
 
 MONITOR_DIRECTIVE_KEYS = {
+    "disable",
+    "disabled",
     "mirror",
     "bitdepth",
     "transform",
@@ -559,6 +561,7 @@ MONITOR_DIRECTIVE_KEYS = {
 }
 
 MONITOR_FIELD_MAP = {
+    "disable": "disabled",
     "addreserved": "reserved",
     "supportswidecolor": "supports_wide_color",
     "supportshdr": "supports_hdr",
@@ -591,7 +594,7 @@ def parse_monitors(path):
         mode_or_directive = parts[1].lower().replace("-", "_")
         extras = []
 
-        if mode_or_directive == "disable":
+        if mode_or_directive in {"disable", "disabled"}:
             spec["mode"] = "disable"
             entries.append(spec)
             continue
@@ -622,6 +625,15 @@ def parse_monitors(path):
                     extras[i + 4].strip(),
                 ]
                 i += 5
+                continue
+            if field == "disabled":
+                if i + 1 >= len(extras):
+                    spec["disabled"] = "true"
+                    i += 1
+                    continue
+                value = extras[i + 1].strip()
+                spec["disabled"] = value if value else "true"
+                i += 2
                 continue
 
             if i + 1 >= len(extras):
@@ -709,6 +721,14 @@ def emit_monitor(spec):
         "hl.monitor({",
         f"    output = {lua_string(spec.get('output', ''))},",
     ]
+
+    mode_value = str(spec.get("mode", "")).strip().lower()
+    disabled_value = str(spec.get("disabled", "")).strip().lower()
+    disabled_truthy = {"1", "true", "yes", "on", "disable", "disabled"}
+    if mode_value in {"disable", "disabled"} or disabled_value in disabled_truthy:
+        lines.append("    mode = \"disable\",")
+        lines.append("})")
+        return "\n".join(lines)
 
     if "mode" in spec:
         lines.append(f"    mode = {lua_string(spec['mode'])},")

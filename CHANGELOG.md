@@ -22,6 +22,8 @@
 
 ## Fixed:
 
+- Lua migration script failed to translate disabled monitors to LUA format 
+  - I.e. for `eDP-1` laptop screens
 - Fixed `Spring-Curves.lua`
   - Hyprland v0.56+ changed springs timing
 - Fixed `RainbowBorders` script to work with LUA config
