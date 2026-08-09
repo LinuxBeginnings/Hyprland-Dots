@@ -31,6 +31,10 @@
 
 ## Fixed:
 
+- waybar startup delayed in Fedora when not using `hyprland-uwsm` session 
+  - Found several issues with Fedora b/c of `waybar.service` with Fedora 
+  - Redid the startup sequences 
+  - Added gated check for `ags` as that was causing errors when not installed
 - Updated startup sequence, wallpaper, theme scripts to remove waybar startup delays
 - Default LUA startup file updated to match Hyprlang changes made for waybar
 - LUA migration script properly edits `~/.config/hypr/UserConfigs/monitors.lua`

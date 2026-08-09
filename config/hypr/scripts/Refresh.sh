@@ -33,7 +33,10 @@ pkill -f 'waybar-cava\..*\.conf' 2>/dev/null || true
 
 
 # quit ags & relaunch ags
-ags -q && ags &
+if command -v ags >/dev/null 2>&1; then
+  ags -q >/dev/null 2>&1 || true
+  ags >/dev/null 2>&1 &
+fi
 
 # quit quickshell & relaunch quickshell
 pkill qs && qs --log-rules "$QS_TEXTINPUT_LOG_RULE" &
@@ -49,8 +52,10 @@ restart_waybar() {
   local manage_with_systemd=0
 
   if command -v systemctl >/dev/null 2>&1; then
-    if systemctl --user --quiet is-active waybar.service 2>/dev/null || systemctl --user --quiet is-enabled waybar.service 2>/dev/null; then
-      manage_with_systemd=1
+    if systemctl --user --quiet is-active graphical-session.target 2>/dev/null || systemctl --user --quiet is-active wayland-session@*.target 2>/dev/null; then
+      if systemctl --user --quiet is-active waybar.service 2>/dev/null || systemctl --user --quiet is-enabled waybar.service 2>/dev/null; then
+        manage_with_systemd=1
+      fi
     fi
   fi
 
@@ -80,9 +85,11 @@ restart_waybar
 
 # relaunch swaync
 sleep 0.3
-swaync >/dev/null 2>&1 &
-# reload swaync
-swaync-client --reload-config
+if ! pidof swaync >/dev/null 2>&1; then
+  swaync >/dev/null 2>&1 &
+fi
+# reload swaync (asynchronous to prevent DBus timeout delays)
+(swaync-client --reload-config >/dev/null 2>&1 &)
 
 # Relaunching rainbow borders based on selected mode
 sleep 1

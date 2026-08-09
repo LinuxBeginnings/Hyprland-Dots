@@ -62,17 +62,11 @@ start_portal_services() {
 }
 
 wait_for_wayland() {
-    # If WAYLAND_DISPLAY is already valid, use it.
     if [ -n "${WAYLAND_DISPLAY:-}" ] && [ -S "$runtime_dir/$WAYLAND_DISPLAY" ]; then
         return 0
     fi
 
-    # Otherwise wait briefly for an available Wayland socket.
-    for _ in $(seq 1 120); do
-        if [ -n "${WAYLAND_DISPLAY:-}" ] && [ -S "$runtime_dir/$WAYLAND_DISPLAY" ]; then
-            return 0
-        fi
-
+    for _ in $(seq 1 30); do
         for socket in "$runtime_dir"/wayland-[0-9]*; do
             [ -S "$socket" ] || continue
             case "$(basename "$socket")" in
@@ -87,48 +81,41 @@ wait_for_wayland() {
     return 1
 }
 
+ensure_wallust_waybar_colors() {
+    local colors_file="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
+    mkdir -p "$(dirname "$colors_file")" 2>/dev/null || true
+    if [ ! -f "$colors_file" ]; then
+        touch "$colors_file" 2>/dev/null || true
+    fi
+    if [ ! -s "$colors_file" ] && [ -x "$SCRIPTSDIR/WallustSwww.sh" ]; then
+        "$SCRIPTSDIR/WallustSwww.sh" >/dev/null 2>&1 &
+    fi
+}
+
 start_waybar_direct() {
     if command -v waybar >/dev/null 2>&1; then
         waybar >/dev/null 2>&1 &
-        wait_for_waybar
-        return $?
+        return 0
     fi
 
     if command -v .waybar-wrapped >/dev/null 2>&1; then
         .waybar-wrapped >/dev/null 2>&1 &
-        wait_for_waybar
-        return $?
+        return 0
     fi
 
     return 1
 }
 
-start_waybar_via_systemd() {
-    [ -x "$(command -v systemctl)" ] || return 1
-
-    local load_state
-    load_state="$(systemctl --user show waybar.service --property=LoadState --value 2>/dev/null || true)"
-    [ -n "$load_state" ] && [ "$load_state" != "not-found" ] || return 1
-
-    systemctl --user start waybar.service >/dev/null 2>&1 || return 1
-    wait_for_waybar
-}
-
 main() {
-    wait_for_wayland || true
-    sync_portal_env
-    # Portal services are already started by PortalHyprland.sh; no need to wait here.
-    ensure_wallust_waybar_colors || true
-
     is_waybar_running && exit 0
+    wait_for_wayland || true
+    sync_portal_env || true
+    ensure_wallust_waybar_colors
 
     if start_waybar_via_systemd || start_waybar_direct; then
         exit 0
     fi
-    # One retry after attempting to refresh wallust templates.
-    ensure_wallust_waybar_colors || true
-    sleep 0.3
-    start_waybar_via_systemd || start_waybar_direct || exit 1
+    exit 1
 }
 
 main

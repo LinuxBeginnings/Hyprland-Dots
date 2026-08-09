@@ -59,8 +59,10 @@ restart_waybar() {
   local manage_with_systemd=0
 
   if command -v systemctl >/dev/null 2>&1; then
-    if systemctl --user --quiet is-active waybar.service 2>/dev/null || systemctl --user --quiet is-enabled waybar.service 2>/dev/null; then
-      manage_with_systemd=1
+    if systemctl --user --quiet is-active graphical-session.target 2>/dev/null || systemctl --user --quiet is-active wayland-session@*.target 2>/dev/null; then
+      if systemctl --user --quiet is-active waybar.service 2>/dev/null || systemctl --user --quiet is-enabled waybar.service 2>/dev/null; then
+        manage_with_systemd=1
+      fi
     fi
   fi
 

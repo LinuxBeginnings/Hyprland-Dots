@@ -174,9 +174,8 @@ set_waybar_style() {
     theme="$1"
     waybar_styles="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style"
     waybar_style_link="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
-    style_prefix="\\[${theme}\\].*\\.css$"
 
-    style_file=$(find -L "$waybar_styles" -maxdepth 1 -type f -regex ".*$style_prefix" | shuf -n 1)
+    style_file=$(find -L "$waybar_styles" -maxdepth 1 -type f \( -iname "${theme}-*.css" -o -iname "${theme}_*.css" -o -iname "[${theme}]*.css" -o -iname "${theme}*.css" \) | shuf -n 1)
 
     if [ -n "$style_file" ]; then
         ln -sf "$style_file" "$waybar_style_link"

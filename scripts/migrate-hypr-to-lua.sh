@@ -1351,15 +1351,15 @@ else:
 startup_readiness = (
     "runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; "
     "export XDG_RUNTIME_DIR=\"$runtime\"; "
-    "for _ in $(seq 1 200); do "
+    "for _ in $(seq 1 30); do "
     "if [ -n \"$WAYLAND_DISPLAY\" ] && [ -S \"$runtime/$WAYLAND_DISPLAY\" ]; then break; fi; "
     "for sock in \"$runtime\"/wayland-[0-9]*; do [ -S \"$sock\" ] || continue; "
     "case \"$(basename \"$sock\")\" in *awww*) continue ;; esac; "
     "export WAYLAND_DISPLAY=\"$(basename \"$sock\")\"; break 2; done; "
     "sleep 0.1; done; "
     "if [ -n \"$HYPRLAND_INSTANCE_SIGNATURE\" ]; then "
-    "hypr_sock=\"$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock\"; "
-    "for _ in $(seq 1 200); do [ -S \"$hypr_sock\" ] && break; sleep 0.1; done; fi"
+    "for hypr_sock in \"$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock\" \"$runtime/hypr/.socket.sock\"; do [ -S \"$hypr_sock\" ] && break 2; done; "
+    "sleep 0.1; fi"
 )
 
 system_startup_lines = [
