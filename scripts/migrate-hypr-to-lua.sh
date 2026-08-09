@@ -44,7 +44,7 @@ USER_CONFIGS_LEGACY_DIR="$USER_CONFIGS_LEGACY_ROOT/$MIGRATION_TS"
 CONFIGS_LEGACY_DIR="$CONFIGS_LEGACY_ROOT/$MIGRATION_TS"
 USER_OVERRIDES_SHIM="$DEST_HYPR_DIR/lua/user_overrides.lua"
 DEST_MONITORS_CONF="$DEST_HYPR_DIR/monitors.conf"
-DEST_LUA_MONITORS="$DEST_HYPR_DIR/lua/monitors.lua"
+DEST_LUA_MONITORS="$USER_CONFIGS_DIR/monitors.lua"
 DEST_WORKSPACES_CONF="$DEST_HYPR_DIR/workspaces.conf"
 DEST_LUA_WORKSPACES="$DEST_HYPR_DIR/lua/workspaces.lua"
 SOURCE_LUA_ENTRY_ENABLED="$SRC_HYPR_DIR/hyprland.lua"
@@ -726,7 +726,8 @@ def emit_monitor(spec):
     disabled_value = str(spec.get("disabled", "")).strip().lower()
     disabled_truthy = {"1", "true", "yes", "on", "disable", "disabled"}
     if mode_value in {"disable", "disabled"} or disabled_value in disabled_truthy:
-        lines.append("    mode = \"disable\",")
+        lines.append("    mode = \"preferred\",")
+        lines.append("    disabled = true,")
         lines.append("})")
         return "\n".join(lines)
 

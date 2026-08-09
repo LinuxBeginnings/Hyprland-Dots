@@ -508,7 +508,7 @@ print_color() {
 # Check /etc/os-release for Ubuntu or Debian and warn about Hyprland version requirement
 if grep -iqE '^(ID_LIKE|ID)=.*(ubuntu|debian)' /etc/os-release >/dev/null 2>&1; then
   printf "\n%.0s" {1..1}
-  print_color $WARNING "\nThese Dotfiles are only supported on Hyprland v0.54 or greater. Do not install on older versions of Hyprland.\n"
+  print_color $WARNING "\nThese Dotfiles are only supported on Hyprland v0.55 or greater. Do not install on older versions of Hyprland.\n"
   while true; do
     echo -n "${CAT} Do you want to continue anyway? (y/N): "
     read _continue
