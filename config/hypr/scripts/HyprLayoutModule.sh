@@ -34,16 +34,6 @@ layout_name() {
 	esac
 }
 
-# Returns the display (terminal column) width of a string, accounting for wide Unicode chars.
-# Falls back to character count if python3 is unavailable.
-display_width() {
-	python3 -c "
-import unicodedata, sys
-s = sys.argv[1]
-print(sum(2 if unicodedata.east_asian_width(c) in ('W', 'F') else 1 for c in s))
-" "$1" 2>/dev/null || echo "${#1}"
-}
-
 # Fallback shortcut labels used when live Hyprland bind data is unavailable.
 layout_shortcut_fallback() {
 	case "$1" in
@@ -201,21 +191,16 @@ show_menu() {
 
 		shortcut="$(layout_shortcut "$layout")"
 		left_text="$(printf '%s%s  %s' "$prefix" "$(layout_icon "$layout")" "$(layout_name "$layout")")"
-		local dw
-		dw="$(display_width "$left_text")"
-		(( dw > left_width )) && left_width=$dw
+		(( ${#left_text} > left_width )) && left_width=${#left_text}
 		options+=("$left_text|$shortcut")
 	done
 
-	# Second pass: align right-side shortcut column using true display width.
+	# Second pass: pad left column to uniform char width, then append shortcut.
 	for i in "${!options[@]}"; do
 		row="${options[i]}"
 		left_text="${row%%|*}"
 		shortcut="${row#*|}"
-		local dw pad
-		dw="$(display_width "$left_text")"
-		pad=$(( left_width - dw + ${#left_text} ))
-		options[i]="$(printf "%-${pad}s     %s" "$left_text" "$shortcut")"
+		options[i]="$(printf "%-${left_width}s        %s" "$left_text" "$shortcut")"
 	done
 
 	if pgrep -x rofi >/dev/null; then
