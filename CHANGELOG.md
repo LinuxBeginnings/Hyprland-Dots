@@ -55,6 +55,7 @@
 
 ## Updated:
 
+- Layout menu has current bindings for each layout
 - Shortened `waybar` startup time
 - `copy.sh`
   - Defaults to LUA on Fresh Install
