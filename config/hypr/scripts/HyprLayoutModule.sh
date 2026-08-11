@@ -12,7 +12,7 @@ IFS=$'\n\t'
 SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 rofi_config="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-layout.rasi"
 change_layout="${SCRIPTSDIR}/ChangeLayout.sh"
-layouts=(dwindle scrolling monocle master)
+layouts=(dwindle master scrolling monocle)
 
 layout_icon() {
 	case "$1" in
@@ -32,6 +32,16 @@ layout_name() {
 	master) echo "Master" ;;
 	*) echo "Unknown" ;;
 	esac
+}
+
+# Returns the display (terminal column) width of a string, accounting for wide Unicode chars.
+# Falls back to character count if python3 is unavailable.
+display_width() {
+	python3 -c "
+import unicodedata, sys
+s = sys.argv[1]
+print(sum(2 if unicodedata.east_asian_width(c) in ('W', 'F') else 1 for c in s))
+" "$1" 2>/dev/null || echo "${#1}"
 }
 
 # Fallback shortcut labels used when live Hyprland bind data is unavailable.
@@ -191,16 +201,21 @@ show_menu() {
 
 		shortcut="$(layout_shortcut "$layout")"
 		left_text="$(printf '%s%s  %s' "$prefix" "$(layout_icon "$layout")" "$(layout_name "$layout")")"
-		(( ${#left_text} > left_width )) && left_width=${#left_text}
+		local dw
+		dw="$(display_width "$left_text")"
+		(( dw > left_width )) && left_width=$dw
 		options+=("$left_text|$shortcut")
 	done
 
-	# Second pass: align the separator and right-side shortcut column.
+	# Second pass: align right-side shortcut column using true display width.
 	for i in "${!options[@]}"; do
 		row="${options[i]}"
 		left_text="${row%%|*}"
 		shortcut="${row#*|}"
-		options[i]="$(printf "%-${left_width}s     %s" "$left_text" "$shortcut")"
+		local dw pad
+		dw="$(display_width "$left_text")"
+		pad=$(( left_width - dw + ${#left_text} ))
+		options[i]="$(printf "%-${pad}s     %s" "$left_text" "$shortcut")"
 	done
 
 	if pgrep -x rofi >/dev/null; then
