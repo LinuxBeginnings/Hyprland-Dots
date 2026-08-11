@@ -57,6 +57,16 @@ layout_shortcut_live() {
 
 	shortcuts="$(
 		hyprctl -j binds 2>/dev/null | jq -r --arg target "$target" '
+			# Decode integer modmask into modifier string (SUPER+ALT+CTRL+SHIFT).
+			# Bit values: SHIFT=1, CTRL=4, ALT=8, SUPER=64
+			def has_bit(mask; bit): ((mask / bit) | floor) % 2 == 1;
+			def modmask_str(mask):
+				[
+					if has_bit(mask; 64) then "SUPER" else empty end,
+					if has_bit(mask; 8)  then "ALT"   else empty end,
+					if has_bit(mask; 4)  then "CTRL"  else empty end,
+					if has_bit(mask; 1)  then "SHIFT" else empty end
+				] | join("+");
 			[
 				.[]?
 				| select(
@@ -76,19 +86,17 @@ layout_shortcut_live() {
 					)
 				)
 				| (
-					.display_key
+					# Prefer display_key if present and non-empty (newer Hyprland versions).
+					(.display_key | if . != null and length > 0 then . else null end)
 					// (
-						[
-							(.mods // [] | if type == "array" then .[] else empty end),
-							(.key // empty)
-						]
+						# Fall back to decoding modmask bitmask + key name.
+						[modmask_str(.modmask // 0), (.key // "")]
 						| map(select(. != null and . != ""))
 						| join("+")
 					)
 				)
 				| tostring
 				| gsub("\\s*\\+\\s*"; "+")
-				| gsub("\\$mainMod"; "SUPER")
 				| select(length > 0)
 			]
 			| unique
@@ -192,7 +200,7 @@ show_menu() {
 		row="${options[i]}"
 		left_text="${row%%|*}"
 		shortcut="${row#*|}"
-		options[i]="$(printf "%-${left_width}s  ----------->  %s" "$left_text" "$shortcut")"
+		options[i]="$(printf "%-${left_width}s     %s" "$left_text" "$shortcut")"
 	done
 
 	if pgrep -x rofi >/dev/null; then
