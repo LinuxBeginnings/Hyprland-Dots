@@ -213,7 +213,7 @@ local function dispatch(name, args)
     return window_api.bring_to_top()
   end
   if name == "setprop" and window_api.set_prop then
-    local prop, value = args:match("^(%S+)%s+(.+)$")
+    local _win, prop, value = args:match("^(%S+)%s+(%S+)%s+(.+)$")
     if prop and value then
       return window_api.set_prop({ prop = prop, value = value })
     end

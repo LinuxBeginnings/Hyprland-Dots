@@ -4,6 +4,8 @@
 
 ## Added:
 
+- `ToggleOpactiy.sh`  
+  - LUA workflow the existing bindings didn't work 
 - `virtual_workspaces.lua`
   - lua script to link monitors into one workspace(ish) 
   - It finds all the monitors, then when you move to a differnt workspace they move together 

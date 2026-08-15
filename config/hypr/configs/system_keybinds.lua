@@ -402,7 +402,7 @@ bind(
   exec_cmd("$HOME/.config/hypr/UserScripts/WallpaperRandom.sh"),
   { description = "random wallpaper" }
 )
-bind("SUPER CTRL", "O", dispatch("setprop", "active opaque toggle"), { description = "toggle active window opacity" })
+bind("SUPER CTRL", "O", exec_cmd("$HOME/.config/hypr/scripts/ToggleOpacity.sh"), { description = "toggle active window opacity" })
 bind("SUPER SHIFT", "K", exec_cmd("$HOME/.config/hypr/scripts/KeyBinds.sh"), { description = "search keybinds" })
 bind("SUPER SHIFT", "A", exec_cmd("$HOME/.config/hypr/scripts/Animations.sh"), { description = "animations menu" })
 bind(
