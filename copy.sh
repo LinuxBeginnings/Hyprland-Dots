@@ -257,24 +257,24 @@ version_gte() {
 # Parse installed Hyprland version (e.g. 0.55.4) from hyprctl/Hyprland.
 get_hyprland_version() {
   local ver=""
-  local raw=""
+  local full_output=""
 
   if command -v hyprctl >/dev/null 2>&1; then
-    raw="$(hyprctl version 2>/dev/null | head -n1 || true)"
+    full_output="$(hyprctl version 2>/dev/null || true)"
   fi
-  if [ -z "$raw" ] && command -v Hyprland >/dev/null 2>&1; then
-    raw="$(Hyprland --version 2>/dev/null | head -n1 || true)"
+  if [ -z "$full_output" ] && command -v Hyprland >/dev/null 2>&1; then
+    full_output="$(Hyprland --version 2>/dev/null || true)"
   fi
-  if [ -z "$raw" ] && command -v hyprland >/dev/null 2>&1; then
-    raw="$(hyprland --version 2>/dev/null | head -n1 || true)"
+  if [ -z "$full_output" ] && command -v hyprland >/dev/null 2>&1; then
+    full_output="$(hyprland --version 2>/dev/null || true)"
   fi
 
   # Prefer Tag: vX.Y.Z when present in full output
-  if command -v hyprctl >/dev/null 2>&1; then
-    ver="$(hyprctl version 2>/dev/null | sed -n 's/^Tag: v\([0-9][0-9.]*\).*/\1/p' | head -n1 || true)"
-  fi
-  if [ -z "$ver" ] && [ -n "$raw" ]; then
-    ver="$(printf '%s\n' "$raw" | sed -n 's/.*[Hh]yprland[[:space:]]\+v\?\([0-9][0-9.]*\).*/\1/p' | head -n1)"
+  ver="$(printf '%s\n' "$full_output" | sed -n 's/^Tag: v\([0-9][0-9.]*\).*/\1/p' | head -n1 || true)"
+
+  # Fallback to matching 'Hyprland v0.X.Y' or 'Hyprland 0.X.Y' anywhere in full output
+  if [ -z "$ver" ] && [ -n "$full_output" ]; then
+    ver="$(printf '%s\n' "$full_output" | sed -n 's/.*[Hh]yprland[[:space:]]\+v\?\([0-9][0-9.]*\).*/\1/p' | head -n1 || true)"
   fi
 
   printf '%s' "$ver"
