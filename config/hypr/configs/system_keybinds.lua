@@ -407,7 +407,7 @@ bind("SUPER SHIFT", "K", exec_cmd("$HOME/.config/hypr/scripts/KeyBinds.sh"), { d
 bind("SUPER SHIFT", "A", exec_cmd("$HOME/.config/hypr/scripts/Animations.sh"), { description = "animations menu" })
 bind(
   "SUPER SHIFT",
-  "R",
+  "O",
   exec_cmd("$HOME/.config/hypr/scripts/ZshChangeTheme.sh"),
   { description = "change oh-my-zsh theme" }
 )
