@@ -39,6 +39,7 @@
 
 ## Fixed:
 
+- Fixed `ChangeBlur.sh` to be compatible with LUA workflow
 - Waybar fix caused two waybars to start in Debian. Fixed the fix
 - waybar startup delayed in Fedora when not using `hyprland-uwsm` session 
   - Found several issues with Fedora b/c of `waybar.service` with Fedora 
