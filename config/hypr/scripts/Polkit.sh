@@ -12,6 +12,17 @@ if pgrep -u "$UID" -f 'xfce-polkit|polkit-gnome-authentication-agent-1|polkit-kd
   exit 0
 fi
 
+# If hyprpolkitagent is managed as a user service, defer to systemd.
+# This avoids race conditions where both this script and systemd start an
+# agent at the same time, which can trigger "authentication agent already exists"
+# DBus registration errors on first login.
+if command -v systemctl >/dev/null 2>&1; then
+  if systemctl --user list-unit-files 2>/dev/null | grep -q '^hyprpolkitagent\.service'; then
+    systemctl --user start hyprpolkitagent.service >/dev/null 2>&1 || true
+    exit 0
+  fi
+fi
+
 # Ensure Qt apps default to Wayland in a Wayland session
 if [ -n "${WAYLAND_DISPLAY:-}" ] && [ -z "${QT_QPA_PLATFORM:-}" ]; then
   export QT_QPA_PLATFORM=wayland

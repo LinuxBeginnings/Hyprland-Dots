@@ -40,6 +40,9 @@
 
 ## Fixed:
 
+- `hyprpolkitagent` fails to start at login
+  - Patched `Polkit.sh` to check for systemd service
+  - It was trying to run the agent twice causing crash
 - Fixed `ChangeBlur.sh` to be compatible with LUA workflow
 - Waybar fix caused two waybars to start in Debian. Fixed the fix
 - waybar startup delayed in Fedora when not using `hyprland-uwsm` session
