@@ -255,26 +255,36 @@ version_gte() {
 }
 
 # Parse installed Hyprland version (e.g. 0.55.4) from hyprctl/Hyprland.
+# hyprctl version requires a running daemon; fall back to the Hyprland binary
+# (which always reports its own version) when no version can be parsed.
+_parse_hyprland_ver_from_output() {
+  local output="$1"
+  local v
+  v="$(printf '%s\n' "$output" | sed -n 's/^Tag: v\([0-9][0-9.]*\).*/\1/p' | head -n1 || true)"
+  if [ -z "$v" ] && [ -n "$output" ]; then
+    v="$(printf '%s\n' "$output" | sed -n 's/.*[Hh]yprland[[:space:]]\+v\?\([0-9][0-9.]*\).*/\1/p' | head -n1 || true)"
+  fi
+  printf '%s' "$v"
+}
 get_hyprland_version() {
   local ver=""
   local full_output=""
 
+  # Try hyprctl first (works when daemon is running; some builds also work standalone)
   if command -v hyprctl >/dev/null 2>&1; then
     full_output="$(hyprctl version 2>/dev/null || true)"
+    ver="$(_parse_hyprland_ver_from_output "$full_output")"
   fi
-  if [ -z "$full_output" ] && command -v Hyprland >/dev/null 2>&1; then
+
+  # Fall back to Hyprland binary — always works even when daemon is not running
+  if [ -z "$ver" ] && command -v Hyprland >/dev/null 2>&1; then
     full_output="$(Hyprland --version 2>/dev/null || true)"
+    ver="$(_parse_hyprland_ver_from_output "$full_output")"
   fi
-  if [ -z "$full_output" ] && command -v hyprland >/dev/null 2>&1; then
+
+  if [ -z "$ver" ] && command -v hyprland >/dev/null 2>&1; then
     full_output="$(hyprland --version 2>/dev/null || true)"
-  fi
-
-  # Prefer Tag: vX.Y.Z when present in full output
-  ver="$(printf '%s\n' "$full_output" | sed -n 's/^Tag: v\([0-9][0-9.]*\).*/\1/p' | head -n1 || true)"
-
-  # Fallback to matching 'Hyprland v0.X.Y' or 'Hyprland 0.X.Y' anywhere in full output
-  if [ -z "$ver" ] && [ -n "$full_output" ]; then
-    ver="$(printf '%s\n' "$full_output" | sed -n 's/.*[Hh]yprland[[:space:]]\+v\?\([0-9][0-9.]*\).*/\1/p' | head -n1 || true)"
+    ver="$(_parse_hyprland_ver_from_output "$full_output")"
   fi
 
   printf '%s' "$ver"
@@ -693,12 +703,16 @@ preserve_custom_sddm_configs "$LOG"
 ensure_lua_keybinds "$LOG"
 # Fresh copy defaults to Lua config when Hyprland is 0.55+.
 # Older Hyprland keeps Hyprlang (.conf) entrypoint.
+# When version detection fails on a fresh install (daemon not yet running),
+# default to Lua — 0.55+ is the minimum supported version.
 if [ "$RUN_MODE" = "install" ]; then
-  if hyprland_supports_lua; then
+  _hl_install_ver="$(get_hyprland_version)"
+  if [ -z "$_hl_install_ver" ] || version_gte "$_hl_install_ver" "$MIN_LUA_HYPRLAND_VERSION"; then
     enable_fresh_install_lua_config "$LOG"
   else
     warn_hyprland_too_low_for_lua "$LOG"
   fi
+  unset _hl_install_ver
 fi
 printf "\\n%.0s" {1..1}
 # waybar-weather config handling:
