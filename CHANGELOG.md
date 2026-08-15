@@ -4,23 +4,24 @@
 
 ## Added:
 
-- `ToggleOpactiy.sh`  
-  - LUA workflow the existing bindings didn't work 
+- `ToggleOpactiy.sh`
+  - LUA workflow the existing bindings didn't work
 - `virtual_workspaces.lua`
-  - lua script to link monitors into one workspace(ish) 
-  - It finds all the monitors, then when you move to a differnt workspace they move together 
-  - I.e. `eDP-1` and `HDMI-A-1` would like Workspace 1 and 2. Moving to next Workspace would be 3 and 4 
-  | Note: Early stage development 
+  - lua script to link monitors into one workspace(ish)
+  - It finds all the monitors, then when you move to a differnt workspace they move together
+  - I.e. `eDP-1` and `HDMI-A-1` would like Workspace 1 and 2. Moving to next Workspace would be 3 and 4
+    | Note: Early stage development
 
 - Selecting `zsh` now updates `.zprofile`
 
-  ```sh 
+  ```sh
     if [ -f /etc/profile ]; then
        source /etc/profile
     fi
   ```
-  - This should help resolve flatpak apps not showing in rofi menu 
-  - Thanks to `@jfabernathy` for finding it 
+  - This should help resolve flatpak apps not showing in rofi menu
+  - Thanks to `@jfabernathy` for finding it
+
 - `docs/Keybinds.md` a layout of all the default keybinds
 - Option for event drive disable of eDP-1 on lid close
 - `kitty.conf` and `ghostty/config` are now saved to `UserConfigs` directory
@@ -41,14 +42,14 @@
 
 - Fixed `ChangeBlur.sh` to be compatible with LUA workflow
 - Waybar fix caused two waybars to start in Debian. Fixed the fix
-- waybar startup delayed in Fedora when not using `hyprland-uwsm` session 
-  - Found several issues with Fedora b/c of `waybar.service` with Fedora 
-  - Redid the startup sequences 
+- waybar startup delayed in Fedora when not using `hyprland-uwsm` session
+  - Found several issues with Fedora b/c of `waybar.service` with Fedora
+  - Redid the startup sequences
   - Added gated check for `ags` as that was causing errors when not installed
 - Updated startup sequence, wallpaper, theme scripts to remove waybar startup delays
 - Default LUA startup file updated to match Hyprlang changes made for waybar
 - LUA migration script properly edits `~/.config/hypr/UserConfigs/monitors.lua`
-- LUA migration script failed to translate disabled monitors to LUA format 
+- LUA migration script failed to translate disabled monitors to LUA format
   - I.e. for `eDP-1` laptop screens
 - Fixed `Spring-Curves.lua`
   - Hyprland v0.56+ changed springs timing
@@ -64,6 +65,8 @@
 
 ## Updated:
 
+- Yazi config to support new APIs in current version
+  - Backed up old `main.lua` file for older versions of yazi
 - Layout menu has current bindings for each layout
 - Shortened `waybar` startup time
 - `copy.sh`

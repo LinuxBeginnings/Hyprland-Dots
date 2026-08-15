@@ -625,14 +625,8 @@ function Yatline.string.get:hovered_file_extension(show_icon)
 		end
 
 		if show_icon then
-			local matched = th and th.icon and th.icon:match(hovered)
-			local icon = (matched and matched.text) or ""
-
-			if icon ~= "" then
-				return icon .. " " .. name
-			else
-				return name
-			end
+			local icon = hovered:icon().text
+			return icon .. " " .. name
 		else
 			return name
 		end
@@ -654,11 +648,10 @@ function Yatline.string.get:tab_path(trimmed, max_length, trim_length)
 	local cwd = cx.active.current.cwd
 	local filter = cx.active.current.files.filter
 	local finder = cx.active.finder
-	local spec = cwd and cwd.spec
 
 	local t = {}
-	if spec and spec.is_search then
-		t[#t + 1] = string.format("search: %s", spec.domain or "")
+	if cwd.is_search then
+		t[#t + 1] = string.format("search: %s", cwd.domain)
 	end
 	if filter then
 		t[#t + 1] = string.format("filter: %s", filter)
@@ -703,10 +696,9 @@ function Yatline.string.get:search_query(key)
 	key = key or "search:"
 
 	local cwd = cx.active.current.cwd
-	local spec = cwd and cwd.spec
 
-	if spec and spec.is_search then
-		return string.format("%s %s", key, spec.domain or "")
+	if cwd.is_search then
+		return string.format("%s %s", key, cwd.domain)
 	else
 		return ""
 	end
@@ -1008,8 +1000,7 @@ function Yatline.coloreds.get:count(filter, zero_check)
 
 	if filter then
 		local files_count_fg, files_count_icon
-		local cwd_spec = cx.active.current.cwd and cx.active.current.cwd.spec
-		if cx.active.current.files.filter or (cwd_spec and cwd_spec.is_search) then
+		if cx.active.current.files.filter or cx.active.current.cwd.is_search then
 			files_count_fg = Yatline.config.filtereds.fg
 			files_count_icon = Yatline.config.filtereds.icon
 		else
