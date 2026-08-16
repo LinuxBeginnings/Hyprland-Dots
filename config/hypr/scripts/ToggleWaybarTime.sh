@@ -149,8 +149,8 @@ restart_waybar() {
     systemctl --user stop waybar.service >/dev/null 2>&1 || true
   fi
 
-  pkill -x waybar >/dev/null 2>&1 || true
-  pkill -x '.waybar-wrapped' >/dev/null 2>&1 || true
+  pkill -INT -x waybar >/dev/null 2>&1 || true
+  pkill -INT -x '.waybar-wrapped' >/dev/null 2>&1 || true
   sleep 0.2
   if pgrep -x waybar >/dev/null 2>&1 || pgrep -x '.waybar-wrapped' >/dev/null 2>&1; then
     pkill -9 -x waybar >/dev/null 2>&1 || true

@@ -60,7 +60,7 @@ main() {
 
     case "$choice" in
         "no panel")
-            pgrep -x "waybar" && pkill waybar || true
+            pgrep -x "waybar" && { pkill -INT -x waybar || true; sleep 0.2; pkill -9 -x waybar || true; systemctl --user stop waybar.service >/dev/null 2>&1 || true; }
             ;;
         *)
             apply_config "$choice"

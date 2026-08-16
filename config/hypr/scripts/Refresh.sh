@@ -47,14 +47,41 @@ for pid in $(pidof rofi swaync ags swaybg); do
   sleep 0.1
 done
 
-# Does a waybar.service user unit exist? Checks LoadState rather than is-enabled: the
-# unit is usually started on demand by WaybarStartup.sh and left disabled, so is-enabled
-# reports "disabled" for a setup that is nevertheless systemd-managed.
-waybar_unit_exists() {
-  local load_state
+# Does a waybar.service user unit exist and should it be managed via systemd?
+# Check enabled/static or active state so distros where waybar.service is installed
+# but disabled/unmanaged default to direct execution.
+is_waybar_systemd() {
   command -v systemctl >/dev/null 2>&1 || return 1
-  load_state="$(systemctl --user show waybar.service --property=LoadState --value 2>/dev/null || true)"
-  [ -n "$load_state" ] && [ "$load_state" != "not-found" ]
+  systemctl --user cat waybar.service >/dev/null 2>&1 || return 1
+  local enabled_state
+  enabled_state="$(systemctl --user is-enabled waybar.service 2>/dev/null || true)"
+  case "$enabled_state" in
+    enabled|static) return 0 ;;
+  esac
+  systemctl --user is-active --quiet waybar.service 2>/dev/null && return 0
+  return 1
+}
+
+ensure_wayland_env() {
+  local runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+  if [ -z "${WAYLAND_DISPLAY:-}" ] || [ ! -S "$runtime_dir/$WAYLAND_DISPLAY" ]; then
+    for socket in "$runtime_dir"/wayland-[0-9]*; do
+      [ -S "$socket" ] || continue
+      case "$(basename "$socket")" in
+        *awww*) continue ;;
+      esac
+      export WAYLAND_DISPLAY="$(basename "$socket")"
+      break
+    done
+  fi
+
+  if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+    for sig_dir in "$runtime_dir"/hypr/*/; do
+      [ -S "${sig_dir}.socket.sock" ] || continue
+      export HYPRLAND_INSTANCE_SIGNATURE="$(basename "$sig_dir")"
+      break
+    done
+  fi
 }
 
 # Restart waybar once, DETACHED from this script's cgroup.
@@ -64,12 +91,13 @@ waybar_unit_exists() {
 # waybar never gets launched and the bar stays gone. Running the restart as a transient
 # systemd unit puts it outside that cgroup, where it survives the teardown.
 restart_waybar() {
+  ensure_wayland_env
   local restart_cmd
 
-  if waybar_unit_exists; then
-    restart_cmd='pkill -x waybar; pkill -x .waybar-wrapped; sleep 0.3; systemctl --user reset-failed waybar.service >/dev/null 2>&1; exec systemctl --user restart waybar.service'
+  if is_waybar_systemd; then
+    restart_cmd='systemctl --user stop waybar.service >/dev/null 2>&1 || true; pkill -INT -x waybar >/dev/null 2>&1 || true; pkill -INT -x .waybar-wrapped >/dev/null 2>&1 || true; sleep 0.2; if pgrep -x waybar >/dev/null 2>&1 || pgrep -x .waybar-wrapped >/dev/null 2>&1; then pkill -9 -x waybar >/dev/null 2>&1 || true; pkill -9 -x .waybar-wrapped >/dev/null 2>&1 || true; fi; sleep 0.1; systemctl --user reset-failed waybar.service >/dev/null 2>&1 || true; exec systemctl --user restart waybar.service'
   else
-    restart_cmd='pkill -x waybar; pkill -x .waybar-wrapped; sleep 0.3; exec waybar'
+    restart_cmd='systemctl --user stop waybar.service >/dev/null 2>&1 || true; pkill -INT -x waybar >/dev/null 2>&1 || true; pkill -INT -x .waybar-wrapped >/dev/null 2>&1 || true; sleep 0.2; if pgrep -x waybar >/dev/null 2>&1 || pgrep -x .waybar-wrapped >/dev/null 2>&1; then pkill -9 -x waybar >/dev/null 2>&1 || true; pkill -9 -x .waybar-wrapped >/dev/null 2>&1 || true; fi; sleep 0.1; if command -v .waybar-wrapped >/dev/null 2>&1; then exec .waybar-wrapped; else exec waybar; fi'
   fi
 
   if command -v systemd-run >/dev/null 2>&1 &&
