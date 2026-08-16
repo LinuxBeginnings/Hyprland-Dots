@@ -40,6 +40,10 @@
 
 ## Fixed:
 
+- Waybar doesn't restart  after Dark/Light theme in Debian 
+   - Thanks to @tomirgang for the fix 
+- Not all waybar clocks togggled from 12hr/24hr correctly 
+   - Thanks to @tomirgang for the fix 
 - `hyprpolkitagent` fails to start at login
   - Patched `Polkit.sh` to check for systemd service
   - It was trying to run the agent twice causing crash
