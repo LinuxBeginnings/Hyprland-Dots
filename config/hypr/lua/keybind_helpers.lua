@@ -206,8 +206,11 @@ local function dispatch(name, args)
   if name == "moveoutofgroup" and window_api.move then
     return window_api.move({ out_of_group = true })
   end
-  if name == "layoutmsg" and dsp and dsp.layout then
+  if (name == "layoutmsg" or name == "layout") and dsp and dsp.layout then
     return dsp.layout(args)
+  end
+  if name == "togglesplit" and dsp and dsp.layout then
+    return dsp.layout("togglesplit")
   end
   if name == "bringactivetotop" and window_api.bring_to_top then
     return window_api.bring_to_top()

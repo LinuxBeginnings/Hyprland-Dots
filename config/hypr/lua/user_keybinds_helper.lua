@@ -207,6 +207,15 @@ local function dispatch(name, args)
   if name == "togglefloating" and window_api.float then
     return function() hl.dispatch(window_api.float({ action = "toggle" })) end
   end
+  if name == "pseudo" and window_api.pseudo then
+    return window_api.pseudo()
+  end
+  if (name == "layoutmsg" or name == "layout") and dsp and dsp.layout then
+    return dsp.layout(args)
+  end
+  if name == "togglesplit" and dsp and dsp.layout then
+    return dsp.layout("togglesplit")
+  end
   if name == "resizewindow" and window_api.resize then
     return window_api.resize()
   end

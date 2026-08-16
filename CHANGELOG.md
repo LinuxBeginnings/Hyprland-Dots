@@ -40,6 +40,7 @@
 
 ## Fixed:
 
+- `togglesplit` in LUA workflow
 - Waybar doesn't restart  after Dark/Light theme in Debian 
    - Thanks to @tomirgang for the fix 
 - Not all waybar clocks togggled from 12hr/24hr correctly 
