@@ -47,38 +47,42 @@ for pid in $(pidof rofi swaync ags swaybg); do
   sleep 0.1
 done
 
-# Restart waybar once (works with systemd user unit or manual launch setups)
+# Does a waybar.service user unit exist? Checks LoadState rather than is-enabled: the
+# unit is usually started on demand by WaybarStartup.sh and left disabled, so is-enabled
+# reports "disabled" for a setup that is nevertheless systemd-managed.
+waybar_unit_exists() {
+  local load_state
+  command -v systemctl >/dev/null 2>&1 || return 1
+  load_state="$(systemctl --user show waybar.service --property=LoadState --value 2>/dev/null || true)"
+  [ -n "$load_state" ] && [ "$load_state" != "not-found" ]
+}
+
+# Restart waybar once, DETACHED from this script's cgroup.
+# This script is typically invoked from a waybar module on-click (e.g. DarkLight.sh), so
+# it runs inside waybar.service's cgroup. Killing waybar from in there makes systemd tear
+# down the whole unit and every process in it - this script included - so the replacement
+# waybar never gets launched and the bar stays gone. Running the restart as a transient
+# systemd unit puts it outside that cgroup, where it survives the teardown.
 restart_waybar() {
-  local manage_with_systemd=0
+  local restart_cmd
 
-  if command -v systemctl >/dev/null 2>&1; then
-    if systemctl --user --quiet is-active graphical-session.target 2>/dev/null || systemctl --user --quiet is-active wayland-session@*.target 2>/dev/null; then
-      if systemctl --user --quiet is-active waybar.service 2>/dev/null || systemctl --user --quiet is-enabled waybar.service 2>/dev/null; then
-        manage_with_systemd=1
-      fi
-    fi
-  fi
-
-  if [ "$manage_with_systemd" -eq 1 ]; then
-    systemctl --user stop waybar.service >/dev/null 2>&1 || true
-  fi
-
-  pkill -x waybar >/dev/null 2>&1 || true
-  pkill -x '.waybar-wrapped' >/dev/null 2>&1 || true
-  sleep 0.2
-  if pgrep -x waybar >/dev/null 2>&1 || pgrep -x '.waybar-wrapped' >/dev/null 2>&1; then
-    pkill -9 -x waybar >/dev/null 2>&1 || true
-    pkill -9 -x '.waybar-wrapped' >/dev/null 2>&1 || true
-  fi
-  sleep 0.2
-
-  if [ "$manage_with_systemd" -eq 1 ]; then
-    if ! systemctl --user start waybar.service >/dev/null 2>&1; then
-      waybar >/dev/null 2>&1 &
-    fi
+  if waybar_unit_exists; then
+    restart_cmd='pkill -x waybar; pkill -x .waybar-wrapped; sleep 0.3; systemctl --user reset-failed waybar.service >/dev/null 2>&1; exec systemctl --user restart waybar.service'
   else
-    waybar >/dev/null 2>&1 &
+    restart_cmd='pkill -x waybar; pkill -x .waybar-wrapped; sleep 0.3; exec waybar'
   fi
+
+  if command -v systemd-run >/dev/null 2>&1 &&
+    systemd-run --user --collect --quiet --no-block \
+      --setenv=WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-}" \
+      --setenv=XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" \
+      --setenv=HYPRLAND_INSTANCE_SIGNATURE="${HYPRLAND_INSTANCE_SIGNATURE:-}" \
+      /bin/bash -c "$restart_cmd" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  # Fallback when systemd-run is unavailable: detach as far as we can.
+  setsid /bin/bash -c "$restart_cmd" >/dev/null 2>&1 &
 }
 
 restart_waybar

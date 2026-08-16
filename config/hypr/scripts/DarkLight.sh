@@ -354,7 +354,11 @@ ${SCRIPTSDIR}/WallustSwww.sh
 if [ "$no_restart" -eq 0 ]; then
     sleep 2
     # kill process
-    for pid1 in waybar rofi swaync ags swaybg; do
+    # NOTE: waybar is deliberately excluded here. This script is usually launched from a
+    # waybar module on-click, so it lives in waybar.service's cgroup. Killing waybar makes
+    # systemd tear down the whole unit, taking this script with it before Refresh.sh runs.
+    # Refresh.sh restarts waybar detached from that cgroup instead.
+    for pid1 in rofi swaync ags swaybg; do
         killall "$pid1"
     done
     sleep 1
