@@ -62,6 +62,30 @@ stop_proc() {
     pkill -u "$SESSION_USER" -x -KILL "$name" >/dev/null 2>&1 || true
 }
 
+ensure_hyprland_env() {
+    local runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+    if [ -z "${WAYLAND_DISPLAY:-}" ] || [ ! -S "$runtime_dir/$WAYLAND_DISPLAY" ]; then
+        for socket in "$runtime_dir"/wayland-[0-9]*; do
+            [ -S "$socket" ] || continue
+            case "$(basename "$socket")" in
+                *awww*) continue ;;
+            esac
+            export WAYLAND_DISPLAY="$(basename "$socket")"
+            break
+        done
+    fi
+
+    if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        for sig_dir in "$runtime_dir"/hypr/*/; do
+            [ -S "${sig_dir}.socket.sock" ] || continue
+            export HYPRLAND_INSTANCE_SIGNATURE="$(basename "$sig_dir")"
+            break
+        done
+    fi
+}
+
+ensure_hyprland_env
+
 # Close wlogout if it is still visible.
 stop_proc "wlogout"
 HYPRCTL_BIN="$(command -v hyprctl || true)"
@@ -84,6 +108,45 @@ if [ -n "$HYPRSHUTDOWN_BIN" ]; then
         log_msg "hyprshutdown returned success but Hyprland is still running"
     fi
 fi
+
+# Try Hyprland exit dispatchers (Lua workflow first, then Hyprlang)
+if [ -n "$HYPRCTL_BIN" ]; then
+    if run_logged "hyprctl-dispatch-lua-exit" "$HYPRCTL_BIN" dispatch 'hl.dsp.exit()'; then
+        if logout_completed; then
+            exit 0
+        fi
+        log_msg "hyprctl dispatch 'hl.dsp.exit()' returned but Hyprland is still running"
+    fi
+
+    if run_logged "hyprctl-dispatch-exit" "$HYPRCTL_BIN" dispatch exit; then
+        if logout_completed; then
+            exit 0
+        fi
+        log_msg "hyprctl dispatch exit returned but Hyprland is still running"
+    fi
+
+    if run_logged "hyprctl-dispatch-exit-1" "$HYPRCTL_BIN" dispatch exit 1; then
+        if logout_completed; then
+            exit 0
+        fi
+        log_msg "hyprctl dispatch exit 1 returned but Hyprland is still running"
+    fi
+
+    if run_logged "hyprctl-dispatch-exit-0" "$HYPRCTL_BIN" dispatch exit 0; then
+        if logout_completed; then
+            exit 0
+        fi
+        log_msg "hyprctl dispatch exit 0 returned but Hyprland is still running"
+    fi
+
+    if run_logged "hyprctl-dispatch-exit-x" "$HYPRCTL_BIN" dispatch exit x; then
+        if logout_completed; then
+            exit 0
+        fi
+        log_msg "hyprctl dispatch exit x returned but Hyprland is still running"
+    fi
+fi
+
 # systemd session fallback.
 if [ -n "$LOGINCTL_BIN" ] && [ -n "${XDG_SESSION_ID:-}" ]; then
     if [ "$IS_SDDM_SESSION" -eq 1 ]; then
@@ -118,50 +181,6 @@ if [ -n "$UWSM_BIN" ] && [ "$IS_SDDM_SESSION" -eq 0 ]; then
     fi
 elif [ -n "$UWSM_BIN" ] && [ "$IS_SDDM_SESSION" -eq 1 ]; then
     log_msg "Skipping uwsm stop on SDDM-managed session to avoid delayed logout"
-fi
-
-
-# Last-resort Hyprland exit fallbacks.
-if [ -n "$HYPRCTL_BIN" ]; then
-    if [ "$IS_SDDM_SESSION" -eq 1 ]; then
-        if run_logged "hyprctl-exit-1-sddm" "$HYPRCTL_BIN" dispatch exit 1; then
-            if logout_completed; then
-                exit 0
-            fi
-            log_msg "hyprctl dispatch exit 1 (sddm) returned success but Hyprland is still running"
-        fi
-        if run_logged "hyprctl-exit-x-sddm" "$HYPRCTL_BIN" dispatch exit x; then
-            if logout_completed; then
-                exit 0
-            fi
-            log_msg "hyprctl dispatch exit x (sddm) returned success but Hyprland is still running"
-        fi
-    else
-        if run_logged "hyprctl-exit-1" "$HYPRCTL_BIN" dispatch exit 1; then
-            if logout_completed; then
-                exit 0
-            fi
-            log_msg "hyprctl dispatch exit 1 returned success but Hyprland is still running"
-        fi
-        if run_logged "hyprctl-exit-0" "$HYPRCTL_BIN" dispatch exit 0; then
-            if logout_completed; then
-                exit 0
-            fi
-            log_msg "hyprctl dispatch exit 0 returned success but Hyprland is still running"
-        fi
-        if run_logged "hyprctl-exit-x" "$HYPRCTL_BIN" dispatch exit x; then
-            if logout_completed; then
-                exit 0
-            fi
-            log_msg "hyprctl dispatch exit x returned success but Hyprland is still running"
-        fi
-        if run_logged "hyprctl-exit-noarg" "$HYPRCTL_BIN" dispatch exit; then
-            if logout_completed; then
-                exit 0
-            fi
-            log_msg "hyprctl dispatch exit (no arg) returned success but Hyprland is still running"
-        fi
-    fi
 fi
 
 # Final process-level fallback.
