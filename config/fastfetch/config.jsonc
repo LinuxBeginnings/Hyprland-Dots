@@ -1,10 +1,14 @@
 {
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
   "logo": {
+    // To change to an image logo
+    //  Uncomment the `//` on the lines from type to width
     // "type": "kitty",
-    // "source": "~/.config/fastfetch/ubuntu.png",
+    // "source": "~/.config/fastfetch/images/ubuntu.png",
     // "height": 10,
     // "width": 20,
+    // If using an image logo then comment out the next line "type": "small"
+    // Otherwise the image logo will not be displayed
     "type": "small",
     "padding": {
       "top": 3,
