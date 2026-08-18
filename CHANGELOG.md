@@ -4,6 +4,7 @@
 
 ## Added:
 
+- Documented  `fastfetch` `config.json` on how to add graphical logo 
 - `ToggleOpactiy.sh`
   - LUA workflow the existing bindings didn't work
 - `virtual_workspaces.lua`
