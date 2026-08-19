@@ -41,6 +41,7 @@
 
 ## Fixed:
 
+- Fixed 2nd issue in yazi 
 - ENV variables not set in LUA workflow
 - Logout session not working in LUA workflow
 - `togglesplit` in LUA workflow
