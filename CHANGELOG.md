@@ -6,12 +6,6 @@
 
 - Documented  `fastfetch` `config.json` on how to add graphical logo 
 - `ToggleOpactiy.sh`
-  - LUA workflow the existing bindings didn't work
-- `virtual_workspaces.lua`
-  - lua script to link monitors into one workspace(ish)
-  - It finds all the monitors, then when you move to a differnt workspace they move together
-  - I.e. `eDP-1` and `HDMI-A-1` would like Workspace 1 and 2. Moving to next Workspace would be 3 and 4
-    | Note: Early stage development
 
 - Selecting `zsh` now updates `.zprofile`
 
@@ -41,6 +35,7 @@
 
 ## Fixed:
 
+  - LUA workflow the existing bindings didn't work
 - Fixed 2nd issue in yazi 
 - ENV variables not set in LUA workflow
 - Logout session not working in LUA workflow
