@@ -279,6 +279,8 @@
 		"class<vswaybar-studio>": "󰛼 ",
 		"class<nwg-displays>": " ",
 		"class<[Pp]avucontrol|org.pulseaudio.pavucontrol>": "󱡫 ",
+		"class<io.missioncenter.MissionCenter>": " ",
+		"title<.*Mission Center.*>": " ",
 		"class<steam>": " ",
 		"class<thunar|nemo|org.gnome.Nautilus>": "󰝰 ",	
 		"class<Gparted>":"",
