@@ -39,6 +39,7 @@
    - Added more levels to opacity 
    - Added desktop notficiations
 - `ChangeBlue.sh` in LUA workflow need `-r` flag 
+   - Added levels blur `Disbled, Low, Medium, High, Ultra`
   - LUA workflow the existing bindings didn't work
 - Fixed 2nd issue in yazi 
 - ENV variables not set in LUA workflow
