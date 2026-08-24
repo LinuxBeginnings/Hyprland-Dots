@@ -36,6 +36,8 @@
 ## Fixed:
 
 - `ToggleOpactiy.sh` in LUA workflow 
+   - Added more levels to opacity 
+   - Added desktop notficiations
 - `ChangeBlue.sh` in LUA workflow need `-r` flag 
   - LUA workflow the existing bindings didn't work
 - Fixed 2nd issue in yazi 
