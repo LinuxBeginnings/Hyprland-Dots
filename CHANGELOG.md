@@ -35,6 +35,7 @@
 
 ## Fixed:
 
+- `Float-all-windows.sh` in LUA mode
 - Typo in change starship prompt menu
 - Extra `read` in `build-awww.sh`
 - `Toggle-Active-Windown-Audio.sh`
