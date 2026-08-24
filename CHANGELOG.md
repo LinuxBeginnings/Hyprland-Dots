@@ -35,6 +35,7 @@
 
 ## Fixed:
 
+- Extra `read` in `build-awww.sh`
 - `Toggle-Active-Windown-Audio.sh`
   - Updated to work in LUA workflow
 - `Tak0-Per-Window-Switch.sh` for LUA workflow
