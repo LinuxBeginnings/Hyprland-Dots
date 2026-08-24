@@ -35,6 +35,7 @@
 
 ## Fixed:
 
+- `Tak0-Per-Window-Switch.sh` for LUA workflow
 - `ToggleOpactiy.sh` in LUA workflow 
    - Added more levels to opacity 
    - Added desktop notficiations
