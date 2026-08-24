@@ -35,6 +35,7 @@
 
 ## Fixed:
 
+- Typo in change starship prompt menu
 - Extra `read` in `build-awww.sh`
 - `Toggle-Active-Windown-Audio.sh`
   - Updated to work in LUA workflow
