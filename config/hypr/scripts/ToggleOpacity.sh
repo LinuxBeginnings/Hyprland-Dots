@@ -5,7 +5,7 @@
 #  License: GNU GPLv3
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
-# Toggle active_opacity using Lua hl.config (or legacy keyword in conf mode).
+# Toggle active window opacity using window set_prop (and active_opacity in conf mode).
 # Uses flock to prevent double-execution from dual-config (.conf + .lua) loading.
 
 TRANSPARENCY=0.85
@@ -26,22 +26,50 @@ fi
 (
   flock -n 200 || exit 0
 
-  CURRENT=$(hyprctl -j getoption decoration:active_opacity 2>/dev/null | jq -r '.float // empty')
-  if [[ -z "$CURRENT" || "$CURRENT" == "null" ]]; then
-    CURRENT=$(hyprctl getoption decoration:active_opacity 2>/dev/null | awk 'NR==1{print $2}')
+  CURRENT_PROP=$(hyprctl getprop active opacity 2>/dev/null || true)
+  CURRENT_OPAQUE=$(hyprctl getprop active opaque 2>/dev/null || true)
+
+  CURRENT_VAL=""
+  if [[ -n "$CURRENT_PROP" && "$CURRENT_PROP" != *"not found"* && "$CURRENT_PROP" != *"unknown"* ]]; then
+    CURRENT_VAL=$(echo "$CURRENT_PROP" | awk '{v = $1; if (v ~ /^[0-9.]+$/) print v;}')
   fi
 
-  IS_FULL=$(awk -v c="${CURRENT:-1.0}" 'BEGIN {print (c >= 0.999) ? "1" : "0"}')
+  if [[ -z "$CURRENT_VAL" ]]; then
+    CURRENT_VAL=$(hyprctl -j getoption decoration:active_opacity 2>/dev/null | jq -r '.float // empty')
+  fi
+  if [[ -z "$CURRENT_VAL" || "$CURRENT_VAL" == "null" ]]; then
+    CURRENT_VAL=$(hyprctl getoption decoration:active_opacity 2>/dev/null | awk 'NR==1{print $2}')
+  fi
+
+  IS_FULL=$(awk -v c="${CURRENT_VAL:-1.0}" -v op="${CURRENT_OPAQUE:-false}" 'BEGIN {
+    if (op == "true") {
+      print "1";
+    } else if (c >= 0.999) {
+      print "1";
+    } else {
+      print "0";
+    }
+  }')
 
   if [ "$IS_FULL" = "1" ]; then
-    TARGET="$TRANSPARENCY"
+    TARGET_VAL="$TRANSPARENCY"
+    TARGET_PROP="${TRANSPARENCY} ${TRANSPARENCY}"
+    OPAQUE_ACTION="false"
   else
-    TARGET="$NORMAL"
+    TARGET_VAL="$NORMAL"
+    TARGET_PROP="${NORMAL} ${NORMAL}"
+    OPAQUE_ACTION="true"
   fi
 
   if [[ "$hypr_config_mode" == "lua" ]]; then
-    hyprctl eval "hl.config({ decoration = { active_opacity = ${TARGET} } })"
+    # Set window-level property so it affects the active window even when windowrules are active
+    hyprctl eval "return hl.dispatch(hl.dsp.window.set_prop({ prop = 'opacity', value = '${TARGET_PROP}' }))" >/dev/null 2>&1 || true
+    hyprctl eval "return hl.dispatch(hl.dsp.window.set_prop({ prop = 'opaque', value = '${OPAQUE_ACTION}' }))" >/dev/null 2>&1 || true
+    # Also update global active_opacity config
+    hyprctl eval "hl.config({ decoration = { active_opacity = ${TARGET_VAL} } })" >/dev/null 2>&1 || true
   else
-    hyprctl keyword decoration:active_opacity "$TARGET"
+    hyprctl dispatch setprop active opacity "$TARGET_PROP" >/dev/null 2>&1 || true
+    hyprctl dispatch setprop active opaque "$OPAQUE_ACTION" >/dev/null 2>&1 || true
+    hyprctl keyword decoration:active_opacity "$TARGET_VAL" >/dev/null 2>&1 || true
   fi
 ) 200>"$LOCK"

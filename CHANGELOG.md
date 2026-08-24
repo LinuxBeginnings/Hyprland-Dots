@@ -35,6 +35,7 @@
 
 ## Fixed:
 
+- `ToggleOpactiy.sh` 
   - LUA workflow the existing bindings didn't work
 - Fixed 2nd issue in yazi 
 - ENV variables not set in LUA workflow
