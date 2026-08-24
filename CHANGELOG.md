@@ -35,7 +35,8 @@
 
 ## Fixed:
 
-- `ToggleOpactiy.sh` 
+- `ToggleOpactiy.sh` in LUA workflow 
+- `ChangeBlue.sh` in LUA workflow need `-r` flag 
   - LUA workflow the existing bindings didn't work
 - Fixed 2nd issue in yazi 
 - ENV variables not set in LUA workflow
