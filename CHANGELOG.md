@@ -35,6 +35,8 @@
 
 ## Fixed:
 
+- `Toggle-Active-Windown-Audio.sh`
+  - Updated to work in LUA workflow
 - `Tak0-Per-Window-Switch.sh` for LUA workflow
 - `ToggleOpactiy.sh` in LUA workflow 
    - Added more levels to opacity 

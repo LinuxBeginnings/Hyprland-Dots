@@ -7,8 +7,9 @@
 # ==================================================
 set -euo pipefail
 
-XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 swayIconDir="${XDG_CONFIG_HOME}/swaync/icons"
+swayImgDir="${XDG_CONFIG_HOME}/swaync/images"
 
 #// Credits to sl1ng for the orginal script. Rewritten by Vyle.
 ctlcheck=("pactl" "jq" "notify-send" "awk" "pgrep" "hyprctl" "iconv")
@@ -95,13 +96,13 @@ fi
 
 #// Auto-Detect if the environment is on Hyprland or $HYPRLAND_INSTANCE_SIGNATURE.
 if [[ ${#sink_ids[@]} -eq 0 ]]; then
-  if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE}" ]]; then
+  if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
     # Even if the fallback_pid remains empty, we will dispatch exit code based on $HYPRLAND_INSTANCE_SIGNATURE.
-    notify-send -a "t1" -r 91190 -t 1200 -i "${swayIconDir}/volume-low.png" "No sink input for the active_window: ${__class}"
-    echo "No sink input for focused window: ${__class}"
+    notify-send -a "t1" -r 91190 -t 1200 -i "${swayIconDir}/volume-low.png" "No sink input for the active_window: ${__class:-unknown}"
+    echo "No sink input for focused window: ${__class:-unknown}"
     exit 1
   else
-    echo "No sink input for focused active_window ${__class}"
+    echo "No sink input for focused active_window ${__class:-unknown}"
     exit 1
   fi
 fi
