@@ -204,6 +204,7 @@
 		"class<waveterm>": " 🌊",
 		"class<play.mii.Boxxy>": " ",
 		"class<Warp|warp|dev.warp.Warp|warp-terminal>": "󰰭 ",
+		"class<[Cc]ontour|org.contourterminal.Contour>": " ",
 
     "class<[Tt]hunderbird|[Tt]hunderbird-esr>": "󰊫 ",
 		"class<org.mozilla.Thunderbird|eu.betterbird.Betterbird>": "󰊫 ",
