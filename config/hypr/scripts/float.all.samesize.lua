@@ -192,12 +192,16 @@ for _, m in ipairs(monitors) do
   end
 end
 
+local mon_x = 0
+local mon_y = 0
 local mon_width = 1920
 local mon_height = 1080
 local scale = 1.0
 local res_left, res_top, res_right, res_bottom = 0, 0, 0, 0
 
 if active_monitor then
+  mon_x = active_monitor.x or 0
+  mon_y = active_monitor.y or 0
   mon_width = active_monitor.width or mon_width
   mon_height = active_monitor.height or mon_height
   scale = active_monitor.scale or 1.0
@@ -213,34 +217,56 @@ end
 
 local screen_w = math.floor(mon_width / scale)
 local screen_h = math.floor(mon_height / scale)
+local usable_x = mon_x + res_left
+local usable_y = mon_y + res_top
 local usable_w = math.max(320, screen_w - (res_left + res_right))
 local usable_h = math.max(240, screen_h - (res_top + res_bottom))
 
--- 5. Calculate dynamic uniform window size based on window count and screen resolution
-local width_ratio
-local height_ratio
+-- 5. Calculate dynamic uniform window size and balanced non-overlapping layout positions
+local gap = 16
+local positions = {}
 
 if window_count == 1 then
-  width_ratio = 0.75
-  height_ratio = 0.75
+  local target_w = math.floor(math.min(usable_w - gap * 2, math.max(480, usable_w * 0.72)))
+  local target_h = math.floor(math.min(usable_h - gap * 2, math.max(320, usable_h * 0.72)))
+  local x = usable_x + math.floor((usable_w - target_w) / 2)
+  local y = usable_y + math.floor((usable_h - target_h) / 2)
+  table.insert(positions, { x = x, y = y, w = target_w, h = target_h })
 elseif window_count == 2 then
-  width_ratio = 0.58
-  height_ratio = 0.65
-elseif window_count <= 4 then
-  width_ratio = 0.48
-  height_ratio = 0.50
-elseif window_count <= 6 then
-  width_ratio = 0.40
-  height_ratio = 0.42
+  local target_w = math.floor((usable_w - gap * 3) / 2)
+  local target_h = math.floor(math.min(usable_h - gap * 2, math.max(320, usable_h * 0.70)))
+  local start_y = usable_y + math.floor((usable_h - target_h) / 2)
+  for i = 1, 2 do
+    local x = usable_x + gap + (i - 1) * (target_w + gap)
+    table.insert(positions, { x = x, y = start_y, w = target_w, h = target_h })
+  end
 else
-  width_ratio = math.max(0.30, 0.40 - (window_count - 6) * 0.015)
-  height_ratio = math.max(0.30, 0.42 - (window_count - 6) * 0.015)
-end
+  local cols = math.ceil(math.sqrt(window_count))
+  local rows = math.ceil(window_count / cols)
 
-local min_w = math.min(usable_w, 480)
-local min_h = math.min(usable_h, 320)
-local target_w = math.floor(math.max(min_w, math.min(usable_w, usable_w * width_ratio)))
-local target_h = math.floor(math.max(min_h, math.min(usable_h, usable_h * height_ratio)))
+  local raw_w = math.floor((usable_w - gap * (cols + 1)) / cols)
+  local raw_h = math.floor((usable_h - gap * (rows + 1)) / rows)
+
+  local target_w = math.max(320, raw_w)
+  local target_h = math.max(220, raw_h)
+
+  local total_grid_h = rows * target_h + (rows - 1) * gap
+  local start_y = usable_y + math.max(gap, math.floor((usable_h - total_grid_h) / 2))
+
+  for r = 0, rows - 1 do
+    local count_in_row = math.min(cols, window_count - r * cols)
+    if count_in_row > 0 then
+      local row_w = count_in_row * target_w + (count_in_row - 1) * gap
+      local start_x = usable_x + math.max(gap, math.floor((usable_w - row_w) / 2))
+      local y = start_y + r * (target_h + gap)
+
+      for c = 0, count_in_row - 1 do
+        local x = start_x + c * (target_w + gap)
+        table.insert(positions, { x = x, y = y, w = target_w, h = target_h })
+      end
+    end
+  end
+end
 
 -- Helper to detect Hyprland config mode (Lua entrypoint vs legacy .conf includes)
 local function get_hypr_config_mode()
@@ -269,7 +295,8 @@ end
 local mode = get_hypr_config_mode()
 local batch_commands = {}
 
-for _, client in ipairs(ws_clients) do
+for idx, client in ipairs(ws_clients) do
+  local pos = positions[idx] or positions[#positions]
   local address = "address:" .. client.address
 
   if mode == "lua" then
@@ -277,17 +304,23 @@ for _, client in ipairs(ws_clients) do
     table.insert(batch_commands, string.format('dispatch hl.dsp.window.float({ window = "%s", action = "on" })', address))
     table.insert(
       batch_commands,
-      string.format('dispatch hl.dsp.window.resize({ window = "%s", x = %d, y = %d, exact = true })', address, target_w, target_h)
+      string.format('dispatch hl.dsp.window.resize({ window = "%s", x = %d, y = %d, exact = true })', address, pos.w, pos.h)
     )
-    table.insert(batch_commands, string.format('dispatch hl.dsp.exec_raw("centerwindow %s")', address))
+    table.insert(
+      batch_commands,
+      string.format('dispatch hl.dsp.window.move({ window = "%s", x = %d, y = %d, exact = true })', address, pos.x, pos.y)
+    )
   else
     -- Legacy Hyprlang mode
     table.insert(batch_commands, string.format("dispatch setfloating %s", address))
     table.insert(
       batch_commands,
-      string.format("dispatch resizewindowpixel exact %d %d,%s", target_w, target_h, address)
+      string.format("dispatch resizewindowpixel exact %d %d,%s", pos.w, pos.h, address)
     )
-    table.insert(batch_commands, string.format("dispatch centerwindow %s", address))
+    table.insert(
+      batch_commands,
+      string.format("dispatch movewindowpixel exact %d %d,%s", pos.x, pos.y, address)
+    )
   end
 end
 
