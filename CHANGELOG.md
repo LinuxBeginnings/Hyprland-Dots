@@ -39,6 +39,7 @@
 
 ## Fixed:
 
+- `copy.sh` didn't replace LUA system files when already in LUA workflow
 - Duplicate waybars on Debian Forky+
 - `Float-all-windows.sh` in LUA mode
 - Typo in change starship prompt menu

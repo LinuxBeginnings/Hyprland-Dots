@@ -227,22 +227,34 @@ ensure_lua_keybinds() {
       rel_path="${src_file#$src_root/}"
       dst_file="$dst_root/$rel_path"
 
-      if [ ! -f "$dst_file" ]; then
+      # UserConfigs are protected: only add missing templates
+      if [ "$rel_dir" = "UserConfigs" ]; then
+        if [ ! -f "$dst_file" ]; then
+          mkdir -p "$(dirname "$dst_file")"
+          if cp -f "$src_file" "$dst_file" 2>&1 | tee -a "$log"; then
+            copied=1
+            echo "${NOTE:-[NOTE]} - Added missing user config template: ${YELLOW:-}$rel_path${RESET:-}" 2>&1 | tee -a "$log"
+          else
+            echo "${ERROR:-[ERROR]} - Failed to add missing user config template: ${YELLOW:-}$rel_path${RESET:-}" 2>&1 | tee -a "$log"
+          fi
+        fi
+      else
+        # System directories (configs, lua): always sync/overwrite from repo
         mkdir -p "$(dirname "$dst_file")"
         if cp -f "$src_file" "$dst_file" 2>&1 | tee -a "$log"; then
           copied=1
-          echo "${NOTE:-[NOTE]} - Added missing Lua file: ${YELLOW:-}$rel_path${RESET:-}" 2>&1 | tee -a "$log"
+          echo "${NOTE:-[NOTE]} - Synced system file: ${YELLOW:-}$rel_path${RESET:-}" 2>&1 | tee -a "$log"
         else
-          echo "${ERROR:-[ERROR]} - Failed to add missing Lua file: ${YELLOW:-}$rel_path${RESET:-}" 2>&1 | tee -a "$log"
+          echo "${ERROR:-[ERROR]} - Failed to sync system file: ${YELLOW:-}$rel_path${RESET:-}" 2>&1 | tee -a "$log"
         fi
       fi
     done < <(find "$src_dir" -maxdepth 1 -type f -name '*.lua' -print0)
   done
 
   if [ "$copied" -eq 1 ]; then
-    echo "${OK:-[OK]} - Lua fallback copy completed." 2>&1 | tee -a "$log"
+    echo "${OK:-[OK]} - Lua files sync completed." 2>&1 | tee -a "$log"
   else
-    echo "${INFO:-[INFO]} - Lua fallback check: no missing Lua files detected." 2>&1 | tee -a "$log"
+    echo "${INFO:-[INFO]} - Lua files check: up to date." 2>&1 | tee -a "$log"
   fi
 }
 
@@ -306,7 +318,8 @@ restore_hypr_assets() {
 
       # Fresh installs should apply repo defaults; do not restore a previous wallpaper.
       # RUN_MODE is set by copy.sh (install|upgrade|express) and is visible here.
-      local DIR_B=("Monitor_Profiles" "animations")
+      # Note: animations is a system directory and remains managed by dotfiles (not restored from backup).
+      local DIR_B=("Monitor_Profiles")
       if [ "${RUN_MODE:-}" != "install" ]; then
         DIR_B+=("wallpaper_effects")
       else
@@ -533,7 +546,6 @@ restore_user_configs() {
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_DIR_PATH="$DIRPATH-backup-$BACKUP_DIR/UserConfigs"
-  local BACKUP_CONFIGS_PATH="$DIRPATH-backup-$BACKUP_DIR/configs"
 
   if [ -z "$BACKUP_DIR" ]; then
     echo "${ERROR:-[ERROR]} - Backup directory name is empty. Exiting." 2>&1 | tee -a "$log"
@@ -641,19 +653,6 @@ restore_user_configs() {
           fi
         fi
       done
-    fi
-  fi
-
-  if [ -d "$BACKUP_CONFIGS_PATH" ]; then
-    local restored_system_lua=0
-    local lua_file
-    mkdir -p "$DIRPATH/configs"
-    while IFS= read -r -d '' lua_file; do
-      cp -f "$lua_file" "$DIRPATH/configs/"
-      restored_system_lua=1
-    done < <(find "$BACKUP_CONFIGS_PATH" -maxdepth 1 -type f -name 'system_*.lua' -print0)
-    if [ "$restored_system_lua" -eq 1 ]; then
-      echo "${OK:-[OK]} - Restored migrated system Lua overlays to $DIRPATH/configs." 2>&1 | tee -a "$log"
     fi
   fi
 
