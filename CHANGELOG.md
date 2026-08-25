@@ -7,6 +7,7 @@
 - LUA script `float.all.samesizze.lua`script 
   - `SUPER + CTRL + SPACE` to activate
   - sets the sizes based on number of windows and resolution
+  - Note: Only works in LUA worklow, not Hyprlang
 - Documented `fastfetch` `config.json` on how to add graphical logo
 - `ToggleOpactiy.sh`
 
