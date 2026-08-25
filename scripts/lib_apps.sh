@@ -348,3 +348,61 @@ install_waybar_weather() {
     install_waybar_weather_binary "$log"
   fi
 }
+
+# Install Oh My Zsh (and bundled theme templates) when zsh is used and OMZ is missing.
+# Uses --unattended --keep-zshrc so it never blocks the script, doesn't hijack the user's
+# shell immediately, and preserves the existing .zshrc.
+ensure_oh_my_zsh() {
+  local log="${1:-/dev/null}"
+  local user_shell
+  user_shell="$(basename "${SHELL:-}")"
+
+  # Only trigger if the user's shell is zsh or zsh is installed
+  if [ "$user_shell" != "zsh" ] && ! command -v zsh >/dev/null 2>&1; then
+    return 0
+  fi
+
+  # Skip if Oh My Zsh is already installed in any standard location
+  local candidate
+  for candidate in \
+    "${ZSH:-}" \
+    "$HOME/.oh-my-zsh" \
+    "${ZDOTDIR:-$HOME}/.oh-my-zsh" \
+    "${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-zsh" \
+    "/usr/share/oh-my-zsh" \
+    "/usr/share/ohmyzsh" \
+    "/opt/oh-my-zsh"; do
+    if [ -n "$candidate" ] && [ -d "$candidate/themes" ]; then
+      echo "${INFO:-[INFO]} Oh My Zsh themes already present at $candidate" 2>&1 | tee -a "$log"
+      return 0
+    fi
+  done
+
+  # Verify network / download tools before attempting install
+  if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
+    echo "${WARN:-[WARN]} curl/wget not found; cannot install Oh My Zsh theme templates." 2>&1 | tee -a "$log"
+    return 1
+  fi
+  if ! command -v git >/dev/null 2>&1; then
+    echo "${WARN:-[WARN]} git not found; cannot install Oh My Zsh theme templates." 2>&1 | tee -a "$log"
+    return 1
+  fi
+
+  echo "${INFO:-[INFO]} Oh My Zsh not found - installing theme templates to ~/.oh-my-zsh..." 2>&1 | tee -a "$log"
+
+  local install_cmd
+  if command -v curl >/dev/null 2>&1; then
+    install_cmd='curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh'
+  else
+    install_cmd='wget -qO- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh'
+  fi
+
+  # Run unattended without changing the default shell or overwriting .zshrc
+  if sh -c "$($install_cmd)" "" --unattended --keep-zshrc 2>&1 | tee -a "$log"; then
+    echo "${OK:-[OK]} Oh My Zsh theme templates installed successfully." 2>&1 | tee -a "$log"
+    return 0
+  else
+    echo "${WARN:-[WARN]} Oh My Zsh installation failed; theme switcher may only show 'Random'." 2>&1 | tee -a "$log"
+    return 1
+  fi
+}

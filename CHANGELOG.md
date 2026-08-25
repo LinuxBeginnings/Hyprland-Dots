@@ -39,6 +39,7 @@
 
 ## Fixed:
 
+- `OMZ`themes changed.  `copy.sh` checks and downloads them
 - `copy.sh` didn't replace LUA system files when already in LUA workflow
 - Duplicate waybars on Debian Forky+
 - `Float-all-windows.sh` in LUA mode no toggles float/tiled

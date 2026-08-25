@@ -620,6 +620,7 @@ if is_nixos; then
 else
   install_waybar_weather "$LOG"
 fi
+ensure_oh_my_zsh "$LOG"
 printf "\n%.0s" {1..1}
 
 choose_default_editor "$LOG"
