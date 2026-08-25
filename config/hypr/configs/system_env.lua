@@ -15,3 +15,6 @@ local ok, err = pcall(dofile, env_path)
 if not ok then
   print("[ERROR] system_env: failed to load lua/env.lua: " .. tostring(err))
 end
+
+hl.env("QT_QUICK_CONTROLS_STYLE", "Basic")
+hl.env("QT_STYLE_OVERRIDE", "Fusion")

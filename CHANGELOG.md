@@ -4,7 +4,7 @@
 
 ## Added:
 
-- Documented  `fastfetch` `config.json` on how to add graphical logo 
+- Documented `fastfetch` `config.json` on how to add graphical logo
 - `ToggleOpactiy.sh`
 
 - Selecting `zsh` now updates `.zprofile`
@@ -35,26 +35,27 @@
 
 ## Fixed:
 
+- Duplicate waybars on Debian Forky+
 - `Float-all-windows.sh` in LUA mode
 - Typo in change starship prompt menu
 - Extra `read` in `build-awww.sh`
 - `Toggle-Active-Windown-Audio.sh`
   - Updated to work in LUA workflow
 - `Tak0-Per-Window-Switch.sh` for LUA workflow
-- `ToggleOpactiy.sh` in LUA workflow 
-   - Added more levels to opacity 
-   - Added desktop notficiations
-- `ChangeBlue.sh` in LUA workflow need `-r` flag 
-   - Added levels blur `Disbled, Low, Medium, High, Ultra`
+- `ToggleOpactiy.sh` in LUA workflow
+  - Added more levels to opacity
+  - Added desktop notficiations
+- `ChangeBlue.sh` in LUA workflow need `-r` flag
+  - Added levels blur `Disbled, Low, Medium, High, Ultra`
   - LUA workflow the existing bindings didn't work
-- Fixed 2nd issue in yazi 
+- Fixed 2nd issue in yazi
 - ENV variables not set in LUA workflow
 - Logout session not working in LUA workflow
 - `togglesplit` in LUA workflow
-- Waybar doesn't restart  after Dark/Light theme in Debian 
-   - Thanks to @tomirgang for the fix 
-- Not all waybar clocks togggled from 12hr/24hr correctly 
-   - Thanks to @tomirgang for the fix 
+- Waybar doesn't restart after Dark/Light theme in Debian
+  - Thanks to @tomirgang for the fix
+- Not all waybar clocks togggled from 12hr/24hr correctly
+  - Thanks to @tomirgang for the fix
 - `hyprpolkitagent` fails to start at login
   - Patched `Polkit.sh` to check for systemd service
   - It was trying to run the agent twice causing crash

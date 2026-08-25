@@ -180,6 +180,10 @@ print_report() {
 
 perform_disable() {
     info "Disabling and stopping --user ${SERVICE_NAME}..."
+    if command -v sudo >/dev/null 2>&1; then
+        sudo systemctl --global disable "${SERVICE_NAME}" >/dev/null 2>&1 || true
+    fi
+    systemctl --user mask "${SERVICE_NAME}" >/dev/null 2>&1 || true
     if run_cmd systemctl --user disable --now "${SERVICE_NAME}"; then
         if $DRY_RUN; then
             OPERATION_RESULT="dry-run"
@@ -197,26 +201,22 @@ perform_disable() {
 }
 
 perform_revert() {
-    info "Reverting --user ${SERVICE_NAME} (unmask + enable + start)..."
-    if ! run_cmd systemctl --user unmask "${SERVICE_NAME}"; then
-        OPERATION_RESULT="failed"
-        error "Failed to unmask --user ${SERVICE_NAME}."
-        return 1
-    fi
-    if ! run_cmd systemctl --user enable --now "${SERVICE_NAME}"; then
-        OPERATION_RESULT="failed"
-        error "Failed to enable/start --user ${SERVICE_NAME}."
-        return 1
+    info "Enabling and starting --user ${SERVICE_NAME}..."
+    systemctl --user unmask "${SERVICE_NAME}" >/dev/null 2>&1 || true
+    if run_cmd systemctl --user enable --now "${SERVICE_NAME}"; then
+        if $DRY_RUN; then
+            OPERATION_RESULT="dry-run"
+            warn "Dry-run complete. No changes were made."
+        else
+            OPERATION_RESULT="success"
+            ok "Enabled and started --user ${SERVICE_NAME}."
+        fi
+        return 0
     fi
 
-    if $DRY_RUN; then
-        OPERATION_RESULT="dry-run"
-        warn "Dry-run complete. No changes were made."
-    else
-        OPERATION_RESULT="success"
-        ok "Reverted successfully. --user ${SERVICE_NAME} is enabled and started."
-    fi
-    return 0
+    OPERATION_RESULT="failed"
+    error "Failed to enable --user ${SERVICE_NAME}."
+    return 1
 }
 
 while [[ $# -gt 0 ]]; do
