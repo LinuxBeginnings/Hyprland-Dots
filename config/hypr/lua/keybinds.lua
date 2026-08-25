@@ -118,6 +118,7 @@ local app_binds = {
     "Hyprshot Screen Capture",
   },
   { "SUPER ALT", "SPACE", "$HOME/.config/hypr/scripts/Float-all-Windows.sh", "Float all windows" },
+  { "SUPER CTRL", "SPACE", "$HOME/.config/hypr/scripts/float.all.samesize.lua", "Float all windows same size" },
   -- NOTE: Dropterminal is currently certified only with kitty. Not all terminals behave correctly as a dropdown.
   { "SUPER SHIFT", "Return", "$HOME/.config/hypr/scripts/Dropterminal.sh kitty", "DropDown terminal" },
   {

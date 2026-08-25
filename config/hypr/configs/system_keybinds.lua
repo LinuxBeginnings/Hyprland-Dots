@@ -367,6 +367,12 @@ bind(
   { description = "Float all windows" }
 )
 bind(
+  "SUPER CTRL",
+  "SPACE",
+  exec_cmd("$HOME/.config/hypr/scripts/float.all.samesize.lua"),
+  { description = "Float all windows same size" }
+)
+bind(
   "SUPER SHIFT",
   "Return",
   exec_cmd("$HOME/.config/hypr/scripts/Dropterminal.sh kitty"),
