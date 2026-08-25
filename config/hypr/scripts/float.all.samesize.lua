@@ -8,6 +8,9 @@
 -- Float all windows in the active workspace to uniform dimensions
 -- dynamically computed from monitor resolution, reserved bar margins,
 -- and the number of active windows.
+-- Acts as a toggle: if every window on the workspace is already floating
+-- (e.g. from a previous run of this script), it untiles them back into
+-- the active tiled layout instead.
 -- Exits safely if monocle layout is active.
 
 -- Lightweight embedded JSON decoder to guarantee standalone execution
@@ -181,6 +184,66 @@ if window_count == 0 then
   os.exit(0)
 end
 
+-- Helper to detect Hyprland config mode (Lua entrypoint vs legacy .conf includes)
+local function get_hypr_config_mode()
+  local config_home = os.getenv("XDG_CONFIG_HOME")
+  if not config_home or config_home == "" then
+    config_home = (os.getenv("HOME") or "") .. "/.config"
+  end
+  local hypr_dir = config_home .. "/hypr"
+  local lua_entry = hypr_dir .. "/hyprland.lua"
+  local legacy_lua_entry = config_home .. "/hyprland.lua"
+
+  local f = io.open(lua_entry, "r")
+  if f then
+    f:close()
+    return "lua"
+  end
+  f = io.open(legacy_lua_entry, "r")
+  if f then
+    f:close()
+    return "lua"
+  end
+  return "conf"
+end
+
+local mode = get_hypr_config_mode()
+
+-- 3b. Toggle: if every window on the workspace is already floating (i.e. this
+-- script was already run), untile them back into the active layout instead
+-- of re-floating/resizing them.
+local all_floating = true
+for _, client in ipairs(ws_clients) do
+  if not client.floating then
+    all_floating = false
+    break
+  end
+end
+
+if all_floating then
+  local untile_commands = {}
+  for _, client in ipairs(ws_clients) do
+    local address = "address:" .. client.address
+    if mode == "lua" then
+      table.insert(
+        untile_commands,
+        string.format('dispatch hl.dsp.window.float({ window = "%s", action = "toggle" })', address)
+      )
+    else
+      -- Vanilla Hyprland has no dedicated "untile" dispatcher; togglefloating
+      -- is safe here since every window in this set is confirmed floating.
+      table.insert(untile_commands, string.format("dispatch togglefloating %s", address))
+    end
+  end
+
+  if #untile_commands > 0 then
+    local full_cmd = string.format("hyprctl --batch '%s'", table.concat(untile_commands, " ; "))
+    os.execute(full_cmd)
+    os.execute("notify-send -e -u low -t 2000 'Float Windows' 'Restored windows to tiled layout' >/dev/null 2>&1")
+  end
+  os.exit(0)
+end
+
 -- 4. Determine monitor dimensions and usable area (accounting for scaling and reserved bar margins)
 local active_monitor = nil
 for _, m in ipairs(monitors) do
@@ -268,31 +331,7 @@ else
   end
 end
 
--- Helper to detect Hyprland config mode (Lua entrypoint vs legacy .conf includes)
-local function get_hypr_config_mode()
-  local config_home = os.getenv("XDG_CONFIG_HOME")
-  if not config_home or config_home == "" then
-    config_home = (os.getenv("HOME") or "") .. "/.config"
-  end
-  local hypr_dir = config_home .. "/hypr"
-  local lua_entry = hypr_dir .. "/hyprland.lua"
-  local legacy_lua_entry = config_home .. "/hyprland.lua"
-
-  local f = io.open(lua_entry, "r")
-  if f then
-    f:close()
-    return "lua"
-  end
-  f = io.open(legacy_lua_entry, "r")
-  if f then
-    f:close()
-    return "lua"
-  end
-  return "conf"
-end
-
 -- 6. Build and execute atomic Hyprland batch command
-local mode = get_hypr_config_mode()
 local batch_commands = {}
 
 for idx, client in ipairs(ws_clients) do

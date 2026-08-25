@@ -41,7 +41,7 @@
 
 - `copy.sh` didn't replace LUA system files when already in LUA workflow
 - Duplicate waybars on Debian Forky+
-- `Float-all-windows.sh` in LUA mode
+- `Float-all-windows.sh` in LUA mode no toggles float/tiled
 - Typo in change starship prompt menu
 - Extra `read` in `build-awww.sh`
 - `Toggle-Active-Windown-Audio.sh`
