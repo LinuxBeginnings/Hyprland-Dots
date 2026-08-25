@@ -242,23 +242,53 @@ local min_h = math.min(usable_h, 320)
 local target_w = math.floor(math.max(min_w, math.min(usable_w, usable_w * width_ratio)))
 local target_h = math.floor(math.max(min_h, math.min(usable_h, usable_h * height_ratio)))
 
+-- Helper to detect Hyprland config mode (Lua entrypoint vs legacy .conf includes)
+local function get_hypr_config_mode()
+  local config_home = os.getenv("XDG_CONFIG_HOME")
+  if not config_home or config_home == "" then
+    config_home = (os.getenv("HOME") or "") .. "/.config"
+  end
+  local hypr_dir = config_home .. "/hypr"
+  local lua_entry = hypr_dir .. "/hyprland.lua"
+  local legacy_lua_entry = config_home .. "/hyprland.lua"
+
+  local f = io.open(lua_entry, "r")
+  if f then
+    f:close()
+    return "lua"
+  end
+  f = io.open(legacy_lua_entry, "r")
+  if f then
+    f:close()
+    return "lua"
+  end
+  return "conf"
+end
+
 -- 6. Build and execute atomic Hyprland batch command
+local mode = get_hypr_config_mode()
 local batch_commands = {}
 
 for _, client in ipairs(ws_clients) do
   local address = "address:" .. client.address
 
-  -- Ensure window is floating
-  table.insert(batch_commands, string.format("dispatch setfloating %s", address))
-
-  -- Resize to computed uniform dimensions
-  table.insert(
-    batch_commands,
-    string.format("dispatch resizewindowpixel exact %d %d,%s", target_w, target_h, address)
-  )
-
-  -- Center window
-  table.insert(batch_commands, string.format("dispatch centerwindow %s", address))
+  if mode == "lua" then
+    -- In Lua mode, use native Hyprland Lua dispatcher syntax with double quotes for Lua strings
+    table.insert(batch_commands, string.format('dispatch hl.dsp.window.float({ window = "%s", action = "on" })', address))
+    table.insert(
+      batch_commands,
+      string.format('dispatch hl.dsp.window.resize({ window = "%s", x = %d, y = %d, exact = true })', address, target_w, target_h)
+    )
+    table.insert(batch_commands, string.format('dispatch hl.dsp.exec_raw("centerwindow %s")', address))
+  else
+    -- Legacy Hyprlang mode
+    table.insert(batch_commands, string.format("dispatch setfloating %s", address))
+    table.insert(
+      batch_commands,
+      string.format("dispatch resizewindowpixel exact %d %d,%s", target_w, target_h, address)
+    )
+    table.insert(batch_commands, string.format("dispatch centerwindow %s", address))
+  end
 end
 
 if #batch_commands > 0 then

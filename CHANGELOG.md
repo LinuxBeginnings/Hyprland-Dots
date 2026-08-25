@@ -4,6 +4,8 @@
 
 ## Added:
 
+- LUA script `float.all.samesizze.lua`script 
+  - sets the sizes based on number of windows and resolution
 - Documented `fastfetch` `config.json` on how to add graphical logo
 - `ToggleOpactiy.sh`
 
