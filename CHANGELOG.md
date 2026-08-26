@@ -4,7 +4,7 @@
 
 ## Added:
 
-- LUA script `float.all.samesizze.lua`script 
+- LUA script `float.all.samesizze.lua`script
   - `SUPER + CTRL + SPACE` to activate
   - sets the sizes based on number of windows and resolution
   - Note: Only works in LUA worklow, not Hyprlang
@@ -18,6 +18,7 @@
        source /etc/profile
     fi
   ```
+
   - This should help resolve flatpak apps not showing in rofi menu
   - Thanks to `@jfabernathy` for finding it
 
@@ -39,7 +40,9 @@
 
 ## Fixed:
 
-- `OMZ`themes changed.  `copy.sh` checks and downloads them
+- Improved `RofiBeats.sh`, `RofiCalc`, `RainbowBorders-low-cpu`
+  - More compatible with LUA and improved hardening
+- `OMZ`themes changed. `copy.sh` checks and downloads them
 - `copy.sh` didn't replace LUA system files when already in LUA workflow
 - Duplicate waybars on Debian Forky+
 - `Float-all-windows.sh` in LUA mode no toggles float/tiled

@@ -187,18 +187,64 @@ if [[ "$RB_RESTORE" == "1" && "$RB_ONCE" != "1" ]]; then
 fi
 
 # Apply a border color value under conf or Lua Hyprland modes.
-# Prefer hyprctl keyword (legacy). On Lua parsers, fall back to hl.config via eval.
+# Cache parser mode (keyword vs eval) to avoid double-process overhead per tick on Lua configs.
+HYPR_DISPATCH_MODE=""
+
 apply_border_value() {
   local option="$1"
   local value="$2"
-  local out angle colors_str c lua_colors expr
+  local out angle colors_str c lua_colors expr rc
   local -a colors=()
 
-  # Note: under Lua config mode hyprctl may exit 0 while still printing
-  # "keyword can't work with non-legacy parsers", so check output too.
+  # Fast path: if parser mode is already known to be keyword (legacy)
+  if [[ "$HYPR_DISPATCH_MODE" == "keyword" ]]; then
+    if out="$(hyprctl keyword "$option" $value 2>&1)"; then
+      return 0
+    fi
+    HYPR_DISPATCH_MODE=""
+  fi
+
+  # Fast path: if parser mode is already known to be Lua eval
+  if [[ "$HYPR_DISPATCH_MODE" == "eval" ]]; then
+    angle="0"
+    for c in $value; do
+      if [[ "$c" =~ ^([0-9]+)deg$ ]]; then
+        angle="${BASH_REMATCH[1]}"
+      else
+        colors+=("$c")
+      fi
+    done
+    ((${#colors[@]} > 0)) || return 1
+
+    lua_colors=""
+    for c in "${colors[@]}"; do
+      [[ -n "$lua_colors" ]] && lua_colors+=", "
+      lua_colors+="\"${c}\""
+    done
+
+    case "$option" in
+    general:col.active_border)
+      expr="hl.config({ general = { col = { active_border = { colors = { ${lua_colors} }, angle = ${angle} } } } })"
+      ;;
+    general:col.inactive_border)
+      expr="hl.config({ general = { col = { inactive_border = { colors = { ${lua_colors} }, angle = ${angle} } } } })"
+      ;;
+    *)
+      return 1
+      ;;
+    esac
+
+    if hyprctl eval "$expr" >/dev/null 2>&1; then
+      return 0
+    fi
+    HYPR_DISPATCH_MODE=""
+  fi
+
+  # Auto-detection pass (runs on first tick or after fallback)
   out="$(hyprctl keyword "$option" $value 2>&1)"
   rc=$?
   if [[ $rc -eq 0 && "$out" != *"non-legacy parsers"* && "$out" != *"Use eval"* && "$out" != *"error"* && "$out" != *"invalid"* ]]; then
+    HYPR_DISPATCH_MODE="keyword"
     return 0
   fi
 
@@ -236,6 +282,7 @@ apply_border_value() {
   esac
 
   if out="$(hyprctl eval "$expr" 2>&1)"; then
+    HYPR_DISPATCH_MODE="eval"
     return 0
   fi
   log "WARN: failed to apply border via eval: $out"

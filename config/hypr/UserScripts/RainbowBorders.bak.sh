@@ -46,6 +46,10 @@ fi
 
 # ---------- RANDOM WALLUST COLORS ----------
 function wallust_random() {
+  if ((${#WALLUST_COLORS[@]} == 0)); then
+    random_hex
+    return
+  fi
   echo "${WALLUST_COLORS[RANDOM % ${#WALLUST_COLORS[@]}]}"
 }
 
@@ -61,7 +65,11 @@ function random_hex() {
     echo "${RAINBOW_PALETTE[RANDOM % ${#RAINBOW_PALETTE[@]}]}"
     return
   fi
-  echo "0xff$(openssl rand -hex 3)"
+  if command -v openssl >/dev/null 2>&1; then
+    echo "0xff$(openssl rand -hex 3)"
+  else
+    printf '0xff%02x%02x%02x\n' $((RANDOM % 256)) $((RANDOM % 256)) $((RANDOM % 256))
+  fi
 }
 function rainbow_color() {
   local idx="${1:-0}"

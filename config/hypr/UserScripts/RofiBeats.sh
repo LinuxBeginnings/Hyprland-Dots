@@ -16,6 +16,8 @@ music_list="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/online_music.list"
 mkdir -p "$(dirname "$music_list")"
 [[ -f "$music_list" ]] || touch "$music_list"
 
+[[ -d "$mDIR" ]] || mkdir -p "$mDIR"
+
 # Send notification
 notification() {
   notify-send -u normal -i "$iDIR/music.png" "$@"
@@ -26,12 +28,16 @@ music_playing() { pgrep -x "mpv" >/dev/null; }
 
 # Stop all mpv processes except mpvpaper
 stop_music() {
+  local mpv_pids
   mpv_pids=$(pgrep -x mpv)
   if [ -n "$mpv_pids" ]; then
-    mpvpaper_pid=$(ps aux | grep -- 'unique-wallpaper-process' | grep -v 'grep' | awk '{print $2}')
+    local mpvpaper_pid
+    mpvpaper_pid=$(ps aux 2>/dev/null | grep -- 'unique-wallpaper-process' | grep -v 'grep' | awk '{print $2}')
     for pid in $mpv_pids; do
       if ! echo "$mpvpaper_pid" | grep -q "$pid"; then
-        kill -9 $pid || true
+        kill -TERM "$pid" 2>/dev/null || true
+        sleep 0.05
+        kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
       fi
     done
     notification "Music stopped"
@@ -111,7 +117,7 @@ manage_music() {
     entry=$(awk -F'|' '{print $1}' "$music_list" | rofi -dmenu -config "$rofi_theme_menu" \
       -theme-str 'entry { placeholder: "🗑️ Select Music to Remove"; }')
     [[ -z "$entry" ]] && return
-    grep -vF "$entry" "$music_list" >"$music_list.tmp" && mv "$music_list.tmp" "$music_list"
+    grep -v "^${entry}|" "$music_list" >"$music_list.tmp" && mv "$music_list.tmp" "$music_list"
     notification "Removed" "$entry"
     ;;
   "View List")
