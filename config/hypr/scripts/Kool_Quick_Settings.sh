@@ -74,6 +74,8 @@ user_animations_conf="$UserConfigs/UserAnimations.conf"
 user_animations_lua="$UserConfigs/user_animations.lua"
 user_laptops_conf="$UserConfigs/Laptops.conf"
 user_laptops_lua="$UserConfigs/user_laptops.lua"
+user_monitors_conf="$hypr_dir/monitors.conf"
+user_monitors_lua="$UserConfigs/monitors.lua"
 
 # Function to show info notification
 show_info() {
@@ -496,12 +498,8 @@ handle_choice() {
     ;;
   "Choose Kitty Terminal Theme") "$scriptsDir/Kitty_themes.sh" ;;
   "Choose Ghostty Terminal Theme") "$scriptsDir/Ghostty_themes.sh" ;;
-  "Configure Monitors (nwg-displays)")
-    if ! command -v nwg-displays &>/dev/null; then
-      notify-send -i "$iDIR/error.png" "E-R-R-O-R" "Install nwg-displays first"
-      return
-    fi
-    nwg-displays
+  "Edit User Monitor config")
+    file="$(resolve_user_overlay_file "$user_monitors_lua" "$user_monitors_conf")"
     ;;
   "Configure Workspace Rules (nwg-displays)")
     if ! command -v nwg-displays &>/dev/null; then
@@ -585,6 +583,7 @@ Edit User Settings
 Edit User Decorations
 Edit User Animations
 Edit User Laptop Settings
+Edit User Monitor config
 Select Hyprview Layout
 EOF
     )
@@ -616,7 +615,6 @@ Change Starship Prompt
 Set SDDM Wallpaper
 Choose Kitty Terminal Theme
 Choose Ghostty Terminal Theme
-Configure Monitors (nwg-displays)
 Configure Workspace Rules (nwg-displays)
 GTK Settings (nwg-look)
 QT Apps Settings (qt6ct)
@@ -654,10 +652,10 @@ EOF
 
 show_main_menu() {
   printf '%s\n' "[ Settings ]"
-  printf '%b\n' "[[ User Settings ]]\x00meta\x1fEdit User Defaults Edit User Keybinds Edit User ENV variables Edit User Startup Apps overlay Edit User Window Rules overlay Edit User Layer Rules overlay Edit User Settings Edit User Decorations Edit User Animations Edit User Laptop Settings Select Hyprview Layout"
+  printf '%b\n' "[[ User Settings ]]\x00meta\x1fEdit User Defaults Edit User Keybinds Edit User ENV variables Edit User Startup Apps overlay Edit User Window Rules overlay Edit User Layer Rules overlay Edit User Settings Edit User Decorations Edit User Animations Edit User Laptop Settings Edit User Monitor config Select Hyprview Layout"
   printf '%b\n' "[[ System Settings ]]\x00meta\x1fEdit System Default Keybinds Edit System Default Startup Apps Edit System Default Window Rules Edit System Default Layer Rules Edit System Default Settings"
   printf '%b\n' "[[ Toggle Options ]]\x00meta\x1fToggle Waybar Weather units C F Toggle Waybar Clock 12H 24H Toggle Game Mode"
-  printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Configure Monitors nwg-displays Configure Workspace Rules nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Switch Dark-Light Theme Rainbow Borders Mode"
+  printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Configure Workspace Rules nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Switch Dark-Light Theme Rainbow Borders Mode"
   printf '%s\n' "[ Quick Links]"
   printf '%s\n' "Set User Keybinds"
   printf '%s\n' "Set User Decorations"
@@ -673,6 +671,7 @@ show_main_menu() {
   printf '%s\n' "Edit User Decorations"
   printf '%s\n' "Edit User Animations"
   printf '%s\n' "Edit User Laptop Settings"
+  printf '%s\n' "Edit User Monitor config"
   printf '%s\n' "Select Hyprview Layout"
   printf '%s\n' "Edit System Default Keybinds"
   printf '%s\n' "Edit System Default Startup Apps"
@@ -686,7 +685,6 @@ show_main_menu() {
   printf '%s\n' "Set SDDM Wallpaper"
   printf '%s\n' "Choose Kitty Terminal Theme"
   printf '%s\n' "Choose Ghostty Terminal Theme"
-  printf '%s\n' "Configure Monitors (nwg-displays)"
   printf '%s\n' "Configure Workspace Rules (nwg-displays)"
   printf '%s\n' "GTK Settings (nwg-look)"
   printf '%s\n' "QT Apps Settings (qt6ct)"

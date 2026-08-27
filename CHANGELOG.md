@@ -93,6 +93,7 @@
 
 ## Updated:
 
+- `nwg-displays` removed add `Edit monitor config` in quick settings
 - Yazi config to support new APIs in current version
   - Backed up old `main.lua` file for older versions of yazi
 - Layout menu has current bindings for each layout
