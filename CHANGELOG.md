@@ -40,6 +40,7 @@
 
 ## Fixed:
 
+- Logout on powermenu hanging at black screen
 - Improved `RofiBeats.sh`, `RofiCalc`, `RainbowBorders-low-cpu`
   - More compatible with LUA and improved hardening
 - `OMZ`themes changed. `copy.sh` checks and downloads them

@@ -99,13 +99,22 @@ if [ -n "$LOGINCTL_BIN" ] && [ -n "${XDG_SESSION_ID:-}" ]; then
     fi
 fi
 
-# Preferred path: synchronous hyprshutdown, so script does not silently succeed.
+TIMEOUT_BIN="$(command -v timeout || true)"
+
+# Preferred path: synchronous hyprshutdown (with timeout to prevent hanging), so script does not silently stall.
 if [ -n "$HYPRSHUTDOWN_BIN" ]; then
-    if run_logged "hyprshutdown-no-fork" "$HYPRSHUTDOWN_BIN" --no-fork; then
+    if [ -n "$TIMEOUT_BIN" ]; then
+        SHUTDOWN_CMD=("$TIMEOUT_BIN" "2s" "$HYPRSHUTDOWN_BIN" "--no-fork")
+    else
+        SHUTDOWN_CMD=("$HYPRSHUTDOWN_BIN" "--no-fork")
+    fi
+    if run_logged "hyprshutdown-no-fork" "${SHUTDOWN_CMD[@]}"; then
         if logout_completed; then
             exit 0
         fi
         log_msg "hyprshutdown returned success but Hyprland is still running"
+    else
+        log_msg "hyprshutdown failed or timed out, falling back to direct exit dispatchers"
     fi
 fi
 
