@@ -99,39 +99,20 @@ if [ -n "$LOGINCTL_BIN" ] && [ -n "${XDG_SESSION_ID:-}" ]; then
     fi
 fi
 
-TIMEOUT_BIN="$(command -v timeout || true)"
-
-# Preferred path: synchronous hyprshutdown (with timeout to prevent hanging), so script does not silently stall.
-if [ -n "$HYPRSHUTDOWN_BIN" ]; then
-    if [ -n "$TIMEOUT_BIN" ]; then
-        SHUTDOWN_CMD=("$TIMEOUT_BIN" "2s" "$HYPRSHUTDOWN_BIN" "--no-fork")
-    else
-        SHUTDOWN_CMD=("$HYPRSHUTDOWN_BIN" "--no-fork")
-    fi
-    if run_logged "hyprshutdown-no-fork" "${SHUTDOWN_CMD[@]}"; then
-        if logout_completed; then
-            exit 0
-        fi
-        log_msg "hyprshutdown returned success but Hyprland is still running"
-    else
-        log_msg "hyprshutdown failed or timed out, falling back to direct exit dispatchers"
-    fi
-fi
-
-# Try Hyprland exit dispatchers (Lua workflow first, then Hyprlang)
+# Primary exit path: tell Hyprland to exit cleanly
 if [ -n "$HYPRCTL_BIN" ]; then
-    if run_logged "hyprctl-dispatch-lua-exit" "$HYPRCTL_BIN" dispatch 'hl.dsp.exit()'; then
-        if logout_completed; then
-            exit 0
-        fi
-        log_msg "hyprctl dispatch 'hl.dsp.exit()' returned but Hyprland is still running"
-    fi
-
     if run_logged "hyprctl-dispatch-exit" "$HYPRCTL_BIN" dispatch exit; then
         if logout_completed; then
             exit 0
         fi
         log_msg "hyprctl dispatch exit returned but Hyprland is still running"
+    fi
+
+    if run_logged "hyprctl-dispatch-lua-exit" "$HYPRCTL_BIN" dispatch 'hl.dsp.exit()'; then
+        if logout_completed; then
+            exit 0
+        fi
+        log_msg "hyprctl dispatch 'hl.dsp.exit()' returned but Hyprland is still running"
     fi
 
     if run_logged "hyprctl-dispatch-exit-1" "$HYPRCTL_BIN" dispatch exit 1; then
@@ -153,6 +134,21 @@ if [ -n "$HYPRCTL_BIN" ]; then
             exit 0
         fi
         log_msg "hyprctl dispatch exit x returned but Hyprland is still running"
+    fi
+fi
+
+# Secondary path: hyprshutdown with kill timeout if hyprctl dispatch did not exit
+if [ -n "$HYPRSHUTDOWN_BIN" ]; then
+    if [ -n "$TIMEOUT_BIN" ]; then
+        SHUTDOWN_CMD=("$TIMEOUT_BIN" "-k" "1s" "2s" "$HYPRSHUTDOWN_BIN" "--no-fork")
+    else
+        SHUTDOWN_CMD=("$HYPRSHUTDOWN_BIN" "--no-fork")
+    fi
+    if run_logged "hyprshutdown-no-fork" "${SHUTDOWN_CMD[@]}"; then
+        if logout_completed; then
+            exit 0
+        fi
+        log_msg "hyprshutdown returned success but Hyprland is still running"
     fi
 fi
 
