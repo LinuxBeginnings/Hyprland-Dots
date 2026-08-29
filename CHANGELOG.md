@@ -40,6 +40,7 @@
 
 ## Fixed:
 
+- `cava` and `waybar` cava colors weren't syncing with wallpaper
 - Logout on powermenu hanging at black screen
 - Improved `RofiBeats.sh`, `RofiCalc`, `RainbowBorders-low-cpu`
   - More compatible with LUA and improved hardening

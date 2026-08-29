@@ -185,6 +185,10 @@ tooltip {
   padding-left: 6px;
 }
 
+#custom-cava_mviz {
+  color: @color12;
+}
+
 #temperature.critical {
   background-color: #ff0000;
 }

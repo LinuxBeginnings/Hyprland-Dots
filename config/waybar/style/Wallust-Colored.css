@@ -230,6 +230,7 @@ tooltip {
 }
 
 #custom-cava_mviz {
+  color: @color12;
   padding-right: 10px;
 }
 
