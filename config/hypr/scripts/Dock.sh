@@ -20,13 +20,11 @@ if ! command -v nwg-dock-hyprland >/dev/null 2>&1; then
 fi
 
 is_dock_running() {
-  pgrep -x "nwg-dock-hyprla" >/dev/null 2>&1 || pgrep -x "nwg-dock-hyprland" >/dev/null 2>&1 || pgrep -f "nwg-dock-hyprland" >/dev/null 2>&1
+  pgrep -x "nwg-dock-hyprla" >/dev/null 2>&1
 }
 
 kill_dock() {
   pkill -x "nwg-dock-hyprla" 2>/dev/null || true
-  pkill -x "nwg-dock-hyprland" 2>/dev/null || true
-  pkill -f "nwg-dock-hyprland" 2>/dev/null || true
 }
 
 start_dock() {
