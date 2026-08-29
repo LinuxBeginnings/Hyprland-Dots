@@ -40,6 +40,7 @@
 
 ## Fixed:
 
+- `remove master` in `master layout` generate LUA runtime error
 - `cava` and `waybar` cava colors weren't syncing with wallpaper
 - Logout on powermenu hanging at black screen
 - Improved `RofiBeats.sh`, `RofiCalc`, `RainbowBorders-low-cpu`

@@ -162,24 +162,32 @@ local function dispatch(name, args)
   end
   if name == "killactive" then
     if window_api.close then
-      return window_api.close()
+      return function()
+        hl.dispatch(window_api.close())
+      end
     end
     if window_api.kill then
-      return window_api.kill()
+      return function()
+        hl.dispatch(window_api.kill())
+      end
     end
     return raw_dispatch_cmd("killactive")
   end
   if name == "fullscreen" then
     if window_api.fullscreen then
       if args == "1" then
-        return window_api.fullscreen({ mode = "maximized" })
+        return function()
+          hl.dispatch(window_api.fullscreen({ mode = "maximized" }))
+        end
       end
-      return window_api.fullscreen({ mode = "fullscreen" })
+      return function()
+        hl.dispatch(window_api.fullscreen({ mode = "fullscreen" }))
+      end
     end
     if args == "1" then
-      return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\" })'")
+      return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \\\"maximized\\\" })'")
     end
-    return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"fullscreen\" })'")
+    return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \\\"fullscreen\\\" })'")
   end
   if name == "movefocus" and dsp and dsp.focus then
     return function()
@@ -208,16 +216,28 @@ local function dispatch(name, args)
     return function() hl.dispatch(window_api.float({ action = "toggle" })) end
   end
   if name == "pseudo" and window_api.pseudo then
-    return window_api.pseudo()
+    return function()
+      hl.dispatch(window_api.pseudo())
+    end
   end
   if (name == "layoutmsg" or name == "layout") and dsp and dsp.layout then
-    return dsp.layout(args)
+    return function()
+      dispatch_factory_safely(function()
+        return dsp.layout(args)
+      end)
+    end
   end
   if name == "togglesplit" and dsp and dsp.layout then
-    return dsp.layout("togglesplit")
+    return function()
+      dispatch_factory_safely(function()
+        return dsp.layout("togglesplit")
+      end)
+    end
   end
   if name == "resizewindow" and window_api.resize then
-    return window_api.resize()
+    return function()
+      hl.dispatch(window_api.resize())
+    end
   end
   if name == "resizeactive" then
     return raw_dispatch_cmd("resizeactive " .. args)

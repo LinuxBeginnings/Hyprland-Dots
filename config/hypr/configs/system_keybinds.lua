@@ -167,13 +167,19 @@ local function dispatch(name, args)
     return exec_cmd(args)
   end
   if name == "killactive" and window_api.close then
-    return window_api.close()
+    return function()
+      hl.dispatch(window_api.close())
+    end
   end
   if name == "fullscreen" and window_api.fullscreen then
     if args == "1" then
-      return window_api.fullscreen({ mode = "maximized" })
+      return function()
+        hl.dispatch(window_api.fullscreen({ mode = "maximized" }))
+      end
     end
-    return window_api.fullscreen({ mode = "fullscreen" })
+    return function()
+      hl.dispatch(window_api.fullscreen({ mode = "fullscreen" }))
+    end
   end
   if name == "movefocus" and dsp and dsp.focus then
     return function()
@@ -217,25 +223,43 @@ local function dispatch(name, args)
     end
   end
   if name == "pseudo" and window_api.pseudo then
-    return window_api.pseudo()
+    return function()
+      hl.dispatch(window_api.pseudo())
+    end
   end
   if (name == "layoutmsg" or name == "layout") and dsp and dsp.layout then
-    return dsp.layout(args)
+    return function()
+      local ok, dispatcher = pcall(dsp.layout, args)
+      if ok and dispatcher then
+        hl.dispatch(dispatcher)
+      end
+    end
   end
   if name == "togglesplit" and dsp and dsp.layout then
-    return dsp.layout("togglesplit")
+    return function()
+      local ok, dispatcher = pcall(dsp.layout, "togglesplit")
+      if ok and dispatcher then
+        hl.dispatch(dispatcher)
+      end
+    end
   end
   if name == "resizewindow" and window_api.resize then
-    return window_api.resize()
+    return function()
+      hl.dispatch(window_api.resize())
+    end
   end
   if name == "resizeactive" and window_api.resize then
     local x, y = args:match("^(%-?%d+)%s+(%-?%d+)$")
     if x and y then
-      return window_api.resize({ x = tonumber(x) or 0, y = tonumber(y) or 0, relative = true })
+      return function()
+        hl.dispatch(window_api.resize({ x = tonumber(x) or 0, y = tonumber(y) or 0, relative = true }))
+      end
     end
   end
   if name == "movewindow" and args == "" and window_api.drag then
-    return window_api.drag()
+    return function()
+      hl.dispatch(window_api.drag())
+    end
   end
   if args ~= "" then
     return raw_dispatch_cmd(name .. " " .. args)
