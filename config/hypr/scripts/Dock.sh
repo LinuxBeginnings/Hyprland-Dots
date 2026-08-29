@@ -38,30 +38,30 @@ start_dock() {
   # -c : launcher button command (rofi menu)
   # (no -d : no auto-hide)
   local launcher_cmd="${SCRIPTSDIR}/RofiLauncher.sh"
-  nwg-dock-hyprland -p bottom -x -i 32 -mb 10 -c "$launcher_cmd" >/dev/null 2>&1 &
+  nwg-dock-hyprland -p bottom -x -i 32 -mb 7 -mt 5 -c "$launcher_cmd" >/dev/null 2>&1 &
 }
 
 case "${1:-toggle}" in
-  --restart|restart)
-    kill_dock
-    sleep 0.2
+--restart | restart)
+  kill_dock
+  sleep 0.2
+  start_dock
+  ;;
+--start | start | activate)
+  if ! is_dock_running; then
     start_dock
-    ;;
-  --start|start|activate)
-    if ! is_dock_running; then
-      start_dock
-    fi
-    ;;
-  --stop|stop|deactivate)
+  fi
+  ;;
+--stop | stop | deactivate)
+  kill_dock
+  ;;
+--toggle | toggle | *)
+  if is_dock_running; then
     kill_dock
-    ;;
-  --toggle|toggle|*)
-    if is_dock_running; then
-      kill_dock
-    else
-      start_dock
-    fi
-    ;;
+  else
+    start_dock
+  fi
+  ;;
 esac
 
 exit 0
