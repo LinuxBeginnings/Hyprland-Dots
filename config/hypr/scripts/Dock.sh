@@ -7,6 +7,7 @@
 # ==================================================
 # nwg-dock-hyprland launcher and toggle script
 
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 DOCK_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/nwg-dock-hyprland"
 
 # Ensure dock configuration and wallust directory exist
@@ -36,7 +37,7 @@ start_dock() {
   # -g "kitty-dropterm" : ignores dropdown terminal class
   # -c : launcher button command (rofi menu)
   # (no -d : no auto-hide)
-  local launcher_cmd="pkill rofi || rofi -show drun -modi drun,filebrowser,run,window"
+  local launcher_cmd="${SCRIPTSDIR}/RofiLauncher.sh"
   nwg-dock-hyprland -p bottom -x -i 32 -g "kitty-dropterm" -c "$launcher_cmd" >/dev/null 2>&1 &
 }
 
