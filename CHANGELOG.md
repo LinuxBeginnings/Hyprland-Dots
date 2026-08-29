@@ -4,6 +4,7 @@
 
 ## Added:
 
+- `nwg-dock-hyprland` that themes with wallpaper
 - LUA script `float.all.samesizze.lua`script
   - `SUPER + CTRL + SPACE` to activate
   - sets the sizes based on number of windows and resolution

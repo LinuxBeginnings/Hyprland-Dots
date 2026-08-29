@@ -59,6 +59,7 @@ Source: `config/hypr/configs/Keybinds.conf`
 - `CTRL + ALT + Delete` — Exit Hyprland
 - `CTRL + ALT + L` — Lock screen
 - `CTRL + ALT + P` — Power menu
+- `CTRL + ALT + D` — Toggle dock (nwg-dock)
 - `SUPER + SHIFT + H` — Toggle active-window mute
 - `SUPER + SHIFT + G` — Toggle game mode
 - `SUPER + N` — Toggle night light

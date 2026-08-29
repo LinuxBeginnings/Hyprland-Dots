@@ -123,6 +123,11 @@ fi
 # reload swaync (asynchronous to prevent DBus timeout delays)
 (swaync-client --reload-config >/dev/null 2>&1 &)
 
+# reload / restart nwg-dock-hyprland if running
+if pgrep -x "nwg-dock-hyprla" >/dev/null 2>&1 || pgrep -x "nwg-dock-hyprland" >/dev/null 2>&1 || pgrep -f "nwg-dock-hyprland" >/dev/null 2>&1; then
+  "${SCRIPTSDIR}/Dock.sh" --restart >/dev/null 2>&1 &
+fi
+
 # Relaunching rainbow borders based on selected mode
 sleep 1
 rainbow_mode_file="${UserScripts}/rainbow-borders.mode"

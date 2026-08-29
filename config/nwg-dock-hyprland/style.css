@@ -1,0 +1,43 @@
+/* ----------- 💫 https://github.com/LinuxBeginnings 💫 -------- */
+/* nwg-dock-hyprland style - themed with system / wallust */
+
+@import 'wallust/colors-wallust.css';
+
+window {
+    background: @background;
+    border-radius: 10px;
+    border: 1px solid @border;
+}
+
+#box {
+    padding: 6px 10px;
+}
+
+#active {
+    border-bottom: 2px solid @button-active;
+}
+
+button, image {
+    background: none;
+    border-style: none;
+    box-shadow: none;
+    color: @foreground;
+}
+
+button {
+    padding: 4px;
+    margin-left: 4px;
+    margin-right: 4px;
+    color: @foreground;
+    border-radius: 10px;
+    transition: all 0.2s ease-in-out;
+}
+
+button:hover {
+    background-color: @hovered;
+    border-radius: 10px;
+}
+
+button:focus {
+    box-shadow: none;
+}

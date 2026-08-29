@@ -497,6 +497,7 @@ bind(
 )
 bind("CTRL ALT", "L", exec_cmd("$HOME/.config/hypr/scripts/LockScreen.sh"), { description = "lock screen" })
 bind("CTRL ALT", "P", exec_cmd("$HOME/.config/hypr/scripts/Wlogout.sh"), { description = "powermenu" })
+bind("CTRL ALT", "D", exec_cmd("$HOME/.config/hypr/scripts/Dock.sh"), { description = "toggle dock" })
 bind("SUPER SHIFT", "N", exec_cmd("swaync-client -t -sw"), { description = "notification panel" })
 bind(
   "SUPER SHIFT",

@@ -1,0 +1,12 @@
+/* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
+/* wallust template - colors-nwg-dock */
+
+@define-color foreground {{foreground}};
+@define-color background rgba({{background | rgb}}, 0.85);
+@define-color background-alt {{background}};
+@define-color cursor {{cursor}};
+@define-color hovered {{color12}};
+@define-color button-background {{color4}};
+@define-color button-active {{color2}};
+@define-color border {{color12}};
+@define-color urgent {{color15}};

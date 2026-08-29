@@ -58,6 +58,7 @@ GDK_BACKEND=$BACKEND yad \
   " CTRL SHIFT Print" "screenshot timer 10 secs " "(grim)" \
   "ALT Print" "Screenshot active window" "active window only" \
   "CTRL ALT P" "power-menu" "(wlogout)" \
+  "CTRL ALT D" "Toggle dock" "(nwg-dock-hyprland)" \
   "CTRL ALT L" "screen lock" "(hyprlock)" \
   "CTRL ALT Del" "Hyprland Exit" "(NOTE: Hyprland Will exit immediately)" \
   " SHIFT F" "Fullscreen" "Toggles to full screen" \
