@@ -4,6 +4,8 @@
 
 ## Added:
 
+- `docs/HOWTO-Upgrade-Dotfiles.md`
+- Spanish translation: `docs/HOWTO-Upgrade-Dotfiles.es.md`
 - `nwg-dock-hyprland` that themes with wallpaper
 - LUA script `float.all.samesizze.lua`script
   - `SUPER + CTRL + SPACE` to activate

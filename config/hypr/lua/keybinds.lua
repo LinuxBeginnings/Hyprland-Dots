@@ -5,7 +5,7 @@
 --  SPDX-License-Identifier: GPL-3.0-or-later
 -- ==================================================
 
--- Auto-generated from Keybinds.conf/UserKeybinds.conf for Lua testing
+-- Default keybindings for KoolDots Hyprland Lua configuration.
 -- Helper internals live in keybind_helpers.lua so this file stays focused on bindings you may edit.
 -- To add a binding, copy an existing bind(...) line and change:
 --   1) modifiers (e.g. "SUPER SHIFT")

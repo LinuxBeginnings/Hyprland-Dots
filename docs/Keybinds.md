@@ -1,178 +1,190 @@
 # Hyprland Default Keybinds
-Source: `config/hypr/configs/Keybinds.conf`
+Source: `config/hypr/lua/keybinds.lua`
 
 ## Legend
-- `SUPER` = `$mainMod`
+- `SUPER` = `$mainMod` (Super / Windows key)
 - `code:10..19` = number row `1..0`
-- Arrows/print/media keys are shown with their readable names
+- Arrows, function keys, mouse triggers, and media keys are shown with their readable names
 
-## Duplicate Audit
-### Intentional stacked bind
+## Duplicate / Intentional Stacked Binds Audit
 - `ALT + Tab`
-  - `cyclenext` (cycle next window)
-  - `bringactivetotop` (raise newly selected/covered window)
-
-### Potential conflicts
-- None currently detected in `Keybinds.conf` (excluding intentional stacked binds).
+  - `cyclenext` (cycles window focus via `LuaCycleWindow.sh next`)
+- `SUPER + Tab` / `SUPER + SHIFT + Tab`
+  - Group active cycle (`changegroupactive f/b`) and workspace cycle (`workspace e+1/e-1`)
 
 ## Launcher / App Shortcuts
-- `SUPER + D` — App launcher (Rofi)
-- `SUPER + Return` — Terminal
-- `SUPER + SHIFT + Return` — Dropdown terminal
-- `SUPER + E` — File manager
-- `SUPER + B` — Browser
-- `SUPER + C` — SSH menu
-- `SUPER + S` — Web search
-- `SUPER + CTRL + S` — Window switcher
-- `SUPER + ALT + E` — Emoji menu
-- `SUPER + ALT + C` — Calculator
-- `SUPER + H` — Help / cheat sheet
-- `SUPER + SHIFT + K` — Search keybinds helper
+- `SUPER + D` — App launcher (Rofi drun, filebrowser, run, window)
+- `SUPER + Return` — Terminal (`LaunchTerminal.sh '$term'`)
+- `SUPER + SHIFT + Return` — Dropdown terminal (`Dropterminal.sh kitty`)
+- `SUPER + E` — File manager (`LaunchFileManager.sh '$files' '$term'`)
+- `SUPER + B` — Default browser (`xdg-open "https://"`)
+- `SUPER + C` — SSH session manager (`rofi-ssh-menu.sh`)
+- `SUPER + S` — Web search (`RofiSearch.sh`)
+- `SUPER + CTRL + S` — Window switcher (`rofi -show window`)
+- `SUPER + ALT + E` — Emoji menu (`RofiEmoji.sh`)
+- `SUPER + ALT + C` — Calculator (`RofiCalc.sh`)
+- `SUPER + SHIFT + M` — Online music & stations (`RofiBeats.sh`)
+- `SUPER + H` — Help / cheat sheet (`KeyHints.sh`)
+- `SUPER + SHIFT + K` — Search keybinds helper (`KeyBinds.sh`)
 
-## Appearance / Theme / Wallpaper
-- `SUPER + T` — Global theme switcher
-- `SUPER + CTRL + R` — Rofi theme selector
-- `SUPER + CTRL + SHIFT + R` — Modified Rofi theme selector
-- `SUPER + CTRL + K` — Kitty theme selector
-- `SUPER + CTRL + G` — Ghostty theme selector
-- `SUPER + SHIFT + O` — Change ZSH theme
-- `SUPER + W` — Select wallpaper
-- `SUPER + SHIFT + W` — Wallpaper effects
-- `CTRL + ALT + W` — Random wallpaper
-- `SUPER + CTRL + O` — Toggle active window opacity
-- `SUPER + ALT + O` — Toggle blur
-- `SUPER + SHIFT + B` — Set static rainbow border
+## Appearance / Theme / Wallpaper / Zoom
+- `SUPER + T` — Global theme switcher using Wallust (`ThemeChanger.sh`)
+- `SUPER + CTRL + R` — Rofi theme selector (`RofiThemeSelector.sh`)
+- `SUPER + CTRL + SHIFT + R` — Modified Rofi theme selector (`RofiThemeSelector-modified.sh`)
+- `SUPER + CTRL + K` — Kitty theme selector (`Kitty_themes.sh`)
+- `SUPER + CTRL + G` — Ghostty theme selector (`Ghostty_themes.sh`)
+- `SUPER + SHIFT + O` — Change Oh-My-Zsh theme (`ZshChangeTheme.sh`)
+- `SUPER + SHIFT + A` — Animations menu (`Animations.sh`)
+- `SUPER + W` — Select wallpaper (`WallpaperSelect.sh`)
+- `SUPER + SHIFT + W` — Wallpaper effects (`WallpaperEffects.sh`)
+- `CTRL + ALT + W` — Random wallpaper (`WallpaperRandom.sh`)
+- `SUPER + CTRL + O` — Toggle active window opacity (`setprop active opaque toggle`)
+- `SUPER + ALT + O` — Toggle blur (`ChangeBlur.sh`)
+- `SUPER + SHIFT + B` — Set static rainbow border (`RainbowBorders-low-cpu.sh --run-once`)
+- `SUPER + ALT + mouse_down` — Zoom in (`cursor:zoom_factor * 2.0`)
+- `SUPER + ALT + mouse_up` — Zoom out (`cursor:zoom_factor / 2.0`)
 
 ## Panels / Menus / Bar
-- `SUPER + A` — Desktop overview
-- `SUPER + CTRL + A` — AGS overview
-- `SUPER + SHIFT + E` — Quick settings
-- `SUPER + SHIFT + N` — Notification panel
-- `SUPER + CTRL + ALT + B` — Toggle waybar
-- `SUPER + CTRL + B` — Waybar styles menu
-- `SUPER + ALT + B` — Waybar layout menu
-- `SUPER + ALT + R` — Refresh bar/menus
+- `SUPER + A` — Desktop overview (`OverviewToggle.sh`)
+- `SUPER + SHIFT + E` — Quick settings menu (`Kool_Quick_Settings.sh`)
+- `SUPER + SHIFT + N` — Notification panel (`swaync-client -t -sw`)
+- `SUPER + CTRL + ALT + B` — Toggle Waybar on/off (`pkill -SIGUSR1 waybar`)
+- `SUPER + CTRL + B` — Waybar styles menu (`WaybarStyles.sh`)
+- `SUPER + ALT + B` — Waybar layout menu (`WaybarLayout.sh`)
+- `SUPER + ALT + R` — Refresh bar and menus (`Refresh.sh`)
 
-## Session / System
-- `SUPER + Q` — Close active window
-- `SUPER + SHIFT + Q` — Terminate active process
-- `CTRL + ALT + Delete` — Exit Hyprland
-- `CTRL + ALT + L` — Lock screen
-- `CTRL + ALT + P` — Power menu
-- `CTRL + ALT + D` — Toggle dock (nwg-dock)
-- `SUPER + SHIFT + H` — Toggle active-window mute
-- `SUPER + SHIFT + G` — Toggle game mode
-- `SUPER + N` — Toggle night light
+## Session / System Controls
+- `SUPER + Q` — Close active window (`killactive`)
+- `SUPER + SHIFT + Q` — Terminate active process (`KillActiveProcess.sh`)
+- `CTRL + ALT + Delete` — Exit Hyprland / logout menu (`Logout.sh`)
+- `CTRL + ALT + L` — Lock screen (`LockScreen.sh`)
+- `CTRL + ALT + P` — Power menu (`Wlogout.sh`)
+- `SUPER + SHIFT + H` — Toggle mute/unmute for active window (`Toggle-Active-Window-Audio.sh`)
+- `SUPER + SHIFT + G` — Toggle game mode (`GameMode.sh`)
+- `SUPER + N` — Toggle night light (`Hyprsunset.sh toggle`)
 
 ## Window State / Float / Fullscreen
-- `SUPER + F` — Maximize window
-- `SUPER + SHIFT + F` — Fullscreen
-- `SUPER + Space` — Toggle floating
-- `SUPER + ALT + Space` — Float all windows
+- `SUPER + F` — Maximize window (`fullscreen 1`)
+- `SUPER + SHIFT + F` — Fullscreen (`fullscreen 0`)
+- `SUPER + Space` — Toggle floating current window (`togglefloating`)
+- `SUPER + ALT + Space` — Float all windows (`Float-all-Windows.sh`)
+- `SUPER + CTRL + Space` — Float all windows same size (`float.all.samesize.lua`)
 
 ## Layout Controls
 ### Global layout selection
-- `SUPER + ALT + L` — Toggle layouts
-- `SUPER + ALT + 1/2/3/4` — Dwindle / Master / Scrolling / Monocle
+- `SUPER + ALT + L` — Toggle layouts (`ChangeLayout.sh toggle`)
+- `SUPER + ALT + 1` — Dwindle layout (`ChangeLayout.sh dwindle`)
+- `SUPER + ALT + 2` — Master layout (`ChangeLayout.sh master`)
+- `SUPER + ALT + 3` — Scrolling layout (`ChangeLayout.sh scrolling`)
+- `SUPER + ALT + 4` — Monocle layout (`ChangeLayout.sh monocle`)
 
 ### Master layout
-- `SUPER + I` — Add master
-- `SUPER + CTRL + D` — Remove master
-- `SUPER + CTRL + Return` — Swap with master
+- `SUPER + I` — Add master (`layoutmsg addmaster`)
+- `SUPER + CTRL + D` — Remove master (`layoutmsg removemaster`)
+- `SUPER + CTRL + Return` — Swap with master (`layoutmsg swapwithmaster`)
 
 ### Dwindle layout
-- `SUPER + SHIFT + I` — Toggle split
-- `SUPER + P` — Toggle pseudo
+- `SUPER + SHIFT + I` — Toggle split (`layoutmsg togglesplit`)
+- `SUPER + P` — Toggle pseudo (`pseudo`)
+- `SUPER + M` — Set split ratio 0.3 (`splitratio 0.3`)
 
 ### Scrolling layout
-- `SUPER + SHIFT + , / .` — Move column left/right
-- `SUPER + ALT + , / .` — Swap column left/right
-- `SUPER + R` — Cycle column width presets
-- `SUPER + ALT + H` — Horizontal direction
-- `SUPER + CTRL + V` — Vertical direction
-- `SUPER + ALT + S` — Toggle horizontal/vertical direction
+- `SUPER + SHIFT + period` — Move to right column (`layoutmsg move +col`)
+- `SUPER + SHIFT + comma` — Move to left column (`layoutmsg move -col`)
+- `SUPER + ALT + comma` — Swap columns left (`layoutmsg swapcol l`)
+- `SUPER + ALT + period` — Swap columns right (`layoutmsg swapcol r`)
+- `SUPER + R` — Cycle column width preset (`0.25`, `0.33`, `0.5`, `0.66`, `0.75`, `1.0`)
+- `SUPER + ALT + H` — Horizontal scroll direction right (`scrolling:direction right`)
+- `SUPER + CTRL + V` — Vertical scroll direction down (`scrolling:direction down`)
+- `SUPER + ALT + S` — Toggle scrolling direction (Horizontal / Vertical)
 
-## Focus / Move / Resize
+## Focus / Move / Resize / Swap
 ### Focus
-- `SUPER + j/k` — Cycle next/previous (layout-aware)
-- `SUPER + Left/Right/Up/Down` — Focus by direction
+- `SUPER + j` — Cycle next window (layout-aware via `LayoutKeybindDispatch.sh cycle-next`)
+- `SUPER + k` — Cycle previous window (layout-aware via `LayoutKeybindDispatch.sh cycle-prev`)
+- `SUPER + Left/Right/Up/Down` — Focus window by direction (layout-aware via `LayoutKeybindDispatch.sh focus-*`)
+- `ALT + Tab` — Cycle next window (`LuaCycleWindow.sh next`)
 
 ### Move windows
-- `SUPER + CTRL + Left/Right/Up/Down` — Move window by direction
+- `SUPER + CTRL + Left/Right/Up/Down` — Move window by direction (`movewindow l/r/u/d`)
 
 ### Swap windows
-- `SUPER + ALT + Left/Right/Up/Down` — Swap window by direction
+- `SUPER + ALT + Left/Right/Up/Down` — Swap window by direction (`LuaSwapWindow.sh l/r/u/d`)
 
 ### Resize windows
-- `SUPER + SHIFT + Left/Right` — Width -/+50
-- `SUPER + SHIFT + Up/Down` — Height -/+50
+- `SUPER + SHIFT + Left` — Width -50 (`resizeactive -50 0`)
+- `SUPER + SHIFT + Right` — Width +50 (`resizeactive 50 0`)
+- `SUPER + SHIFT + Up` — Height -50 (`resizeactive 0 -50`)
+- `SUPER + SHIFT + Down` — Height +50 (`resizeactive 0 50`)
 
 ### Mouse drag controls
-- `SUPER + mouse:272` — Move window
-- `SUPER + mouse:273` — Resize window
+- `SUPER + mouse:272` (Left click drag) — Move window (`movewindow`)
+- `SUPER + mouse:273` (Right click drag) — Resize window (`resizewindow`)
 
 ## Grouping
-- `SUPER + G` — Toggle group
-- `SUPER + Tab` — Group forward
-- `SUPER + SHIFT + Tab` — Group back
-- `SUPER + CTRL + J` — Move into group (left)
-- `SUPER + CTRL + L` — Move into group (right)
-- `SUPER + CTRL + H` — Move out of group
+- `SUPER + G` — Toggle window grouping (`togglegroup`)
+- `SUPER + Tab` — Cycle group window forward (`changegroupactive f`)
+- `SUPER + SHIFT + Tab` — Cycle group window back (`changegroupactive b`)
+- `SUPER + CTRL + J` — Move left into group (`moveintogroup l`)
+- `SUPER + CTRL + H` — Move active window out of group (`moveoutofgroup`)
 
 ## Workspaces
 ### Navigation
-- `SUPER + Tab` — Next workspace
-- `SUPER + SHIFT + Tab` — Previous workspace
-- `SUPER + mouse_down` or `SUPER + .` — Next existing workspace
-- `SUPER + mouse_up` or `SUPER + ,` — Previous existing workspace
+- `SUPER + Tab` — Next workspace (`workspace e+1`)
+- `SUPER + SHIFT + Tab` — Previous workspace (`workspace e-1`)
+- `SUPER + mouse_down` or `SUPER + period` — Next workspace (`workspace e+1`)
+- `SUPER + mouse_up` or `SUPER + comma` — Previous workspace (`workspace e-1`)
 
 ### Direct workspace jump
 - `SUPER + code:10..19` — Go to workspaces `1..10`
 
 ### Move active window (follow)
 - `SUPER + SHIFT + code:10..19` — Move to workspaces `1..10`
-- `SUPER + SHIFT + [` / `]` — Move to prev/next workspace
+- `SUPER + SHIFT + [` — Move to previous workspace (`movetoworkspace -1`)
+- `SUPER + SHIFT + ]` — Move to next workspace (`movetoworkspace +1`)
 
 ### Move active window (silent)
-- `SUPER + CTRL + code:10..19` — Move silently to workspaces `1..10`
-- `SUPER + CTRL + [` / `]` — Move silently to prev/next workspace
+- `SUPER + CTRL + code:10..19` — Move silently to workspaces `1..10` (`movetoworkspacesilent 1..10`)
+- `SUPER + CTRL + [` — Move silently to previous workspace (`movetoworkspacesilent -1`)
+- `SUPER + CTRL + ]` — Move silently to next workspace (`movetoworkspacesilent +1`)
 
-### Special workspace / monitor move
-- `SUPER + U` — Toggle special workspace
-- `SUPER + SHIFT + U` — Move to special workspace
-- `SUPER + CTRL + F9/F10/F11/F12` — Move current workspace to monitor left/right/up/down
+### Special workspace & monitor move
+- `SUPER + U` — Toggle special workspace (`togglespecialworkspace`)
+- `SUPER + SHIFT + U` — Move to special workspace (`movetoworkspace special`)
+- `SUPER + CTRL + F9` — Move current workspace to left monitor (`movecurrentworkspacetomonitor l`)
+- `SUPER + CTRL + F10` — Move current workspace to right monitor (`movecurrentworkspacetomonitor r`)
+- `SUPER + CTRL + F11` — Move current workspace to upper monitor (`movecurrentworkspacetomonitor u`)
+- `SUPER + CTRL + F12` — Move current workspace to lower monitor (`movecurrentworkspacetomonitor d`)
 
-## Overview / Alt-Tab
-- `SUPER + CTRL + Tab` — Hyprview Toggle
-- `ALT + Tab` — Cycle next + bring active to top (intentional pair)
+## Overview / Hyprview
+- `SUPER + CTRL + Tab` — Hyprview Toggle (`toggle-qs-hyprview.sh smartgrid`)
 
 ## Screenshots
-- `SUPER + Print` — Screenshot now
-- `SUPER + SHIFT + Print` — Screenshot area
-- `SUPER + CTRL + Print` — Screenshot in 5s
-- `SUPER + CTRL + SHIFT + Print` — Screenshot in 10s
-- `ALT + Print` — Screenshot active window
-- `ALT + SHIFT + S` — Hyprshot region capture
-- `SUPER + SHIFT + S` — Screenshot via swappy flow
+- `SUPER + Print` — Screenshot now (`ScreenShot.sh --now`)
+- `SUPER + SHIFT + Print` — Screenshot area (`ScreenShot.sh --area`)
+- `SUPER + CTRL + Print` — Screenshot in 5s (`ScreenShot.sh --in5`)
+- `SUPER + CTRL + SHIFT + Print` — Screenshot in 10s (`ScreenShot.sh --in10`)
+- `ALT + Print` — Screenshot active window (`ScreenShot.sh --active`)
+- `ALT + SHIFT + S` — Hyprshot region capture to `~/Pictures/Screenshots`
+- `SUPER + SHIFT + S` — Screenshot via Swappy editor (`ScreenShot.sh --swappy`)
 
 ## Media / Audio / Hardware Keys
-### Volume & mic
-- `XF86AudioRaiseVolume` / `XF86AudioLowerVolume` — Volume up/down
-- `ALT + XF86AudioRaiseVolume` / `ALT + XF86AudioLowerVolume` — Precise volume up/down
-- `XF86AudioMute` — Toggle output mute
-- `XF86AudioMicMute` — Toggle microphone mute
+### Volume & microphone
+- `XF86AudioRaiseVolume` / `XF86AudioLowerVolume` — Volume up / down (`Volume.sh --inc` / `--dec`)
+- `ALT + XF86AudioRaiseVolume` / `ALT + XF86AudioLowerVolume` — Precise volume up / down (`Volume.sh --inc-precise` / `--dec-precise`)
+- `XF86AudioMute` — Toggle output mute (`Volume.sh --toggle`)
+- `XF86AudioMicMute` — Toggle microphone mute (`Volume.sh --toggle-mic`)
 
-### Playback
-- `XF86AudioPlayPause` — Play/pause
-- `XF86AudioPause` — Pause
-- `XF86AudioPlay` — Play
-- `XF86AudioNext` / `XF86AudioPrev` — Next/previous track
-- `XF86AudioStop` — Stop
+### Playback controls
+- `XF86AudioPlayPause` / `XF86AudioPause` / `XF86AudioPlay` — Play / pause (`MediaCtrl.sh --pause`)
+- `XF86AudioNext` — Next track (`MediaCtrl.sh --nxt`)
+- `XF86AudioPrev` — Previous track (`MediaCtrl.sh --prv`)
+- `XF86AudioStop` — Stop playback (`MediaCtrl.sh --stop`)
 
-### Power/device keys
-- `XF86Sleep` — Suspend
-- `XF86Rfkill` — Airplane mode toggle
+### Power & device keys
+- `XF86Sleep` — Suspend (`systemctl suspend`)
+- `XF86Rfkill` — Airplane mode toggle (`AirplaneMode.sh`)
 
-## Keyboard Layout
-- `Left ALT + Left SHIFT` — Switch keyboard layout globally
-- `Left SHIFT + Left ALT` — Switch keyboard layout per-window
+## Keyboard Layout Switching
+- `Left ALT + Left SHIFT` (`ALT_L + SHIFT_L`) — Switch keyboard layout globally (`KeyboardLayout.sh switch`)
+- `Left SHIFT + Left ALT` (`SHIFT_L + ALT_L`) — Switch keyboard layout per-window (`Tak0-Per-Window-Switch.sh`)
