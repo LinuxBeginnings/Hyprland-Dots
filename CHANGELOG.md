@@ -1,5 +1,7 @@
 # Changelog — KoolDots
 
+## v2.3.27
+
 ## v2.3.26
 
 ## Added:
