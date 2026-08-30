@@ -649,11 +649,8 @@ if [ "$resolution" == "< 1440p" ]; then
   sed -i 's/font_size 16.0/font_size 14.0/' "$DOTFILES_DIR/config/kitty/kitty.conf"
 
   # hyprlock matters
-  if [ -f "$DOTFILES_DIR/config/hypr/hyprlock.conf" ]; then
-    mv "$DOTFILES_DIR/config/hypr/hyprlock.conf" "$DOTFILES_DIR/config/hypr/hyprlock-2k.conf"
-  fi
   if [ -f "$DOTFILES_DIR/config/hypr/hyprlock-1080p.conf" ]; then
-    mv "$DOTFILES_DIR/config/hypr/hyprlock-1080p.conf" "$DOTFILES_DIR/config/hypr/hyprlock.conf"
+    cp -f "$DOTFILES_DIR/config/hypr/hyprlock-1080p.conf" "$DOTFILES_DIR/config/hypr/hyprlock.conf"
   fi
 
   # rofi fonts reduction
@@ -661,6 +658,10 @@ if [ "$resolution" == "< 1440p" ]; then
   if [ -f "$rofi_config_file" ]; then
     sed -i '/element-text {/,/}/s/[[:space:]]*font: "JetBrainsMono Nerd Font SemiBold 13"/font: "JetBrainsMono Nerd Font SemiBold 11"/' "$rofi_config_file" 2>&1 | tee -a "$LOG"
     sed -i '/configuration {/,/}/s/[[:space:]]*font: "JetBrainsMono Nerd Font SemiBold 15"/font: "JetBrainsMono Nerd Font SemiBold 13"/' "$rofi_config_file" 2>&1 | tee -a "$LOG"
+  fi
+elif [ "$resolution" == "≥ 1440p" ]; then
+  if [ -f "$DOTFILES_DIR/config/hypr/hyprlock-2k.conf" ]; then
+    cp -f "$DOTFILES_DIR/config/hypr/hyprlock-2k.conf" "$DOTFILES_DIR/config/hypr/hyprlock.conf"
   fi
 fi
 
