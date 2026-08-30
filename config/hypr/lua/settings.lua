@@ -102,17 +102,71 @@ hl.config({
   },
 })
 
-hl.gesture({
+local function safe_gesture(spec)
+  if hl and hl.gesture then
+    local ok, err = pcall(hl.gesture, spec)
+    if not ok and err and not tostring(err):find("overshadowed", 1, true) then
+      print("[WARN] Failed to register gesture: " .. tostring(err))
+    end
+  end
+end
+
+-- 3-finger horizontal swipe -> workspace switch
+safe_gesture({
   fingers = 3,
   direction = "horizontal",
   action = "workspace",
 })
 
--- Complex dispatcher gestures from SystemSettings.conf are pending explicit Lua API parity:
--- gesture = 3, up, dispatcher, exec, hyprctl keyword cursor:zoom_factor ...
--- gesture = 3, down, dispatcher, exec, hyprctl keyword cursor:zoom_factor ...
--- gesture = 4, up, dispatcher, exec, $scriptsDir/OverviewToggle.sh
--- gesture = 4, down, float
+-- 3-finger swipe up -> zoom in
+safe_gesture({
+  fingers = 3,
+  direction = "up",
+  action = function()
+    local handle = io.popen("hyprctl getoption cursor:zoom_factor 2>/dev/null | awk 'NR==1 {factor = $2; if (factor < 1) {factor = 1}; print factor * 1.5}'")
+    if handle then
+      local factor = handle:read("*a")
+      handle:close()
+      factor = factor and factor:gsub("%s+", "")
+      if factor and factor ~= "" then
+        hl.dispatch(hl.dsp.exec_cmd("hyprctl keyword cursor:zoom_factor " .. factor))
+      end
+    end
+  end,
+})
+
+-- 3-finger swipe down -> zoom out
+safe_gesture({
+  fingers = 3,
+  direction = "down",
+  action = function()
+    local handle = io.popen("hyprctl getoption cursor:zoom_factor 2>/dev/null | awk 'NR==1 {factor = $2; if (factor < 1) {factor = 1}; print factor / 1.5}'")
+    if handle then
+      local factor = handle:read("*a")
+      handle:close()
+      factor = factor and factor:gsub("%s+", "")
+      if factor and factor ~= "" then
+        hl.dispatch(hl.dsp.exec_cmd("hyprctl keyword cursor:zoom_factor " .. factor))
+      end
+    end
+  end,
+})
+
+-- 4-finger swipe up -> desktop overview
+safe_gesture({
+  fingers = 4,
+  direction = "up",
+  action = function()
+    hl.dispatch(hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/OverviewToggle.sh"))
+  end,
+})
+
+-- 4-finger swipe down -> toggle window floating
+safe_gesture({
+  fingers = 4,
+  direction = "down",
+  action = "float",
+})
 
 hl.config({
   misc = {
