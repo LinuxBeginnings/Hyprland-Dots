@@ -55,6 +55,7 @@ local startup_commands = {
   'qs --log-rules "qt.qpa.wayland.textinput.warning=false" -c overview',
   'qs --log-rules "qt.qpa.wayland.textinput.warning=false" -p $HOME/.config/quickshell/qs-hyprview',
   "hypridle",
+  scriptsDir .. "/LuaAutoReload.sh",
   scriptsDir .. "/Hyprsunset.sh init",
   -- NOTE: Dropterminal is currently certified only with kitty. Not all terminals behave correctly as a dropdown.
   scriptsDir .. "/Dropterminal.sh --startup kitty",

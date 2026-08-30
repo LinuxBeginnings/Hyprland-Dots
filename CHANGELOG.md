@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- `startup.lua` wasn't calling `LuaAutoReload.sh` `
 - Changing defaults like filemanager didn't take effect
 - KoolDots update notifier
   - Redid entire script from scratch
