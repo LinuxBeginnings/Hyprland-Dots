@@ -4,7 +4,6 @@
 
 ## Fixed:
 
-- Improved user startup to better handle apps
 - Re-added laptop brightness keybinds
 - User defined startups weren't working I.e. `kde-connect`
 - `startup.lua` wasn't calling `LuaAutoReload.sh`
@@ -16,6 +15,10 @@
 - Waybar config getting changed on each boot
 - Gestures in LUA configs
 - Fixed Quick settings not opening system keybinds file
+
+## Upated:
+
+- Improved user startup to better handle apps
 
 ## v2.3.26
 
