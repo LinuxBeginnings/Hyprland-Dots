@@ -20,6 +20,7 @@ if pidof rofi > /dev/null; then
 fi
 
 while true; do
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
     result=$(
         rofi -i -dmenu \
             -kb-custom-1 "Control-Delete" \

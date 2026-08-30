@@ -1,0 +1,12 @@
+/* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
+/* Default fallback wallust template for nwg-dock-hyprland */
+
+@define-color foreground #cdd6f4;
+@define-color background rgba(24, 24, 37, 0.85);
+@define-color background-alt #1e1e2e;
+@define-color cursor #f5e0dc;
+@define-color hovered #89b4fa;
+@define-color button-background #89b4fa;
+@define-color button-active #a6e3a1;
+@define-color border #89b4fa;
+@define-color urgent #f38ba8;

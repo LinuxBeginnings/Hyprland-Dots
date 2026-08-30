@@ -314,6 +314,7 @@ set_hyprlock_wallpaper() {
 }
 
 main() {
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
   choice=$(menu | $rofi_command)
   choice=$(echo "$choice" | xargs)
 

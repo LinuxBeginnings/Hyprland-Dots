@@ -10,6 +10,7 @@
 set -euo pipefail
 
 QS_OVERVIEW_DIR="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}/quickshell/overview"
+QS_TEXTINPUT_LOG_RULE="qt.qpa.wayland.textinput.warning=false"
 
 # 1) Prefer Quickshell when installed and configured
 if command -v qs >/dev/null 2>&1 && [ -d "$QS_OVERVIEW_DIR" ]; then
@@ -21,7 +22,7 @@ if command -v qs >/dev/null 2>&1 && [ -d "$QS_OVERVIEW_DIR" ]; then
   fi
 
   # If QS isn't running, try starting it and retry once
-  qs -c overview >/dev/null 2>&1 &
+  qs --log-rules "$QS_TEXTINPUT_LOG_RULE" -c overview >/dev/null 2>&1 &
   sleep 0.6
   if qs ipc -c overview call overview toggle >/dev/null 2>&1; then
     exit 0

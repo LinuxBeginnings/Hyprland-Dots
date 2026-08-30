@@ -5,7 +5,7 @@
 --  SPDX-License-Identifier: GPL-3.0-or-later
 -- ==================================================
 
--- Auto-generated from Keybinds.conf/UserKeybinds.conf for Lua testing
+-- Default keybindings for KoolDots Hyprland Lua configuration.
 -- Helper internals live in keybind_helpers.lua so this file stays focused on bindings you may edit.
 -- To add a binding, copy an existing bind(...) line and change:
 --   1) modifiers (e.g. "SUPER SHIFT")
@@ -118,6 +118,7 @@ local app_binds = {
     "Hyprshot Screen Capture",
   },
   { "SUPER ALT", "SPACE", "$HOME/.config/hypr/scripts/Float-all-Windows.sh", "Float all windows" },
+  { "SUPER CTRL", "SPACE", "$HOME/.config/hypr/scripts/float.all.samesize.lua", "Float all windows same size" },
   -- NOTE: Dropterminal is currently certified only with kitty. Not all terminals behave correctly as a dropdown.
   { "SUPER SHIFT", "Return", "$HOME/.config/hypr/scripts/Dropterminal.sh kitty", "DropDown terminal" },
   {
@@ -142,7 +143,7 @@ local app_binds = {
   { "CTRL ALT", "W", "$HOME/.config/hypr/scripts/WallpaperRandom.sh", "random wallpaper" },
   { "SUPER SHIFT", "K", "$HOME/.config/hypr/scripts/KeyBinds.sh", "search keybinds" },
   { "SUPER SHIFT", "A", "$HOME/.config/hypr/scripts/Animations.sh", "animations menu" },
-  { "SUPER SHIFT", "R", "$HOME/.config/hypr/scripts/ZshChangeTheme.sh", "change oh-my-zsh theme" },
+  { "SUPER SHIFT", "O", "$HOME/.config/hypr/scripts/ZshChangeTheme.sh", "change oh-my-zsh theme" },
   { "SUPER ALT", "C", "$HOME/.config/hypr/UserScripts/RofiCalc.sh", "calculator" },
 }
 for _, app in ipairs(app_binds) do
@@ -316,7 +317,7 @@ bind(
   exec_cmd("hyprctl keyword scrolling:direction right"),
   { description = "Horizonal scroll right" }
 )
-bind("SUPER ALT", "V", exec_cmd("hyprctl keyword scrolling:direction down"), { description = "Vertical Scroll down" })
+bind("SUPER CTRL", "V", exec_cmd("hyprctl keyword scrolling:direction down"), { description = "Vertical Scroll down" })
 bind(
   "SUPER ALT",
   "S",
@@ -325,6 +326,10 @@ bind(
   ),
   { description = "toggle scrolling V/H" }
 )
+-- Section: Hyprview expose controls
+-- "smartgrid", "justified", "masonry", "bands", "hero", "spiral"
+-- "satellite", "staggered", "columnar", "vortex", "random"
+-- Bound later (after SUPER SHIFT/CTRL tab workspace/group binds) so the combo is not overwritten.
 local col_width_presets = { 0.25, 0.33, 0.5, 0.66, 0.75, 1.0 }
 local function _as_number(v)
   if type(v) == "number" then
@@ -359,7 +364,11 @@ local function _monitor_width(win)
   if hl.get_active_monitor then
     local active_mon = hl.get_active_monitor()
     if type(active_mon) == "table" then
-      local w = _as_number(active_mon.width or active_mon.w or (type(active_mon.size) == "table" and (active_mon.size[1] or active_mon.size.width)))
+      local w = _as_number(
+        active_mon.width
+          or active_mon.w
+          or (type(active_mon.size) == "table" and (active_mon.size[1] or active_mon.size.width))
+      )
       if w ~= nil then
         return w
       end
@@ -548,25 +557,10 @@ bind(
 --   exec_cmd("bash $HOME/.config/hypr/scripts/ResizeActive.sh 0 50"),
 --   { description = "resize down (+50)" }
 -- )
-bind(
-  "SUPER SHIFT",
-  "left",
-  dispatch("resizeactive", "-50 0"),
-  { description = "resize left (-50)" }
-)
-bind(
-  "SUPER SHIFT",
-  "right",
-  dispatch("resizeactive", "50 0"),
-  { description = "resize right (+50)" }
-)
+bind("SUPER SHIFT", "left", dispatch("resizeactive", "-50 0"), { description = "resize left (-50)" })
+bind("SUPER SHIFT", "right", dispatch("resizeactive", "50 0"), { description = "resize right (+50)" })
 bind("SUPER SHIFT", "up", dispatch("resizeactive", "0 -50"), { description = "resize up (-50)" })
-bind(
-  "SUPER SHIFT",
-  "down",
-  dispatch("resizeactive", "0 50"),
-  { description = "resize down (+50)" }
-)
+bind("SUPER SHIFT", "down", dispatch("resizeactive", "0 50"), { description = "resize down (+50)" })
 -- Keep legacy directional move script binds commented for rollback during Lua API migration.
 -- Native movewindow dispatch below replaces LuaMoveWindowDirectional.sh usage.
 -- bind(
@@ -608,10 +602,8 @@ bind(
 )
 bind("SUPER", "G", dispatch("togglegroup", ""), { description = "toggle group" })
 bind("SUPER", "Tab", dispatch("changegroupactive", "f"), { description = "Change Group Forward" })
-bind("SUPER CTRL", "tab", dispatch("changegroupactive", ""), { description = "change active in group" })
 bind("SUPER SHIFT", "Tab", dispatch("changegroupactive", "b"), { description = "Change Group Back" })
-bind("SUPER CTRL", "K", dispatch("moveintogroup", "l"), { description = "Move left into group" })
-bind("SUPER CTRL", "L", dispatch("moveintogroup", "r"), { description = "Move Right into group" })
+bind("SUPER CTRL", "J", dispatch("moveintogroup", "l"), { description = "Move left into group" })
 bind("SUPER CTRL", "H", dispatch("moveoutofgroup", ""), { description = "Move active out of group" })
 bind(
   "SUPER",
@@ -655,6 +647,14 @@ bind(
 -- )
 bind("SUPER", "tab", dispatch("workspace", "e+1"), { description = "next workspace" })
 bind("SUPER SHIFT", "tab", dispatch("workspace", "e-1"), { description = "previous workspace" })
+-- Hyprview: SUPER CTRL+Tab (avoids SUPER SHIFT+Tab used by previous workspace / group back)
+local qs_hyprview_layout = "smartgrid"
+bind(
+  "SUPER CTRL",
+  "tab",
+  exec_cmd("$HOME/.config/hypr/scripts/toggle-qs-hyprview.sh " .. qs_hyprview_layout),
+  { description = "Hyprview Toggle" }
+)
 bind("SUPER SHIFT", "U", dispatch("movetoworkspace", "special"), { description = "move to special workspace" })
 bind("SUPER", "U", dispatch("togglespecialworkspace", ""), { description = "toggle special workspace" })
 bind("SUPER", "code:10", dispatch("workspace", "1"), { description = "workspace 1" })

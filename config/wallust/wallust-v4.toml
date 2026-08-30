@@ -51,3 +51,6 @@ ghostty.target = '~/.config/ghostty/wallust.conf'
 
 quickshell.template = 'qml_color.json'
 quickshell.target = '~/.config/quickshell/qml_color.json'
+
+nwg-dock.template = 'colors-nwg-dock.css'
+nwg-dock.target = '~/.config/nwg-dock-hyprland/wallust/colors-wallust.css'

@@ -30,8 +30,43 @@ local function trim(value)
   return (value or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
+local function normalize_mods(mods)
+  mods = trim(mods)
+  if mods == "" then
+    return ""
+  end
+  local known = {
+    super = "SUPER",
+    super_l = "SUPER_L",
+    super_r = "SUPER_R",
+    shift = "SHIFT",
+    shift_l = "SHIFT_L",
+    shift_r = "SHIFT_R",
+    ctrl = "CTRL",
+    control = "CTRL",
+    ctrl_l = "CTRL_L",
+    ctrl_r = "CTRL_R",
+    control_l = "CTRL_L",
+    control_r = "CTRL_R",
+    alt = "ALT",
+    alt_l = "ALT_L",
+    alt_r = "ALT_R",
+    meta = "META",
+    meta_l = "META_L",
+    meta_r = "META_R",
+    mod2 = "MOD2",
+    mod3 = "MOD3",
+    mod5 = "MOD5",
+  }
+  local parts = {}
+  for token in mods:gmatch("%S+") do
+    parts[#parts + 1] = known[token:lower()] or token
+  end
+  return table.concat(parts, " ")
+end
+
 local function chord(mods, key)
-  mods = trim(mods):gsub("%s+", " + ")
+  mods = normalize_mods(mods):gsub("%s+", " + ")
   key = trim(key)
   if mods == "" then
     return key
@@ -73,7 +108,7 @@ local function key_variants(key, mods)
     ["code:18"] = "9",
     ["code:19"] = "0",
   }
-  if mods and mods:match("SHIFT") and shifted_number_keys[key] then
+  if mods and mods:upper():match("SHIFT") and shifted_number_keys[key] then
     local number_key = number_keys[key]
     if number_key then
       return { shifted_number_keys[key], number_key }
@@ -127,24 +162,32 @@ local function dispatch(name, args)
   end
   if name == "killactive" then
     if window_api.close then
-      return window_api.close()
+      return function()
+        hl.dispatch(window_api.close())
+      end
     end
     if window_api.kill then
-      return window_api.kill()
+      return function()
+        hl.dispatch(window_api.kill())
+      end
     end
     return raw_dispatch_cmd("killactive")
   end
   if name == "fullscreen" then
     if window_api.fullscreen then
       if args == "1" then
-        return window_api.fullscreen({ mode = "maximized" })
+        return function()
+          hl.dispatch(window_api.fullscreen({ mode = "maximized" }))
+        end
       end
-      return window_api.fullscreen({ mode = "fullscreen" })
+      return function()
+        hl.dispatch(window_api.fullscreen({ mode = "fullscreen" }))
+      end
     end
     if args == "1" then
-      return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\" })'")
+      return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \\\"maximized\\\" })'")
     end
-    return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"fullscreen\" })'")
+    return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \\\"fullscreen\\\" })'")
   end
   if name == "movefocus" and dsp and dsp.focus then
     return function()
@@ -172,8 +215,29 @@ local function dispatch(name, args)
   if name == "togglefloating" and window_api.float then
     return function() hl.dispatch(window_api.float({ action = "toggle" })) end
   end
+  if name == "pseudo" and window_api.pseudo then
+    return function()
+      hl.dispatch(window_api.pseudo())
+    end
+  end
+  if (name == "layoutmsg" or name == "layout") and dsp and dsp.layout then
+    return function()
+      dispatch_factory_safely(function()
+        return dsp.layout(args)
+      end)
+    end
+  end
+  if name == "togglesplit" and dsp and dsp.layout then
+    return function()
+      dispatch_factory_safely(function()
+        return dsp.layout("togglesplit")
+      end)
+    end
+  end
   if name == "resizewindow" and window_api.resize then
-    return window_api.resize()
+    return function()
+      hl.dispatch(window_api.resize())
+    end
   end
   if name == "resizeactive" then
     return raw_dispatch_cmd("resizeactive " .. args)

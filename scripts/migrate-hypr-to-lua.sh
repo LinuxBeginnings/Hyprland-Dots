@@ -44,7 +44,7 @@ USER_CONFIGS_LEGACY_DIR="$USER_CONFIGS_LEGACY_ROOT/$MIGRATION_TS"
 CONFIGS_LEGACY_DIR="$CONFIGS_LEGACY_ROOT/$MIGRATION_TS"
 USER_OVERRIDES_SHIM="$DEST_HYPR_DIR/lua/user_overrides.lua"
 DEST_MONITORS_CONF="$DEST_HYPR_DIR/monitors.conf"
-DEST_LUA_MONITORS="$DEST_HYPR_DIR/lua/monitors.lua"
+DEST_LUA_MONITORS="$USER_CONFIGS_DIR/monitors.lua"
 DEST_WORKSPACES_CONF="$DEST_HYPR_DIR/workspaces.conf"
 DEST_LUA_WORKSPACES="$DEST_HYPR_DIR/lua/workspaces.lua"
 SOURCE_LUA_ENTRY_ENABLED="$SRC_HYPR_DIR/hyprland.lua"
@@ -53,6 +53,13 @@ SRC_USER_LUA_TEMPLATES_DIR="$SRC_HYPR_DIR/UserConfigs"
 DEST_LUA_ENTRY="$DEST_HYPR_DIR/hyprland.lua"
 DEST_LUA_ENTRY_DISABLED="$DEST_HYPR_DIR/hyprland.lua.disable"
 SOURCE_LUA_ENTRY=""
+USER_CONFIGS_PRESERVED_CONFS=(
+  "kitty.conf"
+  "ghostty.conf"
+  "hyprview-layout.conf"
+  "LaptopDisplay.conf"
+  "WorkSpaceRules.conf"
+)
 
 usage() {
   cat <<USAGE
@@ -137,6 +144,8 @@ restore_latest_conf_backup() {
   local legacy_root="$target_dir/$LEGACY_CONFIGS_DIR_NAME"
   local moved=0
   local file
+  local basename
+  local keep
   local archives=()
 
   [ -d "$target_dir" ] || return 0
@@ -521,6 +530,8 @@ def parse_startup(path, *, variables=None, visited=None):
     return entries
 
 MONITOR_DIRECTIVE_KEYS = {
+    "disable",
+    "disabled",
     "mirror",
     "bitdepth",
     "transform",
@@ -550,6 +561,7 @@ MONITOR_DIRECTIVE_KEYS = {
 }
 
 MONITOR_FIELD_MAP = {
+    "disable": "disabled",
     "addreserved": "reserved",
     "supportswidecolor": "supports_wide_color",
     "supportshdr": "supports_hdr",
@@ -582,7 +594,7 @@ def parse_monitors(path):
         mode_or_directive = parts[1].lower().replace("-", "_")
         extras = []
 
-        if mode_or_directive == "disable":
+        if mode_or_directive in {"disable", "disabled"}:
             spec["mode"] = "disable"
             entries.append(spec)
             continue
@@ -613,6 +625,15 @@ def parse_monitors(path):
                     extras[i + 4].strip(),
                 ]
                 i += 5
+                continue
+            if field == "disabled":
+                if i + 1 >= len(extras):
+                    spec["disabled"] = "true"
+                    i += 1
+                    continue
+                value = extras[i + 1].strip()
+                spec["disabled"] = value if value else "true"
+                i += 2
                 continue
 
             if i + 1 >= len(extras):
@@ -700,6 +721,15 @@ def emit_monitor(spec):
         "hl.monitor({",
         f"    output = {lua_string(spec.get('output', ''))},",
     ]
+
+    mode_value = str(spec.get("mode", "")).strip().lower()
+    disabled_value = str(spec.get("disabled", "")).strip().lower()
+    disabled_truthy = {"1", "true", "yes", "on", "disable", "disabled"}
+    if mode_value in {"disable", "disabled"} or disabled_value in disabled_truthy:
+        lines.append("    mode = \"preferred\",")
+        lines.append("    disabled = true,")
+        lines.append("})")
+        return "\n".join(lines)
 
     if "mode" in spec:
         lines.append(f"    mode = {lua_string(spec['mode'])},")
@@ -1103,6 +1133,46 @@ def emit_rule(rule_type, rule):
     lines.append("})")
     return "\n".join(lines)
 
+def normalize_bind_mods(mods):
+    """Uppercase known modifiers for Hyprland Lua key chords.
+
+    Hyprlang accepts mixed-case modifiers (e.g. "shift"), but hl.bind keysyms
+    require canonical names like SHIFT/CTRL/ALT/SUPER.
+    """
+    if not mods:
+        return ""
+    tokens = re.split(r"\s+", mods.strip())
+    known = {
+        "super": "SUPER",
+        "super_l": "SUPER_L",
+        "super_r": "SUPER_R",
+        "shift": "SHIFT",
+        "shift_l": "SHIFT_L",
+        "shift_r": "SHIFT_R",
+        "ctrl": "CTRL",
+        "control": "CTRL",
+        "ctrl_l": "CTRL_L",
+        "ctrl_r": "CTRL_R",
+        "control_l": "CTRL_L",
+        "control_r": "CTRL_R",
+        "alt": "ALT",
+        "alt_l": "ALT_L",
+        "alt_r": "ALT_R",
+        "meta": "META",
+        "meta_l": "META_L",
+        "meta_r": "META_R",
+        "mod2": "MOD2",
+        "mod3": "MOD3",
+        "mod5": "MOD5",
+    }
+    normalized = []
+    for token in tokens:
+        if not token:
+            continue
+        key = token.lower()
+        normalized.append(known.get(key, token))
+    return " ".join(normalized)
+
 def parse_keybinds(path, *, variables=None, visited=None):
     if not path.exists():
         return []
@@ -1155,7 +1225,8 @@ def parse_keybinds(path, *, variables=None, visited=None):
         if unbind:
             parts = [expand(part.strip()) for part in unbind.group(1).split(",")]
             if len(parts) >= 2:
-                converted.append(f"unbind({lua_string(parts[0])}, {lua_string(parts[1])})")
+                mods = normalize_bind_mods(parts[0])
+                converted.append(f"unbind({lua_string(mods)}, {lua_string(parts[1])})")
             continue
 
         bind = re.match(r"^(bind[a-z]*)\s*=\s*(.+)$", line)
@@ -1175,6 +1246,8 @@ def parse_keybinds(path, *, variables=None, visited=None):
                 args = ", ".join(part for part in parts[3:] if part)
             else:
                 continue
+
+            mods = normalize_bind_mods(mods)
 
             opts = []
             if description:
@@ -1278,15 +1351,15 @@ else:
 startup_readiness = (
     "runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; "
     "export XDG_RUNTIME_DIR=\"$runtime\"; "
-    "for _ in $(seq 1 200); do "
+    "for _ in $(seq 1 30); do "
     "if [ -n \"$WAYLAND_DISPLAY\" ] && [ -S \"$runtime/$WAYLAND_DISPLAY\" ]; then break; fi; "
     "for sock in \"$runtime\"/wayland-[0-9]*; do [ -S \"$sock\" ] || continue; "
     "case \"$(basename \"$sock\")\" in *awww*) continue ;; esac; "
     "export WAYLAND_DISPLAY=\"$(basename \"$sock\")\"; break 2; done; "
     "sleep 0.1; done; "
     "if [ -n \"$HYPRLAND_INSTANCE_SIGNATURE\" ]; then "
-    "hypr_sock=\"$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock\"; "
-    "for _ in $(seq 1 200); do [ -S \"$hypr_sock\" ] && break; sleep 0.1; done; fi"
+    "for hypr_sock in \"$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock\" \"$runtime/hypr/.socket.sock\"; do [ -S \"$hypr_sock\" ] && break 2; done; "
+    "sleep 0.1; fi"
 )
 
 system_startup_lines = [
@@ -1435,8 +1508,43 @@ system_keybind_lines = [
     "  return (value or \"\"):gsub(\"^%s+\", \"\"):gsub(\"%s+$\", \"\")",
     "end",
     "",
+    "local function normalize_mods(mods)",
+    "  mods = trim(mods)",
+    "  if mods == \"\" then",
+    "    return \"\"",
+    "  end",
+    "  local known = {",
+    "    super = \"SUPER\",",
+    "    super_l = \"SUPER_L\",",
+    "    super_r = \"SUPER_R\",",
+    "    shift = \"SHIFT\",",
+    "    shift_l = \"SHIFT_L\",",
+    "    shift_r = \"SHIFT_R\",",
+    "    ctrl = \"CTRL\",",
+    "    control = \"CTRL\",",
+    "    ctrl_l = \"CTRL_L\",",
+    "    ctrl_r = \"CTRL_R\",",
+    "    control_l = \"CTRL_L\",",
+    "    control_r = \"CTRL_R\",",
+    "    alt = \"ALT\",",
+    "    alt_l = \"ALT_L\",",
+    "    alt_r = \"ALT_R\",",
+    "    meta = \"META\",",
+    "    meta_l = \"META_L\",",
+    "    meta_r = \"META_R\",",
+    "    mod2 = \"MOD2\",",
+    "    mod3 = \"MOD3\",",
+    "    mod5 = \"MOD5\",",
+    "  }",
+    "  local parts = {}",
+    "  for token in mods:gmatch(\"%S+\") do",
+    "    parts[#parts + 1] = known[token:lower()] or token",
+    "  end",
+    "  return table.concat(parts, \" \")",
+    "end",
+    "",
     "local function chord(mods, key)",
-    "  mods = trim(mods):gsub(\"%s+\", \" + \")",
+    "  mods = normalize_mods(mods):gsub(\"%s+\", \" + \")",
     "  key = trim(key)",
     "  if mods == \"\" then",
     "    return key",
@@ -1478,7 +1586,7 @@ system_keybind_lines = [
     "    [\"code:18\"] = \"9\",",
     "    [\"code:19\"] = \"0\",",
     "  }",
-    "  if mods:match(\"SHIFT\") and shifted_number_keys[key] then",
+    "  if mods:upper():match(\"SHIFT\") and shifted_number_keys[key] then",
     "    local number_key = number_keys[key]",
     "    if number_key then",
     "      return { shifted_number_keys[key], number_key }",
@@ -2210,13 +2318,27 @@ move_conf_files_to_legacy() {
   local source_dir="$1"
   local legacy_dir="$2"
   local label="$3"
+  shift 3
+  local -a preserved_confs=("$@")
   local moved=0
   local file
+  local basename
+  local keep
+  local preserved
 
   [ -d "$source_dir" ] || return 0
   mkdir -p "$legacy_dir"
 
   while IFS= read -r -d '' file; do
+    basename="$(basename "$file")"
+    keep=0
+    for preserved in "${preserved_confs[@]}"; do
+      if [ "$basename" = "$preserved" ]; then
+        keep=1
+        break
+      fi
+    done
+    [ "$keep" -eq 1 ] && continue
     mv "$file" "$legacy_dir/"
     moved=1
   done < <(find "$source_dir" -maxdepth 1 -type f -name '*.conf' -print0)
@@ -2253,11 +2375,11 @@ print_conversion_coverage_summary() {
 [INFO]     - $DEST_HYPR_DIR/hyprlock.conf, hyprlock-1080p.conf, hyprlock-2k.conf
 [INFO]     - $DEST_HYPR_DIR/hyprland.conf (fallback/non-Lua entrypoint)
 [INFO]     - $DEST_HYPR_DIR/Monitor_Profiles/*.conf and $DEST_HYPR_DIR/animations/*.conf (preset profiles)
+[INFO]     - $USER_CONFIGS_DIR/kitty.conf, $USER_CONFIGS_DIR/ghostty.conf, $USER_CONFIGS_DIR/hyprview-layout.conf
 [INFO]     - $USER_CONFIGS_DIR/LaptopDisplay.conf and $USER_CONFIGS_DIR/WorkSpaceRules.conf (legacy/helper files)
 SUMMARY
 }
-
-move_conf_files_to_legacy "$USER_CONFIGS_DIR" "$USER_CONFIGS_LEGACY_DIR" "$USER_CONFIGS_DIR"
+move_conf_files_to_legacy "$USER_CONFIGS_DIR" "$USER_CONFIGS_LEGACY_DIR" "$USER_CONFIGS_DIR" "${USER_CONFIGS_PRESERVED_CONFS[@]}"
 move_conf_files_to_legacy "$CONFIGS_DIR" "$CONFIGS_LEGACY_DIR" "$CONFIGS_DIR"
 print_conversion_coverage_summary
 

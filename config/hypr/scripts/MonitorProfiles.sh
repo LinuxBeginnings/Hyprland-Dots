@@ -71,6 +71,7 @@ if [[ -z "$mon_profiles_list" ]]; then
 fi
 
 # Rofi Menu
+"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 chosen_file=$(echo "$mon_profiles_list" | rofi -i -dmenu -config "$rofi_theme" -mesg "$msg")
 
 if [[ -n "$chosen_file" ]]; then

@@ -13,7 +13,7 @@ HYPR_STARSHIP_DIR="$CONFIG_HOME/hypr/starship"
 STARSHIP_CONFIG="$CONFIG_HOME/starship.toml"
 BACKUP_FILE="$STARSHIP_CONFIG.original"
 ROFI_THEME="$CONFIG_HOME/rofi/config-starship.rasi"
-RESTORE_LABEL="Retore orignal prompt"
+RESTORE_LABEL="Restore original prompt"
 
 if ! command -v starship >/dev/null 2>&1; then
   echo "starship is not installed"
@@ -41,6 +41,7 @@ rofi_options=("${available_prompts[@]}")
 if [[ -f "$BACKUP_FILE" ]]; then
   rofi_options+=("$RESTORE_LABEL")
 fi
+"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 
 selection="$(printf '%s\n' "${rofi_options[@]}" | rofi -dmenu -i -p "Select Starship Prompt" -mesg "Select Starship Prompt" -theme "$ROFI_THEME")"
 

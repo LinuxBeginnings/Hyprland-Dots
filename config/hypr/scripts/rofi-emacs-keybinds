@@ -10,4 +10,5 @@ if [[ ! -s "${CACHE_FILE}" ]]; then
   exit 1
 fi
 
+"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 rofi -dmenu -i -p "Emacs Keybinds" -config "${ROFI_CONFIG}" < "${CACHE_FILE}"

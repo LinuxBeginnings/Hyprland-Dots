@@ -79,7 +79,6 @@ prompt_confirm_distro() {
   echo "  6) gentoo"
   printf "Select your distro (1-6) or Q/q to quit: " >/dev/tty
   read -r choice </dev/tty
-  read -r choice
   case "$choice" in
     1) echo "debian" ;;
     2) echo "ubuntu" ;;

@@ -164,6 +164,10 @@ tooltip {
   border: 2px solid @color13;
 }
 
+#custom-cava_mviz {
+  color: @color12;
+}
+
 #cpu {
   border: 2px solid @color5;
   color: @foreground;

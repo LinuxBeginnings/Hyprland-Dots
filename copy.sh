@@ -79,6 +79,8 @@ actcheckbox=black,cyan
 '
 fi
 MIN_EXPRESS_VERSION="2.3.18"
+# Hyprland Lua config requires Hyprland 0.55+.
+MIN_LUA_HYPRLAND_VERSION="0.55"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$SCRIPT_DIR"
 export DOTFILES_DIR
@@ -136,6 +138,112 @@ else
   exit 1
 fi
 
+# Optional helper fallbacks
+# Some releases may not ship runtime-state helpers yet. Define no-op
+# fallbacks so upgrade/install can continue without crashing.
+if ! declare -f seed_upgrade_userconfigs >/dev/null 2>&1; then
+  seed_upgrade_userconfigs() {
+    local log="${1:-/dev/null}"
+    echo "${NOTE} seed_upgrade_userconfigs helper unavailable; skipping seed step." 2>&1 | tee -a "$log"
+  }
+fi
+if ! declare -f capture_upgrade_runtime_selection_state >/dev/null 2>&1; then
+  capture_upgrade_runtime_selection_state() { :; }
+fi
+if ! declare -f capture_runtime_personal_state >/dev/null 2>&1; then
+  capture_runtime_personal_state() {
+    local log="${1:-/dev/null}"
+    local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local cache_home="${XDG_CACHE_HOME:-$HOME/.cache}"
+    local rofi_link="$cfg_home/rofi/.current_wallpaper"
+    local wallpaper_current="$cfg_home/hypr/wallpaper_effects/.wallpaper_current"
+    local state_dir="$cache_home/kooldots-copy"
+    local state_file="$state_dir/wallpaper-current-$$"
+    local resolved=""
+
+    mkdir -p "$state_dir"
+
+    KOOLDOTS_RUNTIME_WALLPAPER_STATE_FILE="$state_file"
+    KOOLDOTS_RUNTIME_WALLPAPER_SOURCE=""
+    KOOLDOTS_RUNTIME_INITIAL_STARTUP_MARKER=0
+    export KOOLDOTS_RUNTIME_WALLPAPER_STATE_FILE KOOLDOTS_RUNTIME_WALLPAPER_SOURCE KOOLDOTS_RUNTIME_INITIAL_STARTUP_MARKER
+
+    if [ -f "$cfg_home/hypr/.initial_startup_done" ]; then
+      KOOLDOTS_RUNTIME_INITIAL_STARTUP_MARKER=1
+      export KOOLDOTS_RUNTIME_INITIAL_STARTUP_MARKER
+    fi
+
+    if [ -L "$rofi_link" ]; then
+      resolved="$(readlink -f "$rofi_link" 2>/dev/null || true)"
+    fi
+
+    if [ -n "$resolved" ] && [ -f "$resolved" ]; then
+      cp -f "$resolved" "$state_file" 2>/dev/null || true
+      KOOLDOTS_RUNTIME_WALLPAPER_SOURCE="$resolved"
+      export KOOLDOTS_RUNTIME_WALLPAPER_SOURCE
+      echo "${NOTE} Captured current wallpaper from rofi link: $resolved" 2>&1 | tee -a "$log"
+    elif [ -f "$wallpaper_current" ]; then
+      cp -f "$wallpaper_current" "$state_file" 2>/dev/null || true
+      KOOLDOTS_RUNTIME_WALLPAPER_SOURCE="$wallpaper_current"
+      export KOOLDOTS_RUNTIME_WALLPAPER_SOURCE
+      echo "${NOTE} Captured current wallpaper from $wallpaper_current" 2>&1 | tee -a "$log"
+    else
+      rm -f "$state_file" 2>/dev/null || true
+    fi
+  }
+fi
+if ! declare -f preserve_custom_sddm_configs >/dev/null 2>&1; then
+  preserve_custom_sddm_configs() { :; }
+fi
+if ! declare -f restore_upgrade_runtime_selection_state >/dev/null 2>&1; then
+  restore_upgrade_runtime_selection_state() { :; }
+fi
+if ! declare -f restore_runtime_personal_state >/dev/null 2>&1; then
+  restore_runtime_personal_state() {
+    local log="${1:-/dev/null}"
+    local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local wallpaper_current="$cfg_home/hypr/wallpaper_effects/.wallpaper_current"
+    local rofi_link="$cfg_home/rofi/.current_wallpaper"
+    local state_file="${KOOLDOTS_RUNTIME_WALLPAPER_STATE_FILE:-}"
+    local source_path="${KOOLDOTS_RUNTIME_WALLPAPER_SOURCE:-}"
+
+    if [ "${KOOLDOTS_RUNTIME_INITIAL_STARTUP_MARKER:-0}" -eq 1 ]; then
+      mkdir -p "$cfg_home/hypr"
+      touch "$cfg_home/hypr/.initial_startup_done" 2>/dev/null || true
+    fi
+
+    if [ -n "$state_file" ] && [ -f "$state_file" ]; then
+      mkdir -p "$(dirname "$wallpaper_current")" "$(dirname "$rofi_link")"
+      cp -f "$state_file" "$wallpaper_current" 2>/dev/null || true
+
+      if [ -n "$source_path" ] && [ -f "$source_path" ]; then
+        ln -snf "$source_path" "$rofi_link" 2>/dev/null || true
+        echo "${INFO} Runtime wallpaper source restored from: $source_path" 2>&1 | tee -a "$log"
+      else
+        ln -snf "$wallpaper_current" "$rofi_link" 2>/dev/null || true
+        echo "${INFO} Runtime wallpaper source restored from: $wallpaper_current" 2>&1 | tee -a "$log"
+      fi
+
+      echo "${OK} Restored runtime wallpaper state after copy." 2>&1 | tee -a "$log"
+      rm -f "$state_file" 2>/dev/null || true
+    fi
+
+    if [ -L "$rofi_link" ]; then
+      local resolved_link=""
+      resolved_link="$(readlink -f "$rofi_link" 2>/dev/null || true)"
+      if [ -z "$resolved_link" ] || [ ! -f "$resolved_link" ]; then
+        if [ -f "$wallpaper_current" ]; then
+          ln -snf "$wallpaper_current" "$rofi_link" 2>/dev/null || true
+          echo "${NOTE} Repaired broken rofi wallpaper link to wallpaper_current fallback." 2>&1 | tee -a "$log"
+        fi
+      fi
+    elif [ ! -e "$rofi_link" ] && [ -f "$wallpaper_current" ]; then
+      ln -snf "$wallpaper_current" "$rofi_link" 2>/dev/null || true
+      echo "${NOTE} Initialized rofi wallpaper link from wallpaper_current fallback." 2>&1 | tee -a "$log"
+    fi
+  }
+fi
+
 # Ensure we operate from the dotfiles root so relative paths resolve.
 cd "$SCRIPT_DIR" || {
   echo "${ERROR} Failed to cd to $SCRIPT_DIR"
@@ -144,6 +252,61 @@ cd "$SCRIPT_DIR" || {
 
 version_gte() {
   [ "$1" = "$(echo -e "$1\n$2" | sort -V | tail -n1)" ]
+}
+
+# Parse installed Hyprland version (e.g. 0.55.4) from hyprctl/Hyprland.
+# hyprctl version requires a running daemon; fall back to the Hyprland binary
+# (which always reports its own version) when no version can be parsed.
+_parse_hyprland_ver_from_output() {
+  local output="$1"
+  local v
+  v="$(printf '%s\n' "$output" | sed -n 's/^Tag: v\([0-9][0-9.]*\).*/\1/p' | head -n1 || true)"
+  if [ -z "$v" ] && [ -n "$output" ]; then
+    v="$(printf '%s\n' "$output" | sed -n 's/.*[Hh]yprland[[:space:]]\+v\?\([0-9][0-9.]*\).*/\1/p' | head -n1 || true)"
+  fi
+  printf '%s' "$v"
+}
+get_hyprland_version() {
+  local ver=""
+  local full_output=""
+
+  # Try hyprctl first (works when daemon is running; some builds also work standalone)
+  if command -v hyprctl >/dev/null 2>&1; then
+    full_output="$(hyprctl version 2>/dev/null || true)"
+    ver="$(_parse_hyprland_ver_from_output "$full_output")"
+  fi
+
+  # Fall back to Hyprland binary — always works even when daemon is not running
+  if [ -z "$ver" ] && command -v Hyprland >/dev/null 2>&1; then
+    full_output="$(Hyprland --version 2>/dev/null || true)"
+    ver="$(_parse_hyprland_ver_from_output "$full_output")"
+  fi
+
+  if [ -z "$ver" ] && command -v hyprland >/dev/null 2>&1; then
+    full_output="$(hyprland --version 2>/dev/null || true)"
+    ver="$(_parse_hyprland_ver_from_output "$full_output")"
+  fi
+
+  printf '%s' "$ver"
+}
+
+hyprland_supports_lua() {
+  local ver
+  ver="$(get_hyprland_version)"
+  if [ -z "$ver" ]; then
+    return 1
+  fi
+  version_gte "$ver" "$MIN_LUA_HYPRLAND_VERSION"
+}
+
+warn_hyprland_too_low_for_lua() {
+  local log="${1:-/dev/null}"
+  local ver
+  ver="$(get_hyprland_version)"
+  if [ -z "$ver" ]; then
+    ver="unknown"
+  fi
+  echo "${WARN} Hyprland Version ${ver} is too low. Installing Hyprlang config, upgrade Hyprland and re-run copy.sh" 2>&1 | tee -a "$log"
 }
 
 get_installed_dotfiles_version() {
@@ -178,8 +341,17 @@ is_kooldots_config() {
 
 is_oem_lua_config() {
   local cfg_home
+  local hypr_dir
   cfg_home="$(config_home)"
-  [ -f "$cfg_home/hyprland.lua" ] || [ -f "$cfg_home/hypr/hyprland.lua" ]
+  hypr_dir="$cfg_home/hypr"
+
+  # Explicit Hyprlang workflow marker:
+  # if hyprland.lua.disable exists and hyprland.lua does not, treat host as conf mode.
+  if [ -f "$hypr_dir/hyprland.lua.disable" ] && [ ! -f "$hypr_dir/hyprland.lua" ]; then
+    return 1
+  fi
+
+  [ -f "$cfg_home/hyprland.lua" ] || [ -f "$hypr_dir/hyprland.lua" ]
 }
 
 require_kooldots_for_upgrade() {
@@ -228,6 +400,7 @@ EOF
 
 UPGRADE_MODE=0
 EXPRESS_MODE=0
+MIGRATE_HYPR_TO_LUA=0
 RUN_MODE=""
 
 while [[ $# -gt 0 ]]; do
@@ -345,7 +518,7 @@ print_color() {
 # Check /etc/os-release for Ubuntu or Debian and warn about Hyprland version requirement
 if grep -iqE '^(ID_LIKE|ID)=.*(ubuntu|debian)' /etc/os-release >/dev/null 2>&1; then
   printf "\n%.0s" {1..1}
-  print_color $WARNING "\nThese Dotfiles are only supported on Hyprland v0.54 or greater. Do not install on older versions of Hyprland.\n"
+  print_color $WARNING "\nThese Dotfiles are only supported on Hyprland v0.55 or greater. Do not install on older versions of Hyprland.\n"
   while true; do
     echo -n "${CAT} Do you want to continue anyway? (y/N): "
     read _continue
@@ -447,6 +620,7 @@ if is_nixos; then
 else
   install_waybar_weather "$LOG"
 fi
+ensure_oh_my_zsh "$LOG"
 printf "\n%.0s" {1..1}
 
 choose_default_editor "$LOG"
@@ -496,6 +670,18 @@ printf "\n%.0s" {1..1}
 printf "\n%.0s" {1..1}
 prompt_express_upgrade "$EXPRESS_SUPPORTED" "$LOG"
 
+# Upgrade/express: confirm Hyprlang -> Lua migration (default yes).
+# Lua requires Hyprland 0.55+; otherwise stay on Hyprlang.
+if [ "$RUN_MODE" = "upgrade" ] || [ "$RUN_MODE" = "express" ]; then
+  if hyprland_supports_lua; then
+    prompt_lua_migration "$LOG"
+  else
+    MIGRATE_HYPR_TO_LUA=0
+    export MIGRATE_HYPR_TO_LUA
+    warn_hyprland_too_low_for_lua "$LOG"
+  fi
+fi
+
 set -e
 
 # Check if the ${XDG_CONFIG_HOME:-$HOME/.config}/ directory exists
@@ -503,6 +689,9 @@ if [ ! -d "${XDG_CONFIG_HOME:-$HOME/.config}" ]; then
   echo "${ERROR} - ${XDG_CONFIG_HOME:-$HOME/.config} directory does not exist. Creating it now."
   mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}" && echo "Directory created successfully." || echo "Failed to create directory."
 fi
+seed_upgrade_userconfigs "$LOG"
+capture_upgrade_runtime_selection_state
+capture_runtime_personal_state "$LOG"
 
 printf "${INFO} - copying dotfiles ${SKY_BLUE}first${RESET} part\n"
 copy_phase1 "$LOG" "$RUN_MODE"
@@ -511,7 +700,21 @@ copy_waybar "$LOG"
 printf "\n%.0s" {1..1}
 printf "${INFO} - Copying dotfiles ${SKY_BLUE}second${RESET} part\n"
 copy_phase2 "$LOG"
+preserve_custom_sddm_configs "$LOG"
 ensure_lua_keybinds "$LOG"
+# Fresh copy defaults to Lua config when Hyprland is 0.55+.
+# Older Hyprland keeps Hyprlang (.conf) entrypoint.
+# When version detection fails on a fresh install (daemon not yet running),
+# default to Lua — 0.55+ is the minimum supported version.
+if [ "$RUN_MODE" = "install" ]; then
+  _hl_install_ver="$(get_hyprland_version)"
+  if [ -z "$_hl_install_ver" ] || version_gte "$_hl_install_ver" "$MIN_LUA_HYPRLAND_VERSION"; then
+    enable_fresh_install_lua_config "$LOG"
+  else
+    warn_hyprland_too_low_for_lua "$LOG"
+  fi
+  unset _hl_install_ver
+fi
 printf "\\n%.0s" {1..1}
 # waybar-weather config handling:
 # - install (fresh copy): always overwrite and prompt for units
@@ -620,66 +823,67 @@ printf "\\n%.0s" {1..1}
 INSTALLED_VERSION_AT_START="$(get_installed_dotfiles_version || true)"
 
 # quickshell (ags alternative)
-# Check if quickshell is installed
-if command -v qs >/dev/null 2>&1; then
-  echo -e "${NOTE} - ${YELLOW}quickshell${RESET} is detected as installed"
+DIRPATH_QS="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
 
-  DIRPATH_QS="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
-
-  if [ ! -d "$DIRPATH_QS" ]; then
-    echo "${INFO} - quickshell config not found, copying new config."
-    if [ -d "$DOTFILES_DIR/config/quickshell" ]; then
-      cp -r "$DOTFILES_DIR/config/quickshell/" "$DIRPATH_QS" 2>&1 | tee -a "$LOG"
-    fi
-  else
-    # If default shell.qml exists, it blocks named config subdirectory detection
-    # Remove it to enable the overview config to be found
-    if [ -f "$DIRPATH_QS/shell.qml" ]; then
-      echo "${NOTE} - Removing default shell.qml to enable quickshell overview config detection" 2>&1 | tee -a "$LOG"
-      rm "$DIRPATH_QS/shell.qml"
-    fi
-
-    read -p "${CAT} Do you want to overwrite your existing ${YELLOW}quickshell${RESET} config? [y/N] " answer_qs
-    case "$answer_qs" in
-    [Yy]*)
-      BACKUP_DIR=$(get_backup_dirname)
-      mv "$DIRPATH_QS" "$DIRPATH_QS-backup-$BACKUP_DIR" 2>&1 | tee -a "$LOG"
-      echo -e "${NOTE} - Backed up quickshell to $DIRPATH_QS-backup-$BACKUP_DIR"
-
-      cp -r "$DOTFILES_DIR/config/quickshell/" "$DIRPATH_QS" 2>&1 | tee -a "$LOG"
-      if [ $? -eq 0 ]; then
-        echo "${OK} - ${YELLOW}quickshell${RESET} overwritten successfully."
-        # Remove default shell.qml from new copy to enable overview detection
-        rm -f "$DIRPATH_QS/shell.qml" 2>&1 | tee -a "$LOG"
-      else
-        echo "${ERROR} - Failed to copy ${YELLOW}quickshell${RESET} config."
-        exit 1
-      fi
-      ;;
-    *)
-      echo "${NOTE} - Skipping overwrite of quickshell config."
-      ;;
-    esac
+if [ ! -d "$DIRPATH_QS" ]; then
+  echo "${INFO} - quickshell config not found, copying new config."
+  if [ -d "$DOTFILES_DIR/config/quickshell" ]; then
+    cp -r "$DOTFILES_DIR/config/quickshell/" "$DIRPATH_QS" 2>&1 | tee -a "$LOG"
+  fi
+else
+  # If default shell.qml exists, it blocks named config subdirectory detection
+  # Remove it to enable the overview config to be found
+  if [ -f "$DIRPATH_QS/shell.qml" ]; then
+    echo "${NOTE} - Removing default shell.qml to enable quickshell overview config detection" 2>&1 | tee -a "$LOG"
+    rm "$DIRPATH_QS/shell.qml"
   fi
 
-  # Ensure overview subdirectory exists and is up to date
-  DIRPATH_OVERVIEW="$DIRPATH_QS/overview"
-  if [ ! -d "$DIRPATH_OVERVIEW" ] && [ -d "$DOTFILES_DIR/config/quickshell/overview" ]; then
-    echo "${INFO} - Copying quickshell overview config..." 2>&1 | tee -a "$LOG"
-    cp -r "$DOTFILES_DIR/config/quickshell/overview" "$DIRPATH_QS/" 2>&1 | tee -a "$LOG"
-    echo "${OK} - Quickshell overview config copied successfully" 2>&1 | tee -a "$LOG"
-  fi
+  read -p "${CAT} Do you want to overwrite your existing ${YELLOW}quickshell${RESET} config? [y/N] " answer_qs
+  case "$answer_qs" in
+  [Yy]*)
+    BACKUP_DIR=$(get_backup_dirname)
+    mv "$DIRPATH_QS" "$DIRPATH_QS-backup-$BACKUP_DIR" 2>&1 | tee -a "$LOG"
+    echo -e "${NOTE} - Backed up quickshell to $DIRPATH_QS-backup-$BACKUP_DIR"
 
-  # Check for old quickshell startup commands and update them
-  HYPR_STARTUP="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/configs/Startup_Apps.conf"
-  if [ -f "$HYPR_STARTUP" ]; then
-    if grep -q '^exec-once = qs\s*$\|^exec-once = qs &' "$HYPR_STARTUP"; then
-      echo "${NOTE} - Found old Quickshell startup command, updating to new overview config..." 2>&1 | tee -a "$LOG"
-      # Replace old 'qs' or 'qs &' with new 'qs -c overview'
-      sed -i 's/^\(\s*\)exec-once = qs\s*$/\1exec-once = qs -c overview  # Quickshell Overview/' "$HYPR_STARTUP" 2>&1 | tee -a "$LOG"
-      sed -i 's/^\(\s*\)exec-once = qs &$/\1exec-once = qs -c overview  # Quickshell Overview/' "$HYPR_STARTUP" 2>&1 | tee -a "$LOG"
-      echo "${OK} - Updated Quickshell startup command to use overview config" 2>&1 | tee -a "$LOG"
+    cp -r "$DOTFILES_DIR/config/quickshell/" "$DIRPATH_QS" 2>&1 | tee -a "$LOG"
+    if [ $? -eq 0 ]; then
+      echo "${OK} - ${YELLOW}quickshell${RESET} overwritten successfully."
+      # Remove default shell.qml from new copy to enable overview detection
+      rm -f "$DIRPATH_QS/shell.qml" 2>&1 | tee -a "$LOG"
+    else
+      echo "${ERROR} - Failed to copy ${YELLOW}quickshell${RESET} config."
+      exit 1
     fi
+    ;;
+  *)
+    echo "${NOTE} - Skipping overwrite of quickshell config."
+    ;;
+  esac
+fi
+
+# Ensure overview and qs-hyprview subdirectories exist
+DIRPATH_OVERVIEW="$DIRPATH_QS/overview"
+if [ ! -d "$DIRPATH_OVERVIEW" ] && [ -d "$DOTFILES_DIR/config/quickshell/overview" ]; then
+  echo "${INFO} - Copying quickshell overview config..." 2>&1 | tee -a "$LOG"
+  cp -r "$DOTFILES_DIR/config/quickshell/overview" "$DIRPATH_QS/" 2>&1 | tee -a "$LOG"
+  echo "${OK} - Quickshell overview config copied successfully" 2>&1 | tee -a "$LOG"
+fi
+DIRPATH_QS_HYPRVIEW="$DIRPATH_QS/qs-hyprview"
+if [ ! -d "$DIRPATH_QS_HYPRVIEW" ] && [ -d "$DOTFILES_DIR/config/quickshell/qs-hyprview" ]; then
+  echo "${INFO} - Copying quickshell qs-hyprview config..." 2>&1 | tee -a "$LOG"
+  cp -r "$DOTFILES_DIR/config/quickshell/qs-hyprview" "$DIRPATH_QS/" 2>&1 | tee -a "$LOG"
+  echo "${OK} - Quickshell qs-hyprview config copied successfully" 2>&1 | tee -a "$LOG"
+fi
+
+# Check for old quickshell startup commands and update them
+HYPR_STARTUP="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/configs/Startup_Apps.conf"
+if [ -f "$HYPR_STARTUP" ]; then
+  if grep -q '^exec-once = qs\s*$\|^exec-once = qs &' "$HYPR_STARTUP"; then
+    echo "${NOTE} - Found old Quickshell startup command, updating to new overview config..." 2>&1 | tee -a "$LOG"
+    # Replace old 'qs' or 'qs &' with new 'qs -c overview'
+    sed -i 's/^\(\s*\)exec-once = qs\s*$/\1exec-once = qs -c overview  # Quickshell Overview/' "$HYPR_STARTUP" 2>&1 | tee -a "$LOG"
+    sed -i 's/^\(\s*\)exec-once = qs &$/\1exec-once = qs -c overview  # Quickshell Overview/' "$HYPR_STARTUP" 2>&1 | tee -a "$LOG"
+    echo "${OK} - Updated Quickshell startup command to use overview config" 2>&1 | tee -a "$LOG"
   fi
 fi
 printf "\n%.0s" {1..1}
@@ -692,10 +896,13 @@ printf "\\n%.0s" {1..1}
 
 restore_user_scripts "$LOG" "$EXPRESS_MODE"
 printf "\n%.0s" {1..1}
-restore_terminal_configs "$LOG" "$EXPRESS_MODE"
-printf "\\n%.0s" {1..1}
 
 restore_hypr_files "$LOG" "$EXPRESS_MODE"
+restore_runtime_personal_state "$LOG"
+# After restores, migrate restored Hyprlang customizations to Lua when approved.
+if [ "$RUN_MODE" = "upgrade" ] || [ "$RUN_MODE" = "express" ]; then
+  migrate_hypr_to_lua_if_needed "$LOG" "${MIGRATE_HYPR_TO_LUA:-0}" || true
+fi
 printf "\n%.0s" {1..1}
 printf "\n%.0s" {1..1}
 
@@ -768,17 +975,21 @@ fi
 # - If the symlink points somewhere else (or is broken), reset it to the new default.
 WAYBAR_CONFIG_LINK="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/config"
 WAYBAR_CONFIG_TARGET="$config_file"
-if [ -e "$WAYBAR_CONFIG_TARGET" ]; then
-  if [ -L "$WAYBAR_CONFIG_LINK" ]; then
-    current_target=$(readlink "$WAYBAR_CONFIG_LINK" || true)
-    if [ "$current_target" != "$WAYBAR_CONFIG_TARGET" ] || [ ! -e "$WAYBAR_CONFIG_LINK" ]; then
+if [ "$RUN_MODE" = "install" ]; then
+  if [ -e "$WAYBAR_CONFIG_TARGET" ]; then
+    if [ -L "$WAYBAR_CONFIG_LINK" ]; then
+      current_target=$(readlink "$WAYBAR_CONFIG_LINK" || true)
+      if [ "$current_target" != "$WAYBAR_CONFIG_TARGET" ] || [ ! -e "$WAYBAR_CONFIG_LINK" ]; then
+        ln -sf "$WAYBAR_CONFIG_TARGET" "$WAYBAR_CONFIG_LINK" 2>&1 | tee -a "$LOG"
+      fi
+    else
       ln -sf "$WAYBAR_CONFIG_TARGET" "$WAYBAR_CONFIG_LINK" 2>&1 | tee -a "$LOG"
     fi
   else
-    ln -sf "$WAYBAR_CONFIG_TARGET" "$WAYBAR_CONFIG_LINK" 2>&1 | tee -a "$LOG"
+    echo "${WARN} Waybar default config target not found at $WAYBAR_CONFIG_TARGET; leaving $WAYBAR_CONFIG_LINK as-is." 2>&1 | tee -a "$LOG"
   fi
 else
-  echo "${WARN} Waybar default config target not found at $WAYBAR_CONFIG_TARGET; leaving $WAYBAR_CONFIG_LINK as-is." 2>&1 | tee -a "$LOG"
+  restore_upgrade_runtime_selection_state "$LOG"
 fi
 
 # Remove inappropriate waybar configs
@@ -791,13 +1002,7 @@ rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/[TOP] Default$config_re
 
 printf "\n%.0s" {1..1}
 
-# for SDDM (simple_sddm_2)
-sddm_simple_sddm_2="/usr/share/sddm/themes/simple_sddm_2"
-if [ -d "$sddm_simple_sddm_2" ]; then
-  # Apply the current wallpaper as SDDM background without prompting
-  sudo -n cp -r "$DOTFILES_DIR/config/hypr/wallpaper_effects/.wallpaper_current" "/usr/share/sddm/themes/simple_sddm_2/Backgrounds/default" || true
-  echo "${NOTE} Current wallpaper applied as default SDDM background" 2>&1 | tee -a "$LOG"
-fi
+# SDDM background auto-sync removed to avoid overriding user-selected themes/wallpapers.
 
 # additional wallpapers
 printf "\n%.0s" {1..1}
@@ -857,17 +1062,19 @@ fi
 # - If the symlink points somewhere else (or is broken), reset it to the new default.
 WAYBAR_STYLE_LINK="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
 WAYBAR_STYLE_TARGET="$waybar_style"
-if [ -e "$WAYBAR_STYLE_TARGET" ]; then
-  if [ -L "$WAYBAR_STYLE_LINK" ]; then
-    current_target=$(readlink "$WAYBAR_STYLE_LINK" || true)
-    if [ "$current_target" != "$WAYBAR_STYLE_TARGET" ] || [ ! -e "$WAYBAR_STYLE_LINK" ]; then
+if [ "$RUN_MODE" = "install" ]; then
+  if [ -e "$WAYBAR_STYLE_TARGET" ]; then
+    if [ -L "$WAYBAR_STYLE_LINK" ]; then
+      current_target=$(readlink "$WAYBAR_STYLE_LINK" || true)
+      if [ "$current_target" != "$WAYBAR_STYLE_TARGET" ] || [ ! -e "$WAYBAR_STYLE_LINK" ]; then
+        ln -sf "$WAYBAR_STYLE_TARGET" "$WAYBAR_STYLE_LINK" 2>&1 | tee -a "$LOG"
+      fi
+    else
       ln -sf "$WAYBAR_STYLE_TARGET" "$WAYBAR_STYLE_LINK" 2>&1 | tee -a "$LOG"
     fi
   else
-    ln -sf "$WAYBAR_STYLE_TARGET" "$WAYBAR_STYLE_LINK" 2>&1 | tee -a "$LOG"
+    echo "${WARN} Waybar default style target not found at $WAYBAR_STYLE_TARGET; leaving $WAYBAR_STYLE_LINK as-is." 2>&1 | tee -a "$LOG"
   fi
-else
-  echo "${WARN} Waybar default style target not found at $WAYBAR_STYLE_TARGET; leaving $WAYBAR_STYLE_LINK as-is." 2>&1 | tee -a "$LOG"
 fi
 
 printf "\n%.0s" {1..1}
@@ -878,11 +1085,20 @@ wallust_args=()
 if [ -f "$DOTFILES_DIR/config/hypr/scripts/WallustConfig.sh" ]; then
   . "$DOTFILES_DIR/config/hypr/scripts/WallustConfig.sh"
 fi
-wallust "${wallust_args[@]}" run -s "$wallpaper" 2>&1 | tee -a "$LOG"
+if [ "$EXPRESS_MODE" -eq 1 ]; then
+  echo "${NOTE} Express upgrade selected: skipping wallust run entirely." 2>&1 | tee -a "$LOG"
+elif [ "$RUN_MODE" != "install" ] && [ "${KOOLDOTS_RUNTIME_THEME_RESTORED:-0}" -eq 1 ]; then
+  echo "${NOTE} Preserved existing Wallust/global theme colors from pre-upgrade state; skipping wallust regeneration." 2>&1 | tee -a "$LOG"
+else
+  wallust "${wallust_args[@]}" run -s "$wallpaper" 2>&1 | tee -a "$LOG"
+fi
 if is_nixos && ! command -v waybar-weather >/dev/null 2>&1; then
   echo "${WARN} waybar-weather binary is missing." 2>&1 | tee -a "$LOG"
   echo "Install the current NixOS-Hyprland version to install waybar-weather applet for Waybar" 2>&1 | tee -a "$LOG"
 fi
+
+# Ensure shell profile sources /etc/profile (fixes flatpak not showing in rofi on Debian)
+ensure_shell_profile_sources_etc_profile "$LOG"
 
 printf "\n%.0s" {1..2}
 printf "${OK} GREAT! KooL's Hyprland-Dots is now Loaded & Ready !!! "

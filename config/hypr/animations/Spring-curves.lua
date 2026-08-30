@@ -1,6 +1,9 @@
 -- Spring Curves
-hl.curve("spring_fast", { type = "spring", mass = 2, stiffness = 30, dampening = 15 })
-hl.curve("spring_slow", { type = "spring", mass = 2, stiffness = 15, dampening = 10 })
+-- HL 0.56+ advances springs by real wall-clock time (no min tick floor).
+-- Pre-0.56 soft values (mass ~2, stiffness ~15-30) feel sluggish now.
+-- Speed on spring animations is largely ignored; stiffness/mass/dampening set pace.
+hl.curve("spring_fast", { type = "spring", mass = 1, stiffness = 280, dampening = 26 })
+hl.curve("spring_slow", { type = "spring", mass = 1, stiffness = 160, dampening = 24 })
 
 -- Window animations
 hl.animation({ leaf = "windows", enabled = true, speed = 1, spring = "spring_fast" })

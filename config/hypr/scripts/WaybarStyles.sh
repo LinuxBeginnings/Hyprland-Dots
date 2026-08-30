@@ -46,6 +46,7 @@ main() {
     done
 
     # launch rofi with the annotated list and pre‑selected row
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
     choice=$(printf '%s\n' "${options[@]}" \
         | rofi -i -dmenu \
                -config "$rofi_config" \

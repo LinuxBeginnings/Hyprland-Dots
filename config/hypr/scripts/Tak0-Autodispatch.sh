@@ -144,7 +144,7 @@ for RULE in "${CAPTURE_RULES[@]}"; do
   if [[ "$hypr_config_mode" == "lua" ]]; then
       # Attempt to parse rule string into Lua table if it matches class:pattern
       if [[ "$RULE" =~ class:\^\((.*)\)\$ ]]; then
-          local class_pat="${BASH_REMATCH[1]}"
+          class_pat="${BASH_REMATCH[1]}"
           hyprctl eval "hl.window_rule({ name = 'autodispatch-$class_pat', match = { class = '$class_pat' }, workspace = '$TARGET_WS' })" >>"$LOGFILE" 2>&1 || true
       fi
   else
@@ -251,9 +251,12 @@ while ((SECONDS < END_TIME)); do
 
     if ((MATCH)) && [[ -z "${SEEN[$ADDR]-}" ]]; then
       echo "Placing window $ADDR (pid $PID, class $CLASS) → WS $TARGET_WS" >>"$LOGFILE"
-      # Dispatch works the same in both modes
-      hyprctl dispatch movetoworkspacesilent \
-        "$TARGET_WS,address:$ADDR" >>"$LOGFILE" 2>&1 || true
+      if [[ "$hypr_config_mode" == "lua" ]]; then
+          hyprctl eval "return hl.dispatch(hl.dsp.window.move({ workspace = '$TARGET_WS', follow = false, window = 'address:$ADDR' }))" >>"$LOGFILE" 2>&1 || true
+      else
+          hyprctl dispatch movetoworkspacesilent \
+            "$TARGET_WS,address:$ADDR" >>"$LOGFILE" 2>&1 || true
+      fi
       SEEN[$ADDR]=1
     fi
   done < <(hyprctl clients -j | jq -r '.[] | [.pid, .address, .class] | @tsv')

@@ -26,7 +26,7 @@ local function exec_once(cmd)
   local marker = "/tmp/hypr-lua-exec-once-" .. session .. "-" .. key
   local log = "/tmp/hypr-lua-startup-" .. key .. ".log"
   local readiness =
-    'runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; export XDG_RUNTIME_DIR="$runtime"; for _ in $(seq 1 200); do if [ -n "$WAYLAND_DISPLAY" ] && [ -S "$runtime/$WAYLAND_DISPLAY" ]; then break; fi; for sock in "$runtime"/wayland-[0-9]*; do [ -S "$sock" ] || continue; case "$(basename "$sock")" in *awww*) continue ;; esac; export WAYLAND_DISPLAY="$(basename "$sock")"; break 2; done; sleep 0.1; done; if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]; then hypr_sock="$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock"; for _ in $(seq 1 200); do [ -S "$hypr_sock" ] && break; sleep 0.1; done; fi'
+    'runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; export XDG_RUNTIME_DIR="$runtime"; for _ in $(seq 1 30); do if [ -n "$WAYLAND_DISPLAY" ] && [ -S "$runtime/$WAYLAND_DISPLAY" ]; then break; fi; for sock in "$runtime"/wayland-[0-9]*; do [ -S "$sock" ] || continue; case "$(basename "$sock")" in *awww*) continue ;; esac; export WAYLAND_DISPLAY="$(basename "$sock")"; break 2; done; sleep 0.1; done; if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]; then for hypr_sock in "$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock" "$runtime/hypr/.socket.sock"; do [ -S "$hypr_sock" ] && break 2; done; sleep 0.1; fi'
   local inner = readiness .. "; " .. cmd
   local script = "[ -e "
     .. shell_quote(marker)
@@ -42,7 +42,7 @@ end
 -- Prefer lifecycle-hook orchestration for clarity while keeping exec_once
 -- reliability semantics for real-world startup behavior.
 local startup_commands = {
-  scriptsDir .. "/WallpaperDaemon.sh",
+  "sleep 2; $HOME/.config/hypr/scripts/WallpaperDaemon.sh & $HOME/.config/hypr/scripts/ApplyThemeMode.sh && $HOME/.config/hypr/scripts/WaybarStartup.sh",
   "$HOME/.config/hypr/initial-boot.sh",
   "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP",
   "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP",
@@ -52,9 +52,8 @@ local startup_commands = {
   -- "nm-tray",
   "swaync",
   scriptsDir .. "/PortalHyprland.sh",
-  "sh $HOME/.config/hypr/scripts/ApplyThemeMode.sh",
-  "sh " .. scriptsDir .. "/WaybarStartup.sh",
-  "qs -c overview",
+  'qs --log-rules "qt.qpa.wayland.textinput.warning=false" -c overview',
+  'qs --log-rules "qt.qpa.wayland.textinput.warning=false" -p $HOME/.config/quickshell/qs-hyprview',
   "hypridle",
   scriptsDir .. "/Hyprsunset.sh init",
   -- NOTE: Dropterminal is currently certified only with kitty. Not all terminals behave correctly as a dropdown.

@@ -114,30 +114,42 @@ local function dispatch(name, args)
 
   if name == "killactive" then
     if window_api.close then
-      return window_api.close()
+      return function()
+        hl.dispatch(window_api.close())
+      end
     end
     if window_api.kill then
-      return window_api.kill()
+      return function()
+        hl.dispatch(window_api.kill())
+      end
     end
     return raw_dispatch_cmd("killactive")
   end
   if name == "togglefloating" and window_api.float then
-    return window_api.float({ action = "toggle" })
+    return function()
+      hl.dispatch(window_api.float({ action = "toggle" }))
+    end
   end
   if name == "fullscreen" then
     if window_api.fullscreen then
       if args == "1" then
-        return window_api.fullscreen({ mode = "maximized" })
+        return function()
+          hl.dispatch(window_api.fullscreen({ mode = "maximized" }))
+        end
       end
-      return window_api.fullscreen({ mode = "fullscreen" })
+      return function()
+        hl.dispatch(window_api.fullscreen({ mode = "fullscreen" }))
+      end
     end
     if args == "1" then
-      return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\" })'")
+      return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \\\"maximized\\\" })'")
     end
-    return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"fullscreen\" })'")
+    return exec_cmd("hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \\\"fullscreen\\\" })'")
   end
   if name == "pseudo" and window_api.pseudo then
-    return window_api.pseudo()
+    return function()
+      hl.dispatch(window_api.pseudo())
+    end
   end
   if name == "workspace" then
     return workspace_dispatch(workspace_value(args))
@@ -192,30 +204,55 @@ local function dispatch(name, args)
     return exec_cmd("$HOME/.config/hypr/scripts/LuaSwapWindow.sh " .. swap_direction)
   end
   if name == "togglegroup" and group_api.toggle then
-    return group_api.toggle()
+    return function()
+      hl.dispatch(group_api.toggle())
+    end
   end
   if name == "changegroupactive" and group_api.next and group_api.prev then
     if args == "b" or args == "prev" or args == "-1" then
-      return group_api.prev()
+      return function()
+        hl.dispatch(group_api.prev())
+      end
     end
-    return group_api.next()
+    return function()
+      hl.dispatch(group_api.next())
+    end
   end
   if name == "moveintogroup" and window_api.move then
-    return window_api.move({ into_group = direction(args) })
+    return function()
+      hl.dispatch(window_api.move({ into_group = direction(args) }))
+    end
   end
   if name == "moveoutofgroup" and window_api.move then
-    return window_api.move({ out_of_group = true })
+    return function()
+      hl.dispatch(window_api.move({ out_of_group = true }))
+    end
   end
-  if name == "layoutmsg" and dsp and dsp.layout then
-    return dsp.layout(args)
+  if (name == "layoutmsg" or name == "layout") and dsp and dsp.layout then
+    return function()
+      dispatch_factory_safely(function()
+        return dsp.layout(args)
+      end)
+    end
+  end
+  if name == "togglesplit" and dsp and dsp.layout then
+    return function()
+      dispatch_factory_safely(function()
+        return dsp.layout("togglesplit")
+      end)
+    end
   end
   if name == "bringactivetotop" and window_api.bring_to_top then
-    return window_api.bring_to_top()
+    return function()
+      hl.dispatch(window_api.bring_to_top())
+    end
   end
   if name == "setprop" and window_api.set_prop then
-    local prop, value = args:match("^(%S+)%s+(.+)$")
+    local _win, prop, value = args:match("^(%S+)%s+(%S+)%s+(.+)$")
     if prop and value then
-      return window_api.set_prop({ prop = prop, value = value })
+      return function()
+        hl.dispatch(window_api.set_prop({ prop = prop, value = value }))
+      end
     end
   end
 
@@ -225,8 +262,43 @@ local function dispatch(name, args)
   return raw_dispatch_cmd(name)
 end
 
+local function normalize_mods(mods)
+  mods = trim(mods)
+  if mods == "" then
+    return ""
+  end
+  local known = {
+    super = "SUPER",
+    super_l = "SUPER_L",
+    super_r = "SUPER_R",
+    shift = "SHIFT",
+    shift_l = "SHIFT_L",
+    shift_r = "SHIFT_R",
+    ctrl = "CTRL",
+    control = "CTRL",
+    ctrl_l = "CTRL_L",
+    ctrl_r = "CTRL_R",
+    control_l = "CTRL_L",
+    control_r = "CTRL_R",
+    alt = "ALT",
+    alt_l = "ALT_L",
+    alt_r = "ALT_R",
+    meta = "META",
+    meta_l = "META_L",
+    meta_r = "META_R",
+    mod2 = "MOD2",
+    mod3 = "MOD3",
+    mod5 = "MOD5",
+  }
+  local parts = {}
+  for token in mods:gmatch("%S+") do
+    parts[#parts + 1] = known[token:lower()] or token
+  end
+  return table.concat(parts, " ")
+end
+
 local function chord(mods, key)
-  mods = trim(mods):gsub("%s+", " + ")
+  mods = normalize_mods(mods):gsub("%s+", " + ")
   key = trim(key)
   key = key:gsub("^xf86", "XF86")
   local key_aliases = {
@@ -261,7 +333,7 @@ local function chord(mods, key)
     ["code:18"] = "9",
     ["code:19"] = "0",
   }
-  if mods:match("SHIFT") and shifted_number_keys[key] then
+  if mods:upper():match("SHIFT") and shifted_number_keys[key] then
     key = shifted_number_keys[key]
   else
     key = number_keys[key] or key
@@ -278,7 +350,7 @@ local function bind(mods, key, fn, opts)
   else
     hl.bind(chord(mods, key), fn)
   end
-  if mods:match("SHIFT") then
+  if mods:upper():match("SHIFT") then
     local number_key = ({
       ["code:10"] = "1",
       ["code:11"] = "2",

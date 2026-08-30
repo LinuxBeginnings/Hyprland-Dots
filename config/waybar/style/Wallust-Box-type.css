@@ -161,6 +161,10 @@ window#waybar.empty #window {
   border-bottom-style: solid;
 }
 
+#custom-cava_mviz {
+  color: @color12;
+}
+
 #custom-power {
   padding-right: 0px;
   padding-left: 0px;

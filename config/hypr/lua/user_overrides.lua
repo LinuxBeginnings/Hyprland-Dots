@@ -21,24 +21,33 @@ local function has_kvantum_qml_module()
   pipe:close()
   return output:match("%S") ~= nil
 end
+local function has_hyprland_qml_style_module()
+  local cmd = "find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/org/hyprland/style' -print -quit 2>/dev/null"
+  local pipe = io.popen(cmd, "r")
+  if not pipe then
+    return false
+  end
+  local output = pipe:read("*a") or ""
+  pipe:close()
+  return output:match("%S") ~= nil
+end
 
 local function apply_qt_style_fallbacks()
   if not hl or not hl.env then
     return
   end
 
-  if has_kvantum_qml_module() then
-    return
+  if not has_kvantum_qml_module() then
+    local style_override = (os.getenv("QT_STYLE_OVERRIDE") or ""):lower()
+    if style_override == "kvantum" or style_override == "kvantum-dark" then
+      hl.env("QT_STYLE_OVERRIDE", "Fusion")
+    end
   end
-
-  local style_override = (os.getenv("QT_STYLE_OVERRIDE") or ""):lower()
-  if style_override == "kvantum" or style_override == "kvantum-dark" then
-    hl.env("QT_STYLE_OVERRIDE", "Fusion")
-  end
-
-  local quick_controls = (os.getenv("QT_QUICK_CONTROLS_STYLE") or ""):lower()
-  if quick_controls == "kvantum" then
-    hl.env("QT_QUICK_CONTROLS_STYLE", "Basic")
+  if not has_hyprland_qml_style_module() then
+    local quick_controls = (os.getenv("QT_QUICK_CONTROLS_STYLE") or ""):lower()
+    if quick_controls == "" or quick_controls == "org.hyprland.style" then
+      hl.env("QT_QUICK_CONTROLS_STYLE", "Basic")
+    end
   end
 end
 
