@@ -171,16 +171,52 @@ fi
 
 # Function to set Waybar style
 set_waybar_style() {
-    theme="$1"
-    waybar_styles="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style"
-    waybar_style_link="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
+    local theme="$1"
+    local waybar_styles="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style"
+    local waybar_style_link="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
 
-    style_file=$(find -L "$waybar_styles" -maxdepth 1 -type f \( -iname "${theme}-*.css" -o -iname "${theme}_*.css" -o -iname "[${theme}]*.css" -o -iname "${theme}*.css" \) | shuf -n 1)
+    # If re-applying saved mode on startup (--apply-current), do NOT change the user's existing style.css
+    if [ "$apply_saved_mode" -eq 1 ]; then
+        if [ -L "$waybar_style_link" ] || [ -f "$waybar_style_link" ]; then
+            return 0
+        fi
+    fi
 
-    if [ -n "$style_file" ]; then
-        ln -sf "$style_file" "$waybar_style_link"
-    else
-        echo "Style file not found for $theme theme."
+    # When toggling mode (Dark <-> Light), preserve style if valid or switch to matching counterpart
+    if [ -L "$waybar_style_link" ]; then
+        local current_style_target current_style_base counterpart
+        current_style_target="$(readlink -f "$waybar_style_link" 2>/dev/null || true)"
+        current_style_base="$(basename "$current_style_target" 2>/dev/null || true)"
+
+        # Wallust, Chroma, and universal extra styles adapt automatically; keep them
+        if [[ "$current_style_base" =~ ^(Wallust|Chroma|\[Extra\]) ]]; then
+            return 0
+        fi
+
+        if [ "$theme" = "Light" ]; then
+            counterpart="${current_style_base//Dark/Light}"
+            counterpart="${counterpart//dark/light}"
+        else
+            counterpart="${current_style_base//Light/Dark}"
+            counterpart="${counterpart//light/dark}"
+        fi
+
+        if [ -n "$counterpart" ] && [ -f "$waybar_styles/$counterpart" ]; then
+            ln -sf "$waybar_styles/$counterpart" "$waybar_style_link"
+            return 0
+        fi
+
+        # If no counterpart exists, keep user's existing style rather than randomizing
+        return 0
+    fi
+
+    # Initial fallback if no style is set at all
+    if [ ! -e "$waybar_style_link" ]; then
+        local style_file
+        style_file="$(find -L "$waybar_styles" -maxdepth 1 -type f \( -iname "${theme}-*.css" -o -iname "${theme}_*.css" -o -iname "[${theme}]*.css" -o -iname "${theme}*.css" \) | sort | head -n 1)"
+        if [ -n "$style_file" ]; then
+            ln -sf "$style_file" "$waybar_style_link"
+        fi
     fi
 }
 

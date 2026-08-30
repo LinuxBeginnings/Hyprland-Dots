@@ -1,5 +1,12 @@
 # Changelog — KoolDots
 
+## v2.3.26.1
+
+## Fixed:
+
+- Waybar config getting changed on each boot
+- Gestures in LUA configs
+
 ## v2.3.26
 
 ## Added:
@@ -43,7 +50,6 @@
 
 ## Fixed:
 
-- Fixed guestures in LUA configs
 - Edit system binds resolved to wrong file
 - Returning from `game mode` didn't restore user decoration values
 - `remove master` in `master layout` generate LUA runtime error
