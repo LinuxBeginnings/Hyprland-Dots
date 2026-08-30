@@ -687,6 +687,54 @@ bind(
   exec_cmd("$HOME/.config/hypr/scripts/MediaCtrl.sh --stop"),
   { description = "stop", locked = true }
 )
+bind(
+  "",
+  "xf86MonBrightnessDown",
+  exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --dec"),
+  { description = "decrease monitor brightness", ["repeat"] = true }
+)
+bind(
+  "",
+  "xf86MonBrightnessUp",
+  exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --inc"),
+  { description = "increase monitor brightness", ["repeat"] = true }
+)
+bind(
+  "",
+  "xf86KbdBrightnessDown",
+  exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --dec"),
+  { description = "decrease keyboard brightness", ["repeat"] = true }
+)
+bind(
+  "",
+  "xf86KbdBrightnessUp",
+  exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --inc"),
+  { description = "increase keyboard brightness", ["repeat"] = true }
+)
+bind(
+  "",
+  "xf86TouchpadToggle",
+  exec_cmd("$HOME/.config/hypr/scripts/TouchPad.sh"),
+  { description = "disable touchpad" }
+)
+bind(
+  "",
+  "xf86Launch1",
+  exec_cmd("rog-control-center"),
+  { description = "ASUS Armory crate button" }
+)
+bind(
+  "",
+  "xf86Launch3",
+  exec_cmd("asusctl led-mode -n"),
+  { description = "FN+F4 Switch keyboard RGB profile" }
+)
+bind(
+  "",
+  "xf86Launch4",
+  exec_cmd("asusctl profile -n"),
+  { description = "FN+F5 change of fan profiles" }
+)
 bind("SUPER", "Print", exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --now"), { description = "screenshot now" })
 bind(
   "SUPER SHIFT",
@@ -717,6 +765,32 @@ bind(
   "S",
   exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --swappy"),
   { description = "screenshot (swappy)" }
+)
+-- Screenshot keybindings using F6 (no PrintSrc button)
+bind("SUPER", "F6", exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --now"), { description = "screenshot" })
+bind(
+  "SUPER SHIFT",
+  "F6",
+  exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --area"),
+  { description = "screenshot (area)" }
+)
+bind(
+  "SUPER CTRL",
+  "F6",
+  exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --in5"),
+  { description = "screenshot (5 secs delay)" }
+)
+bind(
+  "SUPER ALT",
+  "F6",
+  exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --in10"),
+  { description = "screenshot (10 secs delay)" }
+)
+bind(
+  "ALT",
+  "F6",
+  exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --active"),
+  { description = "screenshot (active window only)" }
 )
 bind("SUPER SHIFT", "left", dispatch("resizeactive", "-50 0"), { description = "resize left (-50)", ["repeat"] = true })
 bind(

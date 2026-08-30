@@ -4,6 +4,9 @@
 
 ## Fixed:
 
+- Improved user startup to better handle apps
+- Re-added laptop brightness keybinds
+- User defined startups weren't working I.e. `kde-connect`
 - `startup.lua` wasn't calling `LuaAutoReload.sh`
 - Changing defaults like filemanager didn't take effect
 - KoolDots update notifier

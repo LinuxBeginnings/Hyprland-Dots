@@ -498,6 +498,54 @@ bind(
   dispatch("stop", "exec, $HOME/.config/hypr/scripts/MediaCtrl.sh --stop"),
   { locked = true, description = "stop" }
 )
+bind(
+  "",
+  "xf86MonBrightnessDown",
+  dispatch("decrease monitor brightness", "exec, $HOME/.config/hypr/scripts/Brightness.sh --dec"),
+  { description = "decrease monitor brightness", ["repeat"] = true }
+)
+bind(
+  "",
+  "xf86MonBrightnessUp",
+  dispatch("increase monitor brightness", "exec, $HOME/.config/hypr/scripts/Brightness.sh --inc"),
+  { description = "increase monitor brightness", ["repeat"] = true }
+)
+bind(
+  "",
+  "xf86KbdBrightnessDown",
+  dispatch("decrease keyboard brightness", "exec, $HOME/.config/hypr/scripts/BrightnessKbd.sh --dec"),
+  { description = "decrease keyboard brightness", ["repeat"] = true }
+)
+bind(
+  "",
+  "xf86KbdBrightnessUp",
+  dispatch("increase keyboard brightness", "exec, $HOME/.config/hypr/scripts/BrightnessKbd.sh --inc"),
+  { description = "increase keyboard brightness", ["repeat"] = true }
+)
+bind(
+  "",
+  "xf86TouchpadToggle",
+  dispatch("disable touchpad", "exec, $HOME/.config/hypr/scripts/TouchPad.sh"),
+  { description = "disable touchpad" }
+)
+bind(
+  "",
+  "xf86Launch1",
+  exec_cmd("rog-control-center"),
+  { description = "ASUS Armory crate button" }
+)
+bind(
+  "",
+  "xf86Launch3",
+  exec_cmd("asusctl led-mode -n"),
+  { description = "FN+F4 Switch keyboard RGB profile" }
+)
+bind(
+  "",
+  "xf86Launch4",
+  exec_cmd("asusctl profile -n"),
+  { description = "FN+F5 change of fan profiles" }
+)
 
 -- Section: Screenshot bindings
 bind("SUPER", "Print", exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --now"), { description = "screenshot now" })
@@ -530,6 +578,32 @@ bind(
   "S",
   exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --swappy"),
   { description = "screenshot (swappy)" }
+)
+-- Screenshot keybindings using F6 (no PrintSrc button)
+bind("SUPER", "F6", exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --now"), { description = "screenshot" })
+bind(
+  "SUPER SHIFT",
+  "F6",
+  exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --area"),
+  { description = "screenshot (area)" }
+)
+bind(
+  "SUPER CTRL",
+  "F6",
+  exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --in5"),
+  { description = "screenshot (5 secs delay)" }
+)
+bind(
+  "SUPER ALT",
+  "F6",
+  exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --in10"),
+  { description = "screenshot (10 secs delay)" }
+)
+bind(
+  "ALT",
+  "F6",
+  exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --active"),
+  { description = "screenshot (active window only)" }
 )
 -- Keep legacy script-based resize bindings commented for quick rollback during Lua API migration.
 -- These call ResizeActive.sh and are preserved in case native hl.dsp/hl.window resize behavior regresses.

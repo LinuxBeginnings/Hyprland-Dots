@@ -1274,7 +1274,11 @@ layer_rules = [rule for rule in parse_rules(layer_rules_path, "user-layer") if r
 base_keybind_vars = {}
 parse_keybinds(user_defaults_path, variables=base_keybind_vars)
 system_keybinds = parse_keybinds(system_keybinds_path, variables=dict(base_keybind_vars))
+if system_laptops_path.exists():
+    system_keybinds.extend(parse_keybinds(system_laptops_path, variables=dict(base_keybind_vars)))
 keybinds = parse_keybinds(keybinds_path, variables=dict(base_keybind_vars))
+if laptops_path.exists():
+    keybinds.extend(parse_keybinds(laptops_path, variables=dict(base_keybind_vars)))
 system_env_entries = parse_env(system_env_path)
 env_entries = parse_env(env_path)
 system_startup_entries = parse_startup(system_startup_path, variables=dict(base_keybind_vars))
@@ -1353,14 +1357,14 @@ else:
 startup_readiness = (
     "runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; "
     "export XDG_RUNTIME_DIR=\"$runtime\"; "
-    "for _ in $(seq 1 30); do "
+    "for _ in $(seq 1 60); do "
     "if [ -n \"$WAYLAND_DISPLAY\" ] && [ -S \"$runtime/$WAYLAND_DISPLAY\" ]; then break; fi; "
     "for sock in \"$runtime\"/wayland-[0-9]*; do [ -S \"$sock\" ] || continue; "
     "case \"$(basename \"$sock\")\" in *awww*) continue ;; esac; "
     "export WAYLAND_DISPLAY=\"$(basename \"$sock\")\"; break 2; done; "
     "sleep 0.1; done; "
     "if [ -n \"$HYPRLAND_INSTANCE_SIGNATURE\" ]; then "
-    "for hypr_sock in \"$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock\" \"$runtime/hypr/.socket.sock\"; do [ -S \"$hypr_sock\" ] && break 2; done; "
+    "for hypr_sock in \"$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock\" \"$runtime/hypr/.socket.sock\"; do [ -S \"$hypr_sock\" ] && break; done; "
     "sleep 0.1; fi"
 )
 
