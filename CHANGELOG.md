@@ -6,6 +6,7 @@
 
 - Waybar config getting changed on each boot
 - Gestures in LUA configs
+- Fixed Quick settings not opening system keybinds file
 
 ## v2.3.26
 
