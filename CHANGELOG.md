@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- Changing defaults like filemanager didn't take effect
 - KoolDots update notifier
   - Redid entire script from scratch
 - Toggle in/out of specialworkspace didn't work

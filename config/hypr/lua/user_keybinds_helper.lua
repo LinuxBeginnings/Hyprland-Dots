@@ -7,11 +7,26 @@
 
 local dsp = hl.dsp or hl
 
+local function resolve_cmd(cmd)
+  local defaults = rawget(_G, "KOOLDOTS_DEFAULTS") or {}
+  local resolved_term = defaults.term or os.getenv("TERMINAL") or "kitty"
+  local resolved_files = defaults.files or "thunar"
+  local resolved_edit = defaults.edit or os.getenv("EDITOR") or "nano"
+  local resolved_visual = defaults.visual or os.getenv("VISUAL") or ""
+  cmd = tostring(cmd)
+  cmd = cmd:gsub("%$term", resolved_term)
+  cmd = cmd:gsub("%$files", resolved_files)
+  cmd = cmd:gsub("%$edit", resolved_edit)
+  cmd = cmd:gsub("%$visual", resolved_visual)
+  return cmd
+end
+
 local function exec_cmd(cmd)
+  local resolved = resolve_cmd(cmd)
   if dsp and dsp.exec_cmd then
-    return dsp.exec_cmd(cmd)
+    return dsp.exec_cmd(resolved)
   end
-  return function() hl.exec_cmd(cmd) end
+  return function() hl.exec_cmd(resolved) end
 end
 
 local function shell_quote(value)

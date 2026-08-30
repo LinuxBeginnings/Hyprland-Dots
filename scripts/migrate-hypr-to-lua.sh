@@ -1197,6 +1197,8 @@ def parse_keybinds(path, *, variables=None, visited=None):
         for _ in range(8):
             new_value = value
             for name, var_value in variables.items():
+                if name in {"files", "term", "edit", "editor", "visual", "Search_Engine", "search_engine"}:
+                    continue
                 new_value = new_value.replace(f"${name}", var_value)
             if new_value == value:
                 return new_value
@@ -1477,10 +1479,12 @@ system_keybind_lines = [
     "  local resolved_term = defaults.term or os.getenv(\"TERMINAL\") or \"kitty\"",
     "  local resolved_files = defaults.files or \"thunar\"",
     "  local resolved_edit = defaults.edit or os.getenv(\"EDITOR\") or \"nano\"",
+    "  local resolved_visual = defaults.visual or os.getenv(\"VISUAL\") or \"\"",
     "  cmd = tostring(cmd)",
     "  cmd = cmd:gsub(\"%$term\", resolved_term)",
     "  cmd = cmd:gsub(\"%$files\", resolved_files)",
     "  cmd = cmd:gsub(\"%$edit\", resolved_edit)",
+    "  cmd = cmd:gsub(\"%$visual\", resolved_visual)",
     "  return cmd",
     "end",
     "",

@@ -16,10 +16,12 @@ local function resolve_cmd(cmd)
   local resolved_term = defaults.term or os.getenv("TERMINAL") or "kitty"
   local resolved_files = defaults.files or "thunar"
   local resolved_edit = defaults.edit or os.getenv("EDITOR") or "nano"
+  local resolved_visual = defaults.visual or os.getenv("VISUAL") or ""
   cmd = tostring(cmd)
   cmd = cmd:gsub("%$term", resolved_term)
   cmd = cmd:gsub("%$files", resolved_files)
   cmd = cmd:gsub("%$edit", resolved_edit)
+  cmd = cmd:gsub("%$visual", resolved_visual)
   return cmd
 end
 
