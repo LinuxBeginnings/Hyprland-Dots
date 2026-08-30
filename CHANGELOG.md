@@ -4,6 +4,8 @@
 
 ## Fixed:
 
+- Toggle in/out of specialworkspace didn't work
+  - You could toggle in but not exit
 - Waybar config getting changed on each boot
 - Gestures in LUA configs
 - Fixed Quick settings not opening system keybinds file
