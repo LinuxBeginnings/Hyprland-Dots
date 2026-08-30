@@ -141,6 +141,26 @@ resolve_system_lua_file() {
   fi
 }
 
+resolve_system_keybinds_file() {
+  local lua_keybinds="$hypr_dir/lua/keybinds.lua"
+  local legacy_system_lua="$configs/system_keybinds.lua"
+  local conf_file="$configs/Keybinds.conf"
+
+  if [[ "$hypr_config_mode" == "lua" ]]; then
+    if [[ -f "$lua_keybinds" || ! -f "$legacy_system_lua" ]]; then
+      printf '%s' "$lua_keybinds"
+    else
+      printf '%s' "$legacy_system_lua"
+    fi
+  else
+    if [[ -f "$conf_file" || ! -f "$lua_keybinds" ]]; then
+      printf '%s' "$conf_file"
+    else
+      printf '%s' "$lua_keybinds"
+    fi
+  fi
+}
+
 resolve_mode_file() {
   local preferred="$1"
   local fallback="$2"
@@ -474,7 +494,7 @@ handle_choice() {
     "$scriptsDir/select-hyprview-layout.sh"
     ;;
   "Edit System Default Keybinds")
-    if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_keybinds.lua)"; else file="$configs/Keybinds.conf"; fi
+    file="$(resolve_system_keybinds_file)"
     ;;
   "Edit System Default Startup Apps")
     if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_startup.lua)"; else file="$configs/Startup_Apps.conf"; fi

@@ -43,6 +43,7 @@
 
 ## Fixed:
 
+- Edit system binds resolved to wrong file
 - Returning from `game mode` didn't restore user decoration values
 - `remove master` in `master layout` generate LUA runtime error
 - `cava` and `waybar` cava colors weren't syncing with wallpaper
