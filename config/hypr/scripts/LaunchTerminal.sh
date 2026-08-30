@@ -90,21 +90,33 @@ build_terminal_command() {
   q_payload="$(shell_quote "$payload")"
 
   case "$bin" in
+  kitty)
+    printf '%s -- sh -c %s' "$term_cmd" "$q_payload"
+    ;;
+  ghostty)
+    printf '%s -e sh -c %s' "$term_cmd" "$q_payload"
+    ;;
+  alacritty)
+    printf '%s -e sh -c %s' "$term_cmd" "$q_payload"
+    ;;
   gnome-terminal)
-    printf '%s -- %s' "$term_cmd" "$q_payload"
+    printf '%s -- sh -c %s' "$term_cmd" "$q_payload"
     ;;
   wezterm)
     case "$term_cmd" in
     *" start "* | "wezterm start")
-      printf '%s -- %s' "$term_cmd" "$q_payload"
+      printf '%s -- sh -c %s' "$term_cmd" "$q_payload"
       ;;
     *)
-      printf '%s start -- %s' "$term_cmd" "$q_payload"
+      printf '%s start -- sh -c %s' "$term_cmd" "$q_payload"
       ;;
     esac
     ;;
+  foot)
+    printf '%s sh -c %s' "$term_cmd" "$q_payload"
+    ;;
   *)
-    printf '%s -e %s' "$term_cmd" "$q_payload"
+    printf '%s -e sh -c %s' "$term_cmd" "$q_payload"
     ;;
   esac
 }
