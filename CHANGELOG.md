@@ -4,6 +4,8 @@
 
 ## Fixed:
 
+- KoolDots update notifier
+  - Redid entire script from scratch
 - Toggle in/out of specialworkspace didn't work
   - You could toggle in but not exit
 - Waybar config getting changed on each boot
