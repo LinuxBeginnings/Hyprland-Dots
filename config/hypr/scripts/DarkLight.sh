@@ -122,7 +122,7 @@ fi
 
 
 # Initialize wallpaper daemon if needed
-"$WWW_CMD" query || "$WWW_DAEMON" "${WWW_DAEMON_ARGS[@]}"
+wallpaper_ensure_daemon
 
 # Set swww options
 swww="$WWW_CMD img"

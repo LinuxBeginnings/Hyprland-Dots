@@ -30,9 +30,7 @@ if [[ "$WWW_CMD" == "swww" || "$WWW_CMD" == "awww" ]]; then
 else
   SWWW_PARAMS=()
 fi
-if ! "$WWW_CMD" query >/dev/null 2>&1; then
-  "$WWW_DAEMON" "${WWW_DAEMON_ARGS[@]}" &
-fi
+wallpaper_ensure_daemon
 resize_mode="$(wallpaper_resize_mode "$RANDOMPICS" "$focused_monitor")"
 "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$RANDOMPICS" "${SWWW_PARAMS[@]}"
 
