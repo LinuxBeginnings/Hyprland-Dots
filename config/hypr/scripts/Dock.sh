@@ -37,7 +37,7 @@ start_dock() {
   # -c : launcher button command (rofi menu)
   # (no -d : no auto-hide)
   local launcher_cmd="${SCRIPTSDIR}/RofiLauncher.sh"
-  nwg-dock-hyprland -p bottom -x -i 32 -g "kitty-dropterm" -mb 10 -c "$launcher_cmd" >/dev/null 2>&1 &
+  nwg-dock-hyprland -p bottom -x -i 32 -g "kitty-dropterm" -mb 7 -mt 7 -c "$launcher_cmd" >/dev/null 2>&1 &
 }
 
 case "${1:-toggle}" in
