@@ -25,6 +25,8 @@
 
 ## Added:
 
+- Added keybinds to increase/decrease brightness 
+  - `CTRL+ALT+`` the `-/+` keys
 - `.luarc.json` file to the LUA subdirs
   - Some editors will report `undefined global hl`
 

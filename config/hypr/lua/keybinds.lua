@@ -511,6 +511,30 @@ bind(
   { description = "increase monitor brightness", locked = true, ["repeat"] = true }
 )
 bind(
+  "CTRL ALT",
+  "equal",
+  exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --inc"),
+  { description = "increase brightness", locked = true, ["repeat"] = true }
+)
+bind(
+  "CTRL ALT",
+  "minus",
+  exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --dec"),
+  { description = "decrease brightness", locked = true, ["repeat"] = true }
+)
+bind(
+  "CTRL ALT",
+  "KP_Add",
+  exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --inc"),
+  { description = "increase brightness (numpad)", locked = true, ["repeat"] = true }
+)
+bind(
+  "CTRL ALT",
+  "KP_Subtract",
+  exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --dec"),
+  { description = "decrease brightness (numpad)", locked = true, ["repeat"] = true }
+)
+bind(
   "",
   "xf86KbdBrightnessDown",
   exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --dec"),

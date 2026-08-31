@@ -61,6 +61,7 @@ GDK_BACKEND=$BACKEND yad \
   "CTRL ALT D" "Toggle dock" "(nwg-dock-hyprland)" \
   "CTRL ALT L" "screen lock" "(hyprlock)" \
   "CTRL ALT Del" "Hyprland Exit" "(NOTE: Hyprland Will exit immediately)" \
+  "CTRL ALT + / -" "Brightness Up / Down" "Increase/Decrease brightness" \
   " SHIFT F" "Fullscreen" "Toggles to full screen" \
   " F" "Fake Fullscreen" "Toggles to fake full screen" \
   " ALT L" "Toggle Dwindle|Scrolling|Monocle|Master layouts" "Active workspace layout" \
