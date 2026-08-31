@@ -11,6 +11,3 @@
 -- hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
 -- hl.env("GDK_SCALE", "1")
 -- hl.env("QT_SCALE_FACTOR", "1")
-
--- Force GTK3/GTK4 dark theme for apps like Thunar (required in Lua workflow)
-hl.env("GTK_THEME", "Adwaita-dark")
