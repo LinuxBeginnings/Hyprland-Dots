@@ -959,6 +959,11 @@ if command -v systemctl >/dev/null 2>&1; then
       echo "${NOTE} Polkit agent already running. Skipping hyprpolkitagent enable/start." | tee -a "$LOG"
     fi
   fi
+  # Mask waybar.service in user scope to prevent duplicate bars on distros (e.g. Debian/Ubuntu/Zorin) that enable it globally
+  if systemctl --user list-unit-files 2>/dev/null | grep -q '^waybar\.service'; then
+    systemctl --user mask waybar.service 2>&1 | tee -a "$LOG" || true
+    systemctl --user stop waybar.service 2>&1 | tee -a "$LOG" || true
+  fi
 fi
 
 chassis_type=$(detect_waybar_config)
