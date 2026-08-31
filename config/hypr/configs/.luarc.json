@@ -7,6 +7,7 @@
   ],
   "workspace.checkThirdParty": false,
   "workspace.library": [
-    "${HOME}/.config/hypr"
+    "${HOME}/.config/hypr",
+    "../"
   ]
 }
