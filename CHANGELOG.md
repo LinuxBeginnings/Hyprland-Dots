@@ -17,6 +17,11 @@
 - Gestures in LUA configs
 - Fixed Quick settings not opening system keybinds file
 
+## Added:
+
+- `.luarc.json` file to the LUA subdirs
+  - Some editors will report `undefined global hl`
+
 ## Upated:
 
 - Improved user startup to better handle apps
