@@ -129,7 +129,7 @@ wallpaper_resize_mode() {
 # This happens on a regular login, where Startup_Apps.conf runs
 # WallpaperDaemon.sh and ApplyThemeMode.sh -> DarkLight.sh concurrently.
 wallpaper_ensure_daemon() {
-  local lock_file="${XDG_RUNTIME_DIR:-/tmp}/wallpaper-daemon.lock"
+  local lock_file="${XDG_RUNTIME_DIR:-/tmp}/wallpaper-daemon-${UID:-$(id -u)}.lock"
 
   command -v "$WWW_DAEMON" >/dev/null 2>&1 || return 1
   command -v "$WWW_CMD" >/dev/null 2>&1 || return 1
@@ -151,6 +151,8 @@ wallpaper_ensure_daemon() {
         sleep 0.1
       done
     fi
+
+    "$WWW_CMD" query >/dev/null 2>&1
   } 9>"$lock_file"
 }
 
