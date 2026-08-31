@@ -26,7 +26,7 @@ local function exec_once(cmd)
   local marker = "/tmp/hypr-lua-exec-once-" .. session .. "-" .. key
   local log = "/tmp/hypr-lua-startup-" .. key .. ".log"
   local readiness =
-    'runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; export XDG_RUNTIME_DIR="$runtime"; for _ in $(seq 1 30); do if [ -n "$WAYLAND_DISPLAY" ] && [ -S "$runtime/$WAYLAND_DISPLAY" ]; then break; fi; for sock in "$runtime"/wayland-[0-9]*; do [ -S "$sock" ] || continue; case "$(basename "$sock")" in *awww*) continue ;; esac; export WAYLAND_DISPLAY="$(basename "$sock")"; break 2; done; sleep 0.1; done; if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]; then for hypr_sock in "$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock" "$runtime/hypr/.socket.sock"; do [ -S "$hypr_sock" ] && break 2; done; sleep 0.1; fi'
+    'runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; export XDG_RUNTIME_DIR=\"$runtime\"; for _ in $(seq 1 30); do if [ -n \"$WAYLAND_DISPLAY\" ] && [ -S \"$runtime/$WAYLAND_DISPLAY\" ]; then break; fi; for sock in \"$runtime\"/wayland-[0-9]*; do [ -S \"$sock\" ] || continue; case \"$(basename \"$sock\")\" in *awww*) continue ;; esac; export WAYLAND_DISPLAY=\"$(basename \"$sock\")\"; break; done; sleep 0.1; done; if [ -n \"$HYPRLAND_INSTANCE_SIGNATURE\" ]; then for hypr_sock in \"$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock\" \"$runtime/hypr/.socket.sock\"; do [ -S \"$hypr_sock\" ] && break; done; sleep 0.1; fi'
   local inner = readiness .. "; " .. cmd
   local script = "[ -e "
     .. shell_quote(marker)
@@ -55,6 +55,7 @@ local startup_commands = {
   'qs --log-rules "qt.qpa.wayland.textinput.warning=false" -c overview',
   'qs --log-rules "qt.qpa.wayland.textinput.warning=false" -p $HOME/.config/quickshell/qs-hyprview',
   "hypridle",
+  scriptsDir .. "/LuaAutoReload.sh",
   scriptsDir .. "/Hyprsunset.sh init",
   -- NOTE: Dropterminal is currently certified only with kitty. Not all terminals behave correctly as a dropdown.
   scriptsDir .. "/Dropterminal.sh --startup kitty",

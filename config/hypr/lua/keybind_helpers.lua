@@ -8,12 +8,27 @@ local window_api = (dsp and dsp.window) or hl.window or {}
 local workspace_api = (dsp and dsp.workspace) or {}
 local group_api = (dsp and dsp.group) or {}
 
+local function resolve_cmd(cmd)
+  local defaults = rawget(_G, "KOOLDOTS_DEFAULTS") or {}
+  local resolved_term = defaults.term or os.getenv("TERMINAL") or "kitty"
+  local resolved_files = defaults.files or "thunar"
+  local resolved_edit = defaults.edit or os.getenv("EDITOR") or "nano"
+  local resolved_visual = defaults.visual or os.getenv("VISUAL") or ""
+  cmd = tostring(cmd)
+  cmd = cmd:gsub("%$term", resolved_term)
+  cmd = cmd:gsub("%$files", resolved_files)
+  cmd = cmd:gsub("%$edit", resolved_edit)
+  cmd = cmd:gsub("%$visual", resolved_visual)
+  return cmd
+end
+
 local function exec_cmd(cmd)
+  local resolved = resolve_cmd(cmd)
   if dsp and dsp.exec_cmd then
-    return dsp.exec_cmd(cmd)
+    return dsp.exec_cmd(resolved)
   end
   return function()
-    hl.exec_cmd(cmd)
+    hl.exec_cmd(resolved)
   end
 end
 
@@ -155,6 +170,29 @@ local function dispatch(name, args)
     return workspace_dispatch(workspace_value(args))
   end
   if name == "movetoworkspace" then
+    if args == "special" or args:match("^special:") then
+      return function()
+        local win = hl.get_active_window and hl.get_active_window()
+        local ws = win and win.workspace
+        -- If active window is already in a special workspace, move it back to the current active regular workspace
+        if ws and (ws.special == true or (type(ws.name) == "string" and ws.name:match("^special"))) then
+          local mon = hl.get_active_monitor and hl.get_active_monitor()
+          local active_ws = hl.get_active_workspace and hl.get_active_workspace(mon and mon.id)
+          local target_id = (active_ws and not active_ws.special and active_ws.id) or "+0"
+          if window_api.move then
+            hl.dispatch(window_api.move({ workspace = target_id }))
+          else
+            hl.dispatch(dsp.exec_raw("movetoworkspace " .. tostring(target_id)))
+          end
+          return
+        end
+        if window_api.move then
+          hl.dispatch(window_api.move({ workspace = workspace_value(args) }))
+        else
+          hl.dispatch(dsp.exec_raw("movetoworkspace " .. args))
+        end
+      end
+    end
     if window_api.move then
       return function()
         hl.dispatch(window_api.move({ workspace = workspace_value(args) }))
@@ -241,6 +279,22 @@ local function dispatch(name, args)
         return dsp.layout("togglesplit")
       end)
     end
+  end
+  if name == "togglespecialworkspace" then
+    if workspace_api and workspace_api.toggle_special then
+      return function()
+        dispatch_factory_safely(function()
+          if args ~= "" then
+            return workspace_api.toggle_special({ name = args })
+          end
+          return workspace_api.toggle_special()
+        end)
+      end
+    end
+    if args ~= "" then
+      return raw_dispatch_cmd("togglespecialworkspace " .. args)
+    end
+    return raw_dispatch_cmd("togglespecialworkspace")
   end
   if name == "bringactivetotop" and window_api.bring_to_top then
     return function()

@@ -258,6 +258,14 @@ ensure_lua_keybinds() {
     done < <(find "$src_dir" -maxdepth 1 -type f -name '*.lua' -print0)
   done
 
+  # Patch existing user and system lua configs to fix startup readiness race condition
+  for f in "$dst_root/UserConfigs"/*.lua "$dst_root/configs"/*.lua "$dst_root/lua"/*.lua; do
+    [ -f "$f" ] || continue
+    if grep -q 'break 2;' "$f" 2>/dev/null; then
+      sed -i 's/break 2;/break;/g' "$f"
+    fi
+  done
+
   if [ "$copied" -eq 1 ]; then
     echo "${OK:-[OK]} - Lua files sync completed." 2>&1 | tee -a "$log"
   else

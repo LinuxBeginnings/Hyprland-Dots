@@ -22,26 +22,66 @@ fi
 # Resolve defaults file used to get terminal/editor values
 config_file="$hypr_dir/UserConfigs/01-UserDefaults.conf"
 lua_defaults_file="$hypr_dir/UserConfigs/user_defaults.lua"
-term="${term:-${TERM:-kitty}}"
-edit="${edit:-${EDITOR:-nano}}"
+lua_system_defaults_file="$hypr_dir/lua/user_defaults.lua"
+user_env_lua="$hypr_dir/UserConfigs/user_env.lua"
+system_env_lua="$hypr_dir/configs/system_env.lua"
+term="${term:-${TERMINAL:-kitty}}"
+edit="${edit:-${EDITOR:-}}"
 visual="${visual:-${VISUAL:-}}"
 
 if [[ "$hypr_config_mode" == "conf" && -f "$config_file" ]]; then
   tmp_config_file=$(mktemp)
   sed 's/^\$//g; s/ = /=/g' "$config_file" >"$tmp_config_file"
   source "$tmp_config_file"
+  conf_editor=$(sed -n 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*EDITOR[[:space:]]*,[[:space:]]*\([^#[:space:]]*\).*$/\1/p' "$config_file" | tail -n1)
+  conf_visual=$(sed -n 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*VISUAL[[:space:]]*,[[:space:]]*\([^#[:space:]]*\).*$/\1/p' "$config_file" | tail -n1)
+  [[ -n "$conf_editor" ]] && edit="$conf_editor"
+  [[ -n "$conf_visual" ]] && visual="$conf_visual"
 elif [[ "$hypr_config_mode" == "lua" ]]; then
-  defaults_source=""
+  # 1. Parse active overrides from user_defaults.lua
   if [[ -f "$lua_defaults_file" ]]; then
-    defaults_source="$lua_defaults_file"
-  fi
-  if [[ -n "$defaults_source" ]]; then
-    lua_term=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.term[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$defaults_source" | tail -n1)
-    lua_edit=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.edit[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$defaults_source" | tail -n1)
-    lua_visual=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.visual[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$defaults_source" | tail -n1)
+    lua_term=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.term[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
+    lua_edit=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.edit[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
+    lua_visual=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.visual[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
     [[ -n "$lua_term" ]] && term="$lua_term"
     [[ -n "$lua_edit" ]] && edit="$lua_edit"
     [[ -n "$lua_visual" ]] && visual="$lua_visual"
+  fi
+  # 2. Parse env overrides from user_env.lua / system_env.lua
+  for env_file in "$user_env_lua" "$system_env_lua"; do
+    if [[ -f "$env_file" ]]; then
+      env_edit=$(sed -n 's/^[[:space:]]*hl\.env([[:space:]]*["\x27]EDITOR["\x27][[:space:]]*,[[:space:]]*["\x27]\([^"\x27]*\)["\x27].*$/\1/p' "$env_file" | tail -n1)
+      env_visual=$(sed -n 's/^[[:space:]]*hl\.env([[:space:]]*["\x27]VISUAL["\x27][[:space:]]*,[[:space:]]*["\x27]\([^"\x27]*\)["\x27].*$/\1/p' "$env_file" | tail -n1)
+      [[ -n "$env_edit" ]] && edit="$env_edit"
+      [[ -n "$env_visual" ]] && visual="$env_visual"
+    fi
+  done
+  # 3. Fallback to 01-UserDefaults.conf if edit is still unset
+  if [[ -z "${edit:-}" && -f "$config_file" ]]; then
+    conf_editor=$(sed -n 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*EDITOR[[:space:]]*,[[:space:]]*\([^#[:space:]]*\).*$/\1/p' "$config_file" | tail -n1)
+    conf_visual=$(sed -n 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*VISUAL[[:space:]]*,[[:space:]]*\([^#[:space:]]*\).*$/\1/p' "$config_file" | tail -n1)
+    [[ -n "$conf_editor" ]] && edit="$conf_editor"
+    [[ -n "$conf_visual" ]] && visual="$conf_visual"
+  fi
+  # 4. Fallback to system lua defaults
+  if [[ -z "${lua_term:-}" && -f "$lua_system_defaults_file" ]]; then
+    sys_term=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.term[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_system_defaults_file" | tail -n1)
+    [[ -n "$sys_term" ]] && term="$sys_term"
+  fi
+  if [[ -z "${edit:-}" && -f "$lua_system_defaults_file" ]]; then
+    sys_edit=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.edit[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_system_defaults_file" | tail -n1)
+    [[ -n "$sys_edit" ]] && edit="$sys_edit"
+  fi
+fi
+
+# Final fallback for editor
+if [[ -z "${edit:-}" ]]; then
+  if command -v nvim >/dev/null 2>&1; then
+    edit="nvim"
+  elif command -v vim >/dev/null 2>&1; then
+    edit="vim"
+  else
+    edit="nano"
   fi
 fi
 # ##################################### #
@@ -138,6 +178,26 @@ resolve_system_lua_file() {
     printf '%s' "$preferred"
   else
     printf '%s' "$legacy"
+  fi
+}
+
+resolve_system_keybinds_file() {
+  local lua_keybinds="$hypr_dir/lua/keybinds.lua"
+  local legacy_system_lua="$configs/system_keybinds.lua"
+  local conf_file="$configs/Keybinds.conf"
+
+  if [[ "$hypr_config_mode" == "lua" ]]; then
+    if [[ -f "$lua_keybinds" || ! -f "$legacy_system_lua" ]]; then
+      printf '%s' "$lua_keybinds"
+    else
+      printf '%s' "$legacy_system_lua"
+    fi
+  else
+    if [[ -f "$conf_file" || ! -f "$lua_keybinds" ]]; then
+      printf '%s' "$conf_file"
+    else
+      printf '%s' "$lua_keybinds"
+    fi
   fi
 }
 
@@ -474,7 +534,7 @@ handle_choice() {
     "$scriptsDir/select-hyprview-layout.sh"
     ;;
   "Edit System Default Keybinds")
-    if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_keybinds.lua)"; else file="$configs/Keybinds.conf"; fi
+    file="$(resolve_system_keybinds_file)"
     ;;
   "Edit System Default Startup Apps")
     if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_startup.lua)"; else file="$configs/Startup_Apps.conf"; fi
@@ -557,7 +617,17 @@ handle_choice() {
     [[ ${#visual_cmd[@]} -gt 0 ]] && selected_cmd=("${visual_cmd[@]}")
 
     if is_tui_editor "${selected_cmd[@]}"; then
-      "${term_cmd[@]}" -e "${selected_cmd[@]}" "$file"
+      if [[ -x "$scriptsDir/LaunchTerminal.sh" ]]; then
+        "$scriptsDir/LaunchTerminal.sh" "$term" "${selected_cmd[*]} '$file'" >/dev/null 2>&1 &
+      elif command -v kitty >/dev/null 2>&1; then
+        kitty "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
+      elif command -v ghostty >/dev/null 2>&1; then
+        ghostty -e "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
+      elif command -v alacritty >/dev/null 2>&1; then
+        alacritty -e "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
+      elif command -v "${term_cmd[0]}" >/dev/null 2>&1; then
+        "${term_cmd[@]}" -e "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
+      fi
     else
       "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
     fi

@@ -16,10 +16,12 @@ local function resolve_cmd(cmd)
   local resolved_term = defaults.term or os.getenv("TERMINAL") or "kitty"
   local resolved_files = defaults.files or "thunar"
   local resolved_edit = defaults.edit or os.getenv("EDITOR") or "nano"
+  local resolved_visual = defaults.visual or os.getenv("VISUAL") or ""
   cmd = tostring(cmd)
   cmd = cmd:gsub("%$term", resolved_term)
   cmd = cmd:gsub("%$files", resolved_files)
   cmd = cmd:gsub("%$edit", resolved_edit)
+  cmd = cmd:gsub("%$visual", resolved_visual)
   return cmd
 end
 
@@ -207,15 +209,55 @@ local function dispatch(name, args)
       hl.dispatch(dsp.focus({ workspace = workspace_value(args) }))
     end
   end
-  if name == "movetoworkspace" and window_api.move then
-    return function()
-      hl.dispatch(window_api.move({ workspace = workspace_value(args) }))
+  if name == "movetoworkspace" then
+    if args == "special" or args:match("^special:") then
+      return function()
+        local win = hl.get_active_window and hl.get_active_window()
+        local ws = win and win.workspace
+        if ws and (ws.special == true or (type(ws.name) == "string" and ws.name:match("^special"))) then
+          local mon = hl.get_active_monitor and hl.get_active_monitor()
+          local active_ws = hl.get_active_workspace and hl.get_active_workspace(mon and mon.id)
+          local target_id = (active_ws and not active_ws.special and active_ws.id) or "+0"
+          if window_api.move then
+            hl.dispatch(window_api.move({ workspace = target_id }))
+          else
+            hl.dispatch(dsp.exec_raw("movetoworkspace " .. tostring(target_id)))
+          end
+          return
+        end
+        if window_api.move then
+          hl.dispatch(window_api.move({ workspace = workspace_value(args) }))
+        else
+          hl.dispatch(dsp.exec_raw("movetoworkspace " .. args))
+        end
+      end
     end
+    if window_api.move then
+      return function()
+        hl.dispatch(window_api.move({ workspace = workspace_value(args) }))
+      end
+    end
+    return raw_dispatch_cmd("movetoworkspace " .. args)
   end
   if name == "movetoworkspacesilent" and window_api.move then
     return function()
       hl.dispatch(window_api.move({ workspace = workspace_value(args), follow = false }))
     end
+  end
+  if name == "togglespecialworkspace" then
+    local workspace_api = (dsp and dsp.workspace) or {}
+    if workspace_api.toggle_special then
+      return function()
+        local ok, dispatcher = pcall(workspace_api.toggle_special, args ~= "" and { name = args } or nil)
+        if ok and dispatcher then
+          hl.dispatch(dispatcher)
+        end
+      end
+    end
+    if args ~= "" then
+      return raw_dispatch_cmd("togglespecialworkspace " .. args)
+    end
+    return raw_dispatch_cmd("togglespecialworkspace")
   end
   if name == "togglefloating" and window_api.float then
     return function()
@@ -645,6 +687,78 @@ bind(
   exec_cmd("$HOME/.config/hypr/scripts/MediaCtrl.sh --stop"),
   { description = "stop", locked = true }
 )
+bind(
+  "",
+  "xf86MonBrightnessDown",
+  exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --dec"),
+  { description = "decrease monitor brightness", locked = true, ["repeat"] = true }
+)
+bind(
+  "",
+  "xf86MonBrightnessUp",
+  exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --inc"),
+  { description = "increase monitor brightness", locked = true, ["repeat"] = true }
+)
+bind(
+  "CTRL ALT",
+  "equal",
+  exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --inc"),
+  { description = "increase brightness", locked = true, ["repeat"] = true }
+)
+bind(
+  "CTRL ALT",
+  "minus",
+  exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --dec"),
+  { description = "decrease brightness", locked = true, ["repeat"] = true }
+)
+bind(
+  "CTRL ALT",
+  "KP_Add",
+  exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --inc"),
+  { description = "increase brightness (numpad)", locked = true, ["repeat"] = true }
+)
+bind(
+  "CTRL ALT",
+  "KP_Subtract",
+  exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --dec"),
+  { description = "decrease brightness (numpad)", locked = true, ["repeat"] = true }
+)
+bind(
+  "",
+  "xf86KbdBrightnessDown",
+  exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --dec"),
+  { description = "decrease keyboard brightness", locked = true, ["repeat"] = true }
+)
+bind(
+  "",
+  "xf86KbdBrightnessUp",
+  exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --inc"),
+  { description = "increase keyboard brightness", locked = true, ["repeat"] = true }
+)
+bind(
+  "",
+  "xf86TouchpadToggle",
+  exec_cmd("$HOME/.config/hypr/scripts/TouchPad.sh"),
+  { description = "disable touchpad" }
+)
+bind(
+  "",
+  "xf86Launch1",
+  exec_cmd("rog-control-center"),
+  { description = "ASUS Armory crate button" }
+)
+bind(
+  "",
+  "xf86Launch3",
+  exec_cmd("asusctl led-mode -n"),
+  { description = "FN+F4 Switch keyboard RGB profile" }
+)
+bind(
+  "",
+  "xf86Launch4",
+  exec_cmd("asusctl profile -n"),
+  { description = "FN+F5 change of fan profiles" }
+)
 bind("SUPER", "Print", exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --now"), { description = "screenshot now" })
 bind(
   "SUPER SHIFT",
@@ -675,6 +789,32 @@ bind(
   "S",
   exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --swappy"),
   { description = "screenshot (swappy)" }
+)
+-- Screenshot keybindings using F6 (no PrintSrc button)
+bind("SUPER", "F6", exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --now"), { description = "screenshot" })
+bind(
+  "SUPER SHIFT",
+  "F6",
+  exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --area"),
+  { description = "screenshot (area)" }
+)
+bind(
+  "SUPER CTRL",
+  "F6",
+  exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --in5"),
+  { description = "screenshot (5 secs delay)" }
+)
+bind(
+  "SUPER ALT",
+  "F6",
+  exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --in10"),
+  { description = "screenshot (10 secs delay)" }
+)
+bind(
+  "ALT",
+  "F6",
+  exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --active"),
+  { description = "screenshot (active window only)" }
 )
 bind("SUPER SHIFT", "left", dispatch("resizeactive", "-50 0"), { description = "resize left (-50)", ["repeat"] = true })
 bind(

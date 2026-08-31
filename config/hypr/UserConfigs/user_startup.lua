@@ -42,16 +42,21 @@ end
 
 local exec_once = user_startup_helper.exec_once
 
--- Examples:
--- exec_once("blueman-applet")
--- exec_once("$HOME/.config/hypr/UserScripts/RainbowBorders.sh")
---
--- Template (uncomment and edit):
--- local startup_commands = {
---   "nm-applet",
---   "$HOME/.config/hypr/UserScripts/my-startup-script.sh",
--- }
---
--- for _, cmd in ipairs(startup_commands) do
---   exec_once(cmd)
--- end
+-- Add custom startup commands:
+local startup_commands = {
+  -- "kdeconnect-app",
+  -- "blueman-applet",
+  -- "$HOME/.config/hypr/UserScripts/RainbowBorders.sh",
+}
+
+local function run_startup_commands()
+  for _, cmd in ipairs(startup_commands) do
+    exec_once(cmd)
+  end
+end
+
+if hl and hl.on then
+  hl.on("hyprland.start", run_startup_commands)
+else
+  run_startup_commands()
+end

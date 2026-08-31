@@ -1197,6 +1197,8 @@ def parse_keybinds(path, *, variables=None, visited=None):
         for _ in range(8):
             new_value = value
             for name, var_value in variables.items():
+                if name in {"files", "term", "edit", "editor", "visual", "Search_Engine", "search_engine"}:
+                    continue
                 new_value = new_value.replace(f"${name}", var_value)
             if new_value == value:
                 return new_value
@@ -1233,7 +1235,7 @@ def parse_keybinds(path, *, variables=None, visited=None):
         if bind:
             binder = bind.group(1)
             parts = [expand(part.strip()) for part in bind.group(2).split(",")]
-            has_description = "d" in binder and binder != "bind"
+            has_description = binder.startswith("bind") and "d" in binder[4:]
             description = ""
             if has_description and len(parts) >= 4:
                 mods, key = parts[0], parts[1]
@@ -1272,7 +1274,11 @@ layer_rules = [rule for rule in parse_rules(layer_rules_path, "user-layer") if r
 base_keybind_vars = {}
 parse_keybinds(user_defaults_path, variables=base_keybind_vars)
 system_keybinds = parse_keybinds(system_keybinds_path, variables=dict(base_keybind_vars))
+if system_laptops_path.exists():
+    system_keybinds.extend(parse_keybinds(system_laptops_path, variables=dict(base_keybind_vars)))
 keybinds = parse_keybinds(keybinds_path, variables=dict(base_keybind_vars))
+if laptops_path.exists():
+    keybinds.extend(parse_keybinds(laptops_path, variables=dict(base_keybind_vars)))
 system_env_entries = parse_env(system_env_path)
 env_entries = parse_env(env_path)
 system_startup_entries = parse_startup(system_startup_path, variables=dict(base_keybind_vars))
@@ -1351,14 +1357,14 @@ else:
 startup_readiness = (
     "runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; "
     "export XDG_RUNTIME_DIR=\"$runtime\"; "
-    "for _ in $(seq 1 30); do "
+    "for _ in $(seq 1 60); do "
     "if [ -n \"$WAYLAND_DISPLAY\" ] && [ -S \"$runtime/$WAYLAND_DISPLAY\" ]; then break; fi; "
     "for sock in \"$runtime\"/wayland-[0-9]*; do [ -S \"$sock\" ] || continue; "
     "case \"$(basename \"$sock\")\" in *awww*) continue ;; esac; "
-    "export WAYLAND_DISPLAY=\"$(basename \"$sock\")\"; break 2; done; "
+    "export WAYLAND_DISPLAY=\"$(basename \"$sock\")\"; break; done; "
     "sleep 0.1; done; "
     "if [ -n \"$HYPRLAND_INSTANCE_SIGNATURE\" ]; then "
-    "for hypr_sock in \"$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock\" \"$runtime/hypr/.socket.sock\"; do [ -S \"$hypr_sock\" ] && break 2; done; "
+    "for hypr_sock in \"$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock\" \"$runtime/hypr/.socket.sock\"; do [ -S \"$hypr_sock\" ] && break; done; "
     "sleep 0.1; fi"
 )
 
@@ -1477,10 +1483,12 @@ system_keybind_lines = [
     "  local resolved_term = defaults.term or os.getenv(\"TERMINAL\") or \"kitty\"",
     "  local resolved_files = defaults.files or \"thunar\"",
     "  local resolved_edit = defaults.edit or os.getenv(\"EDITOR\") or \"nano\"",
+    "  local resolved_visual = defaults.visual or os.getenv(\"VISUAL\") or \"\"",
     "  cmd = tostring(cmd)",
     "  cmd = cmd:gsub(\"%$term\", resolved_term)",
     "  cmd = cmd:gsub(\"%$files\", resolved_files)",
     "  cmd = cmd:gsub(\"%$edit\", resolved_edit)",
+    "  cmd = cmd:gsub(\"%$visual\", resolved_visual)",
     "  return cmd",
     "end",
     "",
@@ -1746,69 +1754,21 @@ for name, source in [
         print(f"[INFO] {source.name} not found at {source}; using legacy source {source_path}")
 
     if name == "system_settings":
-        if source_path is None:
-            lines.append(f"-- No active entries were found in {source.name}.")
-            write_file(files_out[name], lines)
-        else:
-            scripts_dir = parse_scripts_dir(source_path)
-            if scripts_dir:
-                lines.append(f"local scriptsDir = {lua_string(scripts_dir)}")
-                lines.append("")
-
-            sections = parse_hyprlang_sections(source_path)
-            gestures_section = sections.pop("gestures", None)
-            if gestures_section and "gesture" in gestures_section:
-                gestures_section.pop("gesture", None)
-
-            ordered_sections = [
-                "dwindle",
-                "master",
-                "scrolling",
-                "general",
-                "input",
-                "gestures",
-                "misc",
-                "binds",
-                "xwayland",
-                "render",
-                "cursor",
-            ]
-            for section in ordered_sections:
-                if section == "gestures":
-                    data = gestures_section
-                elif section == "misc":
-                    data = sections.get(section) or {}
-                    if "force_default_wallpaper" not in data:
-                        data["force_default_wallpaper"] = "false"
-                else:
-                    data = sections.get(section)
-                if not data:
-                    continue
-                lines.append("hl.config({")
-                lines.append(f"  {section} = {{")
-                lines.extend(render_table(data, indent=4))
-                lines.append("  },")
-                lines.append("})")
-                lines.append("")
-
-            simple_gestures, complex_gestures = parse_gestures(source_path)
-            for spec in simple_gestures:
-                lines.extend([
-                    "hl.gesture({",
-                    f"  fingers = {spec['fingers']},",
-                    f"  direction = {lua_string(spec['direction'])},",
-                    f"  action = {lua_string(spec['action'])},",
-                    "})",
-                    "",
-                ])
-
-            if complex_gestures:
-                lines.append("-- Complex dispatcher gestures from SystemSettings.conf are pending explicit Lua API parity:")
-                for entry in complex_gestures:
-                    lines.append(f"-- gesture = {entry}")
-                lines.append("")
-
-            write_file(files_out[name], lines)
+        system_settings_lines = [
+            title,
+            "-- System settings for the Lua workflow.",
+            "-- Loaded by user_overrides.lua on every Hyprland session start.",
+            "-- Delegates to lua/settings.lua which contains the canonical settings.",
+            "",
+            'local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")',
+            'local hyprDir = configHome .. "/hypr"',
+            'local settings_path = hyprDir .. "/lua/settings.lua"',
+            "local ok, err = pcall(dofile, settings_path)",
+            "if not ok then",
+            '  print("[ERROR] system_settings: failed to load lua/settings.lua: " .. tostring(err))',
+            "end",
+        ]
+        write_file(files_out[name], system_settings_lines)
         continue
 
     reference = source_examples(source_path) if source_path else []

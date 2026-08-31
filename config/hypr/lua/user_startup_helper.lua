@@ -23,7 +23,7 @@ local function exec_once(cmd, opts)
   local key = cmd:gsub("[^%w_.-]", "_"):sub(1, 80)
   local marker = marker_prefix .. session .. "-" .. key
   local log = log_prefix .. key .. ".log"
-  local readiness = [[runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; export XDG_RUNTIME_DIR="$runtime"; for _ in $(seq 1 30); do if [ -n "$WAYLAND_DISPLAY" ] && [ -S "$runtime/$WAYLAND_DISPLAY" ]; then break; fi; for sock in "$runtime"/wayland-[0-9]*; do [ -S "$sock" ] || continue; case "$(basename "$sock")" in *awww*) continue ;; esac; export WAYLAND_DISPLAY="$(basename "$sock")"; break 2; done; sleep 0.1; done; if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]; then for hypr_sock in "$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock" "$runtime/hypr/.socket.sock"; do [ -S "$hypr_sock" ] && break 2; done; sleep 0.1; fi]]
+  local readiness = [[runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; export XDG_RUNTIME_DIR="$runtime"; for _ in $(seq 1 60); do if [ -n "$WAYLAND_DISPLAY" ] && [ -S "$runtime/$WAYLAND_DISPLAY" ]; then break; fi; for sock in "$runtime"/wayland-[0-9]*; do [ -S "$sock" ] || continue; case "$(basename "$sock")" in *awww*) continue ;; esac; export WAYLAND_DISPLAY="$(basename "$sock")"; break; done; sleep 0.1; done; if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]; then for hypr_sock in "$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock" "$runtime/hypr/.socket.sock"; do [ -S "$hypr_sock" ] && break; done; sleep 0.1; fi]]
   local inner = readiness .. "; " .. cmd
   local script = "[ -e " .. shell_quote(marker) .. " ] || { touch " .. shell_quote(marker) .. " && sh -lc " .. shell_quote(inner) .. " >>" .. shell_quote(log) .. " 2>&1 & }"
   os.execute("sh -lc " .. shell_quote(script))

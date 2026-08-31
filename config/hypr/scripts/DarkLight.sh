@@ -171,16 +171,52 @@ fi
 
 # Function to set Waybar style
 set_waybar_style() {
-    theme="$1"
-    waybar_styles="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style"
-    waybar_style_link="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
+    local theme="$1"
+    local waybar_styles="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style"
+    local waybar_style_link="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
 
-    style_file=$(find -L "$waybar_styles" -maxdepth 1 -type f \( -iname "${theme}-*.css" -o -iname "${theme}_*.css" -o -iname "[${theme}]*.css" -o -iname "${theme}*.css" \) | shuf -n 1)
+    # If re-applying saved mode on startup (--apply-current), do NOT change the user's existing style.css
+    if [ "$apply_saved_mode" -eq 1 ]; then
+        if [ -L "$waybar_style_link" ] || [ -f "$waybar_style_link" ]; then
+            return 0
+        fi
+    fi
 
-    if [ -n "$style_file" ]; then
-        ln -sf "$style_file" "$waybar_style_link"
-    else
-        echo "Style file not found for $theme theme."
+    # When toggling mode (Dark <-> Light), preserve style if valid or switch to matching counterpart
+    if [ -L "$waybar_style_link" ]; then
+        local current_style_target current_style_base counterpart
+        current_style_target="$(readlink -f "$waybar_style_link" 2>/dev/null || true)"
+        current_style_base="$(basename "$current_style_target" 2>/dev/null || true)"
+
+        # Wallust, Chroma, and universal extra styles adapt automatically; keep them
+        if [[ "$current_style_base" =~ ^(Wallust|Chroma|\[Extra\]) ]]; then
+            return 0
+        fi
+
+        if [ "$theme" = "Light" ]; then
+            counterpart="${current_style_base//Dark/Light}"
+            counterpart="${counterpart//dark/light}"
+        else
+            counterpart="${current_style_base//Light/Dark}"
+            counterpart="${counterpart//light/dark}"
+        fi
+
+        if [ -n "$counterpart" ] && [ -f "$waybar_styles/$counterpart" ]; then
+            ln -sf "$waybar_styles/$counterpart" "$waybar_style_link"
+            return 0
+        fi
+
+        # If no counterpart exists, keep user's existing style rather than randomizing
+        return 0
+    fi
+
+    # Initial fallback if no style is set at all
+    if [ ! -e "$waybar_style_link" ]; then
+        local style_file
+        style_file="$(find -L "$waybar_styles" -maxdepth 1 -type f \( -iname "${theme}-*.css" -o -iname "${theme}_*.css" -o -iname "[${theme}]*.css" -o -iname "${theme}*.css" \) | sort | head -n 1)"
+        if [ -n "$style_file" ]; then
+            ln -sf "$style_file" "$waybar_style_link"
+        fi
     fi
 }
 
@@ -271,74 +307,120 @@ fi
 # GTK themes and icons switching
 set_custom_gtk_theme() {
     mode=$1
-    gtk_themes_directory="$HOME/.themes"
-    icon_directory="$HOME/.icons"
     color_setting="org.gnome.desktop.interface color-scheme"
     theme_setting="org.gnome.desktop.interface gtk-theme"
     icon_setting="org.gnome.desktop.interface icon-theme"
 
+    local prefer_dark=1
     if [ "$mode" == "Light" ]; then
         search_keywords="*Light*"
+        prefer_dark=0
         gsettings set $color_setting 'prefer-light'
     elif [ "$mode" == "Dark" ]; then
         search_keywords="*Dark*"
+        prefer_dark=1
         gsettings set $color_setting 'prefer-dark'
     else
         echo "Invalid mode provided."
         return 1
     fi
 
+    local -a theme_search_dirs=("$HOME/.themes" "$HOME/.local/share/themes" "/usr/share/themes")
+    local -a icon_search_dirs=("$HOME/.icons" "$HOME/.local/share/icons" "/usr/share/icons")
+
     themes=()
     icons=()
 
-    while IFS= read -r -d '' theme_search; do
-        themes+=("$(basename "$theme_search")")
-    done < <(find "$gtk_themes_directory" -maxdepth 1 -type d -iname "$search_keywords" -print0)
+    for dir in "${theme_search_dirs[@]}"; do
+        if [ -d "$dir" ]; then
+            while IFS= read -r -d '' theme_search; do
+                local t_name
+                t_name="$(basename "$theme_search")"
+                [[ " ${themes[*]} " =~ " ${t_name} " ]] || themes+=("$t_name")
+            done < <(find "$dir" -maxdepth 1 -type d -iname "$search_keywords" -print0 2>/dev/null)
+        fi
+    done
 
-    while IFS= read -r -d '' icon_search; do
-        icons+=("$(basename "$icon_search")")
-    done < <(find "$icon_directory" -maxdepth 1 -type d -iname "$search_keywords" -print0)
+    for dir in "${icon_search_dirs[@]}"; do
+        if [ -d "$dir" ]; then
+            while IFS= read -r -d '' icon_search; do
+                local i_name
+                i_name="$(basename "$icon_search")"
+                [[ " ${icons[*]} " =~ " ${i_name} " ]] || icons+=("$i_name")
+            done < <(find "$dir" -maxdepth 1 -type d -iname "$search_keywords" -print0 2>/dev/null)
+        fi
+    done
 
+    local selected_theme=""
     if [ ${#themes[@]} -gt 0 ]; then
-        if [ "$mode" == "Dark" ]; then
-            selected_theme=${themes[RANDOM % ${#themes[@]}]}
-        else
-            selected_theme=${themes[$RANDOM % ${#themes[@]}]}
-        fi
-        echo "Selected GTK theme for $mode mode: $selected_theme"
-        gsettings set $theme_setting "$selected_theme"
-
-        # Flatpak GTK apps (themes)
-        if command -v flatpak &> /dev/null; then
-            flatpak --user override --filesystem=$HOME/.themes
-            sleep 0.5
-            flatpak --user override --env=GTK_THEME="$selected_theme"
-        fi
+        selected_theme=${themes[RANDOM % ${#themes[@]}]}
     else
-        echo "No $mode GTK theme found"
+        if [ "$mode" == "Dark" ]; then
+            selected_theme="Adwaita-dark"
+        else
+            selected_theme="Adwaita"
+        fi
     fi
 
+    echo "Selected GTK theme for $mode mode: $selected_theme"
+    gsettings set $theme_setting "$selected_theme"
+
+    # Flatpak GTK apps (themes)
+    if command -v flatpak &> /dev/null; then
+        flatpak --user override --filesystem=$HOME/.themes 2>/dev/null || true
+        flatpak --user override --env=GTK_THEME="$selected_theme" 2>/dev/null || true
+    fi
+
+    local selected_icon=""
     if [ ${#icons[@]} -gt 0 ]; then
-        if [ "$mode" == "Dark" ]; then
-            selected_icon=${icons[RANDOM % ${#icons[@]}]}
-        else
-            selected_icon=${icons[$RANDOM % ${#icons[@]}]}
-        fi
+        selected_icon=${icons[RANDOM % ${#icons[@]}]}
         echo "Selected icon theme for $mode mode: $selected_icon"
         gsettings set $icon_setting "$selected_icon"
         
-        ## QT5ct icon_theme
-        sed -i "s|^icon_theme=.*$|icon_theme=$selected_icon|" "${XDG_CONFIG_HOME:-$HOME/.config}/qt5ct/qt5ct.conf"
-        sed -i "s|^icon_theme=.*$|icon_theme=$selected_icon|" "${XDG_CONFIG_HOME:-$HOME/.config}/qt6ct/qt6ct.conf"
+        ## QT5ct / QT6ct icon_theme
+        sed -i "s|^icon_theme=.*$|icon_theme=$selected_icon|" "${XDG_CONFIG_HOME:-$HOME/.config}/qt5ct/qt5ct.conf" 2>/dev/null || true
+        sed -i "s|^icon_theme=.*$|icon_theme=$selected_icon|" "${XDG_CONFIG_HOME:-$HOME/.config}/qt6ct/qt6ct.conf" 2>/dev/null || true
 
         # Flatpak GTK apps (icons)
         if command -v flatpak &> /dev/null; then
-            flatpak --user override --filesystem=$HOME/.icons
-            sleep 0.5
-            flatpak --user override --env=ICON_THEME="$selected_icon"
+            flatpak --user override --filesystem=$HOME/.icons 2>/dev/null || true
+            flatpak --user override --env=ICON_THEME="$selected_icon" 2>/dev/null || true
         fi
-    else
-        echo "No $mode icon theme found"
+    fi
+
+    # Sync GTK 3.0 & 4.0 settings.ini for non-GNOME / standalone GTK apps (e.g. Thunar)
+    for gtk_dir in "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0" "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-4.0"; do
+        mkdir -p "$gtk_dir"
+        local ini_file="$gtk_dir/settings.ini"
+        if [ ! -f "$ini_file" ]; then
+            printf '[Settings]\ngtk-theme-name=%s\ngtk-icon-theme-name=%s\ngtk-application-prefer-dark-theme=%d\n' "$selected_theme" "$selected_icon" "$prefer_dark" > "$ini_file"
+        else
+            grep -q '^\[Settings\]' "$ini_file" || sed -i '1i\[Settings\]' "$ini_file"
+            if grep -q '^gtk-theme-name=' "$ini_file"; then
+                sed -i "s|^gtk-theme-name=.*$|gtk-theme-name=$selected_theme|" "$ini_file"
+            else
+                echo "gtk-theme-name=$selected_theme" >> "$ini_file"
+            fi
+            if [ -n "$selected_icon" ]; then
+                if grep -q '^gtk-icon-theme-name=' "$ini_file"; then
+                    sed -i "s|^gtk-icon-theme-name=.*$|gtk-icon-theme-name=$selected_icon|" "$ini_file"
+                else
+                    echo "gtk-icon-theme-name=$selected_icon" >> "$ini_file"
+                fi
+            fi
+            if grep -q '^gtk-application-prefer-dark-theme=' "$ini_file"; then
+                sed -i "s|^gtk-application-prefer-dark-theme=.*$|gtk-application-prefer-dark-theme=$prefer_dark|" "$ini_file"
+            else
+                echo "gtk-application-prefer-dark-theme=$prefer_dark" >> "$ini_file"
+            fi
+        fi
+    done
+
+    # Sync xsettingsd if present
+    if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd/xsettingsd.conf" ]; then
+        sed -i "s|^Net/ThemeName .*$|Net/ThemeName \"$selected_theme\"|" "${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd/xsettingsd.conf" 2>/dev/null || true
+        [ -n "$selected_icon" ] && sed -i "s|^Net/IconThemeName .*$|Net/IconThemeName \"$selected_icon\"|" "${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd/xsettingsd.conf" 2>/dev/null || true
+        killall -HUP xsettingsd 2>/dev/null || true
     fi
 }
 
