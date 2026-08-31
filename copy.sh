@@ -148,7 +148,20 @@ if ! declare -f seed_upgrade_userconfigs >/dev/null 2>&1; then
   }
 fi
 if ! declare -f capture_upgrade_runtime_selection_state >/dev/null 2>&1; then
-  capture_upgrade_runtime_selection_state() { :; }
+  capture_upgrade_runtime_selection_state() {
+    local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local waybar_dir="$cfg_home/waybar"
+    KOOLDOTS_SAVED_WAYBAR_CONFIG=""
+    KOOLDOTS_SAVED_WAYBAR_STYLE=""
+
+    if [ -L "$waybar_dir/config" ]; then
+      KOOLDOTS_SAVED_WAYBAR_CONFIG="$(basename "$(readlink "$waybar_dir/config")")"
+    fi
+    if [ -L "$waybar_dir/style.css" ]; then
+      KOOLDOTS_SAVED_WAYBAR_STYLE="$(basename "$(readlink "$waybar_dir/style.css")")"
+    fi
+    export KOOLDOTS_SAVED_WAYBAR_CONFIG KOOLDOTS_SAVED_WAYBAR_STYLE
+  }
 fi
 if ! declare -f capture_runtime_personal_state >/dev/null 2>&1; then
   capture_runtime_personal_state() {
@@ -196,7 +209,39 @@ if ! declare -f preserve_custom_sddm_configs >/dev/null 2>&1; then
   preserve_custom_sddm_configs() { :; }
 fi
 if ! declare -f restore_upgrade_runtime_selection_state >/dev/null 2>&1; then
-  restore_upgrade_runtime_selection_state() { :; }
+  restore_upgrade_runtime_selection_state() {
+    local log="${1:-/dev/null}"
+    local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local waybar_dir="$cfg_home/waybar"
+    local config_link="$waybar_dir/config"
+    local style_link="$waybar_dir/style.css"
+
+    if [ -n "${KOOLDOTS_SAVED_WAYBAR_CONFIG:-}" ] && [ -f "$waybar_dir/configs/$KOOLDOTS_SAVED_WAYBAR_CONFIG" ]; then
+      rm -f "$config_link"
+      ln -sf "$waybar_dir/configs/$KOOLDOTS_SAVED_WAYBAR_CONFIG" "$config_link" 2>&1 | tee -a "$log"
+      echo "${OK} Restored waybar layout config: $KOOLDOTS_SAVED_WAYBAR_CONFIG" 2>&1 | tee -a "$log"
+    elif [ ! -e "$config_link" ]; then
+      local chassis
+      chassis="$(detect_waybar_config 2>/dev/null || echo "desktop")"
+      local default_target="$waybar_config"
+      [ "$chassis" = "laptop" ] && default_target="$waybar_config_laptop"
+      if [ -f "$default_target" ]; then
+        rm -f "$config_link"
+        ln -sf "$default_target" "$config_link" 2>&1 | tee -a "$log"
+      fi
+    fi
+
+    if [ -n "${KOOLDOTS_SAVED_WAYBAR_STYLE:-}" ] && [ -f "$waybar_dir/style/$KOOLDOTS_SAVED_WAYBAR_STYLE" ]; then
+      rm -f "$style_link"
+      ln -sf "$waybar_dir/style/$KOOLDOTS_SAVED_WAYBAR_STYLE" "$style_link" 2>&1 | tee -a "$log"
+      echo "${OK} Restored waybar style: $KOOLDOTS_SAVED_WAYBAR_STYLE" 2>&1 | tee -a "$log"
+    elif [ ! -e "$style_link" ]; then
+      if [ -f "$waybar_style" ]; then
+        rm -f "$style_link"
+        ln -sf "$waybar_style" "$style_link" 2>&1 | tee -a "$log"
+      fi
+    fi
+  }
 fi
 if ! declare -f restore_runtime_personal_state >/dev/null 2>&1; then
   restore_runtime_personal_state() {
