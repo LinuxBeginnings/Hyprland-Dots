@@ -1,39 +1,5 @@
 # Changelog — KoolDots
 
-## v2.3.26.1
-
-## Fixed:
-
-- LCD keyboard brightness controls
-- Gestures fix 2 
-  - `copy.sh` was overwritting gesture changes
-- Race condition in `awww-daemon` caused it to crash
-  - Changed `break 2` to just `break`
-  - Fix is applied with `copy.sh` on updates
-- Inconsistent Dark mode
-- Re-added laptop brightness keybinds
-- User defined startups weren't working I.e. `kde-connect`
-- `startup.lua` wasn't calling `LuaAutoReload.sh`
-- Changing defaults like filemanager didn't take effect
-- KoolDots update notifier
-  - Redid entire script from scratch
-- Toggle in/out of specialworkspace didn't work
-  - You could toggle in but not exit
-- Waybar config getting changed on each boot
-- Gestures in LUA configs
-- Fixed Quick settings not opening system keybinds file
-
-## Added:
-
-- Added keybinds to increase/decrease brightness 
-  - `CTRL+ALT+`` the `-/+` keys
-- `.luarc.json` file to the LUA subdirs
-  - Some editors will report `undefined global hl`
-
-## Upated:
-
-- Improved user startup to better handle apps
-
 ## v2.3.26
 
 ## Added:
@@ -77,7 +43,11 @@
 
 ## Fixed:
 
-- Edit system binds resolved to wrong file
+- On upgrade waybar config/style got reset (fix 2)
+- Eliminated possible race condition in `awww-daemon`
+  - Thanks to: @hyperion-ak for the fixes
+- Removed dead code from `initial-boot.sh`
+  - Thanks to @silesai
 - Returning from `game mode` didn't restore user decoration values
 - `remove master` in `master layout` generate LUA runtime error
 - `cava` and `waybar` cava colors weren't syncing with wallpaper

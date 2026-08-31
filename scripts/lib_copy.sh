@@ -77,9 +77,16 @@ copy_waybar() {
           target_file="$DIRPATHw/$file"
           if [ -L "$symlink" ]; then
             symlink_target=$(readlink "$symlink")
-            if [ -f "$symlink_target" ]; then
-              rm -f "$target_file" && cp -f "$symlink_target" "$target_file"
+            target_name=$(basename "$symlink_target")
+            if [ "$file" = "config" ] && [ -f "$DIRPATHw/configs/$target_name" ]; then
+              rm -f "$target_file" && ln -sf "$DIRPATHw/configs/$target_name" "$target_file"
+            elif [ "$file" = "style.css" ] && [ -f "$DIRPATHw/style/$target_name" ]; then
+              rm -f "$target_file" && ln -sf "$DIRPATHw/style/$target_name" "$target_file"
+            elif [ -f "$symlink_target" ]; then
+              rm -f "$target_file" && ln -sf "$symlink_target" "$target_file"
             fi
+          elif [ -f "$symlink" ]; then
+            rm -f "$target_file" && cp -f "$symlink" "$target_file"
           fi
         done
         for dir in "$DIRPATHw-backup-$BACKUP_DIR/configs"/*; do

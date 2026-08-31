@@ -161,15 +161,7 @@ apply_image_wallpaper() {
 
   kill_wallpaper_for_image
 
-  if ! pgrep -x "$WWW_DAEMON" >/dev/null; then
-    echo "Starting $WWW_DAEMON..."
-    "$WWW_DAEMON" "${WWW_DAEMON_ARGS[@]}" &
-  fi
-  # Wait for daemon to be ready before applying
-  for _ in {1..20}; do
-    "$WWW_CMD" query >/dev/null 2>&1 && break
-    sleep 0.1
-  done
+  wallpaper_ensure_daemon
   local resize_mode
   resize_mode="$(wallpaper_resize_mode "$image_path" "$focused_monitor")"
   "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$image_path" "${SWWW_PARAMS[@]}" || {

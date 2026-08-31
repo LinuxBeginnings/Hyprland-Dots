@@ -10,7 +10,6 @@
 # Variables
 scriptsDir=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts
 wallpaper=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current
-waybar_style="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/[Extra] Neon Circuit.css"
 kvantum_theme="catppuccin-mocha-blue"
 color_scheme="prefer-dark"
 gtk_theme="Flat-Remix-GTK-Blue-Dark"
@@ -80,13 +79,6 @@ if [ ! -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/.initial_startup_done" ]; then
        
     # initiate kvantum theme
     kvantummanager --set "$kvantum_theme" > /dev/null 2>&1 &
-
-	# waybar style
-	#if [ -L "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/config" ]; then
-    ##    	ln -sf "$waybar_style" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
-    #   	"$scriptsDir/Refresh.sh" > /dev/null 2>&1 & 
-	#fi
-
 
     # Create a marker file to indicate that the script has been executed.
     touch "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/.initial_startup_done"

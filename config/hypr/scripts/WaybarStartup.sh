@@ -81,6 +81,9 @@ start_waybar_via_systemd() {
 }
 
 start_waybar_direct() {
+    if is_waybar_running; then
+        return 0
+    fi
     if command -v waybar >/dev/null 2>&1; then
         waybar >/dev/null 2>&1 &
         return 0
@@ -93,17 +96,30 @@ start_waybar_direct() {
 }
 
 main() {
-    # Brief wait so a systemd-managed waybar.service has time to appear
-    # before we check; avoids a race on distros with an enabled unit.
-    sleep 0.5
-    is_waybar_running && exit 0
-    wait_for_wayland || true
-    sync_portal_env || true
-    ensure_wallust_waybar_colors
-    if start_waybar_via_systemd || start_waybar_direct; then
-        exit 0
-    fi
-    exit 1
+    local lock_file="${runtime_dir}/waybar-startup-${UID:-$(id -u)}.lock"
+
+    {
+        if command -v flock >/dev/null 2>&1; then
+            flock 9 || exit 1
+        fi
+
+        # If already running, nothing to do
+        is_waybar_running && exit 0
+
+        wait_for_wayland || true
+        sync_portal_env || true
+        ensure_wallust_waybar_colors
+
+        # Try systemd first if enabled, otherwise launch directly
+        if start_waybar_via_systemd; then
+            exit 0
+        fi
+
+        if start_waybar_direct; then
+            exit 0
+        fi
+        exit 1
+    } 9>"$lock_file"
 }
 
 main

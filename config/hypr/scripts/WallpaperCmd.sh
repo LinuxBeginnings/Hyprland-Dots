@@ -119,4 +119,41 @@ wallpaper_resize_mode() {
   # Auto mode prefers full-screen fill; set WALLPAPER_RESIZE_MODE=fit to preserve full image.
   printf '%s\n' "crop"
 }
+# Start the wallpaper daemon exactly once, even when several scripts race.
+#
+# Checking with "query" or "pgrep" and then starting is not atomic: two
+# callers can both observe "not running" and both spawn a daemon. The loser
+# panics with "There is an awww-daemon instance already running on this
+# socket!" and aborts (SIGABRT), leaving a core dump behind.
+#
+# This happens on a regular login, where Startup_Apps.conf runs
+# WallpaperDaemon.sh and ApplyThemeMode.sh -> DarkLight.sh concurrently.
+wallpaper_ensure_daemon() {
+  local lock_file="${XDG_RUNTIME_DIR:-/tmp}/wallpaper-daemon-${UID:-$(id -u)}.lock"
+
+  command -v "$WWW_DAEMON" >/dev/null 2>&1 || return 1
+  command -v "$WWW_CMD" >/dev/null 2>&1 || return 1
+
+  {
+    # Without flock, fall back to the previous behaviour instead of failing.
+    if command -v flock >/dev/null 2>&1; then
+      flock 9 || return 1
+    fi
+
+    if ! "$WWW_CMD" query >/dev/null 2>&1; then
+      # 9>&- keeps the daemon from inheriting the lock descriptor, which
+      # would hold the lock for its entire lifetime and block every later
+      # caller.
+      "$WWW_DAEMON" "${WWW_DAEMON_ARGS[@]}" 9>&- &
+
+      for _ in {1..50}; do
+        "$WWW_CMD" query >/dev/null 2>&1 && break
+        sleep 0.1
+      done
+    fi
+
+    "$WWW_CMD" query >/dev/null 2>&1
+  } 9>"$lock_file"
+}
+
 export WWW_CMD WWW_DAEMON WWW_CACHE_DIR WWW_DAEMON_ARGS WWW_MIGRATION_MARKER
