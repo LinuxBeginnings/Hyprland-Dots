@@ -97,6 +97,17 @@ run_repo_update() {
     fi
   fi
 
+  # Patch existing user and system lua configs to fix startup readiness race condition
+  local hypr_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+  if [ -d "$hypr_dir" ]; then
+    for f in "$hypr_dir/UserConfigs"/*.lua "$hypr_dir/configs"/*.lua "$hypr_dir/lua"/*.lua; do
+      [ -f "$f" ] || continue
+      if grep -q 'break 2;' "$f" 2>/dev/null; then
+        sed -i 's/break 2;/break;/g' "$f"
+      fi
+    done
+  fi
+
   read -n1 -s -r -p "Press any key to return to the main menu..."
   echo
 

@@ -4,6 +4,9 @@
 
 ## Fixed:
 
+- Race condition in `awww-daemon` caused it to crash
+  - Changed `break 2` to just `break`
+  - Fix is applied with `copy.sh` on updates
 - Inconsistent Dark mode
 - Re-added laptop brightness keybinds
 - User defined startups weren't working I.e. `kde-connect`
