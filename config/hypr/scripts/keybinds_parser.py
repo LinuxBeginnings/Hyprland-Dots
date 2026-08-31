@@ -402,11 +402,9 @@ def format_for_rofi(raw_binds):
         binder = match.group(1).replace(" ", "").replace("\t", "")
         rhs = match.group(2).strip()
         
-        # "bind" ends in d, but doesn't have a description. "bindd" does.
-        # Original script logic `index(binder, "d")>0` was likely buggy for "bind".
-        # We'll assume strict check for bindd or similar if needed, 
-        # but avoiding "bind" having a description is crucial for correct output.
-        has_desc = 'd' in binder and binder != 'bind'
+        # Hyprland bind flags follow "bind" prefix (e.g., bindd, bindeld, bindlnd, bindmd).
+        # A description field is present only if the flags contain 'd'.
+        has_desc = binder.startswith('bind') and 'd' in binder[4:]
 
         # Split by comma regex (handling spaces)
         parts = [p.strip() for p in rhs.split(',')]

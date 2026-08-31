@@ -4,6 +4,9 @@
 
 ## Fixed:
 
+- LCD keyboard brightness controls
+- Gestures fix 2 
+  - `copy.sh` was overwritting gesture changes
 - Race condition in `awww-daemon` caused it to crash
   - Changed `break 2` to just `break`
   - Fix is applied with `copy.sh` on updates

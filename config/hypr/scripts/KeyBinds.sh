@@ -19,6 +19,7 @@ fi
 config_home="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
 hypr_dir="$config_home/hypr"
 keybinds_conf="$hypr_dir/configs/Keybinds.conf"
+system_laptop_conf="$hypr_dir/configs/Laptops.conf"
 user_keybinds_conf="$hypr_dir/UserConfigs/UserKeybinds.conf"
 laptop_conf="$hypr_dir/UserConfigs/Laptops.conf"
 lua_keybinds_conf="$hypr_dir/lua/keybinds.lua"
@@ -46,11 +47,13 @@ if [[ "$hypr_config_mode" == "lua" ]]; then
   elif [[ -f "$lua_legacy_system_keybinds" ]]; then
     files+=("$lua_legacy_system_keybinds")
   fi
-  [[ -f "$lua_user_keybinds" ]] && files+=("$lua_user_keybinds")
   [[ -f "$lua_overrides" ]] && files+=("$lua_overrides")
+  [[ -f "$lua_user_keybinds" ]] && files+=("$lua_user_keybinds")
 else
-  files=("$keybinds_conf" "$user_keybinds_conf")
+  files=("$keybinds_conf")
+  [[ -f "$system_laptop_conf" ]] && files+=("$system_laptop_conf")
   [[ -f "$laptop_conf" ]] && files+=("$laptop_conf")
+  [[ -f "$user_keybinds_conf" ]] && files+=("$user_keybinds_conf")
 fi
 
 # Parse binds using the python script for speed

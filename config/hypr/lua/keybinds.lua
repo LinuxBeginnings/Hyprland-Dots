@@ -422,110 +422,110 @@ bind("ALT", "Tab", exec_cmd("$HOME/.config/hypr/scripts/LuaCycleWindow.sh next")
 bind(
   "",
   "xf86audioraisevolume",
-  dispatch("volume up", "exec, $HOME/.config/hypr/scripts/Volume.sh --inc"),
-  { description = "volume up" }
+  exec_cmd("$HOME/.config/hypr/scripts/Volume.sh --inc"),
+  { description = "volume up", locked = true, ["repeat"] = true }
 )
 bind(
   "",
   "xf86audiolowervolume",
-  dispatch("volume down", "exec, $HOME/.config/hypr/scripts/Volume.sh --dec"),
-  { description = "volume down" }
+  exec_cmd("$HOME/.config/hypr/scripts/Volume.sh --dec"),
+  { description = "volume down", locked = true, ["repeat"] = true }
 )
 bind(
   "ALT",
   "xf86audioraisevolume",
-  dispatch("volume up precise", "exec, $HOME/.config/hypr/scripts/Volume.sh --inc-precise"),
-  { description = "volume up precise" }
+  exec_cmd("$HOME/.config/hypr/scripts/Volume.sh --inc-precise"),
+  { description = "volume up precise", locked = true, ["repeat"] = true }
 )
 bind(
   "ALT",
   "xf86audiolowervolume",
-  dispatch("volume down precise", "exec, $HOME/.config/hypr/scripts/Volume.sh --dec-precise"),
-  { description = "volume down precise" }
+  exec_cmd("$HOME/.config/hypr/scripts/Volume.sh --dec-precise"),
+  { description = "volume down precise", locked = true, ["repeat"] = true }
 )
 bind(
   "",
   "xf86AudioMicMute",
-  dispatch("toggle mic mute", "exec, $HOME/.config/hypr/scripts/Volume.sh --toggle-mic"),
-  { locked = true, description = "toggle mic mute" }
+  exec_cmd("$HOME/.config/hypr/scripts/Volume.sh --toggle-mic"),
+  { description = "toggle mic mute", locked = true }
 )
 bind(
   "",
   "xf86audiomute",
-  dispatch("toggle mute", "exec, $HOME/.config/hypr/scripts/Volume.sh --toggle"),
-  { locked = true, description = "toggle mute" }
+  exec_cmd("$HOME/.config/hypr/scripts/Volume.sh --toggle"),
+  { description = "toggle mute", locked = true }
 )
-bind("", "xf86Sleep", dispatch("sleep", "exec, systemctl suspend"), { locked = true, description = "sleep" })
+bind("", "xf86Sleep", exec_cmd("systemctl suspend"), { description = "sleep", locked = true })
 bind(
   "",
   "xf86Rfkill",
-  dispatch("airplane mode", "exec, $HOME/.config/hypr/scripts/AirplaneMode.sh"),
-  { locked = true, description = "airplane mode" }
+  exec_cmd("$HOME/.config/hypr/scripts/AirplaneMode.sh"),
+  { description = "airplane mode", locked = true }
 )
 bind(
   "",
   "xf86AudioPlayPause",
-  dispatch("play/pause", "exec, $HOME/.config/hypr/scripts/MediaCtrl.sh --pause"),
-  { locked = true, description = "play/pause" }
+  exec_cmd("$HOME/.config/hypr/scripts/MediaCtrl.sh --pause"),
+  { description = "play/pause", locked = true }
 )
 bind(
   "",
   "xf86AudioPause",
-  dispatch("pause", "exec, $HOME/.config/hypr/scripts/MediaCtrl.sh --pause"),
-  { locked = true, description = "pause" }
+  exec_cmd("$HOME/.config/hypr/scripts/MediaCtrl.sh --pause"),
+  { description = "pause", locked = true }
 )
 bind(
   "",
   "xf86AudioPlay",
-  dispatch("play", "exec, $HOME/.config/hypr/scripts/MediaCtrl.sh --pause"),
-  { locked = true, description = "play" }
+  exec_cmd("$HOME/.config/hypr/scripts/MediaCtrl.sh --pause"),
+  { description = "play", locked = true }
 )
 bind(
   "",
   "xf86AudioNext",
-  dispatch("next track", "exec, $HOME/.config/hypr/scripts/MediaCtrl.sh --nxt"),
-  { locked = true, description = "next track" }
+  exec_cmd("$HOME/.config/hypr/scripts/MediaCtrl.sh --nxt"),
+  { description = "next track", locked = true }
 )
 bind(
   "",
   "xf86AudioPrev",
-  dispatch("previous track", "exec, $HOME/.config/hypr/scripts/MediaCtrl.sh --prv"),
-  { locked = true, description = "previous track" }
+  exec_cmd("$HOME/.config/hypr/scripts/MediaCtrl.sh --prv"),
+  { description = "previous track", locked = true }
 )
 bind(
   "",
   "xf86audiostop",
-  dispatch("stop", "exec, $HOME/.config/hypr/scripts/MediaCtrl.sh --stop"),
-  { locked = true, description = "stop" }
+  exec_cmd("$HOME/.config/hypr/scripts/MediaCtrl.sh --stop"),
+  { description = "stop", locked = true }
 )
 bind(
   "",
   "xf86MonBrightnessDown",
-  dispatch("decrease monitor brightness", "exec, $HOME/.config/hypr/scripts/Brightness.sh --dec"),
-  { description = "decrease monitor brightness", ["repeat"] = true }
+  exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --dec"),
+  { description = "decrease monitor brightness", locked = true, ["repeat"] = true }
 )
 bind(
   "",
   "xf86MonBrightnessUp",
-  dispatch("increase monitor brightness", "exec, $HOME/.config/hypr/scripts/Brightness.sh --inc"),
-  { description = "increase monitor brightness", ["repeat"] = true }
+  exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --inc"),
+  { description = "increase monitor brightness", locked = true, ["repeat"] = true }
 )
 bind(
   "",
   "xf86KbdBrightnessDown",
-  dispatch("decrease keyboard brightness", "exec, $HOME/.config/hypr/scripts/BrightnessKbd.sh --dec"),
-  { description = "decrease keyboard brightness", ["repeat"] = true }
+  exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --dec"),
+  { description = "decrease keyboard brightness", locked = true, ["repeat"] = true }
 )
 bind(
   "",
   "xf86KbdBrightnessUp",
-  dispatch("increase keyboard brightness", "exec, $HOME/.config/hypr/scripts/BrightnessKbd.sh --inc"),
-  { description = "increase keyboard brightness", ["repeat"] = true }
+  exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --inc"),
+  { description = "increase keyboard brightness", locked = true, ["repeat"] = true }
 )
 bind(
   "",
   "xf86TouchpadToggle",
-  dispatch("disable touchpad", "exec, $HOME/.config/hypr/scripts/TouchPad.sh"),
+  exec_cmd("$HOME/.config/hypr/scripts/TouchPad.sh"),
   { description = "disable touchpad" }
 )
 bind(

@@ -691,25 +691,25 @@ bind(
   "",
   "xf86MonBrightnessDown",
   exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --dec"),
-  { description = "decrease monitor brightness", ["repeat"] = true }
+  { description = "decrease monitor brightness", locked = true, ["repeat"] = true }
 )
 bind(
   "",
   "xf86MonBrightnessUp",
   exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --inc"),
-  { description = "increase monitor brightness", ["repeat"] = true }
+  { description = "increase monitor brightness", locked = true, ["repeat"] = true }
 )
 bind(
   "",
   "xf86KbdBrightnessDown",
   exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --dec"),
-  { description = "decrease keyboard brightness", ["repeat"] = true }
+  { description = "decrease keyboard brightness", locked = true, ["repeat"] = true }
 )
 bind(
   "",
   "xf86KbdBrightnessUp",
   exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --inc"),
-  { description = "increase keyboard brightness", ["repeat"] = true }
+  { description = "increase keyboard brightness", locked = true, ["repeat"] = true }
 )
 bind(
   "",
