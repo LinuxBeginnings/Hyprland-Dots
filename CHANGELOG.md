@@ -4,6 +4,8 @@
 
 ## Fixed:
 
+- Added preservation code for `UserConfigs`
+  - Fixed migration code was another path to overwrite user files
 - Improved handling of RO symlinks in NixOS
 - Hypridle updated for LUA commands
 - Thanks to @goldyfruit
@@ -27,8 +29,6 @@
 
 ## Fixed:
 
-- Added preservation code for `UserConfigs`
-  - Fixed migration code was another path to overwrite user files
 - `copy.sh` was overwritting `UserConfigs/monitor.lua`
 - On upgrade waybar config/style got reset (fix 2)
   -Eliminated possible race condition in `awww-daemon`
