@@ -4,6 +4,9 @@
 
 ## Fixed:
 
+- Thanks to @goldyfruit
+  - He found four issues and filed them, including how to fix
+- `LuaAutoReload` did not stop when it receives SIGTERM on the polling path.
 - Changes to workspace layouts wasn't persistent 
 - Animation selected not loading in LUA config
   - Also some animation files had invalid settings
