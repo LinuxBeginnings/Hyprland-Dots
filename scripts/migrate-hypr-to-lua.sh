@@ -432,6 +432,18 @@ files_out = {
 def strip_comment(line):
     return line.split("#", 1)[0].strip()
 
+def has_active_hyprlang_content_py(path):
+    if path is None or not path.exists():
+        return False
+    try:
+        for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            line = strip_comment(raw)
+            if line:
+                return True
+    except Exception:
+        return False
+    return False
+
 def split_items(value):
     return [item.strip() for item in value.split(",") if item.strip()]
 
@@ -1319,7 +1331,12 @@ user_defaults_lines = [
     f"KOOLDOTS_DEFAULTS.search_engine = {lua_string(resolved_search_engine)}",
     f"KOOLDOTS_DEFAULTS.Search_Engine = {lua_string(resolved_search_engine)}",
 ]
-write_file(files_out["user_defaults"], user_defaults_lines)
+if has_active_hyprlang_content_py(user_defaults_path):
+    write_file(files_out["user_defaults"], user_defaults_lines)
+elif files_out["user_defaults"].exists():
+    print(f"[INFO] Preserving existing custom Lua user defaults file: {files_out['user_defaults']}")
+else:
+    write_file(files_out["user_defaults"], user_defaults_lines)
 
 def files_match(p1, p2):
     if p1 is None or p2 is None or not p1.exists() or not p2.exists():
@@ -1975,9 +1992,13 @@ if window_rules:
     for rule_type, rule in window_rules:
         window_lines.append(emit_rule(rule_type, rule))
         window_lines.append("")
+    write_file(files_out["window_rules"], window_lines)
 else:
-    window_lines.append("-- No active window rules were found in WindowRules.conf.")
-write_file(files_out["window_rules"], window_lines)
+    if files_out["window_rules"].exists():
+        print(f"[INFO] No active window rules found in {window_rules_path}; keeping existing {files_out['window_rules']}")
+    else:
+        window_lines.append("-- No active window rules were found in WindowRules.conf.")
+        write_file(files_out["window_rules"], window_lines)
 
 layer_lines = [
     "-- User layer rule overrides (auto-generated).",
@@ -1992,8 +2013,8 @@ layer_lines = [
     "local user_layer_rules_helper = nil",
     "do",
     "  local source = (debug.getinfo(1, \"S\") or {}).source or \"\"",
-    "  local source_path = source:match(\"^@(.+)$\")",
-    "  local source_dir = source_path and source_path:match(\"^(.*)/[^/]+$\") or nil",
+    "  local source_path = source:match(\"^@(.+)$\\\")",
+    "  local source_dir = source_path and source_path:match(\"^(.*)/[^/]+$\\\") or nil",
     "  local home = os.getenv(\"HOME\") or \"\"",
     "  local candidate_paths = {",
     "    source_dir and (source_dir .. \"/../lua/user_layer_rules_helper.lua\") or nil,",
@@ -2029,9 +2050,13 @@ if layer_rules:
     for rule_type, rule in layer_rules:
         layer_lines.append(emit_rule(rule_type, rule))
         layer_lines.append("")
+    write_file(files_out["layer_rules"], layer_lines)
 else:
-    layer_lines.append("-- No active layer rules were found in LayerRules.conf.")
-write_file(files_out["layer_rules"], layer_lines)
+    if files_out["layer_rules"].exists():
+        print(f"[INFO] No active layer rules found in {layer_rules_path}; keeping existing {files_out['layer_rules']}")
+    else:
+        layer_lines.append("-- No active layer rules were found in LayerRules.conf.")
+        write_file(files_out["layer_rules"], layer_lines)
 
 keybind_lines = [
     "-- User keybind overrides (auto-generated).",

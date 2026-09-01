@@ -18,6 +18,7 @@
 
 ## Fixed:
 
+- Added preservation code for `UserConfigs`
 - On upgrade waybar config/style got reset (fix 2)
   -Eliminated possible race condition in `awww-daemon`
 - Thanks to: @hyperion-ak for the fixes
