@@ -14,6 +14,12 @@
 
 ---
 
+## v2.3.26.2 
+
+- Fixed `kb` setting not getting saved properly
+   - Defaulted to just `us`
+
+
 ## v2.3.26.1
 
 ## Fixed:
