@@ -12,103 +12,253 @@
 prompt_detect_layout() {
   if command -v localectl >/dev/null 2>&1; then
     local layout
-    layout=$(localectl status --no-pager | awk '/X11 Layout/ {print $3}')
-    [ -n "$layout" ] && { echo "$layout"; return; }
+    layout=$(localectl status --no-pager 2>/dev/null | awk -F': ' '/X11 Layout/ {print $2}' | xargs)
+    [ -n "$layout" ] && [ "$layout" != "(unset)" ] && { echo "$layout"; return; }
   fi
   if command -v setxkbmap >/dev/null 2>&1; then
     local layout
-    layout=$(setxkbmap -query | awk '/layout/ {print $2}')
+    layout=$(setxkbmap -query 2>/dev/null | awk '/layout/ {print $2}')
     [ -n "$layout" ] && { echo "$layout"; return; }
   fi
-  echo "(unset)"
+  echo "us"
 }
 
-# Confirm or set keyboard layout; writes to SystemSettings.conf.
-prompt_keyboard_layout() {
-  local layout="$1"
-  local log="$2"
+# Detect keyboard variant via localectl or setxkbmap.
+prompt_detect_variant() {
+  if command -v localectl >/dev/null 2>&1; then
+    local variant
+    variant=$(localectl status --no-pager 2>/dev/null | awk -F': ' '/X11 Variant/ {print $2}' | xargs)
+    [ -n "$variant" ] && [ "$variant" != "(unset)" ] && { echo "$variant"; return; }
+  fi
+  if command -v setxkbmap >/dev/null 2>&1; then
+    local variant
+    variant=$(setxkbmap -query 2>/dev/null | awk '/variant/ {print $2}')
+    [ -n "$variant" ] && { echo "$variant"; return; }
+  fi
+  echo ""
+}
+
+# Detect keyboard model via localectl or setxkbmap.
+prompt_detect_model() {
+  if command -v localectl >/dev/null 2>&1; then
+    local model
+    model=$(localectl status --no-pager 2>/dev/null | awk -F': ' '/X11 Model/ {print $2}' | xargs)
+    [ -n "$model" ] && [ "$model" != "(unset)" ] && { echo "$model"; return; }
+  fi
+  if command -v setxkbmap >/dev/null 2>&1; then
+    local model
+    model=$(setxkbmap -query 2>/dev/null | awk '/model/ {print $2}')
+    [ -n "$model" ] && { echo "$model"; return; }
+  fi
+  echo ""
+}
+
+# Set keyboard layout in user and system config files (Lua and Hyprlang).
+set_keyboard_layout_configs() {
+  local new_kb="$1"
+  local new_var="${2:-}"
+  local new_mod="${3:-}"
+  local log="${4:-/dev/null}"
   local base="${DOTFILES_DIR:-.}"
+  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 
-  if [ "$layout" = "(unset)" ]; then
-    while true; do
-      printf "\n%.0s" {1..1}
-      print_color $WARNING "\n    █▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█
-            STOP AND READ
-    █▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█
+  export KOOLDOTS_SELECTED_KB_LAYOUT="$new_kb"
+  export KOOLDOTS_SELECTED_KB_VARIANT="$new_var"
+  export KOOLDOTS_SELECTED_KB_MODEL="$new_mod"
 
-    !!! IMPORTANT WARNING !!!
-
-The Default Keyboard Layout could not be detected
-You need to set it Manually
-
-    !!! WARNING !!!
-
-Setting a wrong Keyboard Layout will cause Hyprland to crash
-If you are not sure, just type ${YELLOW}us${RESET}
-${SKYBLUE}You can change later in ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/UserSettings.conf${RESET}
-
-${MAGENTA} NOTE:${RESET}
-•  You can also set more than 2 keyboard layouts
-•  For example: ${YELLOW}us, kr, gb, ru${RESET}
-"
-      printf "\n%.0s" {1..1}
-
-      echo -n "${CAT} - Please enter the correct keyboard layout: "
-      read new_layout
-
-      if [ -n "$new_layout" ]; then
-        layout="$new_layout"
-        break
-      else
-        echo "${CAT} Please enter a keyboard layout."
-      fi
-    done
+  # 1. Update repo UserConfigs/user_settings.lua & active target user_settings.lua
+  local user_lua_files=("$base/config/hypr/UserConfigs/user_settings.lua")
+  if [ -f "$cfg_home/hypr/UserConfigs/user_settings.lua" ]; then
+    user_lua_files+=("$cfg_home/hypr/UserConfigs/user_settings.lua")
   fi
 
-  printf "${NOTE} Detecting keyboard layout to prepare proper Hyprland Settings\n"
+  for file in "${user_lua_files[@]}"; do
+    if [ -f "$file" ]; then
+      if grep -q '^[[:space:]]*input[[:space:]]*=' "$file"; then
+        if grep -q '^[[:space:]]*kb_layout[[:space:]]*=' "$file"; then
+          sed -i "s/^[[:space:]]*kb_layout[[:space:]]*=.*/    kb_layout = \"$new_kb\",/" "$file"
+        else
+          sed -i "/^[[:space:]]*input[[:space:]]*=/a\\    kb_layout = \"$new_kb\"," "$file"
+        fi
+        if grep -q '^[[:space:]]*kb_variant[[:space:]]*=' "$file"; then
+          sed -i "s/^[[:space:]]*kb_variant[[:space:]]*=.*/    kb_variant = \"$new_var\",/" "$file"
+        else
+          sed -i "/^[[:space:]]*kb_layout[[:space:]]*=/a\\    kb_variant = \"$new_var\"," "$file"
+        fi
+        if grep -q '^[[:space:]]*kb_model[[:space:]]*=' "$file"; then
+          sed -i "s/^[[:space:]]*kb_model[[:space:]]*=.*/    kb_model = \"$new_mod\",/" "$file"
+        else
+          sed -i "/^[[:space:]]*kb_variant[[:space:]]*=/a\\    kb_model = \"$new_mod\"," "$file"
+        fi
+      else
+        cat >>"$file" <<EOF
+
+hl.config({
+  input = {
+    kb_layout = "$new_kb",
+    kb_variant = "$new_var",
+    kb_model = "$new_mod",
+    kb_options = "",
+    kb_rules = "",
+    repeat_rate = 50,
+    repeat_delay = 300,
+    sensitivity = 0,
+    numlock_by_default = true,
+    left_handed = false,
+    follow_mouse = 1,
+    float_switch_override_focus = false,
+    touchpad = {
+      disable_while_typing = true,
+      natural_scroll = true,
+      clickfinger_behavior = false,
+      middle_button_emulation = false,
+      tap_to_click = true,
+      drag_lock = false,
+    },
+    touchdevice = {
+      enabled = true,
+    },
+    tablet = {
+      transform = 0,
+      left_handed = 0,
+    },
+  },
+})
+EOF
+      fi
+      echo "${NOTE} Configured keyboard settings in $file" 2>&1 | tee -a "$log"
+    fi
+  done
+
+  # 2. Update repo lua/settings.lua default & active target lua/settings.lua
+  local settings_lua_files=("$base/config/hypr/lua/settings.lua")
+  if [ -f "$cfg_home/hypr/lua/settings.lua" ]; then
+    settings_lua_files+=("$cfg_home/hypr/lua/settings.lua")
+  fi
+  for file in "${settings_lua_files[@]}"; do
+    if [ -f "$file" ]; then
+      sed -i "s/^[[:space:]]*kb_layout[[:space:]]*=.*/    kb_layout = \"$new_kb\",/" "$file"
+      sed -i "s/^[[:space:]]*kb_variant[[:space:]]*=.*/    kb_variant = \"$new_var\",/" "$file"
+      sed -i "s/^[[:space:]]*kb_model[[:space:]]*=.*/    kb_model = \"$new_mod\",/" "$file"
+    fi
+  done
+
+  # 3. Update repo UserConfigs/UserSettings.conf & active target UserSettings.conf
+  local user_conf_files=("$base/config/hypr/UserConfigs/UserSettings.conf")
+  if [ -f "$cfg_home/hypr/UserConfigs/UserSettings.conf" ]; then
+    user_conf_files+=("$cfg_home/hypr/UserConfigs/UserSettings.conf")
+  fi
+  for file in "${user_conf_files[@]}"; do
+    if [ -f "$file" ]; then
+      if grep -q '^[[:space:]]*input[[:space:]]*{' "$file"; then
+        if grep -q '^[[:space:]]*kb_layout[[:space:]]*=' "$file"; then
+          sed -i "s/^[[:space:]]*kb_layout[[:space:]]*=.*/  kb_layout = $new_kb/" "$file"
+        else
+          sed -i "/^[[:space:]]*input[[:space:]]*{/a\\  kb_layout = $new_kb" "$file"
+        fi
+        if grep -q '^[[:space:]]*kb_variant[[:space:]]*=' "$file"; then
+          sed -i "s/^[[:space:]]*kb_variant[[:space:]]*=.*/  kb_variant = $new_var/" "$file"
+        else
+          sed -i "/^[[:space:]]*kb_layout[[:space:]]*=/a\\  kb_variant = $new_var" "$file"
+        fi
+        if grep -q '^[[:space:]]*kb_model[[:space:]]*=' "$file"; then
+          sed -i "s/^[[:space:]]*kb_model[[:space:]]*=.*/  kb_model = $new_mod/" "$file"
+        else
+          sed -i "/^[[:space:]]*kb_variant[[:space:]]*=/a\\  kb_model = $new_mod" "$file"
+        fi
+      else
+        cat >>"$file" <<EOF
+
+input {
+  kb_layout = $new_kb
+  kb_variant = $new_var
+  kb_model = $new_mod
+}
+EOF
+      fi
+      echo "${NOTE} Configured keyboard settings in $file" 2>&1 | tee -a "$log"
+    fi
+  done
+
+  # 4. Update repo configs/SystemSettings.conf & active target SystemSettings.conf
+  local sys_conf_files=("$base/config/hypr/configs/SystemSettings.conf")
+  if [ -f "$cfg_home/hypr/configs/SystemSettings.conf" ]; then
+    sys_conf_files+=("$cfg_home/hypr/configs/SystemSettings.conf")
+  fi
+  for file in "${sys_conf_files[@]}"; do
+    if [ -f "$file" ]; then
+      awk -v new_layout="$new_kb" '/kb_layout/ {$0 = "  kb_layout = " new_layout} 1' "$file" >temp.conf
+      mv temp.conf "$file"
+      awk -v new_variant="$new_var" '/kb_variant/ {$0 = "  kb_variant = " new_variant} 1' "$file" >temp.conf
+      mv temp.conf "$file"
+      awk -v new_model="$new_mod" '/kb_model/ {$0 = "  kb_model = " new_model} 1' "$file" >temp.conf
+      mv temp.conf "$file"
+    fi
+  done
+}
+
+# Confirm or set keyboard layout, variant, and model; writes to user_settings.lua and UserSettings.conf.
+prompt_keyboard_layout() {
+  local layout="${1:-us}"
+  local variant="${2:-}"
+  local model="${3:-}"
+  local log="$4"
+  local base="${DOTFILES_DIR:-.}"
+
+  [ "$layout" = "(unset)" ] && layout="us"
+
+  printf "\n${NOTE} Detected keyboard settings:\n"
+  printf "  ${INFO} Layout  : ${MAGENTA}%s${RESET}\n" "$layout"
+  printf "  ${INFO} Variant : ${MAGENTA}%s${RESET}\n" "${variant:-(none)}"
+  printf "  ${INFO} Model   : ${MAGENTA}%s${RESET}\n" "${model:-(none)}"
+
   while true; do
-    printf "${INFO} Current keyboard layout is ${MAGENTA}$layout${RESET}\n"
-    echo -n "${CAT} Is this correct? [y/n] "
-    read keyboard_layout
-    case $keyboard_layout in
-      [yY])
-        awk -v layout="$layout" '/kb_layout/ {$0 = "  kb_layout = " layout} 1' "$base/config/hypr/configs/SystemSettings.conf" >temp.conf
-        mv temp.conf "$base/config/hypr/configs/SystemSettings.conf"
-        echo "${NOTE} kb_layout ${MAGENTA}$layout${RESET} configured in settings." 2>&1 | tee -a "$log"
+    echo -n "${CAT} Are these settings correct? [Y/n]: "
+    read -r confirm
+    confirm=$(echo "$confirm" | tr '[:upper:]' '[:lower:]')
+    case "$confirm" in
+      y|yes|"")
+        set_keyboard_layout_configs "$layout" "$variant" "$model" "$log"
+        echo "${NOTE} Keyboard configured: layout='$layout', variant='$variant', model='$model'." 2>&1 | tee -a "$log"
         break
         ;;
-      [nN])
-        printf "\n%.0s" {1..2}
-        print_color $WARNING "
-    █▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█
-            STOP AND READ
+      n|no)
+        printf "\n%.0s" {1..1}
+        print_color $WARNING "\n    █▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█
+            CONFIGURE KEYBOARD
     █▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█
 
     !!! IMPORTANT WARNING !!!
 
-The Default Keyboard Layout could not be detected
-You need to set it Manually
-
-    !!! WARNING !!!
-
-Setting a wrong Keyboard Layout will cause Hyprland to crash
-If you are not sure, just type ${YELLOW}us${RESET}
-${SKYBLUE}You can change later in ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/UserSettings.conf${RESET}
+Setting an invalid Keyboard Layout can cause Hyprland input issues.
+If unsure, use ${YELLOW}us${RESET}.
+${SKYBLUE}You can change these anytime in ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/user_settings.lua${RESET}
 
 ${MAGENTA} NOTE:${RESET}
-•  You can also set more than 2 keyboard layouts
-•  For example: ${YELLOW}us, kr, gb, ru${RESET}
+• Multiple layouts can be comma-separated: ${YELLOW}us,gb${RESET} or ${YELLOW}us,de${RESET}
 "
-        printf "\n%.0s" {1..1}
-        echo -n "${CAT} - Please enter the correct keyboard layout: "
-        read new_layout
-        awk -v new_layout="$new_layout" '/kb_layout/ {$0 = "  kb_layout = " new_layout} 1' "$base/config/hypr/configs/SystemSettings.conf" >temp.conf
-        mv temp.conf "$base/config/hypr/configs/SystemSettings.conf"
-        echo "${OK} kb_layout $new_layout configured in settings." 2>&1 | tee -a "$log"
+        echo -n "${CAT} Enter keyboard layout [${layout}]: "
+        read -r new_layout
+        [ -n "$new_layout" ] && layout="$new_layout"
+
+        echo -n "${CAT} Enter keyboard variant (optional, leave blank for none) [${variant}]: "
+        read -r new_variant
+        if [ -n "$new_variant" ]; then
+          variant="$new_variant"
+        fi
+
+        echo -n "${CAT} Enter keyboard model (optional, leave blank for none) [${model}]: "
+        read -r new_model
+        if [ -n "$new_model" ]; then
+          model="$new_model"
+        fi
+
+        set_keyboard_layout_configs "$layout" "$variant" "$model" "$log"
+        echo "${OK} Keyboard configured: layout='$layout', variant='$variant', model='$model'." 2>&1 | tee -a "$log"
         break
         ;;
       *)
-        echo "${ERROR} Please enter either 'y' or 'n'."
+        echo "${ERROR} Please enter 'y' or 'n'."
         ;;
     esac
   done

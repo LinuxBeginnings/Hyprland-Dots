@@ -1,16 +1,11 @@
 # Changelog — KoolDots
 
-## v2.3.27
-
-## Updated:
-
-- Moved `./config/rofi` to `~/.config/hypr/rofi`
-  - Phase one moving more configs to under `~/.config/hypr`
+## v2.3.26.2
 
 ## Fixed:
 
-- `copy.sh` was overwriting `UserConfigs/monitor.lua`
-- `Dark-Moon.css` Corrected inconsistent rounding
+- KB layout settings not set in `user_settings.lua`
+  - Added: Prompts for KB variant and model
 
 ---
 
