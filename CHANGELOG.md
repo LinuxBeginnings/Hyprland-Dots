@@ -18,6 +18,7 @@
 
 ## Fixed:
 
+- Fixed `togglesplit` in LUA mode
 - Hypridle updated for LUA commands
 - Thanks to @goldyfruit
   - He found four issues and filed them, including how to fix
