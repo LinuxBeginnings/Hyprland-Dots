@@ -7,6 +7,11 @@
      - NixOS systems using Home Manager use RO hard links 
      - Updated `copy.sh` to handle those and not exit with error
 
+## Updated: 
+  - Moved `~/.config/wallust` to `!/.config/hypr/wallust`
+    - Phase 2 of moving out common config dirs for HL 
+
+
 ---- 
 
 ## v2.3.26.2

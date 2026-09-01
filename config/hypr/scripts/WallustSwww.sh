@@ -227,7 +227,7 @@ wait_for_templates() {
   return 1
 }
 
-# Run wallust (silent) to regenerate templates defined in ${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust.toml
+# Run wallust (silent) to regenerate templates defined in ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust.toml
 # -s is used in this repo to keep things quiet and avoid extra prompts
 start_ts=$(date +%s)
 if ! wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1; then
@@ -328,9 +328,9 @@ apply_hypr_gap_fallback() {
 # Apply Hyprland updates immediately to avoid delayed border/gap changes.
 reload_hypr_preserve_layout
 
-kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-kitty.toml"
+kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-kitty.toml"
 if [ "${#wallust_kitty_args[@]}" -gt 0 ]; then
-  kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-kitty-v4.toml"
+  kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-kitty-v4.toml"
 fi
 (
   if [ -f "$kitty_cfg" ]; then

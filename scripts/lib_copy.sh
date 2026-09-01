@@ -150,7 +150,7 @@ copy_waybar() {
 copy_phase2() {
   local log="$1"
   local base="${DOTFILES_DIR:-.}"
-  local DIR="btop cava hypr Kvantum nwg-dock-hyprland qt5ct qt6ct starship swappy wallust wlogout yazi"
+  local DIR="btop cava hypr Kvantum nwg-dock-hyprland qt5ct qt6ct starship swappy wlogout yazi"
   for DIR_NAME in $DIR; do
     local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/$DIR_NAME"
     if [ -d "$DIRPATH" ]; then
@@ -165,6 +165,24 @@ copy_phase2() {
       echo "${ERROR:-[ERROR]} - Directory config/$DIR_NAME does not exist to copy." 2>&1 | tee -a "$log"
     fi
   done
+
+  # Handle ~/.config/wallust like rofi migration:
+  # keep wallust data under ~/.config/hypr/wallust and leave ~/.config/wallust empty
+  local wallust_dir="${XDG_CONFIG_HOME:-$HOME/.config}/wallust"
+  local hypr_wallust_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust"
+  if [ -d "$wallust_dir" ]; then
+    if [ -n "$(ls -A "$wallust_dir" 2>/dev/null)" ]; then
+      local BACKUP_DIR
+      BACKUP_DIR=$(get_backup_dirname)
+      mv "$wallust_dir" "$wallust_dir-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
+      echo -e "${NOTE:-[NOTE]} - Backed up wallust to $wallust_dir-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
+      mkdir -p "$wallust_dir" "$hypr_wallust_dir"
+      rsync -a --ignore-existing "$wallust_dir-backup-$BACKUP_DIR/" "$hypr_wallust_dir/" 2>&1 | tee -a "$log" || true
+      echo -e "${OK:-[OK]} - Migrated existing wallust files to ${YELLOW:-}$hypr_wallust_dir${RESET:-} and left ${YELLOW:-}$wallust_dir${RESET:-} empty." 2>&1 | tee -a "$log"
+    fi
+  else
+    mkdir -p "$wallust_dir"
+  fi
   install_terminal_configs "$log"
 }
 
