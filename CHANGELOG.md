@@ -7,6 +7,12 @@
 - Moved `./config/rofi` to `~/.config/hypr/rofi`
   - Phase one moving more configs to under `~/.config/hypr`
 
+## Fixed:
+
+- `Dark-Moon.css` Corrected inconsistent rounding
+
+---
+
 ## v2.3.26.1
 
 ## Fixed:
