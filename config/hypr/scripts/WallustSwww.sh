@@ -93,7 +93,7 @@ wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wal
 read_cached_wallpaper() {
   local cache_file="$1"
   if [[ -f "$cache_file" ]]; then
-    awk 'NF && $0 !~ /^filter/ {print; exit}' "$cache_file"
+    tr -d '\000' <"$cache_file" | awk 'NF && $0 !~ /^filter/ {print; exit}'
   fi
 }
 
