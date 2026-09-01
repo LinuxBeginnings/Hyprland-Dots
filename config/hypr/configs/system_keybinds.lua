@@ -825,10 +825,12 @@ bind(
 )
 bind("SUPER SHIFT", "up", dispatch("resizeactive", "0 -50"), { description = "resize up (-50)", ["repeat"] = true })
 bind("SUPER SHIFT", "down", dispatch("resizeactive", "0 50"), { description = "resize down (+50)", ["repeat"] = true })
-bind("SUPER CTRL", "left", dispatch("movewindow", "l"), { description = "move window left" })
-bind("SUPER CTRL", "right", dispatch("movewindow", "r"), { description = "move window right" })
-bind("SUPER CTRL", "up", dispatch("movewindow", "u"), { description = "move window up" })
-bind("SUPER CTRL", "down", dispatch("movewindow", "d"), { description = "move window down" })
+
+bind("SUPER CTRL", "left", hl.dsp.window.move({ direction = "l" }), { description = "move window left" })
+bind("SUPER CTRL", "right", hl.dsp.window.move({ direction = "r" }), { description = "move window right" })
+bind("SUPER CTRL", "up", hl.dsp.window.move({ direction = "u" }), { description = "move window up" })
+bind("SUPER CTRL", "down", hl.dsp.window.move({ direction = "d" }), { description = "move window down" })
+
 bind("SUPER ALT", "left", dispatch("swapwindow", "l"), { description = "swap window left" })
 bind("SUPER ALT", "right", dispatch("swapwindow", "r"), { description = "swap window right" })
 bind("SUPER ALT", "up", dispatch("swapwindow", "u"), { description = "swap window up" })
