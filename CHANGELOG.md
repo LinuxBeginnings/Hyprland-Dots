@@ -14,11 +14,11 @@
 
 ---
 
-## v2.3.26.2 
+## v2.3.26.2
 
 - Fixed `kb` setting not getting saved properly
-   - Defaulted to just `us`
-
+  - Defaulted to just `us`
+  - Added: prompts to set KB variant and KB model also
 
 ## v2.3.26.1
 

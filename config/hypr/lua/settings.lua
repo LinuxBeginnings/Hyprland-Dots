@@ -57,7 +57,7 @@ hl.config({
 
 hl.config({
   input = {
-    kb_layout = "us",
+    kb_layout = "us,gb",
     kb_variant = "",
     kb_model = "",
     kb_options = "",
@@ -213,7 +213,7 @@ hl.config({
 hl.config({
   cursor = {
     sync_gsettings_theme = true,
-    no_hardware_cursors =         0,
+    no_hardware_cursors =            0,
     enable_hyprcursor = true,
     warp_on_change_workspace = 2,
     no_warps = true,
