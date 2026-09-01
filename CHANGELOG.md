@@ -24,7 +24,7 @@
   - He found four issues and filed them, including how to fix
     - `LuaAutoReload` did not stop when it receives SIGTERM on the polling path.
     - `MonitorProfile` overwrote `monitors.lua`
-    - Changes to workspace layouts wasn't persistent 
+    - Changes to workspace layouts wasn't persistent
     - Animation selected not loading in LUA config
     - Also some animation files had invalid settings
 - KB layout settings not set in `user_settings.lua`
@@ -36,9 +36,6 @@
 - More examples in `.config/hypr/UserConfigs/user_keybinds.lua`
   - Showing how to add or rebind keybinds 
 
-
-
-
 ---
 
 ## v2.3.26.1
@@ -46,6 +43,7 @@
 ## Fixed:
 
 - Added preservation code for `UserConfigs`
+  - Fixed migration code was another path to overwrite user files
 - `copy.sh` was overwritting `UserConfigs/monitor.lua`
 - On upgrade waybar config/style got reset (fix 2)
   -Eliminated possible race condition in `awww-daemon`
