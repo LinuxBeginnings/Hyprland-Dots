@@ -204,19 +204,12 @@ cp -f "$wallpaper_path" "$wallpaper_current" || true
 # Ensure Ghostty directory exists so Wallust can write target even if Ghostty isn't installed
 mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" || true
 wait_for_templates() {
-  local start_ts="$1"
   shift
   local files=("$@")
   for _ in {1..50}; do
     local ready=true
     for file in "${files[@]}"; do
       if [[ ! -s "$file" ]]; then
-        ready=false
-        break
-      fi
-      local mtime
-      mtime=$(stat -c %Y "$file" 2>/dev/null || echo 0)
-      if (( mtime < start_ts )); then
         ready=false
         break
       fi
@@ -230,16 +223,19 @@ wait_for_templates() {
 # Run wallust (silent) to regenerate templates defined in ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust.toml
 # -s is used in this repo to keep things quiet and avoid extra prompts
 start_ts=$(date +%s)
-if ! wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1; then
-  have_notify && notify-send -u critical -a WallustSwww \
-    "Wallust failed" "See: $wallust_log"
-  exit 1
-fi
 wallust_targets=(
   "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
 )
+for target in "${wallust_targets[@]}"; do
+  mkdir -p "$(dirname "$target")"
+done
+if ! wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1; then
+  have_notify && notify-send -u critical -a WallustSwww \
+    "Wallust failed" "See: $wallust_log"
+  exit 1
+fi
 if ! wait_for_templates "$start_ts" "${wallust_targets[@]}"; then
   have_notify && notify-send -u critical -a WallustSwww \
     "Wallust templates not updated" "See: $wallust_log"

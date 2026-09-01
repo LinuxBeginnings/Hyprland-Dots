@@ -32,7 +32,7 @@ wallust_prepare_args() {
   local v4_kitty_cfg=""
   local version major
   version=$(wallust --version 2>/dev/null | awk '{print $2}')
-  major=${version%%.*}
+  major=$(printf '%s' "$version" | sed -E 's/^[^0-9]*([0-9]+).*$/\1/' 2>/dev/null || true)
   if [ -f "$wallust_cfg_dir/wallust.toml" ]; then
     v3_cfg="$wallust_cfg_dir/wallust.toml"
   elif [ -f "$legacy_wallust_cfg_dir/wallust.toml" ]; then
@@ -59,7 +59,7 @@ wallust_prepare_args() {
 
   # Always pass an explicit config path after namespace migration.
   # v4 prefers v4 configs; v3 uses wallust.toml.
-  if [ -n "$major" ] && [ "$major" -ge 4 ]; then
+  if [[ "$major" =~ ^[0-9]+$ ]] && [ "$major" -ge 4 ]; then
     if [ -n "$v4_cfg" ]; then
       wallust_args=(-C "$v4_cfg")
     fi
@@ -72,6 +72,22 @@ wallust_prepare_args() {
     fi
     if [ -n "$v3_kitty_cfg" ]; then
       wallust_kitty_args=(-C "$v3_kitty_cfg")
+    fi
+  fi
+
+  # Last-resort fallback: if version parsing failed, still prefer any migrated config.
+  if [ "${#wallust_args[@]}" -eq 0 ]; then
+    if [ -n "$v3_cfg" ]; then
+      wallust_args=(-C "$v3_cfg")
+    elif [ -n "$v4_cfg" ]; then
+      wallust_args=(-C "$v4_cfg")
+    fi
+  fi
+  if [ "${#wallust_kitty_args[@]}" -eq 0 ]; then
+    if [ -n "$v3_kitty_cfg" ]; then
+      wallust_kitty_args=(-C "$v3_kitty_cfg")
+    elif [ -n "$v4_kitty_cfg" ]; then
+      wallust_kitty_args=(-C "$v4_kitty_cfg")
     fi
   fi
 }
