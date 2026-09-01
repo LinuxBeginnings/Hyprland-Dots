@@ -1,5 +1,14 @@
 # Changelog — KoolDots
 
+## v2.3.27
+
+## Fixed: 
+   - `copy.sh` tries to update `~/.zprofile` 
+     - NixOS systems using Home Manager use RO hard links 
+     - Updated `copy.sh` to handle those and not exit with error
+
+---- 
+
 ## v2.3.26.2
 
 ## Fixed:

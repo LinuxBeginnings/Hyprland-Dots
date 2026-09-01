@@ -158,12 +158,36 @@ ensure_shell_profile_sources_etc_profile() {
   _add_etc_profile_entry() {
     local profile_file="$1"
     local plog="$2"
+    local profile_dir
+    profile_dir="$(dirname "$profile_file")"
+
+    # NixOS/Home Manager can manage shell profiles as read-only symlinks.
+    # Skip safely so copy.sh continues instead of exiting on redirection errors.
+    if [ -e "$profile_file" ] && [ ! -w "$profile_file" ]; then
+      if [ -L "$profile_file" ]; then
+        echo "${WARN:-[WARN]} $profile_file is a read-only symlink (likely Home Manager managed). Skipping /etc/profile entry update." 2>&1 | tee -a "$plog"
+      else
+        echo "${WARN:-[WARN]} $profile_file is not writable. Skipping /etc/profile entry update." 2>&1 | tee -a "$plog"
+      fi
+      return 0
+    fi
+
+    if [ ! -e "$profile_file" ] && [ ! -w "$profile_dir" ]; then
+      echo "${WARN:-[WARN]} Cannot create $profile_file (directory not writable). Skipping /etc/profile entry update." 2>&1 | tee -a "$plog"
+      return 0
+    fi
     if [ ! -f "$profile_file" ]; then
       echo "${NOTE:-[NOTE]} Creating $profile_file and adding /etc/profile source entry (fixes flatpak in rofi on Debian)" 2>&1 | tee -a "$plog"
-      printf '\n# Source /etc/profile to ensure system paths (e.g. flatpak) are available\n%s\n' "$entry" > "$profile_file"
+      printf '\n# Source /etc/profile to ensure system paths (e.g. flatpak) are available\n%s\n' "$entry" > "$profile_file" || {
+        echo "${WARN:-[WARN]} Failed to write $profile_file. Skipping and continuing." 2>&1 | tee -a "$plog"
+        return 0
+      }
     elif ! grep -qF "$entry_marker" "$profile_file"; then
       echo "${NOTE:-[NOTE]} Adding /etc/profile source entry to $profile_file (fixes flatpak in rofi on Debian)" 2>&1 | tee -a "$plog"
-      printf '\n# Source /etc/profile to ensure system paths (e.g. flatpak) are available\n%s\n' "$entry" >> "$profile_file"
+      printf '\n# Source /etc/profile to ensure system paths (e.g. flatpak) are available\n%s\n' "$entry" >> "$profile_file" || {
+        echo "${WARN:-[WARN]} Failed to append to $profile_file. Skipping and continuing." 2>&1 | tee -a "$plog"
+        return 0
+      }
     else
       echo "${INFO:-[INFO]} $profile_file already sources /etc/profile; no changes needed." 2>&1 | tee -a "$plog"
     fi
