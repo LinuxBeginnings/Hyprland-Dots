@@ -152,9 +152,9 @@ apply_hypr_border_fallback() {
 set +e
 "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 if [ -s "$theme_cache" ]; then
-  choice="$(rofi -dmenu -i -p 'Select Global Theme' < "$theme_cache")"
+  choice="$(rofi -dmenu -i -p 'Select Global Theme' -config "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config.rasi" < "$theme_cache")"
 else
-  choice="$(build_theme_list | rofi -dmenu -i -p 'Select Global Theme')"
+  choice="$(build_theme_list | rofi -dmenu -i -p 'Select Global Theme' -config "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config.rasi")"
 fi
 prompt_status=$?
 set -e
@@ -185,7 +185,7 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
 
   targets=(
     "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
-    "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/wallust/colors-rofi.rasi"
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
   )
 
@@ -240,7 +240,7 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
   # Small cushion before refresh to mirror wallpaper flow
   sleep 0.2
   # Normalize Rofi selection colors to use the palette's accent (color12)
-  rofi_colors="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/wallust/colors-rofi.rasi"
+  rofi_colors="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
   if [ -f "$rofi_colors" ]; then
     accent_hex=$(sed -n 's/^\s*color12:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
     [ -z "$accent_hex" ] && accent_hex=$(sed -n 's/^\s*color13:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)

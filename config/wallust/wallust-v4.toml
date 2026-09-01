@@ -41,7 +41,7 @@ hypr.template = 'colors-hyprland.conf'
 hypr.target = '~/.config/hypr/wallust/wallust-hyprland.conf'
 
 rofi.template = 'colors-rofi.rasi'
-rofi.target = '~/.config/rofi/wallust/colors-rofi.rasi'
+rofi.target = '~/.config/hypr/rofi/wallust/colors-rofi.rasi'
 
 waybar.template = 'colors-waybar.css'
 waybar.target = '~/.config/waybar/wallust/colors-waybar.css'

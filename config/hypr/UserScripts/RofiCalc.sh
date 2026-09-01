@@ -8,7 +8,7 @@
 # /* Calculator (using qalculate) and rofi */
 # /* Submitted by: https://github.com/JosephArmas */
 
-rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-calc.rasi"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-calc.rasi"
 
 # Dependency checks
 for cmd in rofi qalc wl-copy; do

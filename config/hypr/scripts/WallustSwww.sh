@@ -88,7 +88,7 @@ else
   cache_dir="$HOME/.cache/swww/"
   cache_dir_fallback="$HOME/.cache/awww/"
 fi
-rofi_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper"
+rofi_link="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/.current_wallpaper"
 wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current"
 read_cached_wallpaper() {
   local cache_file="$1"
@@ -198,7 +198,7 @@ if ! wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1;
 fi
 wallust_targets=(
   "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
-  "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/wallust/colors-rofi.rasi"
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
 )
 if ! wait_for_templates "$start_ts" "${wallust_targets[@]}"; then
@@ -210,7 +210,7 @@ ensure_wallust_waybar_style
 reload_running_cava_colors
 
 # Normalize Rofi selection colors to a brighter accent and readable foreground
-rofi_colors="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/wallust/colors-rofi.rasi"
+rofi_colors="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
 if [ -f "$rofi_colors" ]; then
   accent_hex=$(sed -n 's/^\s*color13:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
   [ -z "$accent_hex" ] && accent_hex=$(sed -n 's/^\s*color12:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)

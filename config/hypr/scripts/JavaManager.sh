@@ -201,7 +201,7 @@ generate_list() {
 }
 
 # --- 6. rofi ---
-THEME="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config.rasi"
+THEME="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config.rasi"
 "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 
 SELECTION=$(generate_list | rofi -dmenu -i \

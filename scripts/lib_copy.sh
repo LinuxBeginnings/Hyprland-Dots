@@ -11,7 +11,7 @@ copy_phase1() {
   local log="$1"
   local run_mode="${2:-${RUN_MODE:-}}"
   local base="${DOTFILES_DIR:-.}"
-  local dirs="fastfetch kitty rofi swaync"
+  local dirs="fastfetch kitty swaync"
   for DIR2 in $dirs; do
     local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/$DIR2"
     if [ -d "$DIRPATH" ]; then
@@ -30,17 +30,6 @@ copy_phase1() {
           echo -e "${NOTE:-[NOTE]} - Backed up $DIR2 to $DIRPATH-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
           cp -r "$base/config/$DIR2" "${XDG_CONFIG_HOME:-$HOME/.config}/$DIR2" 2>&1 | tee -a "$log"
           echo -e "${OK:-[OK]} - Replaced $DIR2 with new configuration." 2>&1 | tee -a "$log"
-          if [ "$DIR2" = "rofi" ]; then
-            if [ -d "$DIRPATH-backup-$BACKUP_DIR/themes" ]; then
-              for file in "$DIRPATH-backup-$BACKUP_DIR/themes"/*; do
-                [ -e "$file" ] || continue
-                cp -n "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/" >>"$log" 2>&1 || true
-              done || true
-            fi
-            if [ -f "$DIRPATH-backup-$BACKUP_DIR/0-shared-fonts.rasi" ]; then
-              cp "$DIRPATH-backup-$BACKUP_DIR/0-shared-fonts.rasi" "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/0-shared-fonts.rasi" >>"$log" 2>&1
-            fi
-          fi
           break
           ;;
         [Nn]*)
@@ -55,6 +44,31 @@ copy_phase1() {
       echo -e "${OK:-[OK]} - Copy completed for ${YELLOW:-}$DIR2${RESET:-}" 2>&1 | tee -a "$log"
     fi
   done
+
+  # Handle ~/.config/rofi: backup existing and ensure an empty directory exists
+  local rofi_dir="${XDG_CONFIG_HOME:-$HOME/.config}/rofi"
+  if [ -d "$rofi_dir" ]; then
+    if [ -n "$(ls -A "$rofi_dir" 2>/dev/null)" ]; then
+      local BACKUP_DIR
+      BACKUP_DIR=$(get_backup_dirname)
+      mv "$rofi_dir" "$rofi_dir-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
+      echo -e "${NOTE:-[NOTE]} - Backed up rofi to $rofi_dir-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
+      mkdir -p "$rofi_dir"
+      echo -e "${OK:-[OK]} - Created empty rofi directory at $rofi_dir." 2>&1 | tee -a "$log"
+      if [ -d "$rofi_dir-backup-$BACKUP_DIR/themes" ]; then
+        mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/themes"
+        for file in "$rofi_dir-backup-$BACKUP_DIR/themes"/*; do
+          [ -e "$file" ] || continue
+          cp -n "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/themes/" >>"$log" 2>&1 || true
+        done || true
+      fi
+      if [ -f "$rofi_dir-backup-$BACKUP_DIR/0-shared-fonts.rasi" ] && [ ! -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/0-shared-fonts.rasi" ]; then
+        cp "$rofi_dir-backup-$BACKUP_DIR/0-shared-fonts.rasi" "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/0-shared-fonts.rasi" >>"$log" 2>&1 || true
+      fi
+    fi
+  else
+    mkdir -p "$rofi_dir"
+  fi
 }
 
 copy_waybar() {

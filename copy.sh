@@ -21,7 +21,7 @@
 #   - Backup/restore helpers (in scripts/lib_backup.sh).
 #   - App enablement/editor selection (lib_apps.sh).
 #   - Copy phases (lib_copy.sh):
-#       * Part 1: fastfetch/kitty/rofi/swaync (prompted replace).
+#       * Part 1: fastfetch/kitty/swaync (prompted replace); rofi backup & empty dir.
 #       * Waybar special handling (symlinks, configs/styles restore).
 #       * Part 2: other configs (btop, cava, hypr, etc.) + ghostty/wezterm installs.
 #   - UserConfigs/UserScripts and hypr file restores.
@@ -168,7 +168,8 @@ if ! declare -f capture_runtime_personal_state >/dev/null 2>&1; then
     local log="${1:-/dev/null}"
     local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
     local cache_home="${XDG_CACHE_HOME:-$HOME/.cache}"
-    local rofi_link="$cfg_home/rofi/.current_wallpaper"
+    local rofi_link="$cfg_home/hypr/rofi/.current_wallpaper"
+    local legacy_rofi_link="$cfg_home/rofi/.current_wallpaper"
     local wallpaper_current="$cfg_home/hypr/wallpaper_effects/.wallpaper_current"
     local state_dir="$cache_home/kooldots-copy"
     local state_file="$state_dir/wallpaper-current-$$"
@@ -188,6 +189,8 @@ if ! declare -f capture_runtime_personal_state >/dev/null 2>&1; then
 
     if [ -L "$rofi_link" ]; then
       resolved="$(readlink -f "$rofi_link" 2>/dev/null || true)"
+    elif [ -L "$legacy_rofi_link" ]; then
+      resolved="$(readlink -f "$legacy_rofi_link" 2>/dev/null || true)"
     fi
 
     if [ -n "$resolved" ] && [ -f "$resolved" ]; then
@@ -248,7 +251,7 @@ if ! declare -f restore_runtime_personal_state >/dev/null 2>&1; then
     local log="${1:-/dev/null}"
     local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
     local wallpaper_current="$cfg_home/hypr/wallpaper_effects/.wallpaper_current"
-    local rofi_link="$cfg_home/rofi/.current_wallpaper"
+    local rofi_link="$cfg_home/hypr/rofi/.current_wallpaper"
     local state_file="${KOOLDOTS_RUNTIME_WALLPAPER_STATE_FILE:-}"
     local source_path="${KOOLDOTS_RUNTIME_WALLPAPER_SOURCE:-}"
 
@@ -699,7 +702,7 @@ if [ "$resolution" == "< 1440p" ]; then
   fi
 
   # rofi fonts reduction
-  rofi_config_file="$DOTFILES_DIR/config/rofi/0-shared-fonts.rasi"
+  rofi_config_file="$DOTFILES_DIR/config/hypr/rofi/0-shared-fonts.rasi"
   if [ -f "$rofi_config_file" ]; then
     sed -i '/element-text {/,/}/s/[[:space:]]*font: "JetBrainsMono Nerd Font SemiBold 13"/font: "JetBrainsMono Nerd Font SemiBold 11"/' "$rofi_config_file" 2>&1 | tee -a "$LOG"
     sed -i '/configuration {/,/}/s/[[:space:]]*font: "JetBrainsMono Nerd Font SemiBold 15"/font: "JetBrainsMono Nerd Font SemiBold 13"/' "$rofi_config_file" 2>&1 | tee -a "$LOG"
@@ -958,14 +961,14 @@ rofi_DIR="$HOME/.local/share/rofi/themes"
 if [ ! -d "$rofi_DIR" ]; then
   mkdir -p "$rofi_DIR"
 fi
-if [ -d "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes" ]; then
-  if [ -z "$(ls -A ${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes)" ]; then
-    echo '/* Dummy Rofi theme */' >"${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/dummy.rasi"
+if [ -d "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/themes" ]; then
+  if [ -z "$(ls -A ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/themes)" ]; then
+    echo '/* Dummy Rofi theme */' >"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/themes/dummy.rasi"
   fi
-  ln -snf "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/"* "$HOME/.local/share/rofi/themes/"
+  ln -snf "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/themes/"* "$HOME/.local/share/rofi/themes/"
   # Delete the dummy file if it was created
-  if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/dummy.rasi" ]; then
-    rm "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/dummy.rasi"
+  if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/themes/dummy.rasi" ]; then
+    rm "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/themes/dummy.rasi"
   fi
 fi
 

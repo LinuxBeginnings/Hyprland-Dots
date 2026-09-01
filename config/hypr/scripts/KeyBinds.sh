@@ -27,7 +27,7 @@ lua_user_keybinds="$hypr_dir/UserConfigs/user_keybinds.lua"
 lua_system_keybinds="$hypr_dir/configs/system_keybinds.lua"
 lua_legacy_system_keybinds="$hypr_dir/UserConfigs/system_keybinds.lua"
 lua_overrides="$hypr_dir/UserConfigs/user_overrides.lua"
-rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-keybinds.rasi"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-keybinds.rasi"
 msg='☣️ NOTE ☣️: Clicking with Mouse or Pressing ENTER will have NO function'
 
 # detect active Hyprland config mode (Lua entrypoint vs legacy .conf includes)
