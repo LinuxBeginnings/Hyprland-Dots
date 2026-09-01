@@ -826,6 +826,7 @@ bind(
 bind("SUPER SHIFT", "up", dispatch("resizeactive", "0 -50"), { description = "resize up (-50)", ["repeat"] = true })
 bind("SUPER SHIFT", "down", dispatch("resizeactive", "0 50"), { description = "resize down (+50)", ["repeat"] = true })
 
+-- Lua-ified movewindow, does not dynamically call using old syntax
 bind("SUPER CTRL", "left", hl.dsp.window.move({ direction = "l" }), { description = "move window left" })
 bind("SUPER CTRL", "right", hl.dsp.window.move({ direction = "r" }), { description = "move window right" })
 bind("SUPER CTRL", "up", hl.dsp.window.move({ direction = "u" }), { description = "move window up" })
