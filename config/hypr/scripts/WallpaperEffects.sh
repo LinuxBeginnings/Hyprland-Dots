@@ -82,6 +82,9 @@ no-effects() {
     notify-send -u low -i "$iDIR/ja.png" "No wallpaper" "effects applied"
     # copying wallpaper for rofi menu
     cp "$wallpaper_base" "$wallpaper_output"
+    if [ -x "$SCRIPTSDIR/WallustSwww.sh" ]; then
+        "$SCRIPTSDIR/WallustSwww.sh" "$wallpaper_base" >/dev/null 2>&1 || true
+    fi
 }
 
 # Function to run rofi menu
@@ -124,6 +127,9 @@ main() {
             resize_mode="$(wallpaper_resize_mode "$wallpaper_output" "$focused_monitor")"
             "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$wallpaper_output" "${SWWW_PARAMS[@]}"
             persist_wallpaper_state "$wallpaper_output"
+            if [ -x "$SCRIPTSDIR/WallustSwww.sh" ]; then
+                "$SCRIPTSDIR/WallustSwww.sh" "$wallpaper_output" >/dev/null 2>&1 || true
+            fi
             notify-send -u low -i "$iDIR/ja.png" "$choice" "effects applied"
         else
             echo "Effect '$choice' not recognized."

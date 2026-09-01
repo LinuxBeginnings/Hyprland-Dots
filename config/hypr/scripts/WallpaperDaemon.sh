@@ -139,7 +139,6 @@ done < <(wait_for_monitors || true)
 
 "$SCRIPTSDIR/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 
-waybar_colors="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
-if [ ! -s "$waybar_colors" ] && [ -n "$applied_wallpaper" ] && [ -x "$SCRIPTSDIR/WallustSwww.sh" ]; then
+if [ -n "$applied_wallpaper" ] && [ -x "$SCRIPTSDIR/WallustSwww.sh" ]; then
   "$SCRIPTSDIR/WallustSwww.sh" "$applied_wallpaper" >/dev/null 2>&1 || true
 fi

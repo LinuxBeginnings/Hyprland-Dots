@@ -49,7 +49,7 @@ window {
     fullscreen:                 false;
     enabled:                    true;
     border-radius:              12px;
- 	background-color:           rgba(0, 0, 0, 0.6);
+ 	background-color:           @background;
 }
 
 /* ---- Mainbox ---- */
@@ -57,7 +57,7 @@ mainbox {
     enabled:                    true;
     orientation:                vertical;
 	padding:					0px;
-    background-color:		    rgba(0, 0, 0, 0.1);
+    background-color:		    transparent;
     children:                   [ "inputbar", "imagebox" ];
     border-radius:              12px;
 }

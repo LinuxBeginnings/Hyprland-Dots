@@ -41,7 +41,7 @@ window {
     location:                center;
     anchor:                  center;
     width:                   40%; 
-    background-color:        #1a1a1a99;
+    background-color:        @background;
 }
 
 /* ----- Main Box ----- */

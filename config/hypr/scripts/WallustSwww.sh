@@ -97,9 +97,32 @@ read_cached_wallpaper() {
   fi
 }
 
+ensure_wayland_env() {
+  local runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+  if [ -z "${WAYLAND_DISPLAY:-}" ] || [ ! -S "$runtime_dir/$WAYLAND_DISPLAY" ]; then
+    for socket in "$runtime_dir"/wayland-[0-9]*; do
+      [ -S "$socket" ] || continue
+      case "$(basename "$socket")" in
+        *awww*) continue ;;
+      esac
+      export WAYLAND_DISPLAY="$(basename "$socket")"
+      break
+    done
+  fi
+
+  if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+    for sig_dir in "$runtime_dir"/hypr/*/; do
+      [ -S "${sig_dir}.socket.sock" ] || continue
+      export HYPRLAND_INSTANCE_SIGNATURE="$(basename "$sig_dir")"
+      break
+    done
+  fi
+}
+
 read_wallpaper_from_query() {
   local monitor="$1"
-  $WWW query | awk -v mon="$monitor" '
+  [ -n "$monitor" ] || return 0
+  $WWW query 2>/dev/null | awk -v mon="$monitor" '
     /^Monitor/ {
       cur=$2
       gsub(":", "", cur)
@@ -109,16 +132,20 @@ read_wallpaper_from_query() {
       print
       exit
     }
-  '
+  ' 2>/dev/null || true
 }
 
 # Helper: get focused monitor name (prefer JSON)
 get_focused_monitor() {
+  ensure_wayland_env
+  local mon=""
   if command -v jq >/dev/null 2>&1; then
-    hyprctl monitors -j | jq -r '.[] | select(.focused) | .name'
-  else
-    hyprctl monitors | awk '/^Monitor/{name=$2} /focused: yes/{print name}'
+    mon="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused) | .name' 2>/dev/null || true)"
   fi
+  if [ -z "$mon" ]; then
+    mon="$(hyprctl monitors 2>/dev/null | awk '/^Monitor/{name=$2} /focused: yes/{print name; exit}' 2>/dev/null || true)"
+  fi
+  printf '%s' "$mon"
 }
 
 # Determine wallpaper_path
@@ -147,8 +174,20 @@ else
     wallpaper_path="$(read_cached_wallpaper "$cache_file")"
   fi
 
-  if [[ -z "$wallpaper_path" ]]; then
+  if [[ -z "$wallpaper_path" && -n "$current_monitor" ]]; then
     wallpaper_path="$(read_wallpaper_from_query "$current_monitor")"
+  fi
+fi
+
+if [[ -z "${wallpaper_path:-}" || ! -f "$wallpaper_path" ]]; then
+  if [[ -L "$rofi_link" ]]; then
+    resolved_link="$(readlink -f "$rofi_link" 2>/dev/null || true)"
+    if [[ -n "$resolved_link" && -f "$resolved_link" ]]; then
+      wallpaper_path="$resolved_link"
+    fi
+  fi
+  if [[ -z "$wallpaper_path" && -f "$wallpaper_current" ]]; then
+    wallpaper_path="$wallpaper_current"
   fi
 fi
 
