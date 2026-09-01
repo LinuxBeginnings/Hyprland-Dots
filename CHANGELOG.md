@@ -18,6 +18,7 @@
 
 ## Fixed:
 
+- Added preservation code for `UserConfigs`
 - `copy.sh` was overwritting `UserConfigs/monitor.lua`
 - On upgrade waybar config/style got reset (fix 2)
   -Eliminated possible race condition in `awww-daemon`
