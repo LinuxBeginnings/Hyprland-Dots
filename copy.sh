@@ -965,6 +965,9 @@ fi
 if [ -n "${KOOLDOTS_SELECTED_KB_LAYOUT:-}" ]; then
   set_keyboard_layout_configs "$KOOLDOTS_SELECTED_KB_LAYOUT" "${KOOLDOTS_SELECTED_KB_VARIANT:-}" "${KOOLDOTS_SELECTED_KB_MODEL:-}" "$LOG"
 fi
+if [ -n "${KOOLDOTS_SELECTED_EDITOR:-}" ] || [ -n "${KOOLDOTS_SELECTED_VISUAL:-}" ]; then
+  apply_editor_selection_to_userconfigs "$LOG"
+fi
 printf "\n%.0s" {1..1}
 printf "\n%.0s" {1..1}
 

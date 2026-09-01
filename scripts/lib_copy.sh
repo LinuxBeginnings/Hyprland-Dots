@@ -591,6 +591,10 @@ restore_user_configs() {
       echo "${NOTE:-[NOTE]} Preserving existing UserConfigs directory during install." 2>&1 | tee -a "$log"
       rsync -a "$BACKUP_DIR_PATH/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
       echo "${OK:-[OK]} - UserConfigs directory preserved." 2>&1 | tee -a "$log"
+    elif [ -d "${DIRPATH}-${BACKUP_DIR}/UserConfigs" ]; then
+      echo "${NOTE:-[NOTE]} Preserving existing UserConfigs directory during install." 2>&1 | tee -a "$log"
+      rsync -a "${DIRPATH}-${BACKUP_DIR}/UserConfigs/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
+      echo "${OK:-[OK]} - UserConfigs directory preserved." 2>&1 | tee -a "$log"
     fi
     return
   fi
@@ -642,6 +646,11 @@ restore_user_configs() {
         "ENVariables.conf"
         "LaptopDisplay.conf"
         "Laptops.conf"
+        "LayerRules.conf"
+        "ghostty.conf"
+        "kitty.conf"
+        "hyprview-layout.conf"
+        "WorkSpaceRules.conf"
         "monitors.lua"
         "Startup_Apps.conf"
         "UserDecorations.conf"
