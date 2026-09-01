@@ -1368,10 +1368,7 @@ def lua_file_is_generated(lua_path):
         "Source reference from",
     ])
 
-if files_out["monitors"].exists() and (
-    files_match(monitors_conf_path, src_monitors_conf_path)
-    or not lua_file_is_generated(files_out["monitors"])
-):
+if files_out["monitors"].exists():
     print(f"[INFO] Preserving existing custom Lua monitors file: {files_out['monitors']}")
 elif monitor_entries and not files_match(monitors_conf_path, src_monitors_conf_path):
     monitor_lines = [
@@ -1390,10 +1387,7 @@ elif not files_out["monitors"].exists():
 else:
     print(f"[INFO] Keeping existing {files_out['monitors']}")
 
-if files_out["workspaces"].exists() and (
-    files_match(workspaces_conf_path, src_workspaces_conf_path)
-    or not lua_file_is_generated(files_out["workspaces"])
-):
+if files_out["workspaces"].exists():
     print(f"[INFO] Preserving existing custom Lua workspaces file: {files_out['workspaces']}")
 elif workspace_entries and not files_match(workspaces_conf_path, src_workspaces_conf_path):
     workspace_lines = [
@@ -1864,22 +1858,21 @@ env_lines = [
     "-- hl.env(\"MOZ_ENABLE_WAYLAND\", \"1\")",
     "",
 ]
-if env_entries:
+if files_out["env"].exists():
+    print(f"[INFO] Preserving existing custom Lua env file: {files_out['env']}")
+elif env_entries:
     env_lines.append("-- Converted from ENVariables.conf")
     for key, value in env_entries:
         env_lines.append(f"hl.env({lua_string(key)}, {lua_string(value)})")
     write_file(files_out["env"], env_lines)
 else:
-    if files_out["env"].exists():
-        print(f"[INFO] No active env entries found in {env_path}; keeping existing {files_out['env']}")
-    else:
-        env_lines.extend([
-            "-- No active env entries were found in ENVariables.conf.",
-            "-- Uncomment and customize examples below:",
-            "-- hl.env(\"GDK_SCALE\", \"1\")",
-            "-- hl.env(\"QT_SCALE_FACTOR\", \"1\")",
-        ])
-        write_file(files_out["env"], env_lines)
+    env_lines.extend([
+        "-- No active env entries were found in ENVariables.conf.",
+        "-- Uncomment and customize examples below:",
+        '-- hl.env("GDK_SCALE", "1")',
+        '-- hl.env("QT_SCALE_FACTOR", "1")',
+    ])
+    write_file(files_out["env"], env_lines)
 
 startup_lines = [
     "-- User startup overrides (auto-generated).",
@@ -1922,7 +1915,9 @@ startup_lines = [
     "local exec_once = user_startup_helper.exec_once",
     "",
 ]
-if startup_entries:
+if files_out["startup"].exists():
+    print(f"[INFO] Preserving existing custom Lua startup file: {files_out['startup']}")
+elif startup_entries:
     startup_lines.append("-- Converted from Startup_Apps.conf")
     startup_lines.append("local startup_commands = {")
     for cmd in startup_entries:
@@ -1944,14 +1939,11 @@ if startup_entries:
     ])
     write_file(files_out["startup"], startup_lines)
 else:
-    if files_out["startup"].exists():
-        print(f"[INFO] No active startup entries found in {startup_path}; keeping existing {files_out['startup']}")
-    else:
-        startup_lines.extend([
-            "-- No active startup entries were found in Startup_Apps.conf.",
-            "-- exec_once(\"nm-applet --indicator\")",
-        ])
-        write_file(files_out["startup"], startup_lines)
+    startup_lines.extend([
+        "-- No active startup entries were found in Startup_Apps.conf.",
+        "-- exec_once(\"nm-applet --indicator\")",
+    ])
+    write_file(files_out["startup"], startup_lines)
 
 window_lines = [
     "-- User window rule overrides (auto-generated).",
@@ -1999,31 +1991,29 @@ window_lines = [
     "local apply_window_rule = user_window_rules_helper.apply_window_rule",
     "",
 ]
-if window_rules:
+if files_out["window_rules"].exists():
+    print(f"[INFO] Preserving existing custom Lua window rules file: {files_out['window_rules']}")
+elif window_rules:
     window_lines.append("-- Converted from WindowRules.conf")
     for rule_type, rule in window_rules:
         window_lines.append(emit_rule(rule_type, rule))
         window_lines.append("")
     write_file(files_out["window_rules"], window_lines)
 else:
-    if files_out["window_rules"].exists():
-        print(f"[INFO] No active window rules found in {window_rules_path}; keeping existing {files_out['window_rules']}")
-    else:
-        window_lines.append("-- No active window rules were found in WindowRules.conf.")
-        write_file(files_out["window_rules"], window_lines)
+    window_lines.append("-- No active window rules were found in WindowRules.conf.")
+    write_file(files_out["window_rules"], window_lines)
 
-if layer_rules:
+if files_out["layer_rules"].exists():
+    print(f"[INFO] Preserving existing custom Lua layer rules file: {files_out['layer_rules']}")
+elif layer_rules:
     layer_lines.append("-- Converted from LayerRules.conf")
     for rule_type, rule in layer_rules:
         layer_lines.append(emit_rule(rule_type, rule))
         layer_lines.append("")
     write_file(files_out["layer_rules"], layer_lines)
 else:
-    if files_out["layer_rules"].exists():
-        print(f"[INFO] No active layer rules found in {layer_rules_path}; keeping existing {files_out['layer_rules']}")
-    else:
-        layer_lines.append("-- No active layer rules were found in LayerRules.conf.")
-        write_file(files_out["layer_rules"], layer_lines)
+    layer_lines.append("-- No active layer rules were found in LayerRules.conf.")
+    write_file(files_out["layer_rules"], layer_lines)
 
 keybind_lines = [
     "-- User keybind overrides (auto-generated).",
@@ -2090,19 +2080,14 @@ keybind_lines = [
     "local unbind = user_keybinds_helper.unbind",
     "",
 ]
-if keybinds:
+if files_out["keybinds"].exists():
+    print(f"[INFO] Preserving existing custom Lua keybinds file: {files_out['keybinds']}")
+elif keybinds:
     keybind_lines.append("-- Converted from UserKeybinds.conf")
     keybind_lines.extend(keybinds)
     write_file(files_out["keybinds"], keybind_lines)
 else:
-    if files_out["keybinds"].exists():
-        print(f"[INFO] No active keybind entries found in {keybinds_path}; keeping existing {files_out['keybinds']}")
-    else:
-        write_file(files_out["keybinds"], keybind_lines)
-            "-- No active keybind entries were found in UserKeybinds.conf.",
-            "-- bind(\"SUPER\", \"Z\", exec_cmd(\"thunar\"), { description = \"Open file manager\" })",
-        ])
-        write_file(files_out["keybinds"], keybind_lines)
+    write_file(files_out["keybinds"], keybind_lines)
 
 for name, source in [
     ("settings", settings_path),
@@ -2110,6 +2095,9 @@ for name, source in [
     ("animations", animations_path),
     ("laptops", laptops_path),
 ]:
+    if files_out[name].exists():
+        print(f"[INFO] Preserving existing custom Lua {name} file: {files_out[name]}")
+        continue
     title = f"-- User {name} overrides (auto-generated)."
     lines = [
         title,
