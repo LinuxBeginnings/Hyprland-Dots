@@ -310,6 +310,10 @@ if [ "$REVERT" -eq 1 ]; then
   else
     echo "[INFO] No Lua entrypoint found to disable at $DEST_LUA_ENTRY"
   fi
+  if [ -f "$DEST_HYPR_DIR/hypridle.conf" ]; then
+    sed -i "s|hyprctl dispatch hl.dsp.dpms '{ action = \"off\" }'|hyprctl dispatch dpms off|g" "$DEST_HYPR_DIR/hypridle.conf"
+    sed -i "s|hyprctl dispatch hl.dsp.dpms '{ action = \"on\" }'|hyprctl dispatch dpms on|g" "$DEST_HYPR_DIR/hypridle.conf"
+  fi
   restore_latest_conf_backup "$USER_CONFIGS_DIR" "$USER_CONFIGS_DIR"
   restore_latest_conf_backup "$CONFIGS_DIR" "$CONFIGS_DIR"
   echo "[OK] Revert complete."
@@ -2373,6 +2377,11 @@ print_conversion_coverage_summary() {
 [INFO]     - $USER_CONFIGS_DIR/LaptopDisplay.conf and $USER_CONFIGS_DIR/WorkSpaceRules.conf (legacy/helper files)
 SUMMARY
 }
+if [ -f "$DEST_HYPR_DIR/hypridle.conf" ]; then
+  sed -i "s|hyprctl dispatch dpms off|hyprctl dispatch hl.dsp.dpms '{ action = \"off\" }'|g" "$DEST_HYPR_DIR/hypridle.conf"
+  sed -i "s|hyprctl dispatch dpms on|hyprctl dispatch hl.dsp.dpms '{ action = \"on\" }'|g" "$DEST_HYPR_DIR/hypridle.conf"
+fi
+
 move_conf_files_to_legacy "$USER_CONFIGS_DIR" "$USER_CONFIGS_LEGACY_DIR" "$USER_CONFIGS_DIR" "${USER_CONFIGS_PRESERVED_CONFS[@]}"
 move_conf_files_to_legacy "$CONFIGS_DIR" "$CONFIGS_LEGACY_DIR" "$CONFIGS_DIR"
 print_conversion_coverage_summary

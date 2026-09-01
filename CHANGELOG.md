@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- Hypridle updated for LUA commands
 - Thanks to @goldyfruit
   - He found four issues and filed them, including how to fix
     - `LuaAutoReload` did not stop when it receives SIGTERM on the polling path.
