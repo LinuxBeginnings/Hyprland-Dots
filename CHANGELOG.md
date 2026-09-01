@@ -1,30 +1,28 @@
 # Changelog — KoolDots
 
-## v2.3.27
-
-## Updated:
-
-- Moved `./config/rofi` to `~/.config/hypr/rofi`
-  - Phase one moving more configs to under `~/.config/hypr`
+## v2.3.26.2
 
 ## Fixed:
 
-- `copy.sh` was overwriting `UserConfigs/monitor.lua`
-- `Dark-Moon.css` Corrected inconsistent rounding
+- Hypridle updated for LUA commands
+- Thanks to @goldyfruit
+  - He found four issues and filed them, including how to fix
+    - `LuaAutoReload` did not stop when it receives SIGTERM on the polling path.
+    - `MonitorProfile` overwrote `monitors.lua`
+    - Changes to workspace layouts wasn't persistent 
+    - Animation selected not loading in LUA config
+    - Also some animation files had invalid settings
+- KB layout settings not set in `user_settings.lua`
+  - Added: Prompts for KB variant and model
 
 ---
-
-## v2.3.26.2
-
-- Fixed `kb` setting not getting saved properly
-  - Defaulted to just `us`
-  - Added: prompts to set KB variant and KB model also
 
 ## v2.3.26.1
 
 ## Fixed:
 
 - Added preservation code for `UserConfigs`
+- `copy.sh` was overwritting `UserConfigs/monitor.lua`
 - On upgrade waybar config/style got reset (fix 2)
   -Eliminated possible race condition in `awww-daemon`
 - Thanks to: @hyperion-ak for the fixes

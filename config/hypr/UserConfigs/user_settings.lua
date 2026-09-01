@@ -9,7 +9,7 @@
 
 hl.config({
   input = {
-    kb_layout = "us,gb",
+    kb_layout = "us",
     kb_variant = "",
     kb_model = "",
     kb_options = "",
@@ -38,7 +38,6 @@ hl.config({
     },
   },
 })
-
 -- Example:
 -- hl.config({
 --   general = {

@@ -46,13 +46,14 @@ USER_OVERRIDES_SHIM="$DEST_HYPR_DIR/lua/user_overrides.lua"
 DEST_MONITORS_CONF="$DEST_HYPR_DIR/monitors.conf"
 DEST_LUA_MONITORS="$USER_CONFIGS_DIR/monitors.lua"
 DEST_WORKSPACES_CONF="$DEST_HYPR_DIR/workspaces.conf"
-DEST_LUA_WORKSPACES="$DEST_HYPR_DIR/lua/workspaces.lua"
+DEST_LUA_WORKSPACES="$USER_CONFIGS_DIR/workspaces.lua"
 SOURCE_LUA_ENTRY_ENABLED="$SRC_HYPR_DIR/hyprland.lua"
 SOURCE_LUA_ENTRY_DISABLED="$SRC_HYPR_DIR/hyprland.lua.disable"
 SRC_USER_LUA_TEMPLATES_DIR="$SRC_HYPR_DIR/UserConfigs"
 SRC_MONITORS_CONF="$SRC_HYPR_DIR/monitors.conf"
 SRC_WORKSPACES_CONF="$SRC_HYPR_DIR/workspaces.conf"
 SRC_USER_LUA_MONITORS="$SRC_USER_LUA_TEMPLATES_DIR/monitors.lua"
+SRC_USER_LUA_WORKSPACES="$SRC_USER_LUA_TEMPLATES_DIR/workspaces.lua"
 DEST_LUA_ENTRY="$DEST_HYPR_DIR/hyprland.lua"
 DEST_LUA_ENTRY_DISABLED="$DEST_HYPR_DIR/hyprland.lua.disable"
 SOURCE_LUA_ENTRY=""
@@ -220,6 +221,7 @@ ensure_templates_for_empty_user_configs() {
   ensure_template_for_empty_user_conf "$USER_LAPTOPS" "$USER_CONFIGS_DIR/user_laptops.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_laptops.lua"
   ensure_template_for_empty_user_conf "$USER_CONFIGS_DIR/01-UserDefaults.conf" "$USER_CONFIGS_DIR/user_defaults.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_defaults.lua"
   ensure_template_for_empty_user_conf "$DEST_MONITORS_CONF" "$DEST_LUA_MONITORS" "$SRC_USER_LUA_MONITORS"
+  ensure_template_for_empty_user_conf "$DEST_WORKSPACES_CONF" "$DEST_LUA_WORKSPACES" "$SRC_USER_LUA_WORKSPACES"
 }
 
 if [ "$YES" -eq 0 ]; then
@@ -308,6 +310,10 @@ if [ "$REVERT" -eq 1 ]; then
   else
     echo "[INFO] No Lua entrypoint found to disable at $DEST_LUA_ENTRY"
   fi
+  if [ -f "$DEST_HYPR_DIR/hypridle.conf" ]; then
+    sed -i "s|hyprctl dispatch hl.dsp.dpms '{ action = \"off\" }'|hyprctl dispatch dpms off|g" "$DEST_HYPR_DIR/hypridle.conf"
+    sed -i "s|hyprctl dispatch hl.dsp.dpms '{ action = \"on\" }'|hyprctl dispatch dpms on|g" "$DEST_HYPR_DIR/hypridle.conf"
+  fi
   restore_latest_conf_backup "$USER_CONFIGS_DIR" "$USER_CONFIGS_DIR"
   restore_latest_conf_backup "$CONFIGS_DIR" "$CONFIGS_DIR"
   echo "[OK] Revert complete."
@@ -368,7 +374,8 @@ python3 - \
   "$DEST_LUA_WORKSPACES" \
   "$SRC_MONITORS_CONF" \
   "$SRC_WORKSPACES_CONF" \
-  "$SRC_USER_LUA_MONITORS" <<'PY'
+  "$SRC_USER_LUA_MONITORS" \
+  "$SRC_USER_LUA_WORKSPACES" <<'PY'
 import os
 import re
 import sys
@@ -406,6 +413,7 @@ workspaces_lua_path = Path(sys.argv[23])
 src_monitors_conf_path = Path(sys.argv[24]) if len(sys.argv) > 24 else None
 src_workspaces_conf_path = Path(sys.argv[25]) if len(sys.argv) > 25 else None
 src_user_lua_monitors_path = Path(sys.argv[26]) if len(sys.argv) > 26 else None
+src_user_lua_workspaces_path = Path(sys.argv[27]) if len(sys.argv) > 27 else None
 
 files_out = {
     "system_env": system_configs_dir / "system_env.lua",
@@ -1397,6 +1405,10 @@ elif workspace_entries and not files_match(workspaces_conf_path, src_workspaces_
         workspace_lines.append(emit_workspace_rule(spec))
         workspace_lines.append("")
     write_file(files_out["workspaces"], workspace_lines)
+elif not files_out["workspaces"].exists():
+    if src_user_lua_workspaces_path and src_user_lua_workspaces_path.exists():
+        files_out["workspaces"].write_text(src_user_lua_workspaces_path.read_text(encoding="utf-8"), encoding="utf-8")
+        print(f"[OK] Ensured default workspaces template: {files_out['workspaces']}")
 else:
     print(f"[INFO] Keeping existing {files_out['workspaces']}")
 system_env_lines = [
@@ -2000,51 +2012,6 @@ else:
         window_lines.append("-- No active window rules were found in WindowRules.conf.")
         write_file(files_out["window_rules"], window_lines)
 
-layer_lines = [
-    "-- User layer rule overrides (auto-generated).",
-    "-- Add your own rules with apply_layer_rule({...})",
-    "-- Example:",
-    "-- apply_layer_rule({",
-    "--   name = \"My Layer Rule\",",
-    "--   match = { namespace = \"notifications\" },",
-    "--   blur = true,",
-    "-- })",
-    "",
-    "local user_layer_rules_helper = nil",
-    "do",
-    "  local source = (debug.getinfo(1, \"S\") or {}).source or \"\"",
-    "  local source_path = source:match(\"^@(.+)$\\\")",
-    "  local source_dir = source_path and source_path:match(\"^(.*)/[^/]+$\\\") or nil",
-    "  local home = os.getenv(\"HOME\") or \"\"",
-    "  local candidate_paths = {",
-    "    source_dir and (source_dir .. \"/../lua/user_layer_rules_helper.lua\") or nil,",
-    "    home ~= \"\" and (home .. \"/.config/hypr/lua/user_layer_rules_helper.lua\") or nil,",
-    "    home ~= \"\" and (home .. \"/.config/hypr/user_layer_rules_helper.lua\") or nil,",
-    "  }",
-    "",
-    "  local tried_paths = {}",
-    "  for _, helper_path in ipairs(candidate_paths) do",
-    "    if helper_path then",
-    "      table.insert(tried_paths, helper_path)",
-    "      local f = io.open(helper_path, \"r\")",
-    "      if f then",
-    "        f:close()",
-    "        local loaded_ok, loaded_helpers = pcall(dofile, helper_path)",
-    "        if loaded_ok and type(loaded_helpers) == \"table\" and loaded_helpers.apply_layer_rule then",
-    "          user_layer_rules_helper = loaded_helpers",
-    "          break",
-    "        end",
-    "      end",
-    "    end",
-    "  end",
-    "",
-    "  if not user_layer_rules_helper then",
-    "    error(\"Failed to load user_layer_rules_helper.lua from: \" .. table.concat(tried_paths, \", \"))",
-    "  end",
-    "end",
-    "local apply_layer_rule = user_layer_rules_helper.apply_layer_rule",
-    "",
-]
 if layer_rules:
     layer_lines.append("-- Converted from LayerRules.conf")
     for rule_type, rule in layer_rules:
@@ -2411,6 +2378,11 @@ print_conversion_coverage_summary() {
 [INFO]     - $USER_CONFIGS_DIR/LaptopDisplay.conf and $USER_CONFIGS_DIR/WorkSpaceRules.conf (legacy/helper files)
 SUMMARY
 }
+if [ -f "$DEST_HYPR_DIR/hypridle.conf" ]; then
+  sed -i "s|hyprctl dispatch dpms off|hyprctl dispatch hl.dsp.dpms '{ action = \"off\" }'|g" "$DEST_HYPR_DIR/hypridle.conf"
+  sed -i "s|hyprctl dispatch dpms on|hyprctl dispatch hl.dsp.dpms '{ action = \"on\" }'|g" "$DEST_HYPR_DIR/hypridle.conf"
+fi
+
 move_conf_files_to_legacy "$USER_CONFIGS_DIR" "$USER_CONFIGS_LEGACY_DIR" "$USER_CONFIGS_DIR" "${USER_CONFIGS_PRESERVED_CONFS[@]}"
 move_conf_files_to_legacy "$CONFIGS_DIR" "$CONFIGS_LEGACY_DIR" "$CONFIGS_DIR"
 print_conversion_coverage_summary

@@ -25,7 +25,8 @@ echo "$$" >"$pid_file"
 cleanup() {
   rm -f "$pid_file"
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 0' INT TERM
 
 reload_hypr() {
   hyprctl reload >/dev/null 2>&1 || true
