@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- Improved handling of RO symlinks in NixOS
 - Hypridle updated for LUA commands
 - Thanks to @goldyfruit
   - He found four issues and filed them, including how to fix
