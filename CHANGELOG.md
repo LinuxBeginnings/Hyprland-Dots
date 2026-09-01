@@ -4,6 +4,8 @@
 
 ## Fixed:
 
+- Animation selected not loading in LUA config
+  - Also some animation files had invalid settings
 - KB layout settings not set in `user_settings.lua`
   - Added: Prompts for KB variant and model
 

@@ -20,6 +20,7 @@ end
 -- via lua/user_overrides.lua. Base lua/*.lua modules are templates and should
 -- not also be loaded directly here, or bindings/settings can be duplicated.
 load_module("user_defaults")
+load_module("animations")
 load_module("user_overrides")
 load_module("monitors")
 load_module("workspaces")
