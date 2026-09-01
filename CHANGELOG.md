@@ -7,7 +7,8 @@
 - KB layout settings not set in `user_settings.lua`
   - Added: Prompts for KB variant and model
 
----
+
+---- 
 
 ## v2.3.26.1
 
