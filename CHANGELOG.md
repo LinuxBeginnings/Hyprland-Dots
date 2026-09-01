@@ -1,9 +1,24 @@
 # Changelog — KoolDots
 
+## v2.3.27
+
+## Updated:
+
+- Moved `./config/rofi` to `~/.config/hypr/rofi`
+  - Phase one moving more configs to under `~/.config/hypr`
+
+## Fixed:
+
+- `copy.sh` was overwriting `UserConfigs/monitor.lua`
+- `Dark-Moon.css` Corrected inconsistent rounding
+
+---
+
 ## v2.3.26.1
 
 ## Fixed:
 
+- `copy.sh` was overwritting `UserConfigs/monitor.lua`
 - On upgrade waybar config/style got reset (fix 2)
   -Eliminated possible race condition in `awww-daemon`
 - Thanks to: @hyperion-ak for the fixes

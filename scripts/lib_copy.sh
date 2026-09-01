@@ -11,7 +11,7 @@ copy_phase1() {
   local log="$1"
   local run_mode="${2:-${RUN_MODE:-}}"
   local base="${DOTFILES_DIR:-.}"
-  local dirs="fastfetch kitty rofi swaync"
+  local dirs="fastfetch kitty swaync"
   for DIR2 in $dirs; do
     local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/$DIR2"
     if [ -d "$DIRPATH" ]; then
@@ -30,17 +30,6 @@ copy_phase1() {
           echo -e "${NOTE:-[NOTE]} - Backed up $DIR2 to $DIRPATH-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
           cp -r "$base/config/$DIR2" "${XDG_CONFIG_HOME:-$HOME/.config}/$DIR2" 2>&1 | tee -a "$log"
           echo -e "${OK:-[OK]} - Replaced $DIR2 with new configuration." 2>&1 | tee -a "$log"
-          if [ "$DIR2" = "rofi" ]; then
-            if [ -d "$DIRPATH-backup-$BACKUP_DIR/themes" ]; then
-              for file in "$DIRPATH-backup-$BACKUP_DIR/themes"/*; do
-                [ -e "$file" ] || continue
-                cp -n "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/themes/" >>"$log" 2>&1 || true
-              done || true
-            fi
-            if [ -f "$DIRPATH-backup-$BACKUP_DIR/0-shared-fonts.rasi" ]; then
-              cp "$DIRPATH-backup-$BACKUP_DIR/0-shared-fonts.rasi" "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/0-shared-fonts.rasi" >>"$log" 2>&1
-            fi
-          fi
           break
           ;;
         [Nn]*)
@@ -55,14 +44,44 @@ copy_phase1() {
       echo -e "${OK:-[OK]} - Copy completed for ${YELLOW:-}$DIR2${RESET:-}" 2>&1 | tee -a "$log"
     fi
   done
+
+  # Handle ~/.config/rofi: backup existing and ensure an empty directory exists
+  local rofi_dir="${XDG_CONFIG_HOME:-$HOME/.config}/rofi"
+  if [ -d "$rofi_dir" ]; then
+    if [ -n "$(ls -A "$rofi_dir" 2>/dev/null)" ]; then
+      local BACKUP_DIR
+      BACKUP_DIR=$(get_backup_dirname)
+      mv "$rofi_dir" "$rofi_dir-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
+      echo -e "${NOTE:-[NOTE]} - Backed up rofi to $rofi_dir-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
+      mkdir -p "$rofi_dir"
+      echo -e "${OK:-[OK]} - Created empty rofi directory at $rofi_dir." 2>&1 | tee -a "$log"
+      if [ -d "$rofi_dir-backup-$BACKUP_DIR/themes" ]; then
+        mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/themes"
+        for file in "$rofi_dir-backup-$BACKUP_DIR/themes"/*; do
+          [ -e "$file" ] || continue
+          cp -n "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/themes/" >>"$log" 2>&1 || true
+        done || true
+      fi
+      if [ -f "$rofi_dir-backup-$BACKUP_DIR/0-shared-fonts.rasi" ] && [ ! -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/0-shared-fonts.rasi" ]; then
+        cp "$rofi_dir-backup-$BACKUP_DIR/0-shared-fonts.rasi" "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/0-shared-fonts.rasi" >>"$log" 2>&1 || true
+      fi
+    fi
+  else
+    mkdir -p "$rofi_dir"
+  fi
 }
 
 copy_waybar() {
   local log="$1"
+  local run_mode="${2:-${RUN_MODE:-}}"
   local base="${DOTFILES_DIR:-.}"
   local DIRW="waybar"
   local DIRPATHw="${XDG_CONFIG_HOME:-$HOME/.config}/$DIRW"
   if [ -d "$DIRPATHw" ]; then
+    if [ "$run_mode" = "express" ]; then
+      echo -e "${NOTE:-[NOTE]} - Express mode: keeping existing ${YELLOW:-}$DIRW${RESET:-} config." 2>&1 | tee -a "$log"
+      return 0
+    fi
     while true; do
       echo -n "${CAT:-[ACTION]} Do you want to replace ${YELLOW:-}$DIRW${RESET:-} config? (y/n): "
       read DIR1_CHOICE
@@ -352,32 +371,32 @@ restore_hypr_assets() {
 
     # Keep monitor/workspace state across upgrades, including express mode.
     if [ "${RUN_MODE:-}" != "install" ]; then
-      if [ "$backup_mode" = "lua" ]; then
-        local LUA_USER_DIR="$HYPR_DIR/UserConfigs"
-        mkdir -p "$LUA_USER_DIR"
+      local LUA_USER_DIR="$HYPR_DIR/UserConfigs"
+      mkdir -p "$LUA_USER_DIR"
 
-        local BACKUP_LUA_MONITORS=""
-        local BACKUP_LUA_WORKSPACES=""
-        if [ -f "$BACKUP_HYPR_PATH/UserConfigs/monitors.lua" ]; then
-          BACKUP_LUA_MONITORS="$BACKUP_HYPR_PATH/UserConfigs/monitors.lua"
-        elif [ -f "$BACKUP_HYPR_PATH/lua/monitors.lua" ]; then
-          BACKUP_LUA_MONITORS="$BACKUP_HYPR_PATH/lua/monitors.lua"
-        fi
-        if [ -f "$BACKUP_HYPR_PATH/UserConfigs/workspaces.lua" ]; then
-          BACKUP_LUA_WORKSPACES="$BACKUP_HYPR_PATH/UserConfigs/workspaces.lua"
-        elif [ -f "$BACKUP_HYPR_PATH/lua/workspaces.lua" ]; then
-          BACKUP_LUA_WORKSPACES="$BACKUP_HYPR_PATH/lua/workspaces.lua"
-        fi
+      local BACKUP_LUA_MONITORS=""
+      local BACKUP_LUA_WORKSPACES=""
+      if [ -f "$BACKUP_HYPR_PATH/UserConfigs/monitors.lua" ]; then
+        BACKUP_LUA_MONITORS="$BACKUP_HYPR_PATH/UserConfigs/monitors.lua"
+      elif [ -f "$BACKUP_HYPR_PATH/lua/monitors.lua" ]; then
+        BACKUP_LUA_MONITORS="$BACKUP_HYPR_PATH/lua/monitors.lua"
+      fi
+      if [ -f "$BACKUP_HYPR_PATH/UserConfigs/workspaces.lua" ]; then
+        BACKUP_LUA_WORKSPACES="$BACKUP_HYPR_PATH/UserConfigs/workspaces.lua"
+      elif [ -f "$BACKUP_HYPR_PATH/lua/workspaces.lua" ]; then
+        BACKUP_LUA_WORKSPACES="$BACKUP_HYPR_PATH/lua/workspaces.lua"
+      fi
 
-        if [ -n "$BACKUP_LUA_MONITORS" ]; then
-          cp -f "$BACKUP_LUA_MONITORS" "$LUA_USER_DIR/monitors.lua" 2>&1 | tee -a "$log"
-          echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/monitors.lua${RESET:-}" 2>&1 | tee -a "$log"
-        fi
-        if [ -n "$BACKUP_LUA_WORKSPACES" ]; then
-          cp -f "$BACKUP_LUA_WORKSPACES" "$LUA_USER_DIR/workspaces.lua" 2>&1 | tee -a "$log"
-          echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/workspaces.lua${RESET:-}" 2>&1 | tee -a "$log"
-        fi
-      else
+      if [ -n "$BACKUP_LUA_MONITORS" ]; then
+        cp -f "$BACKUP_LUA_MONITORS" "$LUA_USER_DIR/monitors.lua" 2>&1 | tee -a "$log"
+        echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/monitors.lua${RESET:-}" 2>&1 | tee -a "$log"
+      fi
+      if [ -n "$BACKUP_LUA_WORKSPACES" ]; then
+        cp -f "$BACKUP_LUA_WORKSPACES" "$LUA_USER_DIR/workspaces.lua" 2>&1 | tee -a "$log"
+        echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/workspaces.lua${RESET:-}" 2>&1 | tee -a "$log"
+      fi
+
+      if [ "$backup_mode" != "lua" ]; then
         local FILE_B=("monitors.conf" "workspaces.conf")
         for FILE_RESTORE in "${FILE_B[@]}"; do
           local BACKUP_FILE="$BACKUP_HYPR_PATH/$FILE_RESTORE"

@@ -19,6 +19,29 @@ ags_style="${XDG_CONFIG_HOME:-$HOME/.config}/ags/user/style.css"
 SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 # shellcheck source=/dev/null
 . "$SCRIPTSDIR/WallpaperCmd.sh"
+
+ensure_wayland_env() {
+  local runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+  if [ -z "${WAYLAND_DISPLAY:-}" ] || [ ! -S "$runtime_dir/$WAYLAND_DISPLAY" ]; then
+    for socket in "$runtime_dir"/wayland-[0-9]*; do
+      [ -S "$socket" ] || continue
+      case "$(basename "$socket")" in
+        *awww*) continue ;;
+      esac
+      export WAYLAND_DISPLAY="$(basename "$socket")"
+      break
+    done
+  fi
+
+  if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+    for sig_dir in "$runtime_dir"/hypr/*/; do
+      [ -S "${sig_dir}.socket.sock" ] || continue
+      export HYPRLAND_INSTANCE_SIGNATURE="$(basename "$sig_dir")"
+      break
+    done
+  fi
+}
+ensure_wayland_env
 notif="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images/bell.png"
 wallust_rofi="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/templates/colors-rofi.rasi"
 theme_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
@@ -162,11 +185,13 @@ notify_user() {
     notify-send -u low -i "$notif" " Switching to" " $1 mode"
 }
 
-# Use sed to replace the palette setting in the wallust config file
+# Use sed to replace the palette setting in the wallust config files
 if [ "$next_mode" = "Dark" ]; then
-    sed -i 's/^palette = .*/palette = "'"$pallete_dark"'"/' "$wallust_config" 
+    sed -i 's/^palette = .*/palette = "'"$pallete_dark"'"/' "$wallust_config" 2>/dev/null || true
+    [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-v4.toml" ] && sed -i 's/^style = .*/style = "dark"/' "${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-v4.toml" 2>/dev/null || true
 else
-    sed -i 's/^palette = .*/palette = "'"$pallete_light"'"/' "$wallust_config" 
+    sed -i 's/^palette = .*/palette = "'"$pallete_light"'"/' "$wallust_config" 2>/dev/null || true
+    [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-v4.toml" ] && sed -i 's/^style = .*/style = "light"/' "${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-v4.toml" 2>/dev/null || true
 fi
 
 # Function to set Waybar style
@@ -188,17 +213,38 @@ set_waybar_style() {
         current_style_target="$(readlink -f "$waybar_style_link" 2>/dev/null || true)"
         current_style_base="$(basename "$current_style_target" 2>/dev/null || true)"
 
-        # Wallust, Chroma, and universal extra styles adapt automatically; keep them
-        if [[ "$current_style_base" =~ ^(Wallust|Chroma|\[Extra\]) ]]; then
+        # Wallust, Chroma, and universal extra styles adapt automatically via colors-waybar.css; keep them
+        if [[ "$current_style_base" =~ ^(Wallust|Chroma|\[Extra\]|Colored|Colorful|Crystal|Rainbow|Retro|Transparent) ]]; then
             return 0
         fi
 
+        # Specific theme pairs
         if [ "$theme" = "Light" ]; then
-            counterpart="${current_style_base//Dark/Light}"
-            counterpart="${counterpart//dark/light}"
+            case "$current_style_base" in
+                Catppuccin-Mocha.css|Catppuccin-Frappe.css|VERTICAL-Catpuccin-Mocha.css)
+                    counterpart="Catppuccin-Latte.css" ;;
+                Dark-Golden-Eclipse.css|Dark-Golden-Noir.css|Dark-Wallust-Obsidian-Edge.css|Dark-Half-Moon.css|Dark-Purpl.css)
+                    counterpart="Light-Obsidian-Glow.css" ;;
+                Black-\&-White-Monochrome.css)
+                    counterpart="Light-Monochrome-Contrast.css" ;;
+                *)
+                    counterpart="${current_style_base//Dark/Light}"
+                    counterpart="${counterpart//dark/light}"
+                    ;;
+            esac
         else
-            counterpart="${current_style_base//Light/Dark}"
-            counterpart="${counterpart//light/dark}"
+            case "$current_style_base" in
+                Catppuccin-Latte.css)
+                    counterpart="Catppuccin-Mocha.css" ;;
+                Light-Obsidian-Glow.css)
+                    counterpart="Dark-Wallust-Obsidian-Edge.css" ;;
+                Light-Monochrome-Contrast.css)
+                    counterpart="Black-&-White-Monochrome.css" ;;
+                *)
+                    counterpart="${current_style_base//Light/Dark}"
+                    counterpart="${counterpart//light/dark}"
+                    ;;
+            esac
         fi
 
         if [ -n "$counterpart" ] && [ -f "$waybar_styles/$counterpart" ]; then
@@ -206,7 +252,23 @@ set_waybar_style() {
             return 0
         fi
 
-        # If no counterpart exists, keep user's existing style rather than randomizing
+        # Fallback if current style had Dark/Light prefix but no exact match
+        if [ "$theme" = "Light" ] && [[ "$current_style_base" =~ ^Dark- ]]; then
+            local fallback_light
+            fallback_light="$(find -L "$waybar_styles" -maxdepth 1 -type f -iname 'Light-*.css' | sort | head -n 1)"
+            if [ -n "$fallback_light" ]; then
+                ln -sf "$fallback_light" "$waybar_style_link"
+                return 0
+            fi
+        elif [ "$theme" = "Dark" ] && [[ "$current_style_base" =~ ^Light- ]]; then
+            local fallback_dark
+            fallback_dark="$(find -L "$waybar_styles" -maxdepth 1 -type f -iname 'Dark-*.css' | sort | head -n 1)"
+            if [ -n "$fallback_dark" ]; then
+                ln -sf "$fallback_dark" "$waybar_style_link"
+                return 0
+            fi
+        fi
+
         return 0
     fi
 
@@ -431,7 +493,7 @@ set_custom_gtk_theme "$next_mode"
 update_theme_mode
 
 
-${SCRIPTSDIR}/WallustSwww.sh
+${SCRIPTSDIR}/WallustSwww.sh "${next_wallpaper:-$wallpaper_current}"
 
 if [ "$no_restart" -eq 0 ]; then
     sleep 2

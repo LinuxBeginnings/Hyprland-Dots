@@ -344,7 +344,7 @@ end
 bind(
   "SUPER",
   "D",
-  exec_cmd("pkill rofi || true; $HOME/.config/hypr/scripts/RofiFocusedWallpaperLink.sh >/dev/null 2>&1 || true; rofi -show drun -modi drun, filebrowser,run,window"),
+  exec_cmd("pkill rofi || true; $HOME/.config/hypr/scripts/RofiFocusedWallpaperLink.sh >/dev/null 2>&1 || true; rofi -show drun -modi drun,filebrowser,run,window -config $HOME/.config/hypr/rofi/config.rasi"),
   { description = "app launcher" }
 )
 bind("SUPER", "B", exec_cmd('xdg-open "https://"'), { description = "open default browser" })
@@ -375,7 +375,7 @@ bind("SUPER", "S", exec_cmd("$HOME/.config/hypr/scripts/RofiSearch.sh"), { descr
 bind(
   "SUPER CTRL",
   "S",
-  exec_cmd("$HOME/.config/hypr/scripts/RofiFocusedWallpaperLink.sh >/dev/null 2>&1 || true; rofi -show window"),
+  exec_cmd("$HOME/.config/hypr/scripts/RofiFocusedWallpaperLink.sh >/dev/null 2>&1 || true; rofi -show window -config $HOME/.config/hypr/rofi/config.rasi"),
   { description = "window switcher" }
 )
 bind("SUPER ALT", "O", exec_cmd("$HOME/.config/hypr/scripts/ChangeBlur.sh"), { description = "toggle blur" })

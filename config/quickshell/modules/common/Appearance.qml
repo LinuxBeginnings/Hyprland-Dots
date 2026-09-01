@@ -18,7 +18,7 @@ Singleton {
     property real transparency: 0.5
     property real contentTransparency: 0.1
     property real workpaceTransparency: 0.8
-    property string background_image: Directories.config + "/rofi/.current_wallpaper"
+    property string background_image: Directories.config + "/hypr/rofi/.current_wallpaper"
     
     m3colors: QtObject {
         property bool darkmode: true

@@ -12,15 +12,15 @@ terminal=kitty
 wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current"
 wallpaper_output="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_modified"
 wallpaper_base="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_base"
-wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper"
+wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/.current_wallpaper"
 SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 # shellcheck source=/dev/null
 . "$SCRIPTSDIR/WallpaperCmd.sh"
 focused_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
 per_monitor_wallpaper_base="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_base_${focused_monitor}"
 per_monitor_wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current_${focused_monitor}"
-per_monitor_wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper_${focused_monitor}"
-rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-wallpaper-effect.rasi"
+per_monitor_wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/.current_wallpaper_${focused_monitor}"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-wallpaper-effect.rasi"
 
 # Directory for swaync
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
@@ -82,6 +82,9 @@ no-effects() {
     notify-send -u low -i "$iDIR/ja.png" "No wallpaper" "effects applied"
     # copying wallpaper for rofi menu
     cp "$wallpaper_base" "$wallpaper_output"
+    if [ -x "$SCRIPTSDIR/WallustSwww.sh" ]; then
+        "$SCRIPTSDIR/WallustSwww.sh" "$wallpaper_base" >/dev/null 2>&1 || true
+    fi
 }
 
 # Function to run rofi menu
@@ -124,6 +127,9 @@ main() {
             resize_mode="$(wallpaper_resize_mode "$wallpaper_output" "$focused_monitor")"
             "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$wallpaper_output" "${SWWW_PARAMS[@]}"
             persist_wallpaper_state "$wallpaper_output"
+            if [ -x "$SCRIPTSDIR/WallustSwww.sh" ]; then
+                "$SCRIPTSDIR/WallustSwww.sh" "$wallpaper_output" >/dev/null 2>&1 || true
+            fi
             notify-send -u low -i "$iDIR/ja.png" "$choice" "effects applied"
         else
             echo "Effect '$choice' not recognized."

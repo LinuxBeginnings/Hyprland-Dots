@@ -9,7 +9,7 @@
 
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 layout_config="$config_home/hypr/UserConfigs/hyprview-layout.conf"
-rofi_theme="$config_home/rofi/config-edit.rasi"
+rofi_theme="$config_home/hypr/rofi/config-edit.rasi"
 default_layout="smartgrid"
 
 layouts=(

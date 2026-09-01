@@ -12,7 +12,7 @@
 
 # Variables
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
-rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-zsh-theme.rasi"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-zsh-theme.rasi"
 
 if [ -n "$(grep -i nixos < /etc/os-release)" ]; then
   notify-send -i "$iDIR/note.png" "NOT Supported" "Sorry NixOS does not support this KooL feature"

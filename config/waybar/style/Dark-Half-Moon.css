@@ -276,13 +276,13 @@ tooltip label {
   background: #0f1419;
   border-radius: 50px 50px 50px 50px;
   margin: 5px 5px 5px 0px;
-  padding: 5px 5px;
+  padding: 10px 10px;
 }
 
 #custom-power {
   color: #d2a6ff;
   background: #0f1419;
-  border-radius: 15px 50px 50px 50px;
+  border-radius: 50px 50px 50px 50px;
   margin: 5px 0px;
   padding: 2px 5px 2px 5px;
 }

@@ -41,7 +41,7 @@ monitor_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/Monitor_Profiles"
 target_conf="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/monitors.conf"
 target_lua_user="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/monitors.lua"
 target_lua_legacy="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/monitors.lua"
-rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-Monitors.rasi"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-Monitors.rasi"
 
 if [[ "$hypr_config_mode" == "lua" ]]; then
     profile_ext="lua"
