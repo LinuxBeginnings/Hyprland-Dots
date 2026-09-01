@@ -1,5 +1,44 @@
 # Changelog — KoolDots
 
+## v2.3.26.1
+
+## Fixed:
+
+- On upgrade waybar config/style got reset (fix 2)
+  -Eliminated possible race condition in `awww-daemon`
+- Thanks to: @hyperion-ak for the fixes
+- Removed dead code from `initial-boot.sh`
+  - Thanks to @silesai
+- LCD keyboard brightness controls
+- Gestures fix 2
+  - `copy.sh` was overwritting gesture changes
+- Race condition in `awww-daemon` caused it to crash
+  - Changed `break 2` to just `break`
+  - Fix is applied with `copy.sh` on updates
+- Some users reported only light mode
+  - Fixed `LightDark.sh` script
+- Improved handling of user started apps
+- `startup.lua` wasn't calling `LuaAutoReload.sh`
+- Fixed user defaults
+  - Setting `nautilus` as file manager still called Thunar
+- Couldn't exit specialworkspace
+- Waybar config getting changed on each boot
+- Gestures in LUA workflow
+- Fixed Quick settings not opening system keybinds file
+
+## Added:
+
+- Added keybinds to increase/decrease brightness
+  - `CTRL+ALT+`` the `-/+` keys
+- `.luarc.json` file to the LUA subdirs
+  - Some editors will report `undefined global hl`
+
+## Updated:
+
+- Re-added laptop keybinds for brightness
+
+---
+
 ## v2.3.26
 
 ## Added:
