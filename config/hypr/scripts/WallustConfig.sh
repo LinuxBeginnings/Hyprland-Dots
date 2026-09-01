@@ -26,6 +26,7 @@ wallust_prepare_args() {
   command -v wallust >/dev/null 2>&1 || return 0
   local wallust_cfg_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust"
   local legacy_wallust_cfg_dir="${XDG_CONFIG_HOME:-$HOME/.config}/wallust"
+  local wallust_templates_dir="$wallust_cfg_dir/templates"
   local v3_cfg=""
   local v3_kitty_cfg=""
   local v4_cfg=""
@@ -61,33 +62,33 @@ wallust_prepare_args() {
   # v4 prefers v4 configs; v3 uses wallust.toml.
   if [[ "$major" =~ ^[0-9]+$ ]] && [ "$major" -ge 4 ]; then
     if [ -n "$v4_cfg" ]; then
-      wallust_args=(-d "$wallust_cfg_dir" -C "$v4_cfg")
+      wallust_args=(--templates-dir "$wallust_templates_dir" -C "$v4_cfg")
     fi
     if [ -n "$v4_kitty_cfg" ]; then
-      wallust_kitty_args=(-d "$wallust_cfg_dir" -C "$v4_kitty_cfg")
+      wallust_kitty_args=(--templates-dir "$wallust_templates_dir" -C "$v4_kitty_cfg")
     fi
   else
     if [ -n "$v3_cfg" ]; then
-      wallust_args=(-d "$wallust_cfg_dir" -C "$v3_cfg")
+      wallust_args=(--templates-dir "$wallust_templates_dir" -C "$v3_cfg")
     fi
     if [ -n "$v3_kitty_cfg" ]; then
-      wallust_kitty_args=(-d "$wallust_cfg_dir" -C "$v3_kitty_cfg")
+      wallust_kitty_args=(--templates-dir "$wallust_templates_dir" -C "$v3_kitty_cfg")
     fi
   fi
 
   # Last-resort fallback: if version parsing failed, still prefer any migrated config.
   if [ "${#wallust_args[@]}" -eq 0 ]; then
     if [ -n "$v3_cfg" ]; then
-      wallust_args=(-d "$wallust_cfg_dir" -C "$v3_cfg")
+      wallust_args=(--templates-dir "$wallust_templates_dir" -C "$v3_cfg")
     elif [ -n "$v4_cfg" ]; then
-      wallust_args=(-d "$wallust_cfg_dir" -C "$v4_cfg")
+      wallust_args=(--templates-dir "$wallust_templates_dir" -C "$v4_cfg")
     fi
   fi
   if [ "${#wallust_kitty_args[@]}" -eq 0 ]; then
     if [ -n "$v3_kitty_cfg" ]; then
-      wallust_kitty_args=(-d "$wallust_cfg_dir" -C "$v3_kitty_cfg")
+      wallust_kitty_args=(--templates-dir "$wallust_templates_dir" -C "$v3_kitty_cfg")
     elif [ -n "$v4_kitty_cfg" ]; then
-      wallust_kitty_args=(-d "$wallust_cfg_dir" -C "$v4_kitty_cfg")
+      wallust_kitty_args=(--templates-dir "$wallust_templates_dir" -C "$v4_kitty_cfg")
     fi
   fi
 }
