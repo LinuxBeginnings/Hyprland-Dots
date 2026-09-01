@@ -27,14 +27,22 @@ elif [ -d "$USER_CONFIGS" ] && [ -d "$USER_CONFIGS_BAK" ]; then
     case $REPLY in
     1)
       echo "Backing up UserConfigs..."
-      rm -rf "$USER_CONFIGS_BAK"
+      ts="$(date +%Y%m%d_%H%M%S)"
+      if [ -d "$USER_CONFIGS_BAK" ]; then
+        mv "$USER_CONFIGS_BAK" "$HYPR_CONFIG_DIR/UserConfigsBak-$ts"
+        echo "Archived previous backup to UserConfigsBak-$ts."
+      fi
       mv "$USER_CONFIGS" "$USER_CONFIGS_BAK"
       echo "Done. UserConfigs moved to UserConfigsBak."
       break
       ;;
     2)
       echo "Restoring backup..."
-      rm -rf "$USER_CONFIGS"
+      ts="$(date +%Y%m%d_%H%M%S)"
+      if [ -d "$USER_CONFIGS" ]; then
+        mv "$USER_CONFIGS" "$HYPR_CONFIG_DIR/UserConfigs-prev-$ts"
+        echo "Archived current UserConfigs to UserConfigs-prev-$ts."
+      fi
       mv "$USER_CONFIGS_BAK" "$USER_CONFIGS"
       echo "Done. UserConfigsBak moved to UserConfigs."
       break

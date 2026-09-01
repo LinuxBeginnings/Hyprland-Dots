@@ -1339,10 +1339,10 @@ user_defaults_lines = [
     f"KOOLDOTS_DEFAULTS.search_engine = {lua_string(resolved_search_engine)}",
     f"KOOLDOTS_DEFAULTS.Search_Engine = {lua_string(resolved_search_engine)}",
 ]
-if has_active_hyprlang_content_py(user_defaults_path):
-    write_file(files_out["user_defaults"], user_defaults_lines)
-elif files_out["user_defaults"].exists():
+if files_out["user_defaults"].exists():
     print(f"[INFO] Preserving existing custom Lua user defaults file: {files_out['user_defaults']}")
+elif has_active_hyprlang_content_py(user_defaults_path):
+    write_file(files_out["user_defaults"], user_defaults_lines)
 else:
     write_file(files_out["user_defaults"], user_defaults_lines)
 
@@ -2322,6 +2322,41 @@ if not loaded_user_split then
 end
 LUA
 
+USER_CONFIGS_CONVERTED_CONFS=(
+  "01-UserDefaults.conf"
+  "ENVariables.conf"
+  "Laptops.conf"
+  "LayerRules.conf"
+  "Startup_Apps.conf"
+  "UserAnimations.conf"
+  "UserDecorations.conf"
+  "UserKeybinds.conf"
+  "UserSettings.conf"
+  "WindowRules.conf"
+)
+
+move_converted_user_confs_to_legacy() {
+  local source_dir="$1"
+  local legacy_dir="$2"
+  local moved=0
+  local conf_name src_file
+
+  [ -d "$source_dir" ] || return 0
+  mkdir -p "$legacy_dir"
+
+  for conf_name in "${USER_CONFIGS_CONVERTED_CONFS[@]}"; do
+    src_file="$source_dir/$conf_name"
+    if [ -f "$src_file" ]; then
+      mv "$src_file" "$legacy_dir/"
+      moved=1
+    fi
+  done
+
+  if [ "$moved" -eq 1 ]; then
+    echo "[OK] Moved UserConfigs converted *.conf -> $legacy_dir"
+  fi
+}
+
 move_conf_files_to_legacy() {
   local source_dir="$1"
   local legacy_dir="$2"
@@ -2359,32 +2394,32 @@ print_conversion_coverage_summary() {
   echo "[INFO] Migration coverage summary (Hyprland Lua mode):"
   cat <<SUMMARY
 [INFO]   Converted .conf -> .lua:
-[INFO]     - $DEST_MONITORS_CONF -> $DEST_LUA_MONITORS
-[INFO]     - $DEST_WORKSPACES_CONF -> $DEST_LUA_WORKSPACES
-[INFO]     - $SYSTEM_ENV_VARS -> $CONFIGS_DIR/system_env.lua
-[INFO]     - $SYSTEM_STARTUP_APPS -> $CONFIGS_DIR/system_startup.lua
-[INFO]     - $SYSTEM_WINDOW_RULES -> $CONFIGS_DIR/system_window_rules.lua
-[INFO]     - $SYSTEM_LAYER_RULES -> $CONFIGS_DIR/system_layer_rules.lua
-[INFO]     - $SYSTEM_KEYBINDS -> $CONFIGS_DIR/system_keybinds.lua
-[INFO]     - $SYSTEM_SETTINGS -> $CONFIGS_DIR/system_settings.lua
-[INFO]     - $SYSTEM_LAPTOPS -> $CONFIGS_DIR/system_laptops.lua
-[INFO]     - $USER_ENV_VARS -> $USER_CONFIGS_DIR/user_env.lua
-[INFO]     - $USER_STARTUP_APPS -> $USER_CONFIGS_DIR/user_startup.lua
-[INFO]     - $USER_WINDOW_RULES -> $USER_CONFIGS_DIR/user_window_rules.lua
-[INFO]     - $USER_LAYER_RULES -> $USER_CONFIGS_DIR/user_layer_rules.lua
-[INFO]     - $USER_KEYBINDS -> $USER_CONFIGS_DIR/user_keybinds.lua
-[INFO]     - $USER_SETTINGS -> $USER_CONFIGS_DIR/user_settings.lua
-[INFO]     - $USER_DECORATIONS -> $USER_CONFIGS_DIR/user_decorations.lua
-[INFO]     - $USER_ANIMATIONS -> $USER_CONFIGS_DIR/user_animations.lua
-[INFO]     - $USER_LAPTOPS -> $USER_CONFIGS_DIR/user_laptops.lua
-[INFO]     - $USER_CONFIGS_DIR/01-UserDefaults.conf -> $USER_CONFIGS_DIR/user_defaults.lua
+    - $DEST_MONITORS_CONF -> $DEST_LUA_MONITORS
+    - $DEST_WORKSPACES_CONF -> $DEST_LUA_WORKSPACES
+    - $SYSTEM_ENV_VARS -> $CONFIGS_DIR/system_env.lua
+    - $SYSTEM_STARTUP_APPS -> $CONFIGS_DIR/system_startup.lua
+    - $SYSTEM_WINDOW_RULES -> $CONFIGS_DIR/system_window_rules.lua
+    - $SYSTEM_LAYER_RULES -> $CONFIGS_DIR/system_layer_rules.lua
+    - $SYSTEM_KEYBINDS -> $CONFIGS_DIR/system_keybinds.lua
+    - $SYSTEM_SETTINGS -> $CONFIGS_DIR/system_settings.lua
+    - $SYSTEM_LAPTOPS -> $CONFIGS_DIR/system_laptops.lua
+    - $USER_ENV_VARS -> $USER_CONFIGS_DIR/user_env.lua
+    - $USER_STARTUP_APPS -> $USER_CONFIGS_DIR/user_startup.lua
+    - $USER_WINDOW_RULES -> $USER_CONFIGS_DIR/user_window_rules.lua
+    - $USER_LAYER_RULES -> $USER_CONFIGS_DIR/user_layer_rules.lua
+    - $USER_KEYBINDS -> $USER_CONFIGS_DIR/user_keybinds.lua
+    - $USER_SETTINGS -> $USER_CONFIGS_DIR/user_settings.lua
+    - $USER_DECORATIONS -> $USER_CONFIGS_DIR/user_decorations.lua
+    - $USER_ANIMATIONS -> $USER_CONFIGS_DIR/user_animations.lua
+    - $USER_LAPTOPS -> $USER_CONFIGS_DIR/user_laptops.lua
+    - $USER_CONFIGS_DIR/01-UserDefaults.conf -> $USER_CONFIGS_DIR/user_defaults.lua
 [INFO]   Intentionally native/template .conf files:
-[INFO]     - $DEST_HYPR_DIR/hypridle.conf
-[INFO]     - $DEST_HYPR_DIR/hyprlock.conf, hyprlock-1080p.conf, hyprlock-2k.conf
-[INFO]     - $DEST_HYPR_DIR/hyprland.conf (fallback/non-Lua entrypoint)
-[INFO]     - $DEST_HYPR_DIR/Monitor_Profiles/*.conf and $DEST_HYPR_DIR/animations/*.conf (preset profiles)
-[INFO]     - $USER_CONFIGS_DIR/kitty.conf, $USER_CONFIGS_DIR/ghostty.conf, $USER_CONFIGS_DIR/hyprview-layout.conf
-[INFO]     - $USER_CONFIGS_DIR/LaptopDisplay.conf and $USER_CONFIGS_DIR/WorkSpaceRules.conf (legacy/helper files)
+    - $DEST_HYPR_DIR/hypridle.conf
+    - $DEST_HYPR_DIR/hyprlock.conf, hyprlock-1080p.conf, hyprlock-2k.conf
+    - $DEST_HYPR_DIR/hyprland.conf (fallback/non-Lua entrypoint)
+    - $DEST_HYPR_DIR/Monitor_Profiles/*.conf and $DEST_HYPR_DIR/animations/*.conf (preset profiles)
+    - $USER_CONFIGS_DIR/kitty.conf, $USER_CONFIGS_DIR/ghostty.conf, $USER_CONFIGS_DIR/hyprview-layout.conf
+    - $USER_CONFIGS_DIR/LaptopDisplay.conf and $USER_CONFIGS_DIR/WorkSpaceRules.conf (legacy/helper files)
 SUMMARY
 }
 if [ -f "$DEST_HYPR_DIR/hypridle.conf" ]; then
@@ -2392,7 +2427,7 @@ if [ -f "$DEST_HYPR_DIR/hypridle.conf" ]; then
   sed -i "s|hyprctl dispatch dpms on|hyprctl dispatch hl.dsp.dpms '{ action = \"on\" }'|g" "$DEST_HYPR_DIR/hypridle.conf"
 fi
 
-move_conf_files_to_legacy "$USER_CONFIGS_DIR" "$USER_CONFIGS_LEGACY_DIR" "$USER_CONFIGS_DIR" "${USER_CONFIGS_PRESERVED_CONFS[@]}"
+move_converted_user_confs_to_legacy "$USER_CONFIGS_DIR" "$USER_CONFIGS_LEGACY_DIR"
 move_conf_files_to_legacy "$CONFIGS_DIR" "$CONFIGS_LEGACY_DIR" "$CONFIGS_DIR"
 print_conversion_coverage_summary
 
