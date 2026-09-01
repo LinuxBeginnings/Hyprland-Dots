@@ -650,6 +650,16 @@ restore_user_configs() {
         "UserSettings.conf"
         "workspaces.lua"
         "WindowRules.conf"
+        "user_animations.lua"
+        "user_decorations.lua"
+        "user_defaults.lua"
+        "user_env.lua"
+        "user_keybinds.lua"
+        "user_laptops.lua"
+        "user_layer_rules.lua"
+        "user_settings.lua"
+        "user_startup.lua"
+        "user_window_rules.lua"
       )
 
       for FILE_NAME in "${FILES_TO_RESTORE[@]}"; do

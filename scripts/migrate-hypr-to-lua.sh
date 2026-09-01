@@ -200,8 +200,8 @@ ensure_template_for_empty_user_conf() {
     return 0
   fi
 
-  if [ -f "$target_lua" ] && ! lua_file_is_generated "$target_lua"; then
-    echo "[INFO] Preserving customized Lua file for empty/default source: $target_lua"
+  if [ -f "$target_lua" ]; then
+    echo "[INFO] Preserving existing Lua file for empty/default source: $target_lua"
     return 0
   fi
 
@@ -487,9 +487,9 @@ def latest_legacy_file(path):
             candidates.append(candidate)
     return candidates[-1] if candidates else None
 
-def parse_env(path):
+def parse_env(path, allow_legacy=True):
     entries = []
-    source_path = path if path.exists() else latest_legacy_file(path)
+    source_path = path if path.exists() else (latest_legacy_file(path) if allow_legacy else None)
     if source_path is None:
         return entries
     if source_path != path:
@@ -1309,8 +1309,8 @@ if system_laptops_path.exists():
 keybinds = parse_keybinds(keybinds_path, variables=dict(base_keybind_vars))
 if laptops_path.exists():
     keybinds.extend(parse_keybinds(laptops_path, variables=dict(base_keybind_vars)))
-system_env_entries = parse_env(system_env_path)
-env_entries = parse_env(env_path)
+system_env_entries = parse_env(system_env_path, allow_legacy=True)
+env_entries = parse_env(env_path, allow_legacy=not files_out["env"].exists())
 system_startup_entries = parse_startup(system_startup_path, variables=dict(base_keybind_vars))
 startup_entries = parse_startup(startup_path, variables=dict(base_keybind_vars))
 monitor_entries = parse_monitors(monitors_conf_path)
