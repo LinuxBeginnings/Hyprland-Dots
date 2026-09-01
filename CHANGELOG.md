@@ -1,13 +1,11 @@
 # Changelog — KoolDots
 
-
 ## v2.3.26.2
 
 ## Fixed:
 
-- Keyboard settings weren't saved
-  - Defaulted to `us`
-  - Added: support for KB variant and model
+- KB layout settings not set in `user_settings.lua`
+  - Added: Prompts for KB variant and model
 
 
 ---- 

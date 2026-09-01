@@ -29,9 +29,9 @@ hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 -- Fix for missing mime-info database error
 local current_data_dirs = os.getenv("XDG_DATA_DIRS") or ""
 if not current_data_dirs:find("/usr/share") then
-  local new_data_dirs = "/usr/local/share:/usr/share"
-  if current_data_dirs ~= "" then
-    new_data_dirs = new_data_dirs .. ":" .. current_data_dirs
-  end
-  hl.env("XDG_DATA_DIRS", new_data_dirs)
+	local new_data_dirs = "/usr/local/share:/usr/share"
+	if current_data_dirs ~= "" then
+		new_data_dirs = new_data_dirs .. ":" .. current_data_dirs
+	end
+	hl.env("XDG_DATA_DIRS", new_data_dirs)
 end
