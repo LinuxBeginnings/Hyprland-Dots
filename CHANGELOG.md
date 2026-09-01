@@ -15,6 +15,15 @@
 - KB layout settings not set in `user_settings.lua`
   - Added: Prompts for KB variant and model
 
+
+## Added: 
+
+- More examples in `.config/hypr/UserConfigs/user_keybinds.lua`
+  - Showing how to add or rebind keybinds 
+
+
+
+
 ---
 
 ## v2.3.26.1
