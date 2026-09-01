@@ -34,23 +34,23 @@ kmeans = { k = 16, min_dist = 10.0 }
 threshold = 11
 
 [templates]
-cava.template = '~/.config/hypr/wallust/templates/colors-cava'
+cava.template = 'colors-cava'
 cava.target = '~/.config/cava/config'
 
-hypr.template = '~/.config/hypr/wallust/templates/colors-hyprland.conf'
+hypr.template = 'colors-hyprland.conf'
 hypr.target = '~/.config/hypr/wallust/wallust-hyprland.conf'
 
-rofi.template = '~/.config/hypr/wallust/templates/colors-rofi.rasi'
+rofi.template = 'colors-rofi.rasi'
 rofi.target = '~/.config/hypr/rofi/wallust/colors-rofi.rasi'
 
-waybar.template = '~/.config/hypr/wallust/templates/colors-waybar.css'
+waybar.template = 'colors-waybar.css'
 waybar.target = '~/.config/waybar/wallust/colors-waybar.css'
 
-ghostty.template = '~/.config/hypr/wallust/templates/colors-ghostty.conf'
+ghostty.template = 'colors-ghostty.conf'
 ghostty.target = '~/.config/ghostty/wallust.conf'
 
-quickshell.template = '~/.config/hypr/wallust/templates/qml_color.json'
+quickshell.template = 'qml_color.json'
 quickshell.target = '~/.config/quickshell/qml_color.json'
 
-nwg-dock.template = '~/.config/hypr/wallust/templates/colors-nwg-dock.css'
+nwg-dock.template = 'colors-nwg-dock.css'
 nwg-dock.target = '~/.config/nwg-dock-hyprland/wallust/colors-wallust.css'
