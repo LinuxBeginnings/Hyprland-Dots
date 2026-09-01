@@ -73,10 +73,15 @@ copy_phase1() {
 
 copy_waybar() {
   local log="$1"
+  local run_mode="${2:-${RUN_MODE:-}}"
   local base="${DOTFILES_DIR:-.}"
   local DIRW="waybar"
   local DIRPATHw="${XDG_CONFIG_HOME:-$HOME/.config}/$DIRW"
   if [ -d "$DIRPATHw" ]; then
+    if [ "$run_mode" = "express" ]; then
+      echo -e "${NOTE:-[NOTE]} - Express mode: keeping existing ${YELLOW:-}$DIRW${RESET:-} config." 2>&1 | tee -a "$log"
+      return 0
+    fi
     while true; do
       echo -n "${CAT:-[ACTION]} Do you want to replace ${YELLOW:-}$DIRW${RESET:-} config? (y/n): "
       read DIR1_CHOICE
@@ -366,32 +371,32 @@ restore_hypr_assets() {
 
     # Keep monitor/workspace state across upgrades, including express mode.
     if [ "${RUN_MODE:-}" != "install" ]; then
-      if [ "$backup_mode" = "lua" ]; then
-        local LUA_USER_DIR="$HYPR_DIR/UserConfigs"
-        mkdir -p "$LUA_USER_DIR"
+      local LUA_USER_DIR="$HYPR_DIR/UserConfigs"
+      mkdir -p "$LUA_USER_DIR"
 
-        local BACKUP_LUA_MONITORS=""
-        local BACKUP_LUA_WORKSPACES=""
-        if [ -f "$BACKUP_HYPR_PATH/UserConfigs/monitors.lua" ]; then
-          BACKUP_LUA_MONITORS="$BACKUP_HYPR_PATH/UserConfigs/monitors.lua"
-        elif [ -f "$BACKUP_HYPR_PATH/lua/monitors.lua" ]; then
-          BACKUP_LUA_MONITORS="$BACKUP_HYPR_PATH/lua/monitors.lua"
-        fi
-        if [ -f "$BACKUP_HYPR_PATH/UserConfigs/workspaces.lua" ]; then
-          BACKUP_LUA_WORKSPACES="$BACKUP_HYPR_PATH/UserConfigs/workspaces.lua"
-        elif [ -f "$BACKUP_HYPR_PATH/lua/workspaces.lua" ]; then
-          BACKUP_LUA_WORKSPACES="$BACKUP_HYPR_PATH/lua/workspaces.lua"
-        fi
+      local BACKUP_LUA_MONITORS=""
+      local BACKUP_LUA_WORKSPACES=""
+      if [ -f "$BACKUP_HYPR_PATH/UserConfigs/monitors.lua" ]; then
+        BACKUP_LUA_MONITORS="$BACKUP_HYPR_PATH/UserConfigs/monitors.lua"
+      elif [ -f "$BACKUP_HYPR_PATH/lua/monitors.lua" ]; then
+        BACKUP_LUA_MONITORS="$BACKUP_HYPR_PATH/lua/monitors.lua"
+      fi
+      if [ -f "$BACKUP_HYPR_PATH/UserConfigs/workspaces.lua" ]; then
+        BACKUP_LUA_WORKSPACES="$BACKUP_HYPR_PATH/UserConfigs/workspaces.lua"
+      elif [ -f "$BACKUP_HYPR_PATH/lua/workspaces.lua" ]; then
+        BACKUP_LUA_WORKSPACES="$BACKUP_HYPR_PATH/lua/workspaces.lua"
+      fi
 
-        if [ -n "$BACKUP_LUA_MONITORS" ]; then
-          cp -f "$BACKUP_LUA_MONITORS" "$LUA_USER_DIR/monitors.lua" 2>&1 | tee -a "$log"
-          echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/monitors.lua${RESET:-}" 2>&1 | tee -a "$log"
-        fi
-        if [ -n "$BACKUP_LUA_WORKSPACES" ]; then
-          cp -f "$BACKUP_LUA_WORKSPACES" "$LUA_USER_DIR/workspaces.lua" 2>&1 | tee -a "$log"
-          echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/workspaces.lua${RESET:-}" 2>&1 | tee -a "$log"
-        fi
-      else
+      if [ -n "$BACKUP_LUA_MONITORS" ]; then
+        cp -f "$BACKUP_LUA_MONITORS" "$LUA_USER_DIR/monitors.lua" 2>&1 | tee -a "$log"
+        echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/monitors.lua${RESET:-}" 2>&1 | tee -a "$log"
+      fi
+      if [ -n "$BACKUP_LUA_WORKSPACES" ]; then
+        cp -f "$BACKUP_LUA_WORKSPACES" "$LUA_USER_DIR/workspaces.lua" 2>&1 | tee -a "$log"
+        echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/workspaces.lua${RESET:-}" 2>&1 | tee -a "$log"
+      fi
+
+      if [ "$backup_mode" != "lua" ]; then
         local FILE_B=("monitors.conf" "workspaces.conf")
         for FILE_RESTORE in "${FILE_B[@]}"; do
           local BACKUP_FILE="$BACKUP_HYPR_PATH/$FILE_RESTORE"

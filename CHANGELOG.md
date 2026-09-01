@@ -9,6 +9,7 @@
 
 ## Fixed:
 
+- `copy.sh` was overwriting `UserConfigs/monitor.lua`
 - `Dark-Moon.css` Corrected inconsistent rounding
 
 ---

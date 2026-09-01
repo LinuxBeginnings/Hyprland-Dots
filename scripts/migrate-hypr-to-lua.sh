@@ -50,6 +50,9 @@ DEST_LUA_WORKSPACES="$DEST_HYPR_DIR/lua/workspaces.lua"
 SOURCE_LUA_ENTRY_ENABLED="$SRC_HYPR_DIR/hyprland.lua"
 SOURCE_LUA_ENTRY_DISABLED="$SRC_HYPR_DIR/hyprland.lua.disable"
 SRC_USER_LUA_TEMPLATES_DIR="$SRC_HYPR_DIR/UserConfigs"
+SRC_MONITORS_CONF="$SRC_HYPR_DIR/monitors.conf"
+SRC_WORKSPACES_CONF="$SRC_HYPR_DIR/workspaces.conf"
+SRC_USER_LUA_MONITORS="$SRC_USER_LUA_TEMPLATES_DIR/monitors.lua"
 DEST_LUA_ENTRY="$DEST_HYPR_DIR/hyprland.lua"
 DEST_LUA_ENTRY_DISABLED="$DEST_HYPR_DIR/hyprland.lua.disable"
 SOURCE_LUA_ENTRY=""
@@ -216,6 +219,7 @@ ensure_templates_for_empty_user_configs() {
   ensure_template_for_empty_user_conf "$USER_ANIMATIONS" "$USER_CONFIGS_DIR/user_animations.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_animations.lua"
   ensure_template_for_empty_user_conf "$USER_LAPTOPS" "$USER_CONFIGS_DIR/user_laptops.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_laptops.lua"
   ensure_template_for_empty_user_conf "$USER_CONFIGS_DIR/01-UserDefaults.conf" "$USER_CONFIGS_DIR/user_defaults.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_defaults.lua"
+  ensure_template_for_empty_user_conf "$DEST_MONITORS_CONF" "$DEST_LUA_MONITORS" "$SRC_USER_LUA_MONITORS"
 }
 
 if [ "$YES" -eq 0 ]; then
@@ -361,7 +365,10 @@ python3 - \
   "$DEST_MONITORS_CONF" \
   "$DEST_LUA_MONITORS" \
   "$DEST_WORKSPACES_CONF" \
-  "$DEST_LUA_WORKSPACES" <<'PY'
+  "$DEST_LUA_WORKSPACES" \
+  "$SRC_MONITORS_CONF" \
+  "$SRC_WORKSPACES_CONF" \
+  "$SRC_USER_LUA_MONITORS" <<'PY'
 import os
 import re
 import sys
@@ -396,6 +403,9 @@ monitors_conf_path = Path(sys.argv[20])
 monitors_lua_path = Path(sys.argv[21])
 workspaces_conf_path = Path(sys.argv[22])
 workspaces_lua_path = Path(sys.argv[23])
+src_monitors_conf_path = Path(sys.argv[24]) if len(sys.argv) > 24 else None
+src_workspaces_conf_path = Path(sys.argv[25]) if len(sys.argv) > 25 else None
+src_user_lua_monitors_path = Path(sys.argv[26]) if len(sys.argv) > 26 else None
 
 files_out = {
     "system_env": system_configs_dir / "system_env.lua",
@@ -1311,7 +1321,34 @@ user_defaults_lines = [
 ]
 write_file(files_out["user_defaults"], user_defaults_lines)
 
-if monitor_entries:
+def files_match(p1, p2):
+    if p1 is None or p2 is None or not p1.exists() or not p2.exists():
+        return False
+    try:
+        return p1.read_text(encoding="utf-8", errors="ignore").strip() == p2.read_text(encoding="utf-8", errors="ignore").strip()
+    except Exception:
+        return False
+
+def lua_file_is_generated(lua_path):
+    if lua_path is None or not lua_path.exists():
+        return False
+    try:
+        content = lua_path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return False
+    return any(marker in content for marker in [
+        "auto-generated",
+        "Converted from",
+        "No active entries were found",
+        "Source reference from",
+    ])
+
+if files_out["monitors"].exists() and (
+    files_match(monitors_conf_path, src_monitors_conf_path)
+    or not lua_file_is_generated(files_out["monitors"])
+):
+    print(f"[INFO] Preserving existing custom Lua monitors file: {files_out['monitors']}")
+elif monitor_entries and not files_match(monitors_conf_path, src_monitors_conf_path):
     monitor_lines = [
         "-- Monitors migrated from monitors.conf (auto-generated).",
         "-- Edit monitors.conf and rerun scripts/migrate-hypr-to-lua.sh to regenerate this file.",
@@ -1321,9 +1358,19 @@ if monitor_entries:
         monitor_lines.append(emit_monitor(spec))
         monitor_lines.append("")
     write_file(files_out["monitors"], monitor_lines)
+elif not files_out["monitors"].exists():
+    if src_user_lua_monitors_path and src_user_lua_monitors_path.exists():
+        files_out["monitors"].write_text(src_user_lua_monitors_path.read_text(encoding="utf-8"), encoding="utf-8")
+        print(f"[OK] Ensured default monitors template: {files_out['monitors']}")
 else:
-    print(f"[INFO] No active monitor entries found in {monitors_conf_path}; keeping existing {files_out['monitors']}")
-if workspace_entries:
+    print(f"[INFO] Keeping existing {files_out['monitors']}")
+
+if files_out["workspaces"].exists() and (
+    files_match(workspaces_conf_path, src_workspaces_conf_path)
+    or not lua_file_is_generated(files_out["workspaces"])
+):
+    print(f"[INFO] Preserving existing custom Lua workspaces file: {files_out['workspaces']}")
+elif workspace_entries and not files_match(workspaces_conf_path, src_workspaces_conf_path):
     workspace_lines = [
         "-- Workspace rules migrated from workspaces.conf (auto-generated).",
         "-- Edit workspaces.conf and rerun scripts/migrate-hypr-to-lua.sh to regenerate this file.",
@@ -1334,7 +1381,7 @@ if workspace_entries:
         workspace_lines.append("")
     write_file(files_out["workspaces"], workspace_lines)
 else:
-    print(f"[INFO] No active workspace rules found in {workspaces_conf_path}; keeping existing {files_out['workspaces']}")
+    print(f"[INFO] Keeping existing {files_out['workspaces']}")
 system_env_lines = [
     "-- System defaults migrated from configs/ENVariables.conf (auto-generated).",
     "-- Edit this file to keep your previous configs/ ENVariables customizations in Lua mode.",
