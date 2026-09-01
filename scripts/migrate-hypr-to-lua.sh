@@ -46,13 +46,14 @@ USER_OVERRIDES_SHIM="$DEST_HYPR_DIR/lua/user_overrides.lua"
 DEST_MONITORS_CONF="$DEST_HYPR_DIR/monitors.conf"
 DEST_LUA_MONITORS="$USER_CONFIGS_DIR/monitors.lua"
 DEST_WORKSPACES_CONF="$DEST_HYPR_DIR/workspaces.conf"
-DEST_LUA_WORKSPACES="$DEST_HYPR_DIR/lua/workspaces.lua"
+DEST_LUA_WORKSPACES="$USER_CONFIGS_DIR/workspaces.lua"
 SOURCE_LUA_ENTRY_ENABLED="$SRC_HYPR_DIR/hyprland.lua"
 SOURCE_LUA_ENTRY_DISABLED="$SRC_HYPR_DIR/hyprland.lua.disable"
 SRC_USER_LUA_TEMPLATES_DIR="$SRC_HYPR_DIR/UserConfigs"
 SRC_MONITORS_CONF="$SRC_HYPR_DIR/monitors.conf"
 SRC_WORKSPACES_CONF="$SRC_HYPR_DIR/workspaces.conf"
 SRC_USER_LUA_MONITORS="$SRC_USER_LUA_TEMPLATES_DIR/monitors.lua"
+SRC_USER_LUA_WORKSPACES="$SRC_USER_LUA_TEMPLATES_DIR/workspaces.lua"
 DEST_LUA_ENTRY="$DEST_HYPR_DIR/hyprland.lua"
 DEST_LUA_ENTRY_DISABLED="$DEST_HYPR_DIR/hyprland.lua.disable"
 SOURCE_LUA_ENTRY=""
@@ -220,6 +221,7 @@ ensure_templates_for_empty_user_configs() {
   ensure_template_for_empty_user_conf "$USER_LAPTOPS" "$USER_CONFIGS_DIR/user_laptops.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_laptops.lua"
   ensure_template_for_empty_user_conf "$USER_CONFIGS_DIR/01-UserDefaults.conf" "$USER_CONFIGS_DIR/user_defaults.lua" "$SRC_USER_LUA_TEMPLATES_DIR/user_defaults.lua"
   ensure_template_for_empty_user_conf "$DEST_MONITORS_CONF" "$DEST_LUA_MONITORS" "$SRC_USER_LUA_MONITORS"
+  ensure_template_for_empty_user_conf "$DEST_WORKSPACES_CONF" "$DEST_LUA_WORKSPACES" "$SRC_USER_LUA_WORKSPACES"
 }
 
 if [ "$YES" -eq 0 ]; then
@@ -368,7 +370,8 @@ python3 - \
   "$DEST_LUA_WORKSPACES" \
   "$SRC_MONITORS_CONF" \
   "$SRC_WORKSPACES_CONF" \
-  "$SRC_USER_LUA_MONITORS" <<'PY'
+  "$SRC_USER_LUA_MONITORS" \
+  "$SRC_USER_LUA_WORKSPACES" <<'PY'
 import os
 import re
 import sys
@@ -406,6 +409,7 @@ workspaces_lua_path = Path(sys.argv[23])
 src_monitors_conf_path = Path(sys.argv[24]) if len(sys.argv) > 24 else None
 src_workspaces_conf_path = Path(sys.argv[25]) if len(sys.argv) > 25 else None
 src_user_lua_monitors_path = Path(sys.argv[26]) if len(sys.argv) > 26 else None
+src_user_lua_workspaces_path = Path(sys.argv[27]) if len(sys.argv) > 27 else None
 
 files_out = {
     "system_env": system_configs_dir / "system_env.lua",
@@ -1397,6 +1401,10 @@ elif workspace_entries and not files_match(workspaces_conf_path, src_workspaces_
         workspace_lines.append(emit_workspace_rule(spec))
         workspace_lines.append("")
     write_file(files_out["workspaces"], workspace_lines)
+elif not files_out["workspaces"].exists():
+    if src_user_lua_workspaces_path and src_user_lua_workspaces_path.exists():
+        files_out["workspaces"].write_text(src_user_lua_workspaces_path.read_text(encoding="utf-8"), encoding="utf-8")
+        print(f"[OK] Ensured default workspaces template: {files_out['workspaces']}")
 else:
     print(f"[INFO] Keeping existing {files_out['workspaces']}")
 system_env_lines = [

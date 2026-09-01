@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- Changes to workspace layouts wasn't persistent 
 - Animation selected not loading in LUA config
   - Also some animation files had invalid settings
 - KB layout settings not set in `user_settings.lua`
