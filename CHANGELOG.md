@@ -1,5 +1,17 @@
 # Changelog — KoolDots
 
+
+## v2.3.26.2
+
+## Fixed:
+
+- Keyboard settings weren't saved
+  - Defaulted to `us`
+  - Added: support for KB variant and model
+
+
+---- 
+
 ## v2.3.26.1
 
 ## Fixed:
