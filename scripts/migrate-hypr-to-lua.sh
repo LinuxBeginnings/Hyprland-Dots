@@ -2033,6 +2033,51 @@ else:
     window_lines.append("-- No active window rules were found in WindowRules.conf.")
     write_file(files_out["window_rules"], window_lines)
 
+layer_lines = [
+    "-- User layer rule overrides (auto-generated).",
+    "-- Add your own rules with apply_layer_rule({...})",
+    "-- Example:",
+    "-- apply_layer_rule({",
+    "--   name = \"My Layer Rule\",",
+    "--   match = { namespace = \"rofi\" },",
+    "--   blur = true,",
+    "-- })",
+    "",
+    "local user_layer_rules_helper = nil",
+    "do",
+    "  local source = (debug.getinfo(1, \"S\") or {}).source or \"\"",
+    "  local source_path = source:match(\"^@(.+)$\")",
+    "  local source_dir = source_path and source_path:match(\"^(.*)/[^/]+$\") or nil",
+    "  local home = os.getenv(\"HOME\") or \"\"",
+    "  local candidate_paths = {",
+    "    source_dir and (source_dir .. \"/../lua/user_layer_rules_helper.lua\") or nil,",
+    "    home ~= \"\" and (home .. \"/.config/hypr/lua/user_layer_rules_helper.lua\") or nil,",
+    "    home ~= \"\" and (home .. \"/.config/hypr/user_layer_rules_helper.lua\") or nil,",
+    "  }",
+    "",
+    "  local tried_paths = {}",
+    "  for _, helper_path in ipairs(candidate_paths) do",
+    "    if helper_path then",
+    "      table.insert(tried_paths, helper_path)",
+    "      local f = io.open(helper_path, \"r\")",
+    "      if f then",
+    "        f:close()",
+    "        local loaded_ok, loaded_helpers = pcall(dofile, helper_path)",
+    "        if loaded_ok and type(loaded_helpers) == \"table\" and loaded_helpers.apply_layer_rule then",
+    "          user_layer_rules_helper = loaded_helpers",
+    "          break",
+    "        end",
+    "      end",
+    "    end",
+    "  end",
+    "",
+    "  if not user_layer_rules_helper then",
+    "    error(\"Failed to load user_layer_rules_helper.lua from: \" .. table.concat(tried_paths, \", \"))",
+    "  end",
+    "end",
+    "local apply_layer_rule = user_layer_rules_helper.apply_layer_rule",
+    "",
+]
 if files_out["layer_rules"].exists():
     print(f"[INFO] Preserving existing custom Lua layer rules file: {files_out['layer_rules']}")
 elif layer_rules:
@@ -2075,13 +2120,13 @@ keybind_lines = [
     "local user_keybinds_helper = nil",
     "do",
     "  local source = (debug.getinfo(1, \"S\") or {}).source or \"\"",
-    "  local source_path = source:match(\"^@(.+)$\\\")",
-    "  local source_dir = source_path and source_path:match(\"^(.*)/[^/]+$\\\") or nil",
+    "  local source_path = source:match(\"^@(.+)$\")",
+    "  local source_dir = source_path and source_path:match(\"^(.*)/[^/]+$\") or nil",
     "  local home = os.getenv(\"HOME\") or \"\"",
     "  local candidate_paths = {",
-    "    source_dir and (source_dir .. \"/../lua/user_keybinds_helper.lua\\\") or nil,",
-    "    home ~= \"\" and (home .. \"/.config/hypr/lua/user_keybinds_helper.lua\\\") or nil,",
-    "    home ~= \"\" and (home .. \"/.config/hypr/user_keybinds_helper.lua\\\") or nil,",
+    "    source_dir and (source_dir .. \"/../lua/user_keybinds_helper.lua\") or nil,",
+    "    home ~= \"\" and (home .. \"/.config/hypr/lua/user_keybinds_helper.lua\") or nil,",
+    "    home ~= \"\" and (home .. \"/.config/hypr/user_keybinds_helper.lua\") or nil,",
     "  }",
     "",
     "  local tried_paths = {}",
@@ -2286,7 +2331,10 @@ for name, source in [
 PY
 ensure_templates_for_empty_user_configs
 
-cat > "$USER_OVERRIDES_SHIM" <<'LUA'
+if [ -f "$SRC_HYPR_DIR/lua/user_overrides.lua" ]; then
+  cp -f "$SRC_HYPR_DIR/lua/user_overrides.lua" "$USER_OVERRIDES_SHIM"
+else
+  cat > "$USER_OVERRIDES_SHIM" <<'LUA'
 -- ==================================================
 --  KoolDots (2026)
 --  Project URL: https://github.com/LinuxBeginnings
@@ -2300,17 +2348,58 @@ local hyprDir = configHome .. "/hypr"
 local systemDir = hyprDir .. "/configs"
 local userDir = configHome .. "/hypr/UserConfigs"
 
+local function has_kvantum_qml_module()
+  local cmd = "find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/kvantum' -print -quit 2>/dev/null"
+  local pipe = io.popen(cmd, "r")
+  if not pipe then
+    return false
+  end
+  local output = pipe:read("*a") or ""
+  pipe:close()
+  return output:match("%S") ~= nil
+end
+
+local function has_hyprland_qml_style_module()
+  local cmd = "find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/org/hyprland/style' -print -quit 2>/dev/null"
+  local pipe = io.popen(cmd, "r")
+  if not pipe then
+    return false
+  end
+  local output = pipe:read("*a") or ""
+  pipe:close()
+  return output:match("%S") ~= nil
+end
+
+local function apply_qt_style_fallbacks()
+  if not hl or not hl.env then
+    return
+  end
+
+  if not has_kvantum_qml_module() then
+    local style_override = (os.getenv("QT_STYLE_OVERRIDE") or ""):lower()
+    if style_override == "kvantum" or style_override == "kvantum-dark" then
+      hl.env("QT_STYLE_OVERRIDE", "Fusion")
+    end
+  end
+  if not has_hyprland_qml_style_module() then
+    local quick_controls = (os.getenv("QT_QUICK_CONTROLS_STYLE") or ""):lower()
+    if quick_controls == "" or quick_controls == "org.hyprland.style" then
+      hl.env("QT_QUICK_CONTROLS_STYLE", "Basic")
+    end
+  end
+end
+
 local function load_optional(path)
   local ok, err = pcall(dofile, path)
   if ok then
     return true
   end
-  if err and tostring(err):find("No such file or directory", 1, true) ~= nil then
-    return false
+  if err and tostring(err):find("No such file or directory", 1, true) == nil then
+    print("[WARN] Unable to load user override file " .. path .. ": " .. tostring(err))
   end
-  print("[WARN] Unable to load user override file " .. path .. ": " .. tostring(err))
   return false
 end
+local loaded_user_split = false
 
 local system_files = {
   "system_env.lua",
@@ -2328,7 +2417,6 @@ for _, file in ipairs(system_files) do
     load_optional(legacy)
   end
 end
-local loaded_user_split = false
 
 local user_files = {
   "user_env.lua",
@@ -2348,9 +2436,104 @@ for _, file in ipairs(user_files) do
   end
 end
 if not loaded_user_split then
-  load_optional(userDir .. "/user_overrides.lua") -- backward compatibility with older single-file overrides
+  load_optional(userDir .. "/user_overrides.lua") -- legacy single-file support
+end
+apply_qt_style_fallbacks()
+
+-- Legacy compatibility: import UserKeybinds.conf when user_keybinds.lua is missing.
+do
+  local userKeybindsLua = userDir .. "/user_keybinds.lua"
+  local legacyUserKeybinds = userDir .. "/UserKeybinds.conf"
+
+  local hasUserLua = io.open(userKeybindsLua, "r")
+  if hasUserLua then
+    hasUserLua:close()
+  else
+    local legacy = io.open(legacyUserKeybinds, "r")
+    if legacy then
+      local function trim(value)
+        return (value or ""):gsub("^%s+", ""):gsub("%s+$", "")
+      end
+      local function strip_inline_comment(value)
+        return trim((value or ""):gsub("%s+#.*$", ""))
+      end
+      local function load_vars_from_file(path, vars)
+        local handle = io.open(path, "r")
+        if not handle then
+          return
+        end
+        for raw in handle:lines() do
+          local line = trim(raw)
+          if line ~= "" and not line:match("^#") then
+            local name, val = line:match("^%$([%w_]+)%s*=%s*(.+)$")
+            if name and val then
+              vars[name] = strip_inline_comment(val)
+            end
+          end
+        end
+        handle:close()
+      end
+      local vars = {}
+      local raw_lines = {}
+      local configDir = configHome .. "/hypr/configs"
+      local defaultsFile = userDir .. "/01-UserDefaults.conf"
+      local keybindsFile = configDir .. "/Keybinds.conf"
+      local systemSettingsFile = configDir .. "/SystemSettings.conf"
+
+      load_vars_from_file(systemSettingsFile, vars)
+      load_vars_from_file(keybindsFile, vars)
+      load_vars_from_file(defaultsFile, vars)
+
+      for line in legacy:lines() do
+        table.insert(raw_lines, line)
+        local trimmed = trim(line)
+        if trimmed ~= "" and not trimmed:match("^#") then
+          local var_name, var_value = trimmed:match("^%$([%w_]+)%s*=%s*(.+)$")
+          if var_name and var_value then
+            vars[var_name] = strip_inline_comment(var_value)
+          end
+        end
+      end
+      legacy:close()
+
+      local function expand_vars(value)
+        value = tostring(value or "")
+        for _ = 1, 8 do
+          local changed = false
+          value = value:gsub("%$([%w_]+)", function(name)
+            local replacement = vars[name]
+            if replacement ~= nil then
+              changed = true
+              return replacement
+            end
+            return "$" .. name
+          end)
+          if not changed then
+            break
+          end
+        end
+        return value
+      end
+
+      for _, line in ipairs(raw_lines) do
+        local trimmed = trim(line)
+        if trimmed ~= "" and not trimmed:match("^#") then
+          local keyword, value = trimmed:match("^([%w_]+)%s*=%s*(.+)$")
+          if keyword and value and (keyword:match("^bind") or keyword == "unbind") then
+            local expanded = expand_vars(value)
+            local cmd = "hyprctl keyword " .. keyword .. " " .. string.format("%q", expanded)
+            local ok = os.execute(cmd)
+            if not ok then
+              print("[WARN] Failed to apply legacy keybind via: " .. cmd)
+            end
+          end
+        end
+      end
+    end
+  end
 end
 LUA
+fi
 
 USER_CONFIGS_CONVERTED_CONFS=(
   "01-UserDefaults.conf"

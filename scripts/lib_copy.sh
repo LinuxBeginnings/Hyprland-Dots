@@ -277,6 +277,16 @@ ensure_lua_keybinds() {
     done < <(find "$src_dir" -maxdepth 1 -type f -name '*.lua' -print0)
   done
 
+  # Sync root-level lua metadata and config files if present
+  for root_lua in "$src_root"/*.lua; do
+    [ -f "$root_lua" ] || continue
+    local root_lua_name
+    root_lua_name="$(basename "$root_lua")"
+    if [ "$root_lua_name" != "hyprland.lua.disable" ]; then
+      cp -f "$root_lua" "$dst_root/$root_lua_name" 2>&1 | tee -a "$log" || true
+    fi
+  done
+
   # Patch existing user and system lua configs to fix startup readiness race condition
   for f in "$dst_root/UserConfigs"/*.lua "$dst_root/configs"/*.lua "$dst_root/lua"/*.lua; do
     [ -f "$f" ] || continue

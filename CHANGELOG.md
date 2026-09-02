@@ -22,6 +22,7 @@
 
 ## Added:
 
+- More defensive code for migration to lua
 - More examples in `.config/hypr/UserConfigs/user_keybinds.lua`
   - Showing how to add or rebind keybinds
 
