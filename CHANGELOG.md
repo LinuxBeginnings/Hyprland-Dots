@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- DropDownterminal warping you to another workspace 
 - Changes to `user_keybinds.lua` not loading
 - swaync: missing semicolons in style.css
   - Thx to `@yperion-akhyperion-ak` for fix
