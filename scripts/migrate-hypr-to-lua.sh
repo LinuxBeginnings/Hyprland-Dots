@@ -348,6 +348,12 @@ fi
 rm -rf "$DEST_HYPR_DIR/lua"
 cp -a "$SRC_HYPR_DIR/lua" "$DEST_HYPR_DIR/lua"
 mkdir -p "$USER_CONFIGS_DIR" "$CONFIGS_DIR"
+if [ -d "$SRC_HYPR_DIR/configs" ]; then
+  for src_lua in "$SRC_HYPR_DIR/configs/"*.lua; do
+    [ -f "$src_lua" ] || continue
+    cp -f "$src_lua" "$CONFIGS_DIR/"
+  done
+fi
 python3 - \
   "$CONFIGS_DIR" \
   "$USER_CONFIGS_DIR" \

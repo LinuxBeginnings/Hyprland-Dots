@@ -4,7 +4,8 @@
 
 ## Fixed:
 
-- `SUPER+CTRL L/R/U/D` Updated to using existing API 
+- `system_keybinds.lua` not copied on updates
+- `SUPER+CTRL L/R/U/D` Updated to using existing API
 - Added preservation code for `UserConfigs`
   - Fixed migration code was another path to overwrite user files
 - Improved handling of RO symlinks in NixOS
