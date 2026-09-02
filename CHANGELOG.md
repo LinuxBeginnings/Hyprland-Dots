@@ -19,6 +19,10 @@
 ## Fixed:
 
 - Fixed `togglesplit` in LUA mode
+- `SUPER+CTRL L/R/U/D` Updated to using existing API 
+- Added preservation code for `UserConfigs`
+  - Fixed migration code was another path to overwrite user files
+- Improved handling of RO symlinks in NixOS
 - Hypridle updated for LUA commands
 - Thanks to @goldyfruit
   - He found four issues and filed them, including how to fix
