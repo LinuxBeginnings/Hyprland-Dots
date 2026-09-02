@@ -819,10 +819,53 @@ if [ "$EXPRESS_MODE" -eq 0 ] && [ "$WAYBAR_WEATHER_COPIED" -eq 1 ]; then
       else
         echo "${WARN} - waybar-weather config not found at $WEATHER_CFG" 2>&1 | tee -a "$LOG"
       fi
+      # Set user_env.lua and ENVariables.conf
+      USER_ENV_LUA="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/user_env.lua"
+      if [ -f "$USER_ENV_LUA" ]; then
+        if grep -qE '^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\'']' "$USER_ENV_LUA"; then
+          sed -i -E 's/^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\''].*/hl.env("WEATHER_UNITS", "imperial")/' "$USER_ENV_LUA"
+        elif grep -qE '^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\'']' "$USER_ENV_LUA"; then
+          sed -i -E 's/^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\''].*/hl.env("WEATHER_UNITS", "imperial")/' "$USER_ENV_LUA"
+        else
+          printf '\nhl.env("WEATHER_UNITS", "imperial")\n' >>"$USER_ENV_LUA"
+        fi
+        echo "${OK} - Set WEATHER_UNITS to imperial in user_env.lua" 2>&1 | tee -a "$LOG"
+      fi
+      USER_ENV_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/ENVariables.conf"
+      if [ -f "$USER_ENV_CONF" ]; then
+        if grep -qE '^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS' "$USER_ENV_CONF"; then
+          sed -i -E 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS.*/env = WEATHER_UNITS,imperial/' "$USER_ENV_CONF"
+        elif grep -qE '^[[:space:]]*#[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS' "$USER_ENV_CONF"; then
+          sed -i -E 's/^[[:space:]]*#[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS.*/env = WEATHER_UNITS,imperial/' "$USER_ENV_CONF"
+        else
+          printf '\nenv = WEATHER_UNITS,imperial\n' >>"$USER_ENV_CONF"
+        fi
+      fi
       break
       ;;
     c | celsius | "")
-      # Default config already uses metric; no change needed
+      # Default config uses metric
+      USER_ENV_LUA="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/user_env.lua"
+      if [ -f "$USER_ENV_LUA" ]; then
+        if grep -qE '^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\'']' "$USER_ENV_LUA"; then
+          sed -i -E 's/^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\''].*/hl.env("WEATHER_UNITS", "metric")/' "$USER_ENV_LUA"
+        elif grep -qE '^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\'']' "$USER_ENV_LUA"; then
+          sed -i -E 's/^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\''].*/hl.env("WEATHER_UNITS", "metric")/' "$USER_ENV_LUA"
+        else
+          printf '\nhl.env("WEATHER_UNITS", "metric")\n' >>"$USER_ENV_LUA"
+        fi
+        echo "${OK} - Set WEATHER_UNITS to metric in user_env.lua" 2>&1 | tee -a "$LOG"
+      fi
+      USER_ENV_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/ENVariables.conf"
+      if [ -f "$USER_ENV_CONF" ]; then
+        if grep -qE '^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS' "$USER_ENV_CONF"; then
+          sed -i -E 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS.*/env = WEATHER_UNITS,metric/' "$USER_ENV_CONF"
+        elif grep -qE '^[[:space:]]*#[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS' "$USER_ENV_CONF"; then
+          sed -i -E 's/^[[:space:]]*#[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS.*/env = WEATHER_UNITS,metric/' "$USER_ENV_CONF"
+        else
+          printf '\nenv = WEATHER_UNITS,metric\n' >>"$USER_ENV_CONF"
+        fi
+      fi
       break
       ;;
     *)
