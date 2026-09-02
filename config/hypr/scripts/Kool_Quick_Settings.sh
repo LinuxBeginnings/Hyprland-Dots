@@ -600,7 +600,7 @@ handle_choice() {
   "Choose Monitor Profiles") "$scriptsDir/MonitorProfiles.sh" ;;
   "Choose Rofi Themes") "$scriptsDir/RofiThemeSelector.sh" ;;
   "Search for Keybinds") "$scriptsDir/KeyBinds.sh" ;;
-  "Toggle Waybar Weather units (C/F)") "$scriptsDir/Toggle-weather-waybar-units.sh" ;;
+  "Toggle Waybar Weather units"* | "Toggle Waybar Weather units (C/F)") "$scriptsDir/Toggle-weather-waybar-units.sh" ;;
   "Toggle Waybar Clock (12H/24H)") "$scriptsDir/ToggleWaybarTime.sh" ;;
   "Toggle Game Mode") "$scriptsDir/GameMode.sh" ;;
   "Switch Dark-Light Theme") "$scriptsDir/DarkLight.sh" ;;
@@ -631,6 +631,36 @@ handle_choice() {
     else
       "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
     fi
+  fi
+}
+
+get_weather_units_label() {
+  local unit="metric"
+  local env_lua="$UserConfigs/user_env.lua"
+  local env_conf="$UserConfigs/ENVariables.conf"
+  local waybar_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/waybar-weather/config.toml"
+
+  if [[ -f "$env_lua" ]] && grep -qE '^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\'']' "$env_lua"; then
+    local val
+    val=$(sed -nE 's/^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\''][[:space:]]*,[[:space:]]*["'\'']([^"'\'']+)["'\''].*/\1/p' "$env_lua" | tail -n1)
+    [[ -n "$val" ]] && unit="$val"
+  elif [[ -f "$env_conf" ]] && grep -qE '^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS' "$env_conf"; then
+    local val
+    val=$(sed -nE 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS[[:space:]]*,[[:space:]]*([^#[:space:]]+).*/\1/p' "$env_conf" | tail -n1)
+    [[ -n "$val" ]] && unit="$val"
+  elif [[ -f "$waybar_cfg" ]] && grep -qE '^[[:space:]]*units[[:space:]]*=' "$waybar_cfg"; then
+    local val
+    val=$(sed -nE 's/^[[:space:]]*units[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$waybar_cfg" | tail -n1)
+    [[ -n "$val" ]] && unit="$val"
+  elif [[ -n "${WEATHER_UNITS:-}" ]]; then
+    unit="$WEATHER_UNITS"
+  fi
+
+  unit=$(echo "$unit" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+  if [[ "$unit" == "imperial" || "$unit" == "fahrenheit" || "$unit" == "f" ]]; then
+    echo "Imperial (°F)"
+  else
+    echo "Metric (°C)"
   fi
 }
 
@@ -670,9 +700,11 @@ EOF
     )
     ;;
   "[[ Toggle Options ]]")
+    local weather_label
+    weather_label="$(get_weather_units_label)"
     options=$(
       cat <<EOF
-Toggle Waybar Weather units (C/F)
+Toggle Waybar Weather units [Current: $weather_label]
 Toggle Waybar Clock (12H/24H)
 Toggle Game Mode
 EOF
@@ -721,6 +753,8 @@ EOF
 }
 
 show_main_menu() {
+  local weather_label
+  weather_label="$(get_weather_units_label)"
   printf '%s\n' "[ Settings ]"
   printf '%b\n' "[[ User Settings ]]\x00meta\x1fEdit User Defaults Edit User Keybinds Edit User ENV variables Edit User Startup Apps overlay Edit User Window Rules overlay Edit User Layer Rules overlay Edit User Settings Edit User Decorations Edit User Animations Edit User Laptop Settings Edit User Monitor config Select Hyprview Layout"
   printf '%b\n' "[[ System Settings ]]\x00meta\x1fEdit System Default Keybinds Edit System Default Startup Apps Edit System Default Window Rules Edit System Default Layer Rules Edit System Default Settings"
@@ -748,7 +782,7 @@ show_main_menu() {
   printf '%s\n' "Edit System Default Window Rules"
   printf '%s\n' "Edit System Default Layer Rules"
   printf '%s\n' "Edit System Default Settings"
-  printf '%s\n' "Toggle Waybar Weather units (C/F)"
+  printf '%s\n' "Toggle Waybar Weather units [Current: $weather_label]"
   printf '%s\n' "Toggle Waybar Clock (12H/24H)"
   printf '%s\n' "Toggle Game Mode"
   printf '%s\n' "Change Starship Prompt"

@@ -25,6 +25,13 @@
 - KB layout settings not set in `user_settings.lua`
   - Added: Prompts for KB variant and model
 
+## Updated: 
+
+- Improved weather units control.
+   - Now has system wide variable 
+   - The Toggle Waybar Units now reads current value 
+   - Change value restarts systemd environment variable 
+
 ## Added:
 
 - More defensive code for migration to lua

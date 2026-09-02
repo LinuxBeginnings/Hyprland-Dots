@@ -44,8 +44,8 @@ end
 local startup_commands = {
   "sleep 2; $HOME/.config/hypr/scripts/WallpaperDaemon.sh & $HOME/.config/hypr/scripts/ApplyThemeMode.sh && $HOME/.config/hypr/scripts/WaybarStartup.sh",
   "$HOME/.config/hypr/initial-boot.sh",
-  "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP",
-  "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP",
+  "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP WEATHER_UNITS",
+  "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP WEATHER_UNITS",
   scriptsDir .. "/Polkit.sh",
   "nm-applet",
   -- nm-tray now optional for ubuntu
