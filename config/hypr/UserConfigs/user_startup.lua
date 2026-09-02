@@ -6,6 +6,51 @@
 -- ==================================================
 -- User startup overrides template.
 -- Add personal exec-once commands here.
+--
+-- =============================================================================
+-- USER STARTUP RULES & SYNTAX
+-- =============================================================================
+-- In KoolDots Lua configuration, user autostart commands are defined in this file.
+--
+-- How it works:
+-- 1. Add command strings to the `startup_commands` table below (or call `exec_once("command")`).
+-- 2. `exec_once` ensures commands run once per Hyprland session and prevents re-execution on config reload.
+-- 3. Startup logs for each command are written to /tmp/hypr-lua-user-startup-<cmd>.log for easy debugging.
+--
+-- =============================================================================
+-- EXAMPLES OF COMMON STARTUP APPS & DAEMONS
+-- =============================================================================
+--
+-- 1. TRAY APPLET & SYSTEM UTILITIES:
+--    "blueman-applet",                -- Bluetooth manager tray applet
+--    "nm-applet --indicator",         -- NetworkManager tray icon
+--    "pasystray",                     -- PulseAudio / PipeWire volume tray applet
+--    "udiskie --tray",                -- Auto-mount removable media with tray icon
+--    "cbatticon",                     -- Battery icon for laptops
+--
+-- 2. BACKGROUND APPS / MESSENGERS / DAEMONS:
+--    "kdeconnect-app",                -- KDE Connect (or "kdeconnect-indicator")
+--    "flatpak run com.discordapp.Discord --start-minimized",
+--    "flatpak run org.telegram.desktop -startintray",
+--    "spotify --minimized",
+--    "1password --silent",
+--    "copyq --start-server",
+--
+-- 3. CLOUD SYNC & BACKUP:
+--    "nextcloud --background",
+--    "insync start",
+--    "megasync",
+--
+-- 4. CUSTOM SCRIPTS & WALLPAPER ENHANCEMENTS:
+--    "$HOME/.config/hypr/UserScripts/RainbowBorders.sh",
+--    "$HOME/.config/hypr/UserScripts/WallpaperAutoChange.sh $HOME/Pictures/wallpapers",
+--    "sleep 3; notify-send 'Welcome' 'Hyprland session started successfully!'",
+--
+-- 5. IDLE / NIGHT LIGHT / RGB:
+--    "wlsunset -l 37.77 -l -122.41 -t 4000 -T 6500", -- Custom color temperature
+--    "openrgb --startminimized --profile 'MyProfile'",
+--
+-- =============================================================================
 
 local user_startup_helper = nil
 do
