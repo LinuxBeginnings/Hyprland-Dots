@@ -381,7 +381,8 @@ python3 - \
   "$SRC_MONITORS_CONF" \
   "$SRC_WORKSPACES_CONF" \
   "$SRC_USER_LUA_MONITORS" \
-  "$SRC_USER_LUA_WORKSPACES" <<'PY'
+  "$SRC_USER_LUA_WORKSPACES" \
+  "$SRC_HYPR_DIR/configs" <<'PY'
 import os
 import re
 import sys
@@ -420,6 +421,7 @@ src_monitors_conf_path = Path(sys.argv[24]) if len(sys.argv) > 24 else None
 src_workspaces_conf_path = Path(sys.argv[25]) if len(sys.argv) > 25 else None
 src_user_lua_monitors_path = Path(sys.argv[26]) if len(sys.argv) > 26 else None
 src_user_lua_workspaces_path = Path(sys.argv[27]) if len(sys.argv) > 27 else None
+src_configs_dir = Path(sys.argv[28]) if len(sys.argv) > 28 else None
 
 files_out = {
     "system_env": system_configs_dir / "system_env.lua",
@@ -1418,7 +1420,10 @@ system_env_lines = [
     "-- hl.env(\"QT_QPA_PLATFORMTHEME\", \"qt6ct\")",
     "",
 ]
-if system_env_entries:
+if src_configs_dir and (src_configs_dir / "system_env.lua").exists():
+    files_out["system_env"].write_text((src_configs_dir / "system_env.lua").read_text(encoding="utf-8"), encoding="utf-8")
+    print(f"[OK] Ensured canonical system file: {files_out['system_env']}")
+elif system_env_entries:
     system_env_lines.append("-- Converted from configs/ENVariables.conf")
     for key, value in system_env_entries:
         system_env_lines.append(f"hl.env({lua_string(key)}, {lua_string(value)})")
@@ -1467,7 +1472,10 @@ system_startup_lines = [
     "end",
     "",
 ]
-if system_startup_entries:
+if src_configs_dir and (src_configs_dir / "system_startup.lua").exists():
+    files_out["system_startup"].write_text((src_configs_dir / "system_startup.lua").read_text(encoding="utf-8"), encoding="utf-8")
+    print(f"[OK] Ensured canonical system file: {files_out['system_startup']}")
+elif system_startup_entries:
     system_startup_lines.append("-- Converted from configs/Startup_Apps.conf")
     system_startup_lines.append("local startup_commands = {")
     for cmd in system_startup_entries:
@@ -1512,14 +1520,18 @@ system_window_lines = [
     "end",
     "",
 ]
-if system_window_rules:
+if src_configs_dir and (src_configs_dir / "system_window_rules.lua").exists():
+    files_out["system_window_rules"].write_text((src_configs_dir / "system_window_rules.lua").read_text(encoding="utf-8"), encoding="utf-8")
+    print(f"[OK] Ensured canonical system file: {files_out['system_window_rules']}")
+elif system_window_rules:
     system_window_lines.append("-- Converted from configs/WindowRules.conf")
     for rule_type, rule in system_window_rules:
         system_window_lines.append(emit_rule(rule_type, rule))
         system_window_lines.append("")
+    write_file(files_out["system_window_rules"], system_window_lines)
 else:
     system_window_lines.append("-- No active window rules were found in configs/WindowRules.conf.")
-write_file(files_out["system_window_rules"], system_window_lines)
+    write_file(files_out["system_window_rules"], system_window_lines)
 
 system_layer_lines = [
     "-- System defaults migrated from configs/LayerRules.conf (auto-generated).",
@@ -1538,14 +1550,18 @@ system_layer_lines = [
     "end",
     "",
 ]
-if system_layer_rules:
+if src_configs_dir and (src_configs_dir / "system_layer_rules.lua").exists():
+    files_out["system_layer_rules"].write_text((src_configs_dir / "system_layer_rules.lua").read_text(encoding="utf-8"), encoding="utf-8")
+    print(f"[OK] Ensured canonical system file: {files_out['system_layer_rules']}")
+elif system_layer_rules:
     system_layer_lines.append("-- Converted from configs/LayerRules.conf")
     for rule_type, rule in system_layer_rules:
         system_layer_lines.append(emit_rule(rule_type, rule))
         system_layer_lines.append("")
+    write_file(files_out["system_layer_rules"], system_layer_lines)
 else:
     system_layer_lines.append("-- No active layer rules were found in configs/LayerRules.conf.")
-write_file(files_out["system_layer_rules"], system_layer_lines)
+    write_file(files_out["system_layer_rules"], system_layer_lines)
 
 system_keybind_lines = [
     "-- System defaults migrated from configs/Keybinds.conf (auto-generated).",
@@ -1801,7 +1817,10 @@ system_keybind_lines = [
     "end",
     "",
 ]
-if system_keybinds:
+if src_configs_dir and (src_configs_dir / "system_keybinds.lua").exists():
+    files_out["system_keybinds"].write_text((src_configs_dir / "system_keybinds.lua").read_text(encoding="utf-8"), encoding="utf-8")
+    print(f"[OK] Ensured canonical system file: {files_out['system_keybinds']}")
+elif system_keybinds:
     system_keybind_lines.append("-- Converted from configs/Keybinds.conf")
     system_keybind_lines.extend(system_keybinds)
     write_file(files_out["system_keybinds"], system_keybind_lines)
@@ -1828,6 +1847,11 @@ for name, source in [
     source_path = source if source.exists() else latest_legacy_file(source)
     if source_path and source_path != source:
         print(f"[INFO] {source.name} not found at {source}; using legacy source {source_path}")
+
+    if src_configs_dir and (src_configs_dir / f"{name}.lua").exists():
+        files_out[name].write_text((src_configs_dir / f"{name}.lua").read_text(encoding="utf-8"), encoding="utf-8")
+        print(f"[OK] Ensured canonical system file: {files_out[name]}")
+        continue
 
     if name == "system_settings":
         system_settings_lines = [
