@@ -158,7 +158,7 @@
 
 "custom/menu": {
 	"format": "  ",
-	"on-click": "pkill rofi || rofi -show drun -modi run,drun,filebrowser,window -config $HOME/.config/hypr/rofi/config.rasi",
+	"on-click": "rofi_dir=\"$HOME/.config/hypr/rofi\"; [ ! -d \"$rofi_dir\" ] && rofi_dir=\"$HOME/.config/rofi\"; pkill rofi || true; $HOME/.config/hypr/scripts/RofiFocusedWallpaperLink.sh >/dev/null 2>&1 || true; rofi -show drun -modi run,drun,filebrowser,window -config \"$rofi_dir/config.rasi\"",
 	"on-click-middle": "$HOME/.config/hypr/UserScripts/WallpaperSelect.sh",
 	"on-click-right": "$HOME/.config/hypr/scripts/WaybarLayout.sh",
 	"tooltip": true,

@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- Waybar `ModulesCustom` rofi menu called default rofi menu
 - Some `.lua` files not copied on updates
 - `SUPER+CTRL L/R/U/D` Updated to using existing API
 - Added preservation code for `UserConfigs`
