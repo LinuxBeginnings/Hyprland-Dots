@@ -4,6 +4,8 @@
 
 ## Fixed:
 
+- swaync: missing semicolons in style.css
+  - Thx to `@yperion-akhyperion-ak` for fix
 - Waybar `ModulesCustom` rofi menu called default rofi menu
 - Some `.lua` files not copied on updates
 - `SUPER+CTRL L/R/U/D` Updated to using existing API
