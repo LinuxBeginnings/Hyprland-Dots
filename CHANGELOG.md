@@ -2,24 +2,26 @@
 
 ## v2.3.27
 
-## Fixed: 
-   - `copy.sh` tries to update `~/.zprofile` 
-     - NixOS systems using Home Manager use RO hard links 
-     - Updated `copy.sh` to handle those and not exit with error
+## Fixed:
 
-## Updated: 
-  - Moved `~/.config/wallust` to `!/.config/hypr/wallust`
-    - Phase 2 of moving out common config dirs for HL 
+- `copy.sh` tries to update `~/.zprofile`
+  - NixOS systems using Home Manager use RO hard links
+  - Updated `copy.sh` to handle those and not exit with error
 
+## Updated:
 
----- 
+- Moved `~/.config/wallust` to `!/.config/hypr/wallust`
+  - Phase 2 of moving out common config dirs for HL
+
+---
 
 ## v2.3.26.2
 
 ## Fixed:
 
-- Fixed `togglesplit` in LUA mode
-- `SUPER+CTRL L/R/U/D` Updated to using existing API 
+- `system_keybinds.lua` wasn't copied on updates
+- `togglesplit` in LUA mode
+- `SUPER+CTRL L/R/U/D` Updated to using existing API
 - Added preservation code for `UserConfigs`
   - Fixed migration code was another path to overwrite user files
 - Improved handling of RO symlinks in NixOS
@@ -34,11 +36,10 @@
 - KB layout settings not set in `user_settings.lua`
   - Added: Prompts for KB variant and model
 
-
-## Added: 
+## Added:
 
 - More examples in `.config/hypr/UserConfigs/user_keybinds.lua`
-  - Showing how to add or rebind keybinds 
+  - Showing how to add or rebind keybinds
 
 ---
 

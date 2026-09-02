@@ -962,6 +962,7 @@ restore_runtime_personal_state "$LOG"
 if [ "$RUN_MODE" = "upgrade" ] || [ "$RUN_MODE" = "express" ]; then
   migrate_hypr_to_lua_if_needed "$LOG" "${MIGRATE_HYPR_TO_LUA:-0}" || true
 fi
+ensure_lua_keybinds "$LOG"
 if [ -n "${KOOLDOTS_SELECTED_KB_LAYOUT:-}" ]; then
   set_keyboard_layout_configs "$KOOLDOTS_SELECTED_KB_LAYOUT" "${KOOLDOTS_SELECTED_KB_VARIANT:-}" "${KOOLDOTS_SELECTED_KB_MODEL:-}" "$LOG"
 fi
