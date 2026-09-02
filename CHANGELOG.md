@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- Changes to `user_keybinds.lua` not loading
 - swaync: missing semicolons in style.css
   - Thx to `@yperion-akhyperion-ak` for fix
 - Waybar `ModulesCustom` rofi menu called default rofi menu
