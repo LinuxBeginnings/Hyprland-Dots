@@ -5,52 +5,155 @@
 #  License: GNU GPLv3
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
-# Script for keyboard backlights (if supported) using brightnessctl
+# Keyboard backlight controls using the device's native brightness steps.
+
+set -euo pipefail
 
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/icons"
+device="${KBD_BACKLIGHT_DEVICE:-}"
 
-# Get keyboard brightness
-get_kbd_backlight() {
-	echo $(brightnessctl -d '*::kbd_backlight' -m | cut -d, -f4)
+if [[ -z "$device" ]]; then
+    device="$(
+        brightnessctl --list 2>/dev/null |
+            awk -F"'" '/^Device .*kbd_backlight/ && !device { device = $2 } END { print device }'
+    )"
+fi
+
+if [[ -z "$device" ]]; then
+    notify-send -u normal "Keyboard backlight" "No keyboard backlight was detected" >/dev/null 2>&1 || true
+    exit 1
+fi
+
+read_asus_state() {
+    asusctl leds get 2>/dev/null |
+        awk -F': ' '/Current keyboard led brightness/ { print tolower($2); exit }'
 }
 
-# Get icons
-get_icon() {
-	current=$(get_kbd_backlight | sed 's/%//')
-	if   [ "$current" -le "20" ]; then
-		icon="$iDIR/brightness-20.png"
-	elif [ "$current" -le "40" ]; then
-		icon="$iDIR/brightness-40.png"
-	elif [ "$current" -le "60" ]; then
-		icon="$iDIR/brightness-60.png"
-	elif [ "$current" -le "80" ]; then
-		icon="$iDIR/brightness-80.png"
-	else
-		icon="$iDIR/brightness-100.png"
-	fi
-}
-# Notify
-notify_user() {
-	notify-send -e -h string:x-canonical-private-synchronous:brightness_notif -h int:value:$current -h boolean:SWAYNC_BYPASS_DND:true -u low -i "$icon" "Keyboard" "Brightness:$current%"
+backend=brightnessctl
+if [[ "$device" == "asus::kbd_backlight" ]] && command -v asusctl >/dev/null 2>&1; then
+    case "$(read_asus_state || true)" in
+        off|low|med|high) backend=asusctl ;;
+    esac
+fi
+
+read_state() {
+    if [[ "$backend" == "asusctl" ]]; then
+        level_name="$(read_asus_state)"
+        case "$level_name" in
+            off) current=0 ;;
+            low) current=1 ;;
+            med) current=2 ;;
+            high) current=3 ;;
+            *) return 1 ;;
+        esac
+        maximum=3
+    else
+        current="$(brightnessctl -d "$device" get)"
+        maximum="$(brightnessctl -d "$device" max)"
+        [[ "$current" =~ ^[0-9]+$ && "$maximum" =~ ^[1-9][0-9]*$ ]]
+    fi
+
+    percent=$(( (current * 100 + maximum / 2) / maximum ))
 }
 
-# Change brightness
-change_kbd_backlight() {
-	brightnessctl -d *::kbd_backlight set "$1" && get_icon && notify_user
+select_icon() {
+    if (( percent <= 20 )); then
+        icon="$iDIR/brightness-20.png"
+    elif (( percent <= 40 )); then
+        icon="$iDIR/brightness-40.png"
+    elif (( percent <= 60 )); then
+        icon="$iDIR/brightness-60.png"
+    elif (( percent <= 80 )); then
+        icon="$iDIR/brightness-80.png"
+    else
+        icon="$iDIR/brightness-100.png"
+    fi
 }
 
-# Execute accordingly
-case "$1" in
-	"--get")
-		get_kbd_backlight
-		;;
-	"--inc")
-		change_kbd_backlight "+30%"
-		;;
-	"--dec")
-		change_kbd_backlight "30%-"
-		;;
-	*)
-		get_kbd_backlight
-		;;
+notify_state() {
+    local message
+    select_icon
+
+    if [[ "$backend" == "asusctl" ]]; then
+        message="${level_name^}"
+        notify-send -e -u low -i "$icon" \
+            -h string:x-canonical-private-synchronous:keyboard_backlight \
+            -h boolean:SWAYNC_BYPASS_DND:true \
+            "Keyboard backlight" "$message" || true
+    else
+        message="Level $current of $maximum ($percent%)"
+        notify-send -e -u low -i "$icon" \
+            -h string:x-canonical-private-synchronous:keyboard_backlight \
+            -h "int:value:$percent" \
+            -h boolean:SWAYNC_BYPASS_DND:true \
+            "Keyboard backlight" "$message" || true
+    fi
+}
+
+change_level() {
+    local action="$1"
+    local previous previous_name step target
+
+    read_state
+    previous="$current"
+
+    if [[ "$backend" == "asusctl" ]]; then
+        previous_name="$level_name"
+        if [[ "$action" == "dec" ]]; then
+            asusctl leds prev >/dev/null 2>&1
+        else
+            asusctl leds next >/dev/null 2>&1
+        fi
+        read_state
+
+        # next/prev wrap. Brightness keys should stop at the boundaries;
+        # only the dedicated cycle action is allowed to wrap.
+        if [[ "$action" == "inc" ]] && (( current <= previous )); then
+            asusctl leds set "$previous_name" >/dev/null 2>&1
+            read_state
+        elif [[ "$action" == "dec" ]] && (( current >= previous )); then
+            asusctl leds set "$previous_name" >/dev/null 2>&1
+            read_state
+        fi
+    else
+        step=$(( maximum <= 10 ? 1 : (maximum + 9) / 10 ))
+        case "$action" in
+            inc)
+                target=$((current + step))
+                (( target > maximum )) && target="$maximum"
+                ;;
+            dec)
+                target=$((current - step))
+                (( target < 0 )) && target=0
+                ;;
+            cycle)
+                if (( current >= maximum )); then
+                    target=0
+                else
+                    target=$((current + step))
+                    (( target > maximum )) && target="$maximum"
+                fi
+                ;;
+        esac
+        if (( target != current )); then
+            brightnessctl -q -d "$device" set "$target"
+            read_state
+        fi
+    fi
+
+    notify_state
+}
+
+case "${1:---get}" in
+    --get)
+        read_state
+        printf '%s%%\n' "$percent"
+        ;;
+    --inc) change_level inc ;;
+    --dec) change_level dec ;;
+    --cycle|--toggle) change_level cycle ;;
+    *)
+        printf 'Usage: %s {--get|--inc|--dec|--cycle}\n' "${0##*/}" >&2
+        exit 2
+        ;;
 esac

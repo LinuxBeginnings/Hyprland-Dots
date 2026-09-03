@@ -751,6 +751,12 @@ bind(
 )
 bind(
   "",
+  "xf86KbdLightOnOff",
+  exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --cycle"),
+  { description = "cycle keyboard brightness", locked = true }
+)
+bind(
+  "",
   "xf86TouchpadToggle",
   exec_cmd("$HOME/.config/hypr/scripts/TouchPad.sh"),
   { description = "disable touchpad" }
