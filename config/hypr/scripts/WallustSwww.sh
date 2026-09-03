@@ -19,6 +19,20 @@ fi
 have_notify() { command -v notify-send >/dev/null 2>&1; }
 wallust_log="${XDG_CACHE_HOME:-$HOME/.cache}/wallust/wallust-swww.log"
 mkdir -p "$(dirname "$wallust_log")"
+
+theme_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
+global_theme_file="$theme_state_dir/global_theme"
+legacy_global_theme_file="$HOME/.cache/.global_theme"
+
+read_global_theme() {
+  local theme=""
+  if [ -f "$global_theme_file" ]; then
+    theme="$(tr -d '\r\n' < "$global_theme_file" | awk '{$1=$1};1')"
+  elif [ -f "$legacy_global_theme_file" ]; then
+    theme="$(tr -d '\r\n' < "$legacy_global_theme_file" | awk '{$1=$1};1')"
+  fi
+  printf '%s' "$theme"
+}
 capture_current_layout() {
   if [ -x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" ]; then
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" --no-notify current 2>/dev/null | awk 'NF {print; exit}'
@@ -231,10 +245,20 @@ wallust_targets=(
 for target in "${wallust_targets[@]}"; do
   mkdir -p "$(dirname "$target")"
 done
-if ! wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1; then
-  have_notify && notify-send -u critical -a WallustSwww \
-    "Wallust failed" "See: $wallust_log"
-  exit 1
+
+global_theme="$(read_global_theme)"
+if [ -n "$global_theme" ]; then
+  if ! wallust "${wallust_args[@]}" theme -- "$global_theme" >"$wallust_log" 2>&1; then
+    have_notify && notify-send -u critical -a WallustSwww \
+      "Wallust failed" "See: $wallust_log"
+    exit 1
+  fi
+else
+  if ! wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1; then
+    have_notify && notify-send -u critical -a WallustSwww \
+      "Wallust failed" "See: $wallust_log"
+    exit 1
+  fi
 fi
 if ! wait_for_templates "$start_ts" "${wallust_targets[@]}"; then
   have_notify && notify-send -u critical -a WallustSwww \

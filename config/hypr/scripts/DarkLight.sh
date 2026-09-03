@@ -64,6 +64,7 @@ notify_enabled=1
 preserve_wallpaper=0
 forced_mode=""
 no_restart=0
+no_wallust=0
 
 ensure_managed_kitty_conf() {
     if [[ -f "$user_kitty_conf" && -r "$user_kitty_conf" ]]; then
@@ -118,6 +119,9 @@ while [ $# -gt 0 ]; do
             ;;
         --no-restart)
             no_restart=1
+            ;;
+        --no-wallust)
+            no_wallust=1
             ;;
         --help)
             cat <<'EOF'
@@ -492,8 +496,9 @@ set_custom_gtk_theme "$next_mode"
 # Update theme mode for the next cycle
 update_theme_mode
 
-
-${SCRIPTSDIR}/WallustSwww.sh "${next_wallpaper:-$wallpaper_current}"
+if [ "$no_wallust" -eq 0 ]; then
+    ${SCRIPTSDIR}/WallustSwww.sh "${next_wallpaper:-$wallpaper_current}"
+fi
 
 if [ "$no_restart" -eq 0 ]; then
     sleep 2

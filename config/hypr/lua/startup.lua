@@ -42,7 +42,7 @@ end
 -- Prefer lifecycle-hook orchestration for clarity while keeping exec_once
 -- reliability semantics for real-world startup behavior.
 local startup_commands = {
-  "sleep 2; $HOME/.config/hypr/scripts/WallpaperDaemon.sh & $HOME/.config/hypr/scripts/ApplyThemeMode.sh && $HOME/.config/hypr/scripts/WaybarStartup.sh",
+  "sleep 1; $HOME/.config/hypr/scripts/ApplyThemeMode.sh && $HOME/.config/hypr/scripts/WallpaperDaemon.sh && $HOME/.config/hypr/scripts/WaybarStartup.sh",
   "$HOME/.config/hypr/initial-boot.sh",
   "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP WEATHER_UNITS",
   "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP WEATHER_UNITS",
