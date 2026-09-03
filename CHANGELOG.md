@@ -13,6 +13,8 @@
 
 ## Updated:
 
+- Made global theme persistent 
+  - Menu option to disable and go back to theme by wallpaper
 - `WindowRules.conf` isn't used in LUA mode 
    - Updated file to point to the .lua file 
    - Also added WindowRules.conf to the migraiton process properly
