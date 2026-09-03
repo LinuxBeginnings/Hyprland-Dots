@@ -102,6 +102,39 @@ if not loaded_user_split then
 end
 apply_qt_style_fallbacks()
 
+-- Warn users if active rules are detected in legacy UserConfigs/*.conf files while running in Lua mode
+do
+  local function warn_if_legacy_conf_has_rules(conf_file, lua_file, pattern)
+    local conf_path = userDir .. "/" .. conf_file
+    local handle = io.open(conf_path, "r")
+    if not handle then
+      return
+    end
+    local has_active = false
+    for raw in handle:lines() do
+      local line = (raw or ""):gsub("^%s+", ""):gsub("%s+$", "")
+      if line ~= "" and not line:match("^#") and not line:match("^//") then
+        if pattern then
+          if line:match(pattern) then
+            has_active = true
+            break
+          end
+        else
+          has_active = true
+          break
+        end
+      end
+    end
+    handle:close()
+    if has_active then
+      print(string.format("[WARN] %s contains active configuration but is not loaded in Lua mode. Please use %s instead (or Quick Settings: SUPER+SHIFT+E).", conf_file, lua_file))
+    end
+  end
+
+  warn_if_legacy_conf_has_rules("WindowRules.conf", "user_window_rules.lua", "^windowrule")
+  warn_if_legacy_conf_has_rules("LayerRules.conf", "user_layer_rules.lua", "^layerrule")
+end
+
 -- Legacy compatibility: import UserKeybinds.conf when user_keybinds.lua is missing.
 do
   local userKeybindsLua = userDir .. "/user_keybinds.lua"

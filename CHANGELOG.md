@@ -4,12 +4,18 @@
 
 ## Fixed:
 
+- Hardcoded entries in backlight scripts 
+- TouchPad, keypad, slidepad detection 
+  - Thanks to @goldyfruit for the fixes
 - `copy.sh` tries to update `~/.zprofile`
   - NixOS systems using Home Manager use RO hard links
   - Updated `copy.sh` to handle those and not exit with error
 
 ## Updated:
 
+- `WindowRules.conf` isn't used in LUA mode 
+   - Updated file to point to the .lua file 
+   - Also added WindowRules.conf to the migraiton process properly
 - Moved `~/.config/wallust` to `!/.config/hypr/wallust`
   - Phase 2 of moving out common config dirs for HL
 
