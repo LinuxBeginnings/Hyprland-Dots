@@ -1,5 +1,16 @@
 # Changelog — KoolDots
 
+
+## v2.3.26.3
+
+## Added: 
+  - Docs:
+     - Bindings 
+     - Window Rules 
+     - Adding Apps at startup 
+     - HowTo Install and Upgrade KoolDots 
+       - In English and Spanish 
+
 ## v2.3.26.2
 
 ## Fixed:
