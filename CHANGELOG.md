@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- Hardcoded `eDP-1` caused restore from sleep to fail and lose custom settings
 - Hardcoded entries in backlight scripts 
 - TouchPad, keypad, slidepad detection 
   - Thanks to @goldyfruit for the fixes
