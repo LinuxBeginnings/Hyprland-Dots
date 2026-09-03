@@ -19,6 +19,12 @@ if [[ -z "$device" ]]; then
     )"
 fi
 
+if [[ -z "$device" ]] && command -v asusctl >/dev/null 2>&1; then
+    if asusctl leds get >/dev/null 2>&1; then
+        device="asus::kbd_backlight"
+    fi
+fi
+
 if [[ -z "$device" ]]; then
     notify-send -u normal "Keyboard backlight" "No keyboard backlight was detected" >/dev/null 2>&1 || true
     exit 1
@@ -26,7 +32,7 @@ fi
 
 read_asus_state() {
     asusctl leds get 2>/dev/null |
-        awk -F': ' '/Current keyboard led brightness/ { print tolower($2); exit }'
+        awk -F': ' '/Current keyboard led brightness/ { val = tolower($2); gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); print val; exit }'
 }
 
 backend=brightnessctl
@@ -48,11 +54,12 @@ read_state() {
         esac
         maximum=3
     else
-        current="$(brightnessctl -d "$device" get)"
-        maximum="$(brightnessctl -d "$device" max)"
+        current="$(brightnessctl -d "$device" get 2>/dev/null || echo 0)"
+        maximum="$(brightnessctl -d "$device" max 2>/dev/null || echo 1)"
         [[ "$current" =~ ^[0-9]+$ && "$maximum" =~ ^[1-9][0-9]*$ ]]
     fi
 
+    (( maximum < 1 )) && maximum=1
     percent=$(( (current * 100 + maximum / 2) / maximum ))
 }
 
@@ -79,14 +86,14 @@ notify_state() {
         notify-send -e -u low -i "$icon" \
             -h string:x-canonical-private-synchronous:keyboard_backlight \
             -h boolean:SWAYNC_BYPASS_DND:true \
-            "Keyboard backlight" "$message" || true
+            "Keyboard backlight" "$message" >/dev/null 2>&1 || true
     else
         message="Level $current of $maximum ($percent%)"
         notify-send -e -u low -i "$icon" \
             -h string:x-canonical-private-synchronous:keyboard_backlight \
             -h "int:value:$percent" \
             -h boolean:SWAYNC_BYPASS_DND:true \
-            "Keyboard backlight" "$message" || true
+            "Keyboard backlight" "$message" >/dev/null 2>&1 || true
     fi
 }
 
@@ -136,7 +143,7 @@ change_level() {
                 ;;
         esac
         if (( target != current )); then
-            brightnessctl -q -d "$device" set "$target"
+            brightnessctl -q -d "$device" set "$target" >/dev/null 2>&1 || true
             read_state
         fi
     fi
