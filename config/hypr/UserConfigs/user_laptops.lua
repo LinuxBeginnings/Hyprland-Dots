@@ -8,6 +8,7 @@
 -- Add lid/display behavior here if you need laptop-specific logic.
 
 -- Examples:
+-- Touchpad_Device = "your-touchpad-device-name" -- Optional: TouchPad.sh auto-detects by default
 -- hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = "1" })
 -- hl.monitor({ output = "eDP-1", disabled = true })
 
