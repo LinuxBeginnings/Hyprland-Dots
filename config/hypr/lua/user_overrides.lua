@@ -61,6 +61,35 @@ local function load_optional(path)
   end
   return false
 end
+
+local function has_active_hyprlang_content(path)
+  local handle = io.open(path, "r")
+  if not handle then
+    return false
+  end
+
+  for line in handle:lines() do
+    if line:match("^%s*[^#%s]") then
+      handle:close()
+      return true
+    end
+  end
+
+  handle:close()
+  return false
+end
+
+local legacyWindowRules = userDir .. "/WindowRules.conf"
+if has_active_hyprlang_content(legacyWindowRules) then
+  print(
+    "[WARN] Lua config ignores active rules in "
+      .. legacyWindowRules
+      .. "; migrate them to "
+      .. userDir
+      .. "/user_window_rules.lua"
+  )
+end
+
 local loaded_user_split = false
 
 local system_files = {
