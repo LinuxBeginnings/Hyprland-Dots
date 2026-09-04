@@ -4,9 +4,14 @@
 
 ## Fixed:
 
+- `swaync` restarted with `SIG1`
+  - `swaync` doesn't have a handler for that
+  - Added `systemd --user` service instead
+  - Also prevents potential race condition
+  - Thanks to @hyperion-ak for finding and fixing this
 - Hardcoded `eDP-1` caused restore from sleep to fail and lose custom settings
-- Hardcoded entries in backlight scripts 
-- TouchPad, keypad, slidepad detection 
+- Hardcoded entries in backlight scripts
+- TouchPad, keypad, slidepad detection
   - Thanks to @goldyfruit for the fixes
 - `copy.sh` tries to update `~/.zprofile`
   - NixOS systems using Home Manager use RO hard links
@@ -14,11 +19,11 @@
 
 ## Updated:
 
-- Made global theme persistent 
+- Made global theme persistent
   - Menu option to disable and go back to theme by wallpaper
-- `WindowRules.conf` isn't used in LUA mode 
-   - Updated file to point to the .lua file 
-   - Also added WindowRules.conf to the migraiton process properly
+- `WindowRules.conf` isn't used in LUA mode
+  - Updated file to point to the .lua file
+  - Also added WindowRules.conf to the migraiton process properly
 - Moved `~/.config/wallust` to `!/.config/hypr/wallust`
   - Phase 2 of moving out common config dirs for HL
 
@@ -45,12 +50,12 @@
 - KB layout settings not set in `user_settings.lua`
   - Added: Prompts for KB variant and model
 
-## Updated: 
+## Updated:
 
 - Improved weather units control.
-   - Now has system wide variable 
-   - The Toggle Waybar Units now reads current value 
-   - Change value restarts systemd environment variable 
+  - Now has system wide variable
+  - The Toggle Waybar Units now reads current value
+  - Change value restarts systemd environment variable
 
 ## Added:
 
