@@ -43,7 +43,7 @@ ensure_wayland_env() {
 }
 ensure_wayland_env
 notif="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images/bell.png"
-wallust_rofi="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/templates/colors-rofi.rasi"
+wallust_rofi="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/templates/colors-rofi.rasi"
 theme_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
 theme_state_file="$theme_state_dir/theme_mode"
 legacy_theme_state_file="$HOME/.cache/.theme_mode"
@@ -52,7 +52,7 @@ user_kitty_conf="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/kitty.conf"
 fallback_kitty_conf="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty.conf"
 kitty_conf="$user_kitty_conf"
 
-wallust_config="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust.toml"
+wallust_config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust.toml"
 pallete_dark="dark16"
 pallete_light="light16"
 qt5ct_dark="${XDG_CONFIG_HOME:-$HOME/.config}/qt5ct/colors/Catppuccin-Mocha.conf"
@@ -64,6 +64,7 @@ notify_enabled=1
 preserve_wallpaper=0
 forced_mode=""
 no_restart=0
+no_wallust=0
 
 ensure_managed_kitty_conf() {
     if [[ -f "$user_kitty_conf" && -r "$user_kitty_conf" ]]; then
@@ -118,6 +119,9 @@ while [ $# -gt 0 ]; do
             ;;
         --no-restart)
             no_restart=1
+            ;;
+        --no-wallust)
+            no_wallust=1
             ;;
         --help)
             cat <<'EOF'
@@ -188,10 +192,10 @@ notify_user() {
 # Use sed to replace the palette setting in the wallust config files
 if [ "$next_mode" = "Dark" ]; then
     sed -i 's/^palette = .*/palette = "'"$pallete_dark"'"/' "$wallust_config" 2>/dev/null || true
-    [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-v4.toml" ] && sed -i 's/^style = .*/style = "dark"/' "${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-v4.toml" 2>/dev/null || true
+    [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-v4.toml" ] && sed -i 's/^style = .*/style = "dark"/' "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-v4.toml" 2>/dev/null || true
 else
     sed -i 's/^palette = .*/palette = "'"$pallete_light"'"/' "$wallust_config" 2>/dev/null || true
-    [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-v4.toml" ] && sed -i 's/^style = .*/style = "light"/' "${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-v4.toml" 2>/dev/null || true
+    [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-v4.toml" ] && sed -i 's/^style = .*/style = "light"/' "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-v4.toml" 2>/dev/null || true
 fi
 
 # Function to set Waybar style
@@ -492,8 +496,9 @@ set_custom_gtk_theme "$next_mode"
 # Update theme mode for the next cycle
 update_theme_mode
 
-
-${SCRIPTSDIR}/WallustSwww.sh "${next_wallpaper:-$wallpaper_current}"
+if [ "$no_wallust" -eq 0 ]; then
+    ${SCRIPTSDIR}/WallustSwww.sh "${next_wallpaper:-$wallpaper_current}"
+fi
 
 if [ "$no_restart" -eq 0 ]; then
     sleep 2

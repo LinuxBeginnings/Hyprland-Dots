@@ -59,7 +59,7 @@ hl.config({
   input = {
     kb_layout = "us",
     kb_variant = "",
-    kb_model = "",
+    kb_model = "pc105",
     kb_options = "",
     kb_rules = "",
     repeat_rate = 50,
@@ -213,7 +213,7 @@ hl.config({
 hl.config({
   cursor = {
     sync_gsettings_theme = true,
-    no_hardware_cursors =        0,
+    no_hardware_cursors =            0,
     enable_hyprcursor = true,
     warp_on_change_workspace = 2,
     no_warps = true,

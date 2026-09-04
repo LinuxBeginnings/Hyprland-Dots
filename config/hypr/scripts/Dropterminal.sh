@@ -34,72 +34,22 @@ if [[ -f "$LUA_ENTRY" || -f "$LEGACY_LUA_ENTRY" ]]; then
 else
   HYPR_CONFIG_MODE="conf"
 fi
-lua_escape() {
-  local value="$1"
-  value=${value//\\/\\\\}
-  value=${value//\"/\\\"}
-  value=${value//$'\n'/\\n}
-  printf '%s' "$value"
-}
-
-
-hypr_dispatch() {
-  local dispatcher="$1"
-  shift
-  local payload="$*"
-  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    local command="$dispatcher"
-    if [ -n "$payload" ]; then
-      command="$dispatcher $payload"
-    fi
-    local escaped
-    escaped="$(lua_escape "$command")"
-    hyprctl dispatch "hl.dsp.exec_raw(\"$escaped\")"
-  else
-    hyprctl dispatch "$dispatcher" "$payload"
-  fi
-}
-
-hypr_exec_cmd() {
-  local command="$*"
-  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    local escaped
-    escaped="$(lua_escape "$command")"
-    hyprctl dispatch "hl.dsp.exec_cmd(\"$escaped\")"
-  else
-    hyprctl dispatch exec "$command"
-  fi
-}
-
-lua_workspace_expr() {
-  local workspace="$1"
-  if [[ "$workspace" =~ ^-?[0-9]+$ ]]; then
-    printf '%s' "$workspace"
-  else
-    local escaped
-    escaped="$(lua_escape "$workspace")"
-    printf '"%s"' "$escaped"
-  fi
-}
 
 focus_window() {
   local addr="$1"
   if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    local selector escaped
-    selector="address:$addr"
-    escaped="$(lua_escape "$selector")"
-    hyprctl dispatch "hl.dsp.focus({ window = \"$escaped\" })"
+    hyprctl dispatch "hl.dsp.focus({ window = 'address:$addr' })" >/dev/null 2>&1 || true
   else
-    hypr_dispatch focuswindow "address:$addr"
+    hyprctl dispatch focuswindow "address:$addr" >/dev/null 2>&1 || true
   fi
 }
 
 set_window_floating() {
   local addr="$1"
   if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    hyprctl dispatch "hl.dsp.window.float({ window = 'address:$addr', action = 'on' })"
+    hyprctl dispatch "hl.dsp.window.float({ window = 'address:$addr', action = 'on' })" >/dev/null 2>&1 || true
   else
-    hypr_dispatch setfloating "address:$addr"
+    hyprctl dispatch setfloating "address:$addr" >/dev/null 2>&1 || true
   fi
 }
 
@@ -108,9 +58,9 @@ resize_window_exact() {
   local width="$2"
   local height="$3"
   if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    hyprctl dispatch "hl.dsp.window.resize({ window = 'address:$addr', x = $width, y = $height, exact = true })"
+    hyprctl dispatch "hl.dsp.window.resize({ window = 'address:$addr', x = $width, y = $height, exact = true })" >/dev/null 2>&1 || true
   else
-    hypr_dispatch resizewindowpixel "exact $width $height,address:$addr"
+    hyprctl dispatch resizewindowpixel "exact $width $height,address:$addr" >/dev/null 2>&1 || true
   fi
 }
 
@@ -119,9 +69,9 @@ move_window_exact() {
   local x="$2"
   local y="$3"
   if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', x = $x, y = $y, exact = true })"
+    hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', x = $x, y = $y, exact = true })" >/dev/null 2>&1 || true
   else
-    hypr_dispatch movewindowpixel "exact $x $y,address:$addr"
+    hyprctl dispatch movewindowpixel "exact $x $y,address:$addr" >/dev/null 2>&1 || true
   fi
 }
 
@@ -169,23 +119,29 @@ if [[ "$TERMINAL_CMD" == kitty* ]] && [[ "$TERMINAL_CMD" != *"--class"* ]] && [[
   TERMINAL_CMD="$TERMINAL_CMD --class $DROPDOWN_KITTY_CLASS --app-id $DROPDOWN_KITTY_CLASS"
 fi
 
+get_epoch_ms() {
+  local s ns
+  s=$(date +%s 2>/dev/null || echo 0)
+  ns=$(date +%N 2>/dev/null || echo 0)
+  if [[ "$ns" =~ ^[0-9]+$ ]]; then
+    printf '%s%03d\n' "$s" "$(( 10#${ns:0:3} ))"
+  else
+    printf '%s000\n' "$s"
+  fi
+}
+
 # Ensure only one instance runs at a time (prevents overlapping animations)
 exec 9>"$LOCK_FILE"
 flock -n 9 || exit 0
 
 # Debounce rapid toggles
 if [ "$STARTUP_MODE" != true ]; then
-  now_ms=""
-  if date +%s%3N >/dev/null 2>&1; then
-    now_ms=$(date +%s%3N)
-  else
-    now_ms=$(( $(date +%s) * 1000 ))
-  fi
+  now_ms=$(get_epoch_ms)
   if [ -f "$LAST_TOGGLE_FILE" ]; then
     last_ms=$(cat "$LAST_TOGGLE_FILE" 2>/dev/null || echo 0)
-    if [ -n "$last_ms" ] && [ "$last_ms" -ge 0 ] 2>/dev/null; then
+    if [[ "$last_ms" =~ ^[0-9]+$ && "$now_ms" =~ ^[0-9]+$ ]]; then
       delta_ms=$((now_ms - last_ms))
-      if [ "$delta_ms" -lt "$MIN_TOGGLE_INTERVAL_MS" ] 2>/dev/null; then
+      if [ "$delta_ms" -ge 0 ] && [ "$delta_ms" -lt "$MIN_TOGGLE_INTERVAL_MS" ]; then
         if [ "$DEBUG" = true ]; then
           echo "Toggle debounced (${delta_ms}ms < ${MIN_TOGGLE_INTERVAL_MS}ms)" >&2
         fi
@@ -492,7 +448,12 @@ calculate_dropdown_position() {
 }
 
 get_current_workspace() {
-  hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // empty'
+  local ws
+  ws=$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.name // .id // empty' 2>/dev/null)
+  if [ -z "$ws" ] || [ "$ws" = "null" ]; then
+    ws=$(hyprctl activeworkspace 2>/dev/null | awk '/workspace ID/ {print $3}')
+  fi
+  echo "${ws:-1}"
 }
 
 # Function to get stored terminal address
@@ -538,7 +499,7 @@ window_exists() {
 
 window_workspace_name() {
   local addr="$1"
-  hyprctl clients -j 2>/dev/null | jq -r --arg ADDR "$addr" '.[] | select(.address == $ADDR) | .workspace.name // empty'
+  hyprctl clients -j 2>/dev/null | jq -r --arg ADDR "$addr" '.[] | select(.address == $ADDR) | .workspace.name // (.workspace.id | tostring) // empty' 2>/dev/null
 }
 
 window_is_on_special_workspace() {
@@ -551,11 +512,14 @@ window_is_on_special_workspace() {
 workspace_matches_target() {
   local target_ws="$1"
   local current_ws="$2"
+  if [ -z "$target_ws" ] || [ -z "$current_ws" ]; then
+    return 1
+  fi
   if [ "$target_ws" = "$SPECIAL_WS" ] || [ "$target_ws" = "$SPECIAL_NAME" ]; then
     [ "$current_ws" = "$SPECIAL_WS" ] || [ "$current_ws" = "$SPECIAL_NAME" ]
-  else
-    [ "$current_ws" = "$target_ws" ]
+    return $?
   fi
+  [ "$current_ws" = "$target_ws" ]
 }
 
 move_window_to_workspace_silent() {
@@ -565,34 +529,33 @@ move_window_to_workspace_silent() {
 
   if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
     local ws_expr
-    ws_expr=$(lua_workspace_expr "$target_ws")
-    hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', workspace = $ws_expr, follow = false })" >/dev/null 2>&1 || return 1
-    sleep 0.03
-    post_ws=$(window_workspace_name "$addr")
-    workspace_matches_target "$target_ws" "$post_ws"
-    return $?
-  fi
-
-  # Preferred syntax on newer Hyprland builds (target a specific window by selector).
-  if hypr_dispatch movetoworkspacesilent "$target_ws,address:$addr" >/dev/null 2>&1; then
-    sleep 0.03
-    post_ws=$(window_workspace_name "$addr")
-    if workspace_matches_target "$target_ws" "$post_ws"; then
-      return 0
+    if [[ "$target_ws" =~ ^-?[0-9]+$ ]]; then
+      ws_expr="$target_ws"
+    else
+      ws_expr="'$target_ws'"
     fi
+    hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', workspace = $ws_expr, follow = false })" >/dev/null 2>&1 || true
+  else
+    hyprctl dispatch movetoworkspacesilent "$target_ws,address:$addr" >/dev/null 2>&1 || true
   fi
-
-  # Compatibility fallback for builds where selector syntax is ignored.
-  hypr_dispatch focuswindow "address:$addr" >/dev/null 2>&1 || return 1
-  hypr_dispatch movetoworkspacesilent "$target_ws" >/dev/null 2>&1 || return 1
-  sleep 0.03
+  sleep 0.02
   post_ws=$(window_workspace_name "$addr")
-  workspace_matches_target "$target_ws" "$post_ws"
+  if workspace_matches_target "$target_ws" "$post_ws"; then
+    return 0
+  fi
+  return 1
 }
 
 infer_hidden_state() {
   local addr="$1"
-  if window_is_hidden "$addr"; then
+  local current_ws
+  current_ws=$(get_current_workspace)
+  local window_ws
+  window_ws=$(window_workspace_name "$addr")
+
+  if ! workspace_matches_target "$current_ws" "$window_ws"; then
+    echo "hidden"
+  elif window_is_hidden "$addr"; then
     echo "hidden"
   elif window_is_on_special_workspace "$addr"; then
     echo "hidden"
@@ -620,12 +583,37 @@ apply_dropdown_layout() {
   return 0
 }
 
+is_terminal_visible_on_current_workspace() {
+  local addr="$1"
+  local current_ws window_ws
+
+  current_ws=$(get_current_workspace)
+  window_ws=$(window_workspace_name "$addr")
+
+  # If not on the current workspace, it's not visible here
+  if ! workspace_matches_target "$current_ws" "$window_ws"; then
+    return 1
+  fi
+
+  # If on special workspace, it's not visible
+  if window_is_on_special_workspace "$addr"; then
+    return 1
+  fi
+
+  # If hidden off-screen, it's not visible
+  if window_is_hidden "$addr"; then
+    return 1
+  fi
+
+  return 0
+}
+
 show_terminal() {
   local addr="$1"
   local current_ws
   local pos_info target_x target_y width height hidden_y
   current_ws=$(get_current_workspace)
-  if ! [[ "$current_ws" =~ ^-?[0-9]+$ ]]; then
+  if [ -z "$current_ws" ]; then
     current_ws=1
   fi
   pos_info=$(calculate_dropdown_position)
@@ -643,13 +631,28 @@ show_terminal() {
   target_y=$(echo "$pos_info" | cut -d' ' -f2)
   width=$(echo "$pos_info" | cut -d' ' -f3)
   height=$(echo "$pos_info" | cut -d' ' -f4)
-  hidden_y=$(get_hidden_y_for_window "$addr" "$height")
-  if window_is_on_special_workspace "$addr"; then
-    move_window_to_workspace_silent "$current_ws" "$addr" >/dev/null 2>&1 || debug_echo "Failed to move dropdown terminal to workspace $current_ws"
-  fi
+
+  # Calculate hidden Y position relative to the target on the focused monitor
+  hidden_y=$((target_y - height - 80))
+
+  # 1. Ensure floating and proper size
   set_window_floating "$addr" >/dev/null 2>&1 || true
   resize_window_exact "$addr" "$width" "$height" >/dev/null 2>&1 || true
+
+  # 2. Position off-screen before moving to avoid visual glitches
+  move_window_exact "$addr" "$target_x" "$hidden_y" >/dev/null 2>&1 || true
+
+  # 3. Ensure the dropdown terminal is on the current workspace (silently)
+  local window_ws
+  window_ws=$(window_workspace_name "$addr")
+  if ! workspace_matches_target "$current_ws" "$window_ws"; then
+    move_window_to_workspace_silent "$current_ws" "$addr" >/dev/null 2>&1 || debug_echo "Failed to move dropdown terminal to workspace $current_ws"
+  fi
+
+  # 4. Slide down into place
   animate_slide_down "$addr" "$target_x" "$target_y" "$width" "$height" "$hidden_y" || move_window_exact "$addr" "$target_x" "$target_y" >/dev/null 2>&1
+
+  # 5. Focus the window on the current workspace
   focus_window "$addr" >/dev/null 2>&1 || true
   set_hidden_state "shown"
   debug_echo "Dropdown terminal shown"
@@ -660,6 +663,7 @@ hide_terminal() {
   local addr="$1"
   local geometry start_x start_y width height hidden_y
   if window_is_hidden "$addr" || window_is_on_special_workspace "$addr"; then
+    move_window_to_workspace_silent "$SPECIAL_WS" "$addr" >/dev/null 2>&1 || true
     set_hidden_state "hidden"
     debug_echo "Dropdown terminal already hidden"
     return 0
@@ -683,7 +687,7 @@ hide_terminal() {
   if ! [[ "$height" =~ ^[0-9]+$ ]]; then
     height=702
   fi
-  hidden_y=$(get_hidden_y_for_window "$addr" "$height")
+  hidden_y=$((start_y - height - 80))
   if ! [[ "$start_x" =~ ^-?[0-9]+$ && "$start_y" =~ ^-?[0-9]+$ ]]; then
     debug_echo "Missing geometry for slide-up animation; moving off-screen directly"
     move_window_exact "$addr" "$start_x" "$hidden_y" >/dev/null 2>&1 || true
@@ -691,17 +695,8 @@ hide_terminal() {
     animate_slide_up "$addr" "$start_x" "$start_y" "$width" "$height" "$hidden_y" || true
   fi
 
-  if ! window_is_hidden "$addr"; then
-    debug_echo "Dropdown not off-screen after slide; trying direct off-screen move"
-    move_window_exact "$addr" "$start_x" "$hidden_y" >/dev/null 2>&1 || true
-  fi
-  if ! window_is_hidden "$addr"; then
-    debug_echo "Off-screen hide failed, falling back to $SPECIAL_WS"
-    if ! move_window_to_workspace_silent "$SPECIAL_WS" "$addr"; then
-      debug_echo "Failed to move dropdown terminal to $SPECIAL_WS"
-      return 1
-    fi
-  fi
+  # Move to special workspace after slide-up so it doesn't stay on regular workspace
+  move_window_to_workspace_silent "$SPECIAL_WS" "$addr" >/dev/null 2>&1 || true
   set_hidden_state "hidden"
   debug_echo "Dropdown terminal hidden"
   return 0
@@ -753,7 +748,12 @@ spawn_terminal() {
 
   # Launch terminal with pre-applied workspace/geometry hints to avoid visible zigzag.
   local launch_cmd="[workspace $SPECIAL_WS silent;float;size $width $height;move $target_x $target_y] $TERMINAL_CMD"
-  hypr_exec_cmd "$launch_cmd"
+  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
+    local escaped="${launch_cmd//\"/\\\"}"
+    hyprctl dispatch "hl.dsp.exec_cmd(\"$escaped\")" >/dev/null 2>&1 || true
+  else
+    hyprctl dispatch exec "$launch_cmd" >/dev/null 2>&1 || true
+  fi
 
   local new_addr=""
   for _ in $(seq 1 20); do
@@ -820,14 +820,8 @@ if [ "$STARTUP_MODE" = true ]; then
   hide_terminal_silent "$TERMINAL_ADDR"
   exit 0
 fi
-HIDDEN_STATE=$(get_hidden_state)
-if [ "$HIDDEN_STATE" != "hidden" ] && [ "$HIDDEN_STATE" != "shown" ]; then
-  HIDDEN_STATE=$(infer_hidden_state "$TERMINAL_ADDR")
-  set_hidden_state "$HIDDEN_STATE"
-fi
-
-if [ "$HIDDEN_STATE" = "hidden" ]; then
-  show_terminal "$TERMINAL_ADDR"
-else
+if is_terminal_visible_on_current_workspace "$TERMINAL_ADDR"; then
   hide_terminal "$TERMINAL_ADDR"
+else
+  show_terminal "$TERMINAL_ADDR"
 fi

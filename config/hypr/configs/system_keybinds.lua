@@ -298,10 +298,24 @@ local function dispatch(name, args)
       end
     end
   end
-  if name == "movewindow" and args == "" and window_api.drag then
-    return function()
-      hl.dispatch(window_api.drag())
+  if name == "movewindow" then
+    if args == "" and window_api.drag then
+      return function()
+        hl.dispatch(window_api.drag())
+      end
     end
+    if args ~= "" and window_api.move then
+      return function()
+        local ok, dispatcher = pcall(window_api.move, { direction = direction(args) })
+        if ok and dispatcher then
+          hl.dispatch(dispatcher)
+        end
+      end
+    end
+    if args ~= "" then
+      return raw_dispatch_cmd("movewindow " .. args)
+    end
+    return raw_dispatch_cmd("movewindow")
   end
   if args ~= "" then
     return raw_dispatch_cmd(name .. " " .. args)
@@ -734,6 +748,12 @@ bind(
   "xf86KbdBrightnessUp",
   exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --inc"),
   { description = "increase keyboard brightness", locked = true, ["repeat"] = true }
+)
+bind(
+  "",
+  "xf86KbdLightOnOff",
+  exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --cycle"),
+  { description = "cycle keyboard brightness", locked = true }
 )
 bind(
   "",

@@ -7,6 +7,37 @@
 -- User settings overrides template.
 -- Add your personal hl.config(...) values here.
 
+hl.config({
+  input = {
+    kb_layout = "us",
+    kb_variant = "",
+    kb_model = "pc105",
+    kb_options = "",
+    kb_rules = "",
+    repeat_rate = 50,
+    repeat_delay = 300,
+    sensitivity = 0,
+    numlock_by_default = true,
+    left_handed = false,
+    follow_mouse = 1,
+    float_switch_override_focus = false,
+    touchpad = {
+      disable_while_typing = true,
+      natural_scroll = true,
+      clickfinger_behavior = false,
+      middle_button_emulation = false,
+      tap_to_click = true,
+      drag_lock = false,
+    },
+    touchdevice = {
+      enabled = true,
+    },
+    tablet = {
+      transform = 0,
+      left_handed = 0,
+    },
+  },
+})
 -- Example:
 -- hl.config({
 --   general = {

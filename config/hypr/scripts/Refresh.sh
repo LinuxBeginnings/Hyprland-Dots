@@ -105,6 +105,7 @@ restart_waybar() {
       --setenv=WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-}" \
       --setenv=XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" \
       --setenv=HYPRLAND_INSTANCE_SIGNATURE="${HYPRLAND_INSTANCE_SIGNATURE:-}" \
+      --setenv=WEATHER_UNITS="${WEATHER_UNITS:-}" \
       /bin/bash -c "$restart_cmd" >/dev/null 2>&1; then
     return 0
   fi

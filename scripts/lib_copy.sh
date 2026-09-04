@@ -73,10 +73,15 @@ copy_phase1() {
 
 copy_waybar() {
   local log="$1"
+  local run_mode="${2:-${RUN_MODE:-}}"
   local base="${DOTFILES_DIR:-.}"
   local DIRW="waybar"
   local DIRPATHw="${XDG_CONFIG_HOME:-$HOME/.config}/$DIRW"
   if [ -d "$DIRPATHw" ]; then
+    if [ "$run_mode" = "express" ]; then
+      echo -e "${NOTE:-[NOTE]} - Express mode: keeping existing ${YELLOW:-}$DIRW${RESET:-} config." 2>&1 | tee -a "$log"
+      return 0
+    fi
     while true; do
       echo -n "${CAT:-[ACTION]} Do you want to replace ${YELLOW:-}$DIRW${RESET:-} config? (y/n): "
       read DIR1_CHOICE
@@ -145,7 +150,7 @@ copy_waybar() {
 copy_phase2() {
   local log="$1"
   local base="${DOTFILES_DIR:-.}"
-  local DIR="btop cava hypr Kvantum nwg-dock-hyprland qt5ct qt6ct starship swappy wallust wlogout yazi"
+  local DIR="btop cava hypr Kvantum nwg-dock-hyprland qt5ct qt6ct starship swappy wlogout yazi"
   for DIR_NAME in $DIR; do
     local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/$DIR_NAME"
     if [ -d "$DIRPATH" ]; then
@@ -160,6 +165,24 @@ copy_phase2() {
       echo "${ERROR:-[ERROR]} - Directory config/$DIR_NAME does not exist to copy." 2>&1 | tee -a "$log"
     fi
   done
+
+  # Handle ~/.config/wallust like rofi migration:
+  # keep wallust data under ~/.config/hypr/wallust and leave ~/.config/wallust empty
+  local wallust_dir="${XDG_CONFIG_HOME:-$HOME/.config}/wallust"
+  local hypr_wallust_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust"
+  if [ -d "$wallust_dir" ]; then
+    if [ -n "$(ls -A "$wallust_dir" 2>/dev/null)" ]; then
+      local BACKUP_DIR
+      BACKUP_DIR=$(get_backup_dirname)
+      mv "$wallust_dir" "$wallust_dir-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
+      echo -e "${NOTE:-[NOTE]} - Backed up wallust to $wallust_dir-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
+      mkdir -p "$wallust_dir" "$hypr_wallust_dir"
+      rsync -a --ignore-existing "$wallust_dir-backup-$BACKUP_DIR/" "$hypr_wallust_dir/" 2>&1 | tee -a "$log" || true
+      echo -e "${OK:-[OK]} - Migrated existing wallust files to ${YELLOW:-}$hypr_wallust_dir${RESET:-} and left ${YELLOW:-}$wallust_dir${RESET:-} empty." 2>&1 | tee -a "$log"
+    fi
+  else
+    mkdir -p "$wallust_dir"
+  fi
   install_terminal_configs "$log"
 }
 
@@ -272,6 +295,16 @@ ensure_lua_keybinds() {
     done < <(find "$src_dir" -maxdepth 1 -type f -name '*.lua' -print0)
   done
 
+  # Sync root-level lua metadata and config files if present
+  for root_lua in "$src_root"/*.lua; do
+    [ -f "$root_lua" ] || continue
+    local root_lua_name
+    root_lua_name="$(basename "$root_lua")"
+    if [ "$root_lua_name" != "hyprland.lua.disable" ]; then
+      cp -f "$root_lua" "$dst_root/$root_lua_name" 2>&1 | tee -a "$log" || true
+    fi
+  done
+
   # Patch existing user and system lua configs to fix startup readiness race condition
   for f in "$dst_root/UserConfigs"/*.lua "$dst_root/configs"/*.lua "$dst_root/lua"/*.lua; do
     [ -f "$f" ] || continue
@@ -366,32 +399,32 @@ restore_hypr_assets() {
 
     # Keep monitor/workspace state across upgrades, including express mode.
     if [ "${RUN_MODE:-}" != "install" ]; then
-      if [ "$backup_mode" = "lua" ]; then
-        local LUA_USER_DIR="$HYPR_DIR/UserConfigs"
-        mkdir -p "$LUA_USER_DIR"
+      local LUA_USER_DIR="$HYPR_DIR/UserConfigs"
+      mkdir -p "$LUA_USER_DIR"
 
-        local BACKUP_LUA_MONITORS=""
-        local BACKUP_LUA_WORKSPACES=""
-        if [ -f "$BACKUP_HYPR_PATH/UserConfigs/monitors.lua" ]; then
-          BACKUP_LUA_MONITORS="$BACKUP_HYPR_PATH/UserConfigs/monitors.lua"
-        elif [ -f "$BACKUP_HYPR_PATH/lua/monitors.lua" ]; then
-          BACKUP_LUA_MONITORS="$BACKUP_HYPR_PATH/lua/monitors.lua"
-        fi
-        if [ -f "$BACKUP_HYPR_PATH/UserConfigs/workspaces.lua" ]; then
-          BACKUP_LUA_WORKSPACES="$BACKUP_HYPR_PATH/UserConfigs/workspaces.lua"
-        elif [ -f "$BACKUP_HYPR_PATH/lua/workspaces.lua" ]; then
-          BACKUP_LUA_WORKSPACES="$BACKUP_HYPR_PATH/lua/workspaces.lua"
-        fi
+      local BACKUP_LUA_MONITORS=""
+      local BACKUP_LUA_WORKSPACES=""
+      if [ -f "$BACKUP_HYPR_PATH/UserConfigs/monitors.lua" ]; then
+        BACKUP_LUA_MONITORS="$BACKUP_HYPR_PATH/UserConfigs/monitors.lua"
+      elif [ -f "$BACKUP_HYPR_PATH/lua/monitors.lua" ]; then
+        BACKUP_LUA_MONITORS="$BACKUP_HYPR_PATH/lua/monitors.lua"
+      fi
+      if [ -f "$BACKUP_HYPR_PATH/UserConfigs/workspaces.lua" ]; then
+        BACKUP_LUA_WORKSPACES="$BACKUP_HYPR_PATH/UserConfigs/workspaces.lua"
+      elif [ -f "$BACKUP_HYPR_PATH/lua/workspaces.lua" ]; then
+        BACKUP_LUA_WORKSPACES="$BACKUP_HYPR_PATH/lua/workspaces.lua"
+      fi
 
-        if [ -n "$BACKUP_LUA_MONITORS" ]; then
-          cp -f "$BACKUP_LUA_MONITORS" "$LUA_USER_DIR/monitors.lua" 2>&1 | tee -a "$log"
-          echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/monitors.lua${RESET:-}" 2>&1 | tee -a "$log"
-        fi
-        if [ -n "$BACKUP_LUA_WORKSPACES" ]; then
-          cp -f "$BACKUP_LUA_WORKSPACES" "$LUA_USER_DIR/workspaces.lua" 2>&1 | tee -a "$log"
-          echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/workspaces.lua${RESET:-}" 2>&1 | tee -a "$log"
-        fi
-      else
+      if [ -n "$BACKUP_LUA_MONITORS" ]; then
+        cp -f "$BACKUP_LUA_MONITORS" "$LUA_USER_DIR/monitors.lua" 2>&1 | tee -a "$log"
+        echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/monitors.lua${RESET:-}" 2>&1 | tee -a "$log"
+      fi
+      if [ -n "$BACKUP_LUA_WORKSPACES" ]; then
+        cp -f "$BACKUP_LUA_WORKSPACES" "$LUA_USER_DIR/workspaces.lua" 2>&1 | tee -a "$log"
+        echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/workspaces.lua${RESET:-}" 2>&1 | tee -a "$log"
+      fi
+
+      if [ "$backup_mode" != "lua" ]; then
         local FILE_B=("monitors.conf" "workspaces.conf")
         for FILE_RESTORE in "${FILE_B[@]}"; do
           local BACKUP_FILE="$BACKUP_HYPR_PATH/$FILE_RESTORE"
@@ -586,6 +619,10 @@ restore_user_configs() {
       echo "${NOTE:-[NOTE]} Preserving existing UserConfigs directory during install." 2>&1 | tee -a "$log"
       rsync -a "$BACKUP_DIR_PATH/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
       echo "${OK:-[OK]} - UserConfigs directory preserved." 2>&1 | tee -a "$log"
+    elif [ -d "${DIRPATH}-${BACKUP_DIR}/UserConfigs" ]; then
+      echo "${NOTE:-[NOTE]} Preserving existing UserConfigs directory during install." 2>&1 | tee -a "$log"
+      rsync -a "${DIRPATH}-${BACKUP_DIR}/UserConfigs/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
+      echo "${OK:-[OK]} - UserConfigs directory preserved." 2>&1 | tee -a "$log"
     fi
     return
   fi
@@ -637,6 +674,11 @@ restore_user_configs() {
         "ENVariables.conf"
         "LaptopDisplay.conf"
         "Laptops.conf"
+        "LayerRules.conf"
+        "ghostty.conf"
+        "kitty.conf"
+        "hyprview-layout.conf"
+        "WorkSpaceRules.conf"
         "monitors.lua"
         "Startup_Apps.conf"
         "UserDecorations.conf"
@@ -645,6 +687,16 @@ restore_user_configs() {
         "UserSettings.conf"
         "workspaces.lua"
         "WindowRules.conf"
+        "user_animations.lua"
+        "user_decorations.lua"
+        "user_defaults.lua"
+        "user_env.lua"
+        "user_keybinds.lua"
+        "user_laptops.lua"
+        "user_layer_rules.lua"
+        "user_settings.lua"
+        "user_startup.lua"
+        "user_window_rules.lua"
       )
 
       for FILE_NAME in "${FILES_TO_RESTORE[@]}"; do

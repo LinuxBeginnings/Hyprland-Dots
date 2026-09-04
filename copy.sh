@@ -592,7 +592,7 @@ fi
 printf "\n%.0s" {1..1}
 echo -e "\e[35m
     ╦╔═┌─┐┌─┐╦    ╔╦╗┌─┐┌┬┐┌─┐
-    ╠╩╗│ ││ │║     ║║│ │ │ └─┐ 2025
+    ╠╩╗│ ││ │║     ║║│ │ │ └─┐ 2026
     ╩ ╩└─┘└─┘╩═╝  ═╩╝└─┘ ┴ └─┘
 \e[0m"
 printf "\n%.0s" {1..1}
@@ -656,7 +656,9 @@ fi
 printf "\n%.0s" {1..1}
 
 layout=$(prompt_detect_layout)
-prompt_keyboard_layout "$layout" "$LOG"
+variant=$(prompt_detect_variant)
+model=$(prompt_detect_model)
+prompt_keyboard_layout "$layout" "$variant" "$model" "$LOG"
 
 enable_asusctl "$LOG"
 enable_blueman "$LOG"
@@ -745,7 +747,7 @@ capture_runtime_personal_state "$LOG"
 printf "${INFO} - copying dotfiles ${SKY_BLUE}first${RESET} part\n"
 copy_phase1 "$LOG" "$RUN_MODE"
 printf "\n%.0s" {1..1}
-copy_waybar "$LOG"
+copy_waybar "$LOG" "$RUN_MODE"
 printf "\n%.0s" {1..1}
 printf "${INFO} - Copying dotfiles ${SKY_BLUE}second${RESET} part\n"
 copy_phase2 "$LOG"
@@ -817,10 +819,53 @@ if [ "$EXPRESS_MODE" -eq 0 ] && [ "$WAYBAR_WEATHER_COPIED" -eq 1 ]; then
       else
         echo "${WARN} - waybar-weather config not found at $WEATHER_CFG" 2>&1 | tee -a "$LOG"
       fi
+      # Set user_env.lua and ENVariables.conf
+      USER_ENV_LUA="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/user_env.lua"
+      if [ -f "$USER_ENV_LUA" ]; then
+        if grep -qE '^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\'']' "$USER_ENV_LUA"; then
+          sed -i -E 's/^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\''].*/hl.env("WEATHER_UNITS", "imperial")/' "$USER_ENV_LUA"
+        elif grep -qE '^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\'']' "$USER_ENV_LUA"; then
+          sed -i -E 's/^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\''].*/hl.env("WEATHER_UNITS", "imperial")/' "$USER_ENV_LUA"
+        else
+          printf '\nhl.env("WEATHER_UNITS", "imperial")\n' >>"$USER_ENV_LUA"
+        fi
+        echo "${OK} - Set WEATHER_UNITS to imperial in user_env.lua" 2>&1 | tee -a "$LOG"
+      fi
+      USER_ENV_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/ENVariables.conf"
+      if [ -f "$USER_ENV_CONF" ]; then
+        if grep -qE '^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS' "$USER_ENV_CONF"; then
+          sed -i -E 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS.*/env = WEATHER_UNITS,imperial/' "$USER_ENV_CONF"
+        elif grep -qE '^[[:space:]]*#[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS' "$USER_ENV_CONF"; then
+          sed -i -E 's/^[[:space:]]*#[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS.*/env = WEATHER_UNITS,imperial/' "$USER_ENV_CONF"
+        else
+          printf '\nenv = WEATHER_UNITS,imperial\n' >>"$USER_ENV_CONF"
+        fi
+      fi
       break
       ;;
     c | celsius | "")
-      # Default config already uses metric; no change needed
+      # Default config uses metric
+      USER_ENV_LUA="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/user_env.lua"
+      if [ -f "$USER_ENV_LUA" ]; then
+        if grep -qE '^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\'']' "$USER_ENV_LUA"; then
+          sed -i -E 's/^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\''].*/hl.env("WEATHER_UNITS", "metric")/' "$USER_ENV_LUA"
+        elif grep -qE '^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\'']' "$USER_ENV_LUA"; then
+          sed -i -E 's/^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\''].*/hl.env("WEATHER_UNITS", "metric")/' "$USER_ENV_LUA"
+        else
+          printf '\nhl.env("WEATHER_UNITS", "metric")\n' >>"$USER_ENV_LUA"
+        fi
+        echo "${OK} - Set WEATHER_UNITS to metric in user_env.lua" 2>&1 | tee -a "$LOG"
+      fi
+      USER_ENV_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/ENVariables.conf"
+      if [ -f "$USER_ENV_CONF" ]; then
+        if grep -qE '^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS' "$USER_ENV_CONF"; then
+          sed -i -E 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS.*/env = WEATHER_UNITS,metric/' "$USER_ENV_CONF"
+        elif grep -qE '^[[:space:]]*#[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS' "$USER_ENV_CONF"; then
+          sed -i -E 's/^[[:space:]]*#[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS.*/env = WEATHER_UNITS,metric/' "$USER_ENV_CONF"
+        else
+          printf '\nenv = WEATHER_UNITS,metric\n' >>"$USER_ENV_CONF"
+        fi
+      fi
       break
       ;;
     *)
@@ -843,24 +888,28 @@ if command -v ags >/dev/null 2>&1; then
       cp -r "$DOTFILES_DIR/config/ags/" "$DIRPATH_AGS" 2>&1 | tee -a "$LOG"
     fi
   else
-    read -p "${CAT} Do you want to overwrite your existing ${YELLOW}ags${RESET} config? [y/N] " answer_ags
-    case "$answer_ags" in
-    [Yy]*)
-      BACKUP_DIR=$(get_backup_dirname)
-      mv "$DIRPATH_AGS" "$DIRPATH_AGS-backup-$BACKUP_DIR" 2>&1 | tee -a "$LOG"
-      echo -e "${NOTE} - Backed up ags config to $DIRPATH_AGS-backup-$BACKUP_DIR"
+    if [ "$EXPRESS_MODE" -eq 1 ]; then
+      echo "${NOTE} Express mode: keeping existing ags config." 2>&1 | tee -a "$LOG"
+    else
+      read -p "${CAT} Do you want to overwrite your existing ${YELLOW}ags${RESET} config? [y/N] " answer_ags
+      case "$answer_ags" in
+      [Yy]*)
+        BACKUP_DIR=$(get_backup_dirname)
+        mv "$DIRPATH_AGS" "$DIRPATH_AGS-backup-$BACKUP_DIR" 2>&1 | tee -a "$LOG"
+        echo -e "${NOTE} - Backed up ags config to $DIRPATH_AGS-backup-$BACKUP_DIR"
 
-      if cp -r "$DOTFILES_DIR/config/ags/" "$DIRPATH_AGS" 2>&1 | tee -a "$LOG"; then
-        echo "${OK} - ${YELLOW}ags configs${RESET} overwritten successfully."
-      else
-        echo "${ERROR} - Failed to copy ${YELLOW}ags${RESET} config."
-        exit 1
-      fi
-      ;;
-    *)
-      echo "${NOTE} - Skipping overwrite of ags config."
-      ;;
-    esac
+        if cp -r "$DOTFILES_DIR/config/ags/" "$DIRPATH_AGS" 2>&1 | tee -a "$LOG"; then
+          echo "${OK} - ${YELLOW}ags configs${RESET} overwritten successfully."
+        else
+          echo "${ERROR} - Failed to copy ${YELLOW}ags${RESET} config."
+          exit 1
+        fi
+        ;;
+      *)
+        echo "${NOTE} - Skipping overwrite of ags config."
+        ;;
+      esac
+    fi
   fi
 fi
 
@@ -887,27 +936,31 @@ else
     rm "$DIRPATH_QS/shell.qml"
   fi
 
-  read -p "${CAT} Do you want to overwrite your existing ${YELLOW}quickshell${RESET} config? [y/N] " answer_qs
-  case "$answer_qs" in
-  [Yy]*)
-    BACKUP_DIR=$(get_backup_dirname)
-    mv "$DIRPATH_QS" "$DIRPATH_QS-backup-$BACKUP_DIR" 2>&1 | tee -a "$LOG"
-    echo -e "${NOTE} - Backed up quickshell to $DIRPATH_QS-backup-$BACKUP_DIR"
+  if [ "$EXPRESS_MODE" -eq 1 ]; then
+    echo "${NOTE} Express mode: keeping existing quickshell config." 2>&1 | tee -a "$LOG"
+  else
+    read -p "${CAT} Do you want to overwrite your existing ${YELLOW}quickshell${RESET} config? [y/N] " answer_qs
+    case "$answer_qs" in
+    [Yy]*)
+      BACKUP_DIR=$(get_backup_dirname)
+      mv "$DIRPATH_QS" "$DIRPATH_QS-backup-$BACKUP_DIR" 2>&1 | tee -a "$LOG"
+      echo -e "${NOTE} - Backed up quickshell to $DIRPATH_QS-backup-$BACKUP_DIR"
 
-    cp -r "$DOTFILES_DIR/config/quickshell/" "$DIRPATH_QS" 2>&1 | tee -a "$LOG"
-    if [ $? -eq 0 ]; then
-      echo "${OK} - ${YELLOW}quickshell${RESET} overwritten successfully."
-      # Remove default shell.qml from new copy to enable overview detection
-      rm -f "$DIRPATH_QS/shell.qml" 2>&1 | tee -a "$LOG"
-    else
-      echo "${ERROR} - Failed to copy ${YELLOW}quickshell${RESET} config."
-      exit 1
-    fi
-    ;;
-  *)
-    echo "${NOTE} - Skipping overwrite of quickshell config."
-    ;;
-  esac
+      cp -r "$DOTFILES_DIR/config/quickshell/" "$DIRPATH_QS" 2>&1 | tee -a "$LOG"
+      if [ $? -eq 0 ]; then
+        echo "${OK} - ${YELLOW}quickshell${RESET} overwritten successfully."
+        # Remove default shell.qml from new copy to enable overview detection
+        rm -f "$DIRPATH_QS/shell.qml" 2>&1 | tee -a "$LOG"
+      else
+        echo "${ERROR} - Failed to copy ${YELLOW}quickshell${RESET} config."
+        exit 1
+      fi
+      ;;
+    *)
+      echo "${NOTE} - Skipping overwrite of quickshell config."
+      ;;
+    esac
+  fi
 fi
 
 # Ensure overview and qs-hyprview subdirectories exist
@@ -951,6 +1004,13 @@ restore_runtime_personal_state "$LOG"
 # After restores, migrate restored Hyprlang customizations to Lua when approved.
 if [ "$RUN_MODE" = "upgrade" ] || [ "$RUN_MODE" = "express" ]; then
   migrate_hypr_to_lua_if_needed "$LOG" "${MIGRATE_HYPR_TO_LUA:-0}" || true
+fi
+ensure_lua_keybinds "$LOG"
+if [ -n "${KOOLDOTS_SELECTED_KB_LAYOUT:-}" ]; then
+  set_keyboard_layout_configs "$KOOLDOTS_SELECTED_KB_LAYOUT" "${KOOLDOTS_SELECTED_KB_VARIANT:-}" "${KOOLDOTS_SELECTED_KB_MODEL:-}" "$LOG"
+fi
+if [ -n "${KOOLDOTS_SELECTED_EDITOR:-}" ] || [ -n "${KOOLDOTS_SELECTED_VISUAL:-}" ]; then
+  apply_editor_selection_to_userconfigs "$LOG"
 fi
 printf "\n%.0s" {1..1}
 printf "\n%.0s" {1..1}

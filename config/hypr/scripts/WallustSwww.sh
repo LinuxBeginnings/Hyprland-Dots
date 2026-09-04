@@ -19,6 +19,20 @@ fi
 have_notify() { command -v notify-send >/dev/null 2>&1; }
 wallust_log="${XDG_CACHE_HOME:-$HOME/.cache}/wallust/wallust-swww.log"
 mkdir -p "$(dirname "$wallust_log")"
+
+theme_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
+global_theme_file="$theme_state_dir/global_theme"
+legacy_global_theme_file="$HOME/.cache/.global_theme"
+
+read_global_theme() {
+  local theme=""
+  if [ -f "$global_theme_file" ]; then
+    theme="$(tr -d '\r\n' < "$global_theme_file" | awk '{$1=$1};1')"
+  elif [ -f "$legacy_global_theme_file" ]; then
+    theme="$(tr -d '\r\n' < "$legacy_global_theme_file" | awk '{$1=$1};1')"
+  fi
+  printf '%s' "$theme"
+}
 capture_current_layout() {
   if [ -x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" ]; then
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" --no-notify current 2>/dev/null | awk 'NF {print; exit}'
@@ -93,7 +107,7 @@ wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wal
 read_cached_wallpaper() {
   local cache_file="$1"
   if [[ -f "$cache_file" ]]; then
-    awk 'NF && $0 !~ /^filter/ {print; exit}' "$cache_file"
+    tr -d '\000' <"$cache_file" | awk 'NF && $0 !~ /^filter/ {print; exit}'
   fi
 }
 
@@ -204,19 +218,12 @@ cp -f "$wallpaper_path" "$wallpaper_current" || true
 # Ensure Ghostty directory exists so Wallust can write target even if Ghostty isn't installed
 mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" || true
 wait_for_templates() {
-  local start_ts="$1"
   shift
   local files=("$@")
   for _ in {1..50}; do
     local ready=true
     for file in "${files[@]}"; do
       if [[ ! -s "$file" ]]; then
-        ready=false
-        break
-      fi
-      local mtime
-      mtime=$(stat -c %Y "$file" 2>/dev/null || echo 0)
-      if (( mtime < start_ts )); then
         ready=false
         break
       fi
@@ -227,19 +234,32 @@ wait_for_templates() {
   return 1
 }
 
-# Run wallust (silent) to regenerate templates defined in ${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust.toml
+# Run wallust (silent) to regenerate templates defined in ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust.toml
 # -s is used in this repo to keep things quiet and avoid extra prompts
 start_ts=$(date +%s)
-if ! wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1; then
-  have_notify && notify-send -u critical -a WallustSwww \
-    "Wallust failed" "See: $wallust_log"
-  exit 1
-fi
 wallust_targets=(
   "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
 )
+for target in "${wallust_targets[@]}"; do
+  mkdir -p "$(dirname "$target")"
+done
+
+global_theme="$(read_global_theme)"
+if [ -n "$global_theme" ]; then
+  if ! wallust "${wallust_args[@]}" theme -- "$global_theme" >"$wallust_log" 2>&1; then
+    have_notify && notify-send -u critical -a WallustSwww \
+      "Wallust failed" "See: $wallust_log"
+    exit 1
+  fi
+else
+  if ! wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1; then
+    have_notify && notify-send -u critical -a WallustSwww \
+      "Wallust failed" "See: $wallust_log"
+    exit 1
+  fi
+fi
 if ! wait_for_templates "$start_ts" "${wallust_targets[@]}"; then
   have_notify && notify-send -u critical -a WallustSwww \
     "Wallust templates not updated" "See: $wallust_log"
@@ -328,9 +348,9 @@ apply_hypr_gap_fallback() {
 # Apply Hyprland updates immediately to avoid delayed border/gap changes.
 reload_hypr_preserve_layout
 
-kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-kitty.toml"
+kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-kitty.toml"
 if [ "${#wallust_kitty_args[@]}" -gt 0 ]; then
-  kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/wallust-kitty-v4.toml"
+  kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-kitty-v4.toml"
 fi
 (
   if [ -f "$kitty_cfg" ]; then

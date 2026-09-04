@@ -2,14 +2,60 @@
 
 ## v2.3.27
 
+## Fixed:
+
+- Hardcoded `eDP-1` caused restore from sleep to fail and lose custom settings
+- Hardcoded entries in backlight scripts 
+- TouchPad, keypad, slidepad detection 
+  - Thanks to @goldyfruit for the fixes
+- `copy.sh` tries to update `~/.zprofile`
+  - NixOS systems using Home Manager use RO hard links
+  - Updated `copy.sh` to handle those and not exit with error
+
 ## Updated:
 
-- Moved `./config/rofi` to `~/.config/hypr/rofi`
-  - Phase one moving more configs to under `~/.config/hypr`
+- Made global theme persistent 
+  - Menu option to disable and go back to theme by wallpaper
+- `WindowRules.conf` isn't used in LUA mode 
+   - Updated file to point to the .lua file 
+   - Also added WindowRules.conf to the migraiton process properly
+- Moved `~/.config/wallust` to `!/.config/hypr/wallust`
+  - Phase 2 of moving out common config dirs for HL
+
+---
+
+## v2.3.26.2
 
 ## Fixed:
 
-- `Dark-Moon.css` Corrected inconsistent rounding
+- `system_keybinds.lua` wasn't copied on updates
+- `togglesplit` in LUA mode
+- `SUPER+CTRL L/R/U/D` Updated to using existing API
+- Added preservation code for `UserConfigs`
+  - Fixed migration code was another path to overwrite user files
+- Improved handling of RO symlinks in NixOS
+- Hypridle updated for LUA commands
+- Thanks to @goldyfruit
+  - He found four issues and filed them, including how to fix
+    - `LuaAutoReload` did not stop when it receives SIGTERM on the polling path.
+    - `MonitorProfile` overwrote `monitors.lua`
+    - Changes to workspace layouts wasn't persistent
+    - Animation selected not loading in LUA config
+    - Also some animation files had invalid settings
+- KB layout settings not set in `user_settings.lua`
+  - Added: Prompts for KB variant and model
+
+## Updated: 
+
+- Improved weather units control.
+   - Now has system wide variable 
+   - The Toggle Waybar Units now reads current value 
+   - Change value restarts systemd environment variable 
+
+## Added:
+
+- More examples in `.config/hypr/UserConfigs/user_keybinds.lua`
+  - Showing how to add or rebind keybinds
 
 ---
 
@@ -17,6 +63,9 @@
 
 ## Fixed:
 
+- Added preservation code for `UserConfigs`
+  - Fixed migration code was another path to overwrite user files
+- `copy.sh` was overwritting `UserConfigs/monitor.lua`
 - On upgrade waybar config/style got reset (fix 2)
   -Eliminated possible race condition in `awww-daemon`
 - Thanks to: @hyperion-ak for the fixes
