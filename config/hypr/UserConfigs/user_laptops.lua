@@ -5,19 +5,89 @@
 --  SPDX-License-Identifier: GPL-3.0-or-later
 -- ==================================================
 -- User laptop overrides template.
--- Add lid/display behavior here if you need laptop-specific logic.
-
--- Examples:
--- Touchpad_Device = "your-touchpad-device-name" -- Optional: TouchPad.sh auto-detects by default
--- hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = "1" })
--- hl.monitor({ output = "eDP-1", disabled = true })
-
--- Lid close: remove laptop panel from layout
-hl.bind("switch:on:Lid Switch", function()
-  os.execute("$HOME/.config/hypr/scripts/LidSwitch.sh close")
-end)
-
--- Lid open: restore laptop panel
-hl.bind("switch:off:Lid Switch", function()
-  os.execute("$HOME/.config/hypr/scripts/LidSwitch.sh open")
-end)
+-- Use this file to configure laptop display, lid switch actions, touchpad gestures, and power rules.
+--
+-- =============================================================================
+-- LAPTOP CONFIGURATION EXAMPLES (KoolDots Lua)
+-- =============================================================================
+--
+-- 1. TOUCHPAD DEVICE & SETTINGS:
+--    -- Optional: TouchPad.sh auto-detects by default, or specify exact device name here:
+--    -- Touchpad_Device = "asue1201:00-04f3:3125-touchpad"
+--
+--    hl.config({
+--      input = {
+--        touchpad = {
+--          tap_to_click = true,               -- Enable tap-to-click
+--          natural_scroll = true,             -- Natural / reverse scrolling
+--          disable_while_typing = true,       -- Disable touchpad while typing on keyboard
+--          clickfinger_behavior = true,       -- 1 finger = left click, 2 = right, 3 = middle
+--          middle_button_emulation = false,   -- Tap with 3 fingers for middle click
+--          tap-to-drag = true,                -- Double tap to drag windows
+--          scroll_factor = 1.0,               -- Touchpad scroll speed multiplier
+--        },
+--      },
+--    })
+--
+-- 2. LAPTOP DISPLAY (eDP-1) CONFIGURATION:
+--    -- Native resolution + auto position + scaling:
+--    -- hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = "1" })
+--    -- Custom HiDPI scale (e.g. 1.25x or 1.5x for 2K/4K laptop panels):
+--    -- hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = "1.25" })
+--    -- Manually disable internal display when docked:
+--    -- hl.monitor({ output = "eDP-1", disabled = true })
+--
+-- 3. LID SWITCH ACTIONS (OPEN / CLOSE BEHAVIOR):
+--
+--    Option A: Default KoolDots behavior (calls LidSwitch.sh helper):
+--    -- Lid close: disable internal laptop panel from layout
+--    hl.bind("switch:on:Lid Switch", function()
+--      os.execute("$HOME/.config/hypr/scripts/LidSwitch.sh close")
+--    end)
+--    -- Lid open: restore internal laptop panel
+--    hl.bind("switch:off:Lid Switch", function()
+--      os.execute("$HOME/.config/hypr/scripts/LidSwitch.sh open")
+--    end)
+--
+--    Option B: Lock session on lid close (with hyprlock):
+--    -- hl.bind("switch:on:Lid Switch", function()
+--    --   os.execute("hyprlock")
+--    -- end)
+--
+--    Option C: Direct monitor enable/disable (Clamshell mode when external monitor connected):
+--    -- hl.bind("switch:on:Lid Switch", function()
+--    --   os.execute("hyprctl keyword monitor 'eDP-1, disable'")
+--    -- end)
+--    -- hl.bind("switch:off:Lid Switch", function()
+--    --   os.execute("hyprctl keyword monitor 'eDP-1, preferred, auto, 1'")
+--    -- end)
+--
+-- 4. TOUCHSCREEN & STYLUS / TABLET SETTINGS:
+--    hl.config({
+--      input = {
+--        touchdevice = {
+--          enabled = true,
+--          transform = 0,                     -- 0=normal, 1=90deg, 2=180deg, 3=270deg
+--          output = "eDP-1",                  -- Map touchscreen to internal laptop panel
+--        },
+--        tablet = {
+--          transform = 0,
+--          left_handed = 0,
+--          output = "eDP-1",                  -- Map drawing tablet / stylus to screen
+--        },
+--      },
+--    })
+--
+-- 5. MULTI-FINGER TOUCHPAD GESTURES:
+--    hl.config({
+--      gestures = {
+--        workspace_swipe = true,              -- Enable workspace swipe gestures
+--        workspace_swipe_fingers = 3,         -- 3-finger swipe
+--        workspace_swipe_distance = 300,      -- Swipe distance in px
+--        workspace_swipe_invert = true,       -- Invert swipe direction
+--        workspace_swipe_min_speed_to_force = 30,
+--        workspace_swipe_cancel_ratio = 0.5,  -- Ratio to trigger swipe
+--        workspace_swipe_create_new = true,   -- Create new workspace when swiping past last
+--      },
+--    })
+-- =============================================================================

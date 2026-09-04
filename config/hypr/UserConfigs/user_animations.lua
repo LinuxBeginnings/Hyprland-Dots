@@ -5,13 +5,98 @@
 --  SPDX-License-Identifier: GPL-3.0-or-later
 -- ==================================================
 -- User animation overrides template.
--- Use this to override defaults from lua/animations.lua.
-
--- Example:
--- hl.config({
---   animations = {
---     enabled = true,
---   },
--- })
+-- Use this file to customize or override animations from lua/animations.lua.
 --
--- hl.animation({ leaf = "windows", enabled = true, speed = 5, bezier = "wind", style = "slide" })
+-- =============================================================================
+-- ANIMATION SYNTAX & API (KoolDots Lua)
+-- =============================================================================
+--
+-- 1. Enable / Disable Global Animations:
+--    hl.config({
+--      animations = {
+--        enabled = true,                     -- Set to false to disable all animations
+--        first_launch_animation = true,      -- Animate on initial startup
+--      },
+--    })
+--
+-- 2. Define Custom Bezier Curves:
+--    hl.curve("curve_name", {
+--      type = "bezier",
+--      points = { { x1, y1 }, { x2, y2 } },
+--    })
+--
+-- 3. Configure Animation Trees & Leaves:
+--    hl.animation({
+--      leaf = "tree_leaf",                   -- Target element (e.g. "windows", "workspaces")
+--      enabled = true,                       -- Enable or disable this specific animation
+--      speed = 5,                            -- Duration (speed factor: lower = faster)
+--      bezier = "curve_name",                -- Bezier curve name defined above
+--      style = "style_name",                 -- Optional style: "slide", "popin", "fade", "loop"
+--    })
+--
+-- Available Animation Tree Nodes (Leaves):
+--   • "windows"          - Window open, close, and move (parent node)
+--   • "windowsIn"        - Window spawn / open animation
+--   • "windowsOut"       - Window close animation
+--   • "windowsMove"      - Window move / resize animation
+--   • "fade"             - All fade animations (parent node)
+--   • "fadeIn"           - Window fade-in on open
+--   • "fadeOut"          - Window fade-out on close
+--   • "fadeSwitch"       - Fade on workspace switch
+--   • "fadeShadow"       - Window shadow fade
+--   • "fadeDim"          - Inactive window dimming fade
+--   • "border"           - Window border color transitions
+--   • "borderangle"      - Window border gradient rotation (style = "loop")
+--   • "workspaces"       - Workspace transition animations
+--   • "workspacesIn"     - Workspace entry transition
+--   • "workspacesOut"    - Workspace exit transition
+--   • "specialWorkspace" - Scratchpad / special workspace entry animation
+--   • "layers"           - Layer-shell surfaces (Waybar, Rofi, QuickShell, SwayNC)
+--   • "layersIn"         - Layer-shell surface appearance
+--   • "layersOut"        - Layer-shell surface exit
+--
+-- =============================================================================
+-- EXAMPLES OF CUSTOM CURVES & PRESETS
+-- =============================================================================
+--
+-- 1. COMMON BEZIER CURVES:
+-- hl.curve("wind", { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.05 } } })
+-- hl.curve("winIn", { type = "bezier", points = { { 0.1, 1.1 }, { 0.1, 1.1 } } })
+-- hl.curve("winOut", { type = "bezier", points = { { 0.3, -0.3 }, { 0, 1 } } })
+-- hl.curve("liner", { type = "bezier", points = { { 1, 1 }, { 1, 1 } } })
+-- hl.curve("overshot", { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.05 } } })
+-- hl.curve("smoothOut", { type = "bezier", points = { { 0.5, 0 }, { 0.99, 0.99 } } })
+-- hl.curve("smoothIn", { type = "bezier", points = { { 0.5, -0.5 }, { 0.68, 1.5 } } })
+-- hl.curve("snappy", { type = "bezier", points = { { 0.2, 0.9 }, { 0.1, 1.0 } } })
+-- hl.curve("bouncy", { type = "bezier", points = { { 0.68, -0.55 }, { 0.265, 1.55 } } })
+--
+-- 2. FAST & SNAPPY PRESET (Low latency / High responsiveness):
+-- hl.animation({ leaf = "windows", enabled = true, speed = 3, bezier = "snappy", style = "popin 85%" })
+-- hl.animation({ leaf = "windowsIn", enabled = true, speed = 3, bezier = "snappy", style = "popin 85%" })
+-- hl.animation({ leaf = "windowsOut", enabled = true, speed = 2, bezier = "snappy", style = "popin 85%" })
+-- hl.animation({ leaf = "windowsMove", enabled = true, speed = 3, bezier = "snappy", style = "slide" })
+-- hl.animation({ leaf = "fade", enabled = true, speed = 2, bezier = "smoothOut" })
+-- hl.animation({ leaf = "workspaces", enabled = true, speed = 3, bezier = "snappy", style = "slide" })
+-- hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 3, bezier = "snappy", style = "slidevert" })
+--
+-- 3. SMOOTH & ELEGANT PRESET (Gentle sliding transitions):
+-- hl.animation({ leaf = "windows", enabled = true, speed = 6, bezier = "wind", style = "slide" })
+-- hl.animation({ leaf = "windowsIn", enabled = true, speed = 5, bezier = "winIn", style = "slide" })
+-- hl.animation({ leaf = "windowsOut", enabled = true, speed = 4, bezier = "smoothOut", style = "slide" })
+-- hl.animation({ leaf = "windowsMove", enabled = true, speed = 5, bezier = "wind", style = "slide" })
+-- hl.animation({ leaf = "border", enabled = true, speed = 2, bezier = "liner" })
+-- hl.animation({ leaf = "borderangle", enabled = true, speed = 100, bezier = "liner", style = "loop" })
+-- hl.animation({ leaf = "fade", enabled = true, speed = 4, bezier = "smoothOut" })
+-- hl.animation({ leaf = "workspaces", enabled = true, speed = 5, bezier = "overshot", style = "slide" })
+-- hl.animation({ leaf = "workspacesIn", enabled = true, speed = 5, bezier = "winIn", style = "slide" })
+-- hl.animation({ leaf = "workspacesOut", enabled = true, speed = 4, bezier = "winOut", style = "slide" })
+--
+-- 4. LAYER-SHELL ANIMATIONS (Waybar, Rofi, QuickShell, SwayNC):
+-- hl.animation({ leaf = "layers", enabled = true, speed = 4, bezier = "smoothOut", style = "slide" })
+-- hl.animation({ leaf = "layersIn", enabled = true, speed = 3, bezier = "smoothOut", style = "fade" })
+-- hl.animation({ leaf = "layersOut", enabled = true, speed = 2, bezier = "smoothOut", style = "fade" })
+--
+-- 5. DISABLE SPECIFIC ANIMATIONS (e.g. keep workspace animations, disable border spinning):
+-- hl.animation({ leaf = "borderangle", enabled = false })
+-- hl.animation({ leaf = "fadeDim", enabled = false })
+-- =============================================================================

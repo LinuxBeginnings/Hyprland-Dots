@@ -5,10 +5,64 @@
 --  SPDX-License-Identifier: GPL-3.0-or-later
 -- ==================================================
 -- User environment overrides template.
--- Keep this file for personal env additions that should survive updates.
-
--- Examples:
--- hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
--- hl.env("GDK_SCALE", "1")
--- hl.env("QT_SCALE_FACTOR", "1")
--- hl.env("WEATHER_UNITS", "metric")
+-- Use this file for personal environment variables that persist across dotfile updates.
+--
+-- =============================================================================
+-- SYNTAX: hl.env("VARIABLE_NAME", "value")
+-- =============================================================================
+--
+-- 1. TOOLKIT BACKENDS & THEMING (QT / GTK / Java):
+--    hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")            -- Use qt6ct / qt5ct theme engine
+--    hl.env("QT_QPA_PLATFORM", "wayland;xcb")           -- Prefer Wayland for Qt, fallback to XCB
+--    hl.env("QT_AUTO_SCREEN_SCALE_FACTOR", "1")         -- Auto-scale Qt based on monitor DPI
+--    hl.env("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1") -- Disable client-side Qt titlebars
+--    hl.env("QT_STYLE_OVERRIDE", "Fusion")              -- Qt style: "Fusion" or "kvantum"
+--    hl.env("QT_QUICK_CONTROLS_STYLE", "Basic")         -- QtQuick control styling
+--    hl.env("GDK_BACKEND", "wayland,x11,*")             -- Prefer Wayland for GTK
+--    hl.env("CLUTTER_BACKEND", "wayland")               -- Clutter backend
+--    hl.env("SDL_VIDEODRIVER", "wayland")               -- SDL2/SDL3 video driver
+--    hl.env("_JAVA_AWT_WM_NONREPARENTING", "1")         -- Fix blank/grey Java GUI windows
+--
+-- 2. HIGH-DPI & DISPLAY SCALING:
+--    -- Set same scaling value if monitor scaling is used:
+--    hl.env("GDK_SCALE", "1")                           -- GTK UI scale factor (1 = 100%, 2 = 200%)
+--    hl.env("GDK_DPI_SCALE", "1")                       -- GTK font DPI scale
+--    hl.env("QT_SCALE_FACTOR", "1")                     -- Qt UI scale factor
+--    hl.env("ELM_SCALE", "1")                           -- EFL / Elementary scaling
+--
+-- 3. BROWSERS & ELECTRON / CHROMIUM APPS:
+--    hl.env("MOZ_ENABLE_WAYLAND", "1")                  -- Force Firefox Wayland backend
+--    hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")     -- Enable Wayland in Electron ("auto" or "wayland")
+--    hl.env("OZONE_PLATFORM", "wayland")                -- Chrome / Chromium Wayland flag
+--
+-- 4. NVIDIA HARDWARE ACCELERATION (Uncomment if using NVIDIA GPU):
+--    -- See Hyprland Nvidia Wiki: https://wiki.hyprland.org/Nvidia/
+--    -- hl.env("LIBVA_DRIVER_NAME", "nvidia")           -- Hardware video decoding
+--    -- hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")   -- OpenGL vendor
+--    -- hl.env("NVD_BACKEND", "direct")                 -- VA-API backend
+--    -- hl.env("GBM_BACKEND", "nvidia-drm")              -- Generic Buffer Management
+--    -- hl.env("__GL_GSYNC_ALLOWED", "1")               -- Adaptive V-Sync / G-Sync
+--    -- hl.env("__NV_PRIME_RENDER_OFFLOAD", "1")        -- Hybrid graphics GPU offloading
+--    -- hl.env("__VK_LAYER_NV_optimus", "NVIDIA_only")  -- Vulkan layer selection
+--    -- hl.env("MOZ_DISABLE_RDD_SANDBOX", "1")          -- Fix Firefox hardware video decoding on Nvidia
+--
+-- 5. AQUAMARINE & DRM BACKEND (Hyprland 0.45+):
+--    -- https://wiki.hyprland.org/Configuring/Environment-variables/#aquamarine-environment-variables
+--    -- Explicit list of DRM GPU cards (primary:secondary):
+--    -- hl.env("AQ_DRM_DEVICES", "/dev/dri/card1:/dev/dri/card0")
+--    -- hl.env("AQ_NO_MODIFIERS", "1")                  -- Disable modifiers for DRM buffers (fixes some Nvidia flickers)
+--    -- hl.env("AQ_MGPU_NO_EXPLICIT", "1")              -- Disable explicit syncing on multi-GPU
+--    -- hl.env("AQ_TRACE", "1")                         -- Enable verbose rendering trace logging
+--
+-- 6. DESKTOP SESSION IDENTIFIERS:
+--    hl.env("XDG_CURRENT_DESKTOP", "Hyprland")
+--    hl.env("XDG_SESSION_DESKTOP", "Hyprland")
+--    hl.env("XDG_SESSION_TYPE", "wayland")
+--
+-- 7. REGIONAL & USER PREFERENCES:
+--    hl.env("WEATHER_UNITS", "metric")                  -- Weather units: "metric" or "imperial"
+--    hl.env("EDITOR", "nvim")                           -- Default CLI editor
+--    hl.env("VISUAL", "nvim")                           -- Default visual editor
+--    hl.env("TERMINAL", "kitty")                        -- Default terminal
+--    hl.env("PAGER", "less")                            -- Default pager
+-- =============================================================================

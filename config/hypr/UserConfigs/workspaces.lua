@@ -4,14 +4,85 @@
 --  License: GNU GPLv3
 --  SPDX-License-Identifier: GPL-3.0-or-later
 -- ==================================================
-
--- User workspace rules for Lua workflow.
--- PersistWorkspaceLayout.sh writes workspace layout rules into this file.
--- Keep custom hl.workspace_rule(...) entries here so upgrades preserve them.
-
--- Example:
--- hl.workspace_rule({
---     workspace = "1",
---     monitor = "eDP-1",
---     layout = "dwindle",
--- })
+-- User workspace rules template for Lua workflow.
+-- PersistWorkspaceLayout.sh and nwg-displays write rules into this file.
+-- Add custom hl.workspace_rule(...) entries here so dotfile updates preserve them.
+--
+-- =============================================================================
+-- WORKSPACE RULE SYNTAX & PROPERTIES (KoolDots Lua)
+-- =============================================================================
+--
+-- • hl.workspace_rule({
+--     workspace = "name_or_number",          -- Workspace target: "1", "2", "name:coding", "special:scratch"
+--     monitor = "output_name",               -- Output monitor name (eDP-1, DP-1, HDMI-A-1)
+--     default = true | false,                -- Make this the default active workspace on this monitor
+--     layout = "dwindle" | "master",         -- Layout to use for this specific workspace
+--     gaps_in = 4,                           -- Workspace-specific inner window gaps (px)
+--     gaps_out = 8,                          -- Workspace-specific outer screen gaps (px)
+--     border = true | false,                 -- Show / hide window borders on this workspace
+--     rounding = true | false,               -- Enable / disable corner rounding on this workspace
+--     decorate = true | false,               -- Enable / disable shadows, blur, and decorations
+--     persistent = true | false,             -- Keep workspace visible in bar even when empty
+--     on_created_empty = "shell_command",    -- Command to auto-execute when this workspace is first created
+--   })
+--
+-- =============================================================================
+-- EXAMPLES OF COMMON WORKSPACE RULES
+-- =============================================================================
+--
+-- 1. ASSIGNING WORKSPACES TO SPECIFIC MONITORS:
+--    -- Primary display (DP-1) hosts workspaces 1 through 5:
+--    hl.workspace_rule({ workspace = "1", monitor = "DP-1", default = true })
+--    hl.workspace_rule({ workspace = "2", monitor = "DP-1" })
+--    hl.workspace_rule({ workspace = "3", monitor = "DP-1" })
+--    hl.workspace_rule({ workspace = "4", monitor = "DP-1" })
+--    hl.workspace_rule({ workspace = "5", monitor = "DP-1" })
+--
+--    -- Secondary display (HDMI-A-1) hosts workspaces 6 through 10:
+--    hl.workspace_rule({ workspace = "6", monitor = "HDMI-A-1", default = true })
+--    hl.workspace_rule({ workspace = "7", monitor = "HDMI-A-1" })
+--    hl.workspace_rule({ workspace = "8", monitor = "HDMI-A-1" })
+--    hl.workspace_rule({ workspace = "9", monitor = "HDMI-A-1" })
+--    hl.workspace_rule({ workspace = "10", monitor = "HDMI-A-1" })
+--
+-- 2. IMMERSIVE & BORDERLESS WORKSPACES (Zero gaps / no borders for gaming or IDE):
+--    hl.workspace_rule({
+--      workspace = "name:gaming",
+--      monitor = "DP-1",
+--      gaps_in = 0,
+--      gaps_out = 0,
+--      border = false,
+--      rounding = false,
+--      decorate = false,
+--    })
+--
+--    hl.workspace_rule({
+--      workspace = "name:coding",
+--      monitor = "DP-1",
+--      layout = "dwindle",
+--      persistent = true,
+--    })
+--
+-- 3. AUTO-STARTING APPS ON EMPTY WORKSPACES:
+--    -- Open Firefox automatically when switching to empty workspace 2:
+--    -- hl.workspace_rule({ workspace = "2", on_created_empty = "zen-browser" })
+--
+--    -- Open Spotify automatically when switching to empty workspace 9:
+--    -- hl.workspace_rule({ workspace = "9", on_created_empty = "spotify" })
+--
+-- 4. SPECIAL WORKSPACES (SCRATCHPADS):
+--    -- Floating terminal scratchpad with extra padding:
+--    hl.workspace_rule({
+--      workspace = "special:scratchpad",
+--      gaps_out = 40,
+--      on_created_empty = "kitty --class scratchpad",
+--    })
+--
+--    -- Music player scratchpad:
+--    hl.workspace_rule({
+--      workspace = "special:music",
+--      gaps_out = 50,
+--      on_created_empty = "flatpak run com.spotify.Client",
+--    })
+--
+-- =============================================================================
