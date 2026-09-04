@@ -39,7 +39,7 @@ pkill qs && qs --log-rules "$QS_TEXTINPUT_LOG_RULE" &
 
 
 # reload swaync
-swaync-client --reload-config
+(swaync-client -R -rs --skip-wait >/dev/null 2>&1 &)
 
 # Relaunching rainbow borders based on selected mode
 sleep 1

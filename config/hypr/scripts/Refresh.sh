@@ -129,18 +129,19 @@ restart_waybar() {
 
 restart_waybar
 
-# relaunch swaync
+# relaunch swaync if not running, then reload config and CSS in-place
 if is_swaync_systemd; then
-  systemctl --user reload-or-restart swaync.service >/dev/null 2>&1 &
+  if ! systemctl --user is-active --quiet swaync.service 2>/dev/null; then
+    systemctl --user start swaync.service >/dev/null 2>&1 &
+  fi
 else
   sleep 0.3
   if ! pidof swaync >/dev/null 2>&1; then
     swaync >/dev/null 2>&1 &
   fi
-  # reload swaync (asynchronous to prevent DBus timeout delays)
-  (swaync-client --reload-config >/dev/null 2>&1 &)
-  (swaync-client --reload-css >/dev/null 2>&1 &)
 fi
+# reload swaync config and CSS (asynchronous to prevent DBus timeout delays)
+(swaync-client -R -rs --skip-wait >/dev/null 2>&1 &)
 
 # reload / restart nwg-dock-hyprland if running
 if pgrep -x "nwg-dock-hyprla" >/dev/null 2>&1 || pgrep -x "nwg-dock-hyprland" >/dev/null 2>&1 || pgrep -f "nwg-dock-hyprland" >/dev/null 2>&1; then

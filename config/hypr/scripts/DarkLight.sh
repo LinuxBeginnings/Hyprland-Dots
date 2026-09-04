@@ -520,6 +520,8 @@ else
     # Reload waybar in-place so it picks up the newly generated wallust colors.
     # SIGUSR2 = reload config/CSS without restarting the process.
     systemctl --user reload waybar.service 2>/dev/null || killall -SIGUSR2 waybar 2>/dev/null || true
+    # Reload swaync config and CSS in-place
+    (swaync-client -R -rs --skip-wait >/dev/null 2>&1 &)
 fi
 
 # Display notifications for theme and icon changes

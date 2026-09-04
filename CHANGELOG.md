@@ -19,6 +19,7 @@
 
 ## Updated:
 
+- Adding more examples to user LUA config files
 - Made global theme persistent
   - Menu option to disable and go back to theme by wallpaper
 - `WindowRules.conf` isn't used in LUA mode
