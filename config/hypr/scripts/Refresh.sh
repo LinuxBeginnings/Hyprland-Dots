@@ -20,8 +20,8 @@ file_exists() {
   fi
 }
 
-# Kill already running processes (exclude waybar to avoid double reloads)
-_ps=(rofi swaync ags)
+# Kill already running processes (exclude waybar and swaync to avoid double reloads)
+_ps=(rofi ags)
 for _prs in "${_ps[@]}"; do
   if pidof "${_prs}" >/dev/null; then
     pkill "${_prs}"
@@ -41,8 +41,8 @@ fi
 # quit quickshell & relaunch quickshell
 pkill qs && qs --log-rules "$QS_TEXTINPUT_LOG_RULE" &
 
-# some process to kill (exclude waybar to avoid restart loops)
-for pid in $(pidof rofi swaync ags swaybg); do
+# some process to kill (exclude waybar and swaync to avoid restart loops)
+for pid in $(pidof rofi ags swaybg); do
   kill -SIGUSR1 "$pid"
   sleep 0.1
 done
@@ -59,6 +59,19 @@ is_waybar_systemd() {
     enabled|static) return 0 ;;
   esac
   systemctl --user is-active --quiet waybar.service 2>/dev/null && return 0
+  return 1
+}
+
+# Same idea as is_waybar_systemd, for swaync.
+is_swaync_systemd() {
+  command -v systemctl >/dev/null 2>&1 || return 1
+  systemctl --user cat swaync.service >/dev/null 2>&1 || return 1
+  local enabled_state
+  enabled_state="$(systemctl --user is-enabled swaync.service 2>/dev/null || true)"
+  case "$enabled_state" in
+    enabled|static) return 0 ;;
+  esac
+  systemctl --user is-active --quiet swaync.service 2>/dev/null && return 0
   return 1
 }
 
@@ -117,12 +130,17 @@ restart_waybar() {
 restart_waybar
 
 # relaunch swaync
-sleep 0.3
-if ! pidof swaync >/dev/null 2>&1; then
-  swaync >/dev/null 2>&1 &
+if is_swaync_systemd; then
+  systemctl --user reload-or-restart swaync.service >/dev/null 2>&1 &
+else
+  sleep 0.3
+  if ! pidof swaync >/dev/null 2>&1; then
+    swaync >/dev/null 2>&1 &
+  fi
+  # reload swaync (asynchronous to prevent DBus timeout delays)
+  (swaync-client --reload-config >/dev/null 2>&1 &)
+  (swaync-client --reload-css >/dev/null 2>&1 &)
 fi
-# reload swaync (asynchronous to prevent DBus timeout delays)
-(swaync-client --reload-config >/dev/null 2>&1 &)
 
 # reload / restart nwg-dock-hyprland if running
 if pgrep -x "nwg-dock-hyprla" >/dev/null 2>&1 || pgrep -x "nwg-dock-hyprland" >/dev/null 2>&1 || pgrep -f "nwg-dock-hyprland" >/dev/null 2>&1; then
