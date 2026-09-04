@@ -141,8 +141,9 @@ done
 
 # Signal running processes to prepare for theme change.
 # Skip hiding waybar on startup (--no-restart) so it stays visible while colors regenerate.
+# swaync is excluded: SIGUSR1 kills it and makes its unit restart.
 if [ "$no_restart" -eq 0 ]; then
-    for pid in waybar rofi swaync ags swaybg; do
+    for pid in waybar rofi ags swaybg; do
         killall -SIGUSR1 "$pid"
     done
 fi
@@ -507,7 +508,9 @@ if [ "$no_restart" -eq 0 ]; then
     # waybar module on-click, so it lives in waybar.service's cgroup. Killing waybar makes
     # systemd tear down the whole unit, taking this script with it before Refresh.sh runs.
     # Refresh.sh restarts waybar detached from that cgroup instead.
-    for pid1 in rofi swaync ags swaybg; do
+    # swaync is excluded: Refresh.sh below reloads it in place and picks up the
+    # style.css written above. Killing it here would drop it out of its unit.
+    for pid1 in rofi ags swaybg; do
         killall "$pid1"
     done
     sleep 1
