@@ -396,9 +396,11 @@ set_custom_gtk_theme() {
     for dir in "${theme_search_dirs[@]}"; do
         if [ -d "$dir" ]; then
             while IFS= read -r -d '' theme_search; do
-                local t_name
-                t_name="$(basename "$theme_search")"
-                [[ " ${themes[*]} " =~ " ${t_name} " ]] || themes+=("$t_name")
+                if [ -d "$theme_search/gtk-3.0" ] || [ -d "$theme_search/gtk-4.0" ]; then
+                    local t_name
+                    t_name="$(basename "$theme_search")"
+                    [[ " ${themes[*]} " =~ " ${t_name} " ]] || themes+=("$t_name")
+                fi
             done < <(find "$dir" -maxdepth 1 -type d -iname "$search_keywords" -print0 2>/dev/null)
         fi
     done
