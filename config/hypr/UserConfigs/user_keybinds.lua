@@ -20,7 +20,7 @@
 --
 -- NOTE ON LUA REBINDS:
 --   Yes — same rule as Hyprlang applies in practice: if a key combo is already bound,
---   unbind(\"MODS\", \"KEY\") first, then bind(...) it to the new action.
+--   unbind("MODS", "KEY") first, then bind(...) it to the new action.
 --   This keeps behavior explicit and avoids duplicate/conflicting binds.
 --
 -- 1. ADDING A BRAND NEW KEYBIND (combo not used by default):
@@ -54,7 +54,6 @@
 --    bind("", "XF86AudioMute", exec_cmd("$HOME/.config/hypr/scripts/Volume.sh --toggle"), { description = "Mute audio", locked = true })
 --
 -- =============================================================================
-
 local user_keybinds_helper = nil
 do
   local source = (debug.getinfo(1, "S") or {}).source or ""

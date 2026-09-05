@@ -5,104 +5,60 @@
 --  SPDX-License-Identifier: GPL-3.0-or-later
 -- ==================================================
 -- User decorations overrides template.
--- Use this file to customize borders, gaps, rounding, opacity, blur, shadows, and tab groups.
+-- Keep this repo copy as comments only; put active custom values in:
+--   ~/.config/hypr/UserConfigs/user_decorations.lua
 --
--- =============================================================================
--- DECORATION SYNTAX & EXAMPLES (KoolDots Lua)
--- =============================================================================
---
--- 1. BORDERS & GAPS (GENERAL):
--- hl.config({
---   general = {
---     border_size = 2,                      -- Border width in pixels (default: 1)
---     gaps_in = 4,                          -- Gaps between windows in pixels (default: 4)
---     gaps_out = 8,                         -- Gaps between windows and screen edges (default: 6)
---     layout = "dwindle",                   -- Layout: "dwindle" or "master"
---     resize_on_border = true,              -- Allow dragging borders to resize
---     extend_border_grab_area = 15,         -- Extra click-area around borders (pixels)
---     hover_icon_on_border = true,          -- Change cursor icon when hovering window borders
---     col = {
---       active_border = "rgba(8db4ffff)",   -- Active window border color (overridden by Wallust if enabled)
---       inactive_border = "rgba(5f6578ff)", -- Inactive window border color
---     },
---   },
--- })
---
--- 2. CORNER ROUNDING & OPACITY:
--- hl.config({
---   decoration = {
---     rounding = 12,                        -- Corner radius in pixels (0 = square corners)
---     rounding_power = 2,                   -- Curve exponent (2.0 = smooth squircle)
---     active_opacity = 1.0,                 -- Focused window opacity (0.0 to 1.0)
---     inactive_opacity = 0.92,              -- Unfocused window opacity (0.0 to 1.0)
---     fullscreen_opacity = 1.0,             -- Fullscreen window opacity
---     dim_inactive = true,                  -- Dim unfocused windows
---     dim_strength = 0.15,                  -- Inactive window dimming strength (0.0 to 1.0)
---     dim_special = 0.8,                    -- Dimming behind scratchpads / special workspaces
---     dim_around = 0.4,                     -- Dimming behind floating windows
---   },
--- })
---
--- 3. DROP SHADOWS:
--- hl.config({
---   decoration = {
---     shadow = {
---       enabled = true,                     -- Enable / disable drop shadows
---       range = 6,                          -- Shadow blur size / spread in pixels
---       render_power = 2,                   -- Shadow falloff power (1 to 4)
---       sharp = false,                      -- Crisp shadow without blur
---       ignore_window = true,               -- Prevent shadow rendering inside transparent windows
---       color = "rgba(00000066)",           -- Focused window shadow color
---       color_inactive = "rgba(00000033)",  -- Unfocused window shadow color
---       offset = { 0, 2 },                  -- Shadow offset in [x, y] pixels
---     },
---   },
--- })
---
--- 4. BACKGROUND BLUR (Kavita / Kawase filter):
--- hl.config({
---   decoration = {
---     blur = {
---       enabled = true,                     -- Enable background blur for transparent surfaces
---       size = 6,                           -- Blur radius (1 to 20, default: 6)
---       passes = 3,                         -- Blur iterations (1 to 5: higher = smoother, more GPU)
---       new_optimizations = true,           -- Performance optimization for blur rendering
---       xray = false,                       -- Floating windows blur desktop background directly
---       noise = 0.02,                       -- Subtle film grain noise overlay (0.0 to 1.0)
---       contrast = 0.9,                     -- Contrast adjustment for blurred areas (0.0 to 2.0)
---       brightness = 0.85,                  -- Brightness adjustment (0.0 to 2.0)
---       vibrancy = 0.2,                     -- Color saturation boost in blur
---       ignore_opacity = true,              -- Make blur ignore window opacity (keeps background sharp)
---       special = true,                     -- Enable blur behind special workspaces / scratchpads
---       popups = true,                      -- Enable blur on menus / tooltips / popups
---       popups_ignorealpha = 0.2,           -- Minimum alpha threshold to blur on popups
---     },
---   },
--- })
---
--- 5. TABBED WINDOW GROUPS (GROUP & GROUPBAR):
--- hl.config({
---   group = {
---     auto_group = true,                    -- Automatically group tiled windows when dragged into group
---     insert_after_current = true,          -- Open new tabbed window after current tab
---     col = {
---       border_active = "rgba(8db4ffff)",   -- Active group border color
---       border_inactive = "rgba(5f6578ff)", -- Inactive group border color
---       border_locked_active = "rgba(ff7b72ff)", -- Locked group border color
---     },
---     groupbar = {
---       enabled = true,                     -- Show tab bar on grouped windows
---       font_family = "JetBrainsMono Nerd Font",
---       font_size = 10,                     -- Tab title font size
---       height = 14,                        -- Height of tab bar header
---       render_titles = true,               -- Render window title in tab
---       text_color = "rgba(ffffffff)",      -- Tab text color
---       col = {
---         active = "rgba(8db4ffcc)",        -- Focused tab bar background
---         inactive = "rgba(20222acc)",      -- Unfocused tab bar background
---         locked_active = "rgba(ff7b72cc)", -- Locked active tab bar background
---       },
---     },
---   },
--- })
--- =============================================================================
+-- Uncomment and edit examples below if you want defaults in the repo template.
+
+-- Example general overrides:
+hl.config({
+  general = {
+    border_size = 1,
+    gaps_in = 4,
+    gaps_out = 6,
+  },
+})
+
+-- Example decoration overrides:
+hl.config({
+  decoration = {
+    rounding = 10,
+    active_opacity = 1.0,
+    inactive_opacity = 0.95,
+    fullscreen_opacity = 1.0,
+    dim_inactive = true,
+    dim_strength = 0.1,
+    dim_special = 0.8,
+    shadow = {
+      enabled = true,
+      range = 2,
+      render_power = 1,
+      color = "rgba(8db4ffff)",
+      color_inactive = "rgba(5f6578ff)",
+    },
+    blur = {
+      enabled = true,
+      size = 6,
+      passes = 3,
+      new_optimizations = true,
+      xray = false,
+      ignore_opacity = true,
+      special = true,
+      popups = true,
+    },
+  },
+})
+
+-- Example group styling:
+hl.config({
+  group = {
+    col = {
+      border_active = "rgba(ffffffff)",
+    },
+    groupbar = {
+      col = {
+        active = "rgba(0f111aff)",
+      },
+    },
+  },
+})
