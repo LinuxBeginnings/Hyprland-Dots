@@ -1,9 +1,14 @@
 # Changelog — KoolDots
 
-## v2.3.27
+## v2.3.6.3
 
 ## Fixed:
 
+- Global Theme now persistent
+  - Option added to return to wallpaper theme
+- Fixed default apps source order
+  - user variables now properly sourced
+- Wallust directory move to `~/.config/hypr`
 - `swaync` restarted with `SIG1`
   - `swaync` doesn't have a handler for that
   - Added `systemd --user` service instead
@@ -19,7 +24,10 @@
 
 ## Updated:
 
-- Adding more examples to user LUA config files
+- Keyboard brightness improved across different HW
+- TouchPad auto detection of HW
+- Waybar backlight detection improved
+- Laptop lid switch detection improved with multi-monitor detection
 - Made global theme persistent
   - Menu option to disable and go back to theme by wallpaper
 - `WindowRules.conf` isn't used in LUA mode
