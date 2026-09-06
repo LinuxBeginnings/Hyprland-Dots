@@ -98,7 +98,7 @@ declare -A directories=(
     ["config/ags/"]="${XDG_CONFIG_HOME:-$HOME/.config}/ags/"
     ["config/quickshell/"]="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/"
     ["config/fastfetch/"]="${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch/"
-    ["config/wallust/"]="${XDG_CONFIG_HOME:-$HOME/.config}/wallust/"
+    ["config/hypr/wallust/"]="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/"
     ["config/wlogout/"]="${XDG_CONFIG_HOME:-$HOME/.config}/wlogout/"
     # Add more directories to compare as needed
 )

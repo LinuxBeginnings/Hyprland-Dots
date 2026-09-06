@@ -1,24 +1,62 @@
 # Changelog — KoolDots
 
-
 ## v2.3.26.3
 
-## Added: 
-  - Docs:
-     - Bindings 
-     - Window Rules 
-     - Adding Apps at startup 
-     - HowTo Install and Upgrade KoolDots 
-       - In English and Spanish 
+## Fixed:
+
+- Global Theme now persistent
+  - Option added to return to wallpaper theme
+- Fixed default apps source order
+  - User variables now properly sourced before keybinds
+- Wallust directory moved to `~/.config/hypr/wallust`
+- `swaync` restarted with `SIG1`
+  - `swaync` doesn't have a handler for that
+  - Added `systemd --user` service and in-place IPC reloads instead
+  - Prevents race conditions and service crash loops
+  - Thanks to @hyperion-ak for finding and fixing this
+- Hardcoded `eDP-1` caused restore from sleep to fail and lose custom settings
+- Hardcoded entries in backlight scripts
+- TouchPad, keypad, slidepad detection
+  - Thanks to @goldyfruit for the fixes
+- `copy.sh` tries to update `~/.zprofile`
+  - NixOS systems using Home Manager use RO hard links
+  - Updated `copy.sh` to handle those and not exit with error
+
+## Updated:
+
+- Keyboard brightness improved across different HW
+- TouchPad auto detection of HW
+- Waybar backlight detection improved
+- Laptop lid switch detection improved with multi-monitor detection
+- Made global theme persistent
+  - Menu option to disable and go back to theme by wallpaper
+- `WindowRules.conf` isn't used in LUA mode
+  - Updated file to point to the .lua file
+  - Also added WindowRules.conf to the migration process properly
+- Moved `~/.config/wallust` to `~/.config/hypr/wallust`
+  - Phase 2 of moving out common config dirs for HL
+
+## Added:
+
+- Docs:
+  - Bindings
+  - Window Rules
+  - Adding Apps at startup
+  - HowTo Install and Upgrade KoolDots
+    - In English and Spanish
+
+---
 
 ## v2.3.26.2
 
 ## Fixed:
 
-- DropDownterminal warping you to another workspace 
+- DropDownterminal warping you to another workspace
 - Changes to `user_keybinds.lua` not loading
+- `system_keybinds.lua` wasn't copied on updates
+- `togglesplit` in LUA mode
 - swaync: missing semicolons in style.css
-  - Thx to `@yperion-akhyperion-ak` for fix
+  - Thx to @hyperion-ak for fix
 - Waybar `ModulesCustom` rofi menu called default rofi menu
 - Some `.lua` files not copied on updates
 - `SUPER+CTRL L/R/U/D` Updated to using existing API
@@ -36,12 +74,12 @@
 - KB layout settings not set in `user_settings.lua`
   - Added: Prompts for KB variant and model
 
-## Updated: 
+## Updated:
 
 - Improved weather units control.
-   - Now has system wide variable 
-   - The Toggle Waybar Units now reads current value 
-   - Change value restarts systemd environment variable 
+  - Now has system wide variable
+  - The Toggle Waybar Units now reads current value
+  - Change value restarts systemd environment variable
 
 ## Added:
 
@@ -55,6 +93,8 @@
 
 ## Fixed:
 
+- Added preservation code for `UserConfigs`
+  - Fixed migration code was another path to overwrite user files
 - `copy.sh` was overwritting `UserConfigs/monitor.lua`
 - On upgrade waybar config/style got reset (fix 2)
   -Eliminated possible race condition in `awww-daemon`

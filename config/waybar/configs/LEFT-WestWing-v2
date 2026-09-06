@@ -60,8 +60,7 @@
 "backlight/slider": {
 	"min": 0,
 	"max": 100,
-	"orientation": "vertical",
-	"device": "intel_backlight"
+	"orientation": "vertical"
 },
 
 }
