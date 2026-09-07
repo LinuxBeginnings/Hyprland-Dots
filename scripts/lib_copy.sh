@@ -122,6 +122,20 @@ _restore_waybar_customizations() {
   [ -f "$BACKUP_FILEw" ] && cp -f "$BACKUP_FILEw" "$new_dir/UserModules"
 }
 
+# Detect a waybar directory whose configs/modules/styles still reference the
+# pre-migration "$HOME/.config/waybar/" path. That path no longer exists once
+# waybar moves under hypr/, so every include/@import using it silently fails
+# -- meaning modules (idle_inhibitor, workspaces, custom entries, etc.) never
+# load and styling breaks. This is a broken install, not a user preference,
+# so it must be repaired unconditionally -- even when express mode would
+# otherwise "keep existing" untouched, and even if a non-express upgrade
+# would otherwise let the user decline replacement.
+_waybar_dir_has_stale_paths() {
+  local dir="$1"
+  [ -d "$dir" ] || return 1
+  grep -rq '\.config/waybar/' "$dir" 2>/dev/null
+}
+
 copy_waybar() {
   local log="$1"
   local run_mode="${2:-${RUN_MODE:-}}"
@@ -134,41 +148,39 @@ copy_waybar() {
 
   # One-time migration: a pre-migration install has waybar at the legacy
   # top-level path (~/.config/waybar), but the new hypr-owned path
-  # (~/.config/hypr/waybar) does not exist yet. Relocate it so every script
-  # that now reads from the new path keeps working.
+  # (~/.config/hypr/waybar) does not exist yet. Its configs/modules/styles
+  # always reference the old "$HOME/.config/waybar/" path (correct for where
+  # they used to live), which breaks the moment they're relocated to a new
+  # parent directory -- so always back up, install a fresh repo copy, and
+  # restore customizations on top. A bare relocate is never safe here.
   if [ -d "$OLD_DIRPATHw" ] && [ ! -d "$DIRPATHw" ]; then
     echo -e "${NOTE:-[NOTE]} - Detected legacy ${YELLOW:-}$OLD_DIRPATHw${RESET:-}; migrating it to ${YELLOW:-}$DIRPATHw${RESET:-}." 2>&1 | tee -a "$log"
-    if [ "$run_mode" = "express" ]; then
-      mv "$OLD_DIRPATHw" "$DIRPATHw" 2>&1 | tee -a "$log"
-      echo -e "${OK:-[OK]} - Relocated existing ${YELLOW:-}$DIRW${RESET:-} config to ${YELLOW:-}$DIRPATHw${RESET:-} (express mode: contents preserved as-is)." 2>&1 | tee -a "$log"
-      return 0
-    fi
-    while true; do
-      echo -n "${CAT:-[ACTION]} Do you want to replace ${YELLOW:-}$DIRW${RESET:-} config with the latest version while migrating it? (y/n): "
-      read DIR1_CHOICE
-      case "$DIR1_CHOICE" in
-      [Yy]*)
-        BACKUP_DIR=$(get_backup_dirname)
-        cp -r "$OLD_DIRPATHw" "$OLD_DIRPATHw-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
-        echo -e "${NOTE:-[NOTE]} - Backed up $DIRW to $OLD_DIRPATHw-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
-        rm -rf "$OLD_DIRPATHw"
-        cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
-        _restore_waybar_customizations "$DIRPATHw" "$OLD_DIRPATHw-backup-$BACKUP_DIR"
-        echo -e "${OK:-[OK]} - Migrated ${YELLOW:-}$DIRW${RESET:-} config to ${YELLOW:-}$DIRPATHw${RESET:-}." 2>&1 | tee -a "$log"
-        break
-        ;;
-      [Nn]*)
-        echo -e "${NOTE:-[NOTE]} - Skipping ${YELLOW:-}$DIRW${RESET:-} config replacement; relocating as-is." 2>&1 | tee -a "$log"
-        mv "$OLD_DIRPATHw" "$DIRPATHw" 2>&1 | tee -a "$log"
-        break
-        ;;
-      *) echo -e "${WARN:-[WARN]} - Invalid choice. Please enter Y or N." ;;
-      esac
-    done
+    BACKUP_DIR=$(get_backup_dirname)
+    cp -r "$OLD_DIRPATHw" "$OLD_DIRPATHw-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
+    echo -e "${NOTE:-[NOTE]} - Backed up $DIRW to $OLD_DIRPATHw-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
+    rm -rf "$OLD_DIRPATHw"
+    cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
+    _restore_waybar_customizations "$DIRPATHw" "$OLD_DIRPATHw-backup-$BACKUP_DIR"
+    echo -e "${OK:-[OK]} - Migrated ${YELLOW:-}$DIRW${RESET:-} config to ${YELLOW:-}$DIRPATHw${RESET:-}." 2>&1 | tee -a "$log"
     return 0
   fi
 
   if [ -d "$DIRPATHw" ]; then
+    # Stale check runs first and bypasses both the express "keep existing"
+    # shortcut and the interactive y/n prompt below: a directory with broken
+    # path references (e.g. left behind by an earlier/interrupted copy of
+    # this dotfiles version) is not something either mode should preserve.
+    if _waybar_dir_has_stale_paths "$DIRPATHw"; then
+      echo -e "${WARN:-[WARN]} - ${YELLOW:-}$DIRPATHw${RESET:-} still contains pre-migration path references (\$HOME/.config/waybar/...) from an earlier/interrupted copy; module includes and CSS imports are broken as a result. Repairing automatically." 2>&1 | tee -a "$log"
+      BACKUP_DIR=$(get_backup_dirname)
+      cp -r "$DIRPATHw" "$DIRPATHw-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
+      echo -e "${NOTE:-[NOTE]} - Backed up $DIRW to $DIRPATHw-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
+      rm -rf "$DIRPATHw" && cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
+      _restore_waybar_customizations "$DIRPATHw" "$DIRPATHw-backup-$BACKUP_DIR"
+      echo -e "${OK:-[OK]} - Repaired stale ${YELLOW:-}$DIRW${RESET:-} config at ${YELLOW:-}$DIRPATHw${RESET:-} (runs regardless of express/upgrade mode since the old content was broken, not a preference)." 2>&1 | tee -a "$log"
+      return 0
+    fi
+
     if [ "$run_mode" = "express" ]; then
       echo -e "${NOTE:-[NOTE]} - Express mode: keeping existing ${YELLOW:-}$DIRW${RESET:-} config." 2>&1 | tee -a "$log"
       return 0

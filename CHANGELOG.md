@@ -24,6 +24,9 @@
 
 ## Updated:
 
+- Moved `$HOME/.config/waybar` to `$HOME/.config/hypr/waybar`
+  - Updated scripts, and theming
+  - `copy.sh` now has check for stale links and updates them
 - Keyboard brightness improved across different HW
 - TouchPad auto detection of HW
 - Waybar backlight detection improved
