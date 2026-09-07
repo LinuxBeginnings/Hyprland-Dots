@@ -1,0 +1,52 @@
+/* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
+
+// ### Minimal - Long ### //
+
+{
+"include": [
+  "$HOME/.config/hypr/waybar/Modules",
+  "$HOME/.config/hypr/waybar/ModulesWorkspaces",
+  "$HOME/.config/hypr/waybar/ModulesCustom",
+  "$HOME/.config/hypr/waybar/ModulesGroups",
+  "$HOME/.config/hypr/waybar/UserModules",
+  ],
+"layer": "top",
+//"mode": "dock",
+"exclusive": true,
+"passthrough": false,
+"position": "top",
+"spacing": 6,
+"fixed-center": true,
+"ipc": true,
+"margin-top": 3,
+"margin-left": 8,
+"margin-right": 8,
+
+"modules-left": [
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
+	"custom/menu",
+	"custom/separator#blank_2", 
+	"hyprland/workspaces#pacman",
+	"custom/separator#blank_2",
+	"mpris",
+	"group/notify",
+	"tray",
+	],
+"modules-center": [
+	"clock",
+	"idle_inhibitor",
+	],
+"modules-right": [
+	"group/mobo_drawer",
+	"custom/separator#blank_2",
+	"group/laptop",
+	"custom/separator#blank_2",
+	"group/audio",
+	"custom/separator#blank_2",
+	"custom/nightlight",
+	"custom/power",
+	],
+
+}

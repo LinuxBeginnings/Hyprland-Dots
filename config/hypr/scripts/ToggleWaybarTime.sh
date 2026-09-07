@@ -7,7 +7,7 @@
 # ==================================================
 # Toggle Waybar clock format between 12H and 24H
 
-WAYBAR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/waybar"
+WAYBAR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar"
 
 # Files that hold toggleable clock formats
 MODULES_FILES=(

@@ -1,0 +1,78 @@
+//* ----------- 💫 https://github.com/LinuxBeginnings 💫 -------- */
+//* ............................................*/
+//* .............CAMELLIA.......................*/
+//* ............................................*/
+//* --- 👍 designed by https://github.com/Krautt  👍 --- */
+
+{
+ 
+"include": [
+  "$HOME/.config/hypr/waybar/Modules",
+  "$HOME/.config/hypr/waybar/ModulesWorkspaces",
+  "$HOME/.config/hypr/waybar/ModulesCustom",
+  "$HOME/.config/hypr/waybar/ModulesGroups",
+  "$HOME/.config/hypr/waybar/UserModules",
+  ],
+"layer": "top",
+//"mode": "dock",
+"exclusive": true,
+"passthrough": false,
+"position": "top",
+"spacing": 4,
+"fixed-center": true,
+"ipc": true,
+//"margin-top": 0,
+//"margin-bottom": 0,
+//"margin-left": 0,
+//"margin-right": 0,
+	
+"modules-left": [
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
+	"hyprland/workspaces#cam",
+	"custom/separator#line",
+	"mpris",
+	"group/notify",
+	"tray", 
+	"wlr/taskbar"],
+
+"modules-center": ["hyprland/window"], 
+	
+"modules-right": [
+	"custom/backlight",
+	"backlight/slider",
+	"custom/speaker",
+	"pulseaudio/slider",
+	"power-profiles-daemon",
+	"battery",
+	"clock#3", 
+	"network",
+	"custom/nightlight"],
+
+// Additional modules //
+"pulseaudio/slider": {
+	"min": 0,
+	"max": 100,
+	"orientation": "horizontal"
+	
+},
+
+"custom/speaker": {
+	"exec": "echo '🔊'",  
+	"interval": 1,
+	"format": "{}"
+},
+
+"backlight/slider": {
+	"min": 0,
+	"max": 100,
+	"orientation": "horizontal"
+},
+
+"custom/backlight": {
+	"exec": "echo '✨'",  
+	"interval": 1,
+	"format": "{}"
+},
+}

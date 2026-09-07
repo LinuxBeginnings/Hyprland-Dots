@@ -1,0 +1,47 @@
+//* ----------- 💫 https://github.com/LinuxBeginnings 💫 -------- */
+//* ............................................*/
+//* .............GARDENIA.......................*/
+//* ............................................*/
+//* --- 👍 designed by https://github.com/Krautt  👍 --- */
+
+{
+ 
+"include": [
+  "$HOME/.config/hypr/waybar/Modules",
+  "$HOME/.config/hypr/waybar/ModulesWorkspaces",
+  "$HOME/.config/hypr/waybar/ModulesCustom",
+  "$HOME/.config/hypr/waybar/ModulesGroups",
+  "$HOME/.config/hypr/waybar/UserModules",
+  ],
+"layer": "top",
+//"mode": "dock",
+"exclusive": true,
+"passthrough": false,
+"position": "top",
+"spacing": 5,
+"fixed-center": false,
+"ipc": true,
+"margin-top": 5,
+//"margin-bottom": 5,
+"width": 1000,
+	
+"modules-left": [
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
+	"clock#5", 
+	"mpris", 
+	"tray", 
+	"group/notify"
+	],
+	  
+"modules-center": ["hyprland/workspaces#kanji"], 
+	
+"modules-right": [
+	"pulseaudio#1",
+	"backlight#2", 
+	"battery",
+	"custom/nightlight"
+	],
+
+}

@@ -54,7 +54,7 @@ sync_portal_env() {
 }
 
 ensure_wallust_waybar_colors() {
-    local colors_file="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
+    local colors_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/wallust/colors-waybar.css"
     mkdir -p "$(dirname "$colors_file")" 2>/dev/null || true
     [ -f "$colors_file" ] || touch "$colors_file" 2>/dev/null || true
     if [ ! -s "$colors_file" ] && [ -x "$SCRIPTSDIR/WallustSwww.sh" ]; then
