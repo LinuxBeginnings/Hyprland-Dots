@@ -11,6 +11,12 @@
 runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 export XDG_RUNTIME_DIR="$runtime_dir"
 SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
+# Waybar itself only auto-discovers ~/.config/waybar by default; it has no
+# knowledge of the hypr/-owned location, so every direct launch must pass
+# explicit -c/-s flags.
+WAYBAR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar"
+WAYBAR_CONFIG_ARG="$WAYBAR_DIR/config"
+WAYBAR_STYLE_ARG="$WAYBAR_DIR/style.css"
 
 is_waybar_running() {
     pgrep -x "waybar" >/dev/null 2>&1 || pgrep -x '\.waybar-wrapped' >/dev/null 2>&1
@@ -85,11 +91,11 @@ start_waybar_direct() {
         return 0
     fi
     if command -v waybar >/dev/null 2>&1; then
-        waybar >/dev/null 2>&1 &
+        waybar -c "$WAYBAR_CONFIG_ARG" -s "$WAYBAR_STYLE_ARG" >/dev/null 2>&1 &
         return 0
     fi
     if command -v .waybar-wrapped >/dev/null 2>&1; then
-        .waybar-wrapped >/dev/null 2>&1 &
+        .waybar-wrapped -c "$WAYBAR_CONFIG_ARG" -s "$WAYBAR_STYLE_ARG" >/dev/null 2>&1 &
         return 0
     fi
     return 1

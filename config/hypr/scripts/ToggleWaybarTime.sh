@@ -136,6 +136,12 @@ warn_unknown_formats() {
 
 restart_waybar() {
   local manage_with_systemd=0
+  # Waybar only auto-discovers ~/.config/waybar by default; it has no
+  # knowledge of the hypr/-owned location, so direct launches must pass
+  # explicit -c/-s flags. Systemd-managed restarts rely on the packaged
+  # waybar.service unit, which is overridden separately (see
+  # config/systemd/user/waybar.service.d/override.conf) to add the same flags.
+  local waybar_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar"
 
   if command -v systemctl >/dev/null 2>&1; then
     if systemctl --user --quiet is-active graphical-session.target 2>/dev/null || systemctl --user --quiet is-active wayland-session@*.target 2>/dev/null; then
@@ -160,10 +166,10 @@ restart_waybar() {
 
   if [ "$manage_with_systemd" -eq 1 ]; then
     if ! systemctl --user start waybar.service >/dev/null 2>&1; then
-      waybar >/dev/null 2>&1 &
+      waybar -c "$waybar_dir/config" -s "$waybar_dir/style.css" >/dev/null 2>&1 &
     fi
   else
-    waybar >/dev/null 2>&1 &
+    waybar -c "$waybar_dir/config" -s "$waybar_dir/style.css" >/dev/null 2>&1 &
   fi
 }
 
