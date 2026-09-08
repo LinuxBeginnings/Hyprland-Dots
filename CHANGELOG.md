@@ -3,6 +3,7 @@
 ## v2.3.26.4
 
 - Fixed:
+  - Legacy WindowRules weren't getting migrated
   - Missing or incorrect Keybinds
     - Kitty
     - Group/Ungroup
@@ -12,8 +13,9 @@
     - SUPER-ALT-Mouse Wheel (zoon)
 
 - Added:
-  - Docs for overriding GTK and Icon themes
-    - In English and Spanish
+
+- Docs for overriding GTK and Icon themes
+  - In English and Spanish
 
 ---
 
