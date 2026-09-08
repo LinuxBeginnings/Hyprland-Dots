@@ -338,10 +338,21 @@ def _extract_lua_bind_tables(text):
             idx += 1
     return binds
 
+def _strip_lua_comments(text):
+    text = re.sub(r'--\[\[.*?\]\]', '', text, flags=re.DOTALL)
+    clean_lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith('--'):
+            continue
+        clean_lines.append(line)
+    return '\n'.join(clean_lines)
+
 def _extract_lua_binds(text):
+    clean_text = _strip_lua_comments(text)
     binds = []
-    binds.extend(_extract_lua_bind_calls(text))
-    binds.extend(_extract_lua_bind_tables(text))
+    binds.extend(_extract_lua_bind_calls(clean_text))
+    binds.extend(_extract_lua_bind_tables(clean_text))
     return binds
 
 def _format_lua_binds(binds):

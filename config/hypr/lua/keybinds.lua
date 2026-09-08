@@ -67,6 +67,7 @@ local app_binds = {
   },
   { "SUPER", "B", 'xdg-open "https://"', "open default browser" },
   { "SUPER", "A", "$HOME/.config/hypr/scripts/OverviewToggle.sh", "desktop overview" },
+  { "SUPER CTRL", "A", "pkill rofi || true && ags -t 'overview'", "Ags overview" },
   { "SUPER", "Return", "$HOME/.config/hypr/scripts/LaunchTerminal.sh '$term'", "Open terminal" },
   {
     "SUPER",
@@ -90,6 +91,7 @@ local app_binds = {
   { "SUPER SHIFT", "G", "$HOME/.config/hypr/scripts/GameMode.sh", "toggle game mode" },
   { "SUPER ALT", "L", "$HOME/.config/hypr/scripts/ChangeLayout.sh toggle", "toggle layouts" },
   { "SUPER ALT", "V", "$HOME/.config/hypr/scripts/ClipManager.sh", "clipboard manager" },
+  { "CTRL ALT", "D", "$HOME/.config/hypr/scripts/Dock.sh", "toggle dock" },
   { "SUPER CTRL", "R", "$HOME/.config/hypr/scripts/RofiThemeSelector.sh", "rofi theme selector" },
   {
     "SUPER CTRL SHIFT",
@@ -708,6 +710,7 @@ bind("SUPER", "G", dispatch("togglegroup", ""), { description = "toggle group" }
 bind("SUPER", "Tab", dispatch("changegroupactive", "f"), { description = "Change Group Forward" })
 bind("SUPER SHIFT", "Tab", dispatch("changegroupactive", "b"), { description = "Change Group Back" })
 bind("SUPER CTRL", "J", dispatch("moveintogroup", "l"), { description = "Move left into group" })
+bind("SUPER CTRL", "L", dispatch("moveintogroup", "r"), { description = "Move Right into group" })
 bind("SUPER CTRL", "H", dispatch("moveoutofgroup", ""), { description = "Move active out of group" })
 bind(
   "SUPER",
