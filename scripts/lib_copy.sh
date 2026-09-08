@@ -460,6 +460,16 @@ ensure_lua_keybinds() {
     fi
   done
 
+  # Ensure canonical system window rules delegate to lua/window_rules.lua (all 93 rules)
+  local sys_win_rules="$dst_root/configs/system_window_rules.lua"
+  local src_win_rules="$src_root/configs/system_window_rules.lua"
+  if [ -f "$src_win_rules" ]; then
+    if [ ! -f "$sys_win_rules" ] || grep -q "No active window rules were found" "$sys_win_rules" 2>/dev/null || ! grep -q "window_rules\.lua" "$sys_win_rules" 2>/dev/null; then
+      cp -f "$src_win_rules" "$sys_win_rules" 2>&1 | tee -a "$log" || true
+      echo "${OK:-[OK]} - Ensured canonical system window rules: ${YELLOW:-}configs/system_window_rules.lua${RESET:-}" 2>&1 | tee -a "$log"
+    fi
+  fi
+
   # Patch existing user and system lua configs to fix startup readiness race condition
   for f in "$dst_root/UserConfigs"/*.lua "$dst_root/configs"/*.lua "$dst_root/lua"/*.lua; do
     [ -f "$f" ] || continue

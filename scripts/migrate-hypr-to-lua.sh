@@ -1620,6 +1620,9 @@ system_window_lines = [
 if src_configs_dir and (src_configs_dir / "system_window_rules.lua").exists():
     files_out["system_window_rules"].write_text((src_configs_dir / "system_window_rules.lua").read_text(encoding="utf-8"), encoding="utf-8")
     print(f"[OK] Ensured canonical system file: {files_out['system_window_rules']}")
+elif (SRC_HYPR_DIR / "configs" / "system_window_rules.lua").exists():
+    files_out["system_window_rules"].write_text((SRC_HYPR_DIR / "configs" / "system_window_rules.lua").read_text(encoding="utf-8"), encoding="utf-8")
+    print(f"[OK] Ensured canonical system file: {files_out['system_window_rules']}")
 elif system_window_rules:
     system_window_lines.append("-- Converted from configs/WindowRules.conf")
     for rule_type, rule in system_window_rules:
