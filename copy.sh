@@ -151,14 +151,19 @@ if ! declare -f capture_upgrade_runtime_selection_state >/dev/null 2>&1; then
   capture_upgrade_runtime_selection_state() {
     local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
     local waybar_dir="$cfg_home/hypr/waybar"
+    local legacy_waybar_dir="$cfg_home/waybar"
     KOOLDOTS_SAVED_WAYBAR_CONFIG=""
     KOOLDOTS_SAVED_WAYBAR_STYLE=""
 
     if [ -L "$waybar_dir/config" ]; then
       KOOLDOTS_SAVED_WAYBAR_CONFIG="$(basename "$(readlink "$waybar_dir/config")")"
+    elif [ -L "$legacy_waybar_dir/config" ]; then
+      KOOLDOTS_SAVED_WAYBAR_CONFIG="$(basename "$(readlink "$legacy_waybar_dir/config")")"
     fi
     if [ -L "$waybar_dir/style.css" ]; then
       KOOLDOTS_SAVED_WAYBAR_STYLE="$(basename "$(readlink "$waybar_dir/style.css")")"
+    elif [ -L "$legacy_waybar_dir/style.css" ]; then
+      KOOLDOTS_SAVED_WAYBAR_STYLE="$(basename "$(readlink "$legacy_waybar_dir/style.css")")"
     fi
     export KOOLDOTS_SAVED_WAYBAR_CONFIG KOOLDOTS_SAVED_WAYBAR_STYLE
   }
@@ -218,30 +223,71 @@ if ! declare -f restore_upgrade_runtime_selection_state >/dev/null 2>&1; then
     local waybar_dir="$cfg_home/hypr/waybar"
     local config_link="$waybar_dir/config"
     local style_link="$waybar_dir/style.css"
+    local chassis
+    chassis="$(detect_waybar_config 2>/dev/null || echo "desktop")"
+    local default_config="$waybar_config"
+    [ "$chassis" = "laptop" ] && default_config="$waybar_config_laptop"
+    local default_style="$waybar_style"
 
+    # --- Config link validation and restoration ---
+    local restored_config=0
     if [ -n "${KOOLDOTS_SAVED_WAYBAR_CONFIG:-}" ] && [ -f "$waybar_dir/configs/$KOOLDOTS_SAVED_WAYBAR_CONFIG" ]; then
       rm -f "$config_link"
       ln -sf "$waybar_dir/configs/$KOOLDOTS_SAVED_WAYBAR_CONFIG" "$config_link" 2>&1 | tee -a "$log"
       echo "${OK} Restored waybar layout config: $KOOLDOTS_SAVED_WAYBAR_CONFIG" 2>&1 | tee -a "$log"
-    elif [ ! -e "$config_link" ]; then
-      local chassis
-      chassis="$(detect_waybar_config 2>/dev/null || echo "desktop")"
-      local default_target="$waybar_config"
-      [ "$chassis" = "laptop" ] && default_target="$waybar_config_laptop"
-      if [ -f "$default_target" ]; then
+      restored_config=1
+    fi
+
+    if [ "$restored_config" -eq 0 ]; then
+      local current_cfg_target=""
+      if [ -L "$config_link" ]; then
+        current_cfg_target="$(readlink "$config_link" || true)"
+      fi
+      local base_cfg_target=""
+      [ -n "$current_cfg_target" ] && base_cfg_target="$(basename "$current_cfg_target")"
+
+      if [ -n "$base_cfg_target" ] && [ -f "$waybar_dir/configs/$base_cfg_target" ]; then
         rm -f "$config_link"
-        ln -sf "$default_target" "$config_link" 2>&1 | tee -a "$log"
+        ln -sf "$waybar_dir/configs/$base_cfg_target" "$config_link" 2>&1 | tee -a "$log"
+        echo "${OK} Repaired waybar config link to: $base_cfg_target" 2>&1 | tee -a "$log"
+      else
+        # If config is a regular file, broken link, or points to missing target: remove and link to default
+        if [ -f "$default_config" ]; then
+          rm -f "$config_link"
+          ln -sf "$default_config" "$config_link" 2>&1 | tee -a "$log"
+          echo "${OK} Initialized default waybar config link: $(basename "$default_config")" 2>&1 | tee -a "$log"
+        fi
       fi
     fi
 
+    # --- Style link validation and restoration ---
+    local restored_style=0
     if [ -n "${KOOLDOTS_SAVED_WAYBAR_STYLE:-}" ] && [ -f "$waybar_dir/style/$KOOLDOTS_SAVED_WAYBAR_STYLE" ]; then
       rm -f "$style_link"
       ln -sf "$waybar_dir/style/$KOOLDOTS_SAVED_WAYBAR_STYLE" "$style_link" 2>&1 | tee -a "$log"
       echo "${OK} Restored waybar style: $KOOLDOTS_SAVED_WAYBAR_STYLE" 2>&1 | tee -a "$log"
-    elif [ ! -e "$style_link" ]; then
-      if [ -f "$waybar_style" ]; then
+      restored_style=1
+    fi
+
+    if [ "$restored_style" -eq 0 ]; then
+      local current_style_target=""
+      if [ -L "$style_link" ]; then
+        current_style_target="$(readlink "$style_link" || true)"
+      fi
+      local base_style_target=""
+      [ -n "$current_style_target" ] && base_style_target="$(basename "$current_style_target")"
+
+      if [ -n "$base_style_target" ] && [ -f "$waybar_dir/style/$base_style_target" ]; then
         rm -f "$style_link"
-        ln -sf "$waybar_style" "$style_link" 2>&1 | tee -a "$log"
+        ln -sf "$waybar_dir/style/$base_style_target" "$style_link" 2>&1 | tee -a "$log"
+        echo "${OK} Repaired waybar style link to: $base_style_target" 2>&1 | tee -a "$log"
+      else
+        # If style is a regular file, broken link, or points to missing target: remove and link to default
+        if [ -f "$default_style" ]; then
+          rm -f "$style_link"
+          ln -sf "$default_style" "$style_link" 2>&1 | tee -a "$log"
+          echo "${OK} Initialized default waybar style link: $(basename "$default_style")" 2>&1 | tee -a "$log"
+        fi
       fi
     fi
   }
@@ -1174,6 +1220,7 @@ fi
 # Ensure waybar style uses the normalized default.
 # - If the current path is not a symlink (regular file), convert it to a symlink.
 # - If the symlink points somewhere else (or is broken), reset it to the new default.
+# Ensure waybar style uses the normalized default or valid target.
 WAYBAR_STYLE_LINK="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/style.css"
 WAYBAR_STYLE_TARGET="$waybar_style"
 if [ "$RUN_MODE" = "install" ]; then
@@ -1184,10 +1231,18 @@ if [ "$RUN_MODE" = "install" ]; then
         ln -sf "$WAYBAR_STYLE_TARGET" "$WAYBAR_STYLE_LINK" 2>&1 | tee -a "$LOG"
       fi
     else
+      rm -f "$WAYBAR_STYLE_LINK"
       ln -sf "$WAYBAR_STYLE_TARGET" "$WAYBAR_STYLE_LINK" 2>&1 | tee -a "$LOG"
     fi
   else
     echo "${WARN} Waybar default style target not found at $WAYBAR_STYLE_TARGET; leaving $WAYBAR_STYLE_LINK as-is." 2>&1 | tee -a "$LOG"
+  fi
+else
+  if [ ! -e "$WAYBAR_STYLE_LINK" ] || [ ! -L "$WAYBAR_STYLE_LINK" ]; then
+    if [ -f "$WAYBAR_STYLE_TARGET" ]; then
+      rm -f "$WAYBAR_STYLE_LINK"
+      ln -sf "$WAYBAR_STYLE_TARGET" "$WAYBAR_STYLE_LINK" 2>&1 | tee -a "$LOG"
+    fi
   fi
 fi
 

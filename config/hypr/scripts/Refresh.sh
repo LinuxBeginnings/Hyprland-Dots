@@ -155,6 +155,9 @@ if pgrep -x "nwg-dock-hyprla" >/dev/null 2>&1 || pgrep -x "nwg-dock-hyprland" >/
   "${SCRIPTSDIR}/Dock.sh" --restart >/dev/null 2>&1 &
 fi
 
+# reload GTK theme / styles across open GTK applications
+killall -HUP xsettingsd 2>/dev/null || true
+
 # Relaunching rainbow borders based on selected mode
 sleep 1
 rainbow_mode_file="${UserScripts}/rainbow-borders.mode"

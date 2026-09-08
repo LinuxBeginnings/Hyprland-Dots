@@ -255,13 +255,14 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
     "Global theme changed" "Selected: ${choice}"
 
   # Wait until template targets exist, are newer than start_ts, and are stable (size/mtime stops changing)
-  # Ensure Ghostty directory exists so Wallust can write target even if Ghostty isn't installed
-  mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" || true
+  # Ensure Ghostty and GTK-3.0 directories exist so Wallust can write targets even if not yet created
+  mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0" || true
 
   targets=(
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/wallust/colors-waybar.css"
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
+    "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/colors-wallust.css"
   )
 
   # Normalize Ghostty palette syntax in case upstream templates or older targets used ':'
@@ -330,6 +331,7 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
   fi
 
   reload_hypr_preserve_layout
+  killall -HUP xsettingsd 2>/dev/null || true
   ensure_wallust_waybar_style
   reload_running_cava_colors
 
