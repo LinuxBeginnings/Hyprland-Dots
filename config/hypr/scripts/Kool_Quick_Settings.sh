@@ -603,7 +603,6 @@ handle_choice() {
   "Toggle Waybar Weather units"* | "Toggle Waybar Weather units (C/F)") "$scriptsDir/Toggle-weather-waybar-units.sh" ;;
   "Toggle Waybar Clock (12H/24H)") "$scriptsDir/ToggleWaybarTime.sh" ;;
   "Toggle Game Mode") "$scriptsDir/GameMode.sh" ;;
-  "Switch Dark-Light Theme") "$scriptsDir/DarkLight.sh" ;;
   "Rainbow Borders Mode") rainbow_borders_menu ;;
   *) return ;;
   esac
@@ -726,7 +725,6 @@ Choose Hyprland Animations
 Choose Monitor Profiles
 Choose Rofi Themes
 Search for Keybinds
-Switch Dark-Light Theme
 Rainbow Borders Mode
 EOF
     )
@@ -759,7 +757,7 @@ show_main_menu() {
   printf '%b\n' "[[ User Settings ]]\x00meta\x1fEdit User Defaults Edit User Keybinds Edit User ENV variables Edit User Startup Apps overlay Edit User Window Rules overlay Edit User Layer Rules overlay Edit User Settings Edit User Decorations Edit User Animations Edit User Laptop Settings Edit User Monitor config Select Hyprview Layout"
   printf '%b\n' "[[ System Settings ]]\x00meta\x1fEdit System Default Keybinds Edit System Default Startup Apps Edit System Default Window Rules Edit System Default Layer Rules Edit System Default Settings"
   printf '%b\n' "[[ Toggle Options ]]\x00meta\x1fToggle Waybar Weather units C F Toggle Waybar Clock 12H 24H Toggle Game Mode"
-  printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Configure Workspace Rules nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Switch Dark-Light Theme Rainbow Borders Mode"
+  printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Configure Workspace Rules nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Rainbow Borders Mode"
   printf '%s\n' "[ Quick Links]"
   printf '%s\n' "Set User Keybinds"
   printf '%s\n' "Set User Decorations"
@@ -798,7 +796,6 @@ show_main_menu() {
   printf '%s\n' "Choose Monitor Profiles"
   printf '%s\n' "Choose Rofi Themes"
   printf '%s\n' "Search for Keybinds"
-  printf '%s\n' "Switch Dark-Light Theme"
   printf '%s\n' "Rainbow Borders Mode"
 }
 

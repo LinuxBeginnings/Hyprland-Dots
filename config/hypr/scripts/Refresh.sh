@@ -98,7 +98,7 @@ ensure_wayland_env() {
 }
 
 # Restart waybar once, DETACHED from this script's cgroup.
-# This script is typically invoked from a waybar module on-click (e.g. DarkLight.sh), so
+# This script is typically invoked from a waybar module on-click or keybind, so
 # it runs inside waybar.service's cgroup. Killing waybar from in there makes systemd tear
 # down the whole unit and every process in it - this script included - so the replacement
 # waybar never gets launched and the bar stays gone. Running the restart as a transient

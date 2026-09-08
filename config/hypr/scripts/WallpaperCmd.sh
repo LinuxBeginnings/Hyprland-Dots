@@ -127,7 +127,7 @@ wallpaper_resize_mode() {
 # socket!" and aborts (SIGABRT), leaving a core dump behind.
 #
 # This happens on a regular login, where Startup_Apps.conf runs
-# WallpaperDaemon.sh and ApplyThemeMode.sh -> DarkLight.sh concurrently.
+# WallpaperDaemon.sh concurrently with other session services.
 wallpaper_ensure_daemon() {
   local lock_file="${XDG_RUNTIME_DIR:-/tmp}/wallpaper-daemon-${UID:-$(id -u)}.lock"
 

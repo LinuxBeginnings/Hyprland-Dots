@@ -1,9 +1,13 @@
 # Changelog — KoolDots
 
-## v2.3.26.3
+## v2.3.27
 
 ## Fixed:
 
+- Support for `nwg-look` to set theme / icons
+  - REMOVED `DarkLight.sh` and `ApplyThemeMode.sh`
+  - Working to greatly simplify theming
+  - These two features have added many issues / complexities
 - Global Theme now persistent
   - Option added to return to wallpaper theme
 - Fixed default apps source order
