@@ -215,8 +215,8 @@ ln -sf "$wallpaper_path" "$rofi_link" || true
 mkdir -p "$(dirname "$wallpaper_current")"
 cp -f "$wallpaper_path" "$wallpaper_current" || true
 
-# Ensure Ghostty and GTK-3.0 directories exist so Wallust can write targets even if not yet created
-mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0" || true
+# Ensure Ghostty directory exists so Wallust can write targets even if not yet created
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" || true
 wait_for_templates() {
   shift
   local files=("$@")
@@ -241,7 +241,6 @@ wallust_targets=(
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/wallust/colors-waybar.css"
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
-  "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/colors-wallust.css"
 )
 for target in "${wallust_targets[@]}"; do
   mkdir -p "$(dirname "$target")"

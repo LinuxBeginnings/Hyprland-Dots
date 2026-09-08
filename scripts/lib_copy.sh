@@ -325,6 +325,19 @@ copy_phase2() {
   else
     mkdir -p "$wallust_dir"
   fi
+  # Clean up stale GTK-3 Wallust css overrides if present from older versions
+  local gtk3_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0"
+  if [ -f "$gtk3_dir/colors-wallust.css" ]; then
+    rm -f "$gtk3_dir/colors-wallust.css"
+    if [ -f "$gtk3_dir/gtk.css" ]; then
+      if ! grep -Ev '^[[:space:]]*(/\*.*\*/|@import[[:space:]]+[\x27"]colors-wallust\.css[\x27"];|[[:space:]]*)$' "$gtk3_dir/gtk.css" >/dev/null 2>&1; then
+        rm -f "$gtk3_dir/gtk.css"
+      else
+        sed -i "/@import[[:space:]]*['\"]colors-wallust\.css['\"];/d" "$gtk3_dir/gtk.css" 2>/dev/null || true
+      fi
+    fi
+  fi
+
   install_terminal_configs "$log"
 }
 
