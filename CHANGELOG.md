@@ -1,13 +1,26 @@
 # Changelog — KoolDots
 
+## v2.3.26.4
+
+- Fixed:
+  - Missing or incorrect Keybinds
+    - Kitty
+    - Group/Ungroup
+  - Broken keybinds
+    - SUPER-R (Column presets scrolling layout)
+    - SUPER-G (Group/Ungroup)
+    - SUPER-ALT-Mouse Wheel (zoon)
+
+- Added:
+  - Docs for overriding GTK and Icon themes
+    - In English and Spanish
+
+---
+
 ## v2.3.26.3
 
 ## Fixed:
 
-- Fixed broken keybinds
-  - SUPER-R (Column presets scrolling layout)
-  - SUPER-G (Group/Ungroup)
-  - SUPER-ALT-Mouse Wheel (zoon)
 - Missing keybinds
 - Global Theme now persistent
   - Option added to return to wallpaper theme
