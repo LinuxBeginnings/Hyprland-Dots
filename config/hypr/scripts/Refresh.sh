@@ -155,35 +155,6 @@ if pgrep -x "nwg-dock-hyprla" >/dev/null 2>&1 || pgrep -x "nwg-dock-hyprland" >/
   "${SCRIPTSDIR}/Dock.sh" --restart >/dev/null 2>&1 &
 fi
 
-reload_gtk_theme_inplace() {
-  local gtk_css="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/gtk.css"
-  local wallust_gtk="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/colors-wallust.css"
-
-  # Force gtk.css timestamp & content change so GTK3 invalidates cached styles
-  if [ -f "$wallust_gtk" ]; then
-    printf "/* GTK 3 & Thunar styling with Wallust colors */\n@import 'colors-wallust.css';\n/* %s */\n" "$(date +%s%N 2>/dev/null || date +%s)" > "$gtk_css" 2>/dev/null || true
-  fi
-
-  # Signal xsettingsd if running
-  killall -HUP xsettingsd 2>/dev/null || true
-
-  # Nudge GSettings to trigger in-place widget repaint in all running GTK3 apps without quitting them
-  if command -v gsettings >/dev/null 2>&1; then
-    local current_theme alt_theme
-    current_theme="$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null | tr -d "'")"
-    if [ -n "$current_theme" ]; then
-      alt_theme="Adwaita"
-      [ "$current_theme" = "Adwaita" ] && alt_theme="Adwaita-dark"
-      gsettings set org.gnome.desktop.interface gtk-theme "$alt_theme" >/dev/null 2>&1 || true
-      sleep 0.05
-      gsettings set org.gnome.desktop.interface gtk-theme "$current_theme" >/dev/null 2>&1 || true
-    fi
-  fi
-}
-
-# reload GTK theme / styles live across open GTK applications
-reload_gtk_theme_inplace
-
 # Relaunching rainbow borders based on selected mode
 sleep 1
 rainbow_mode_file="${UserScripts}/rainbow-borders.mode"

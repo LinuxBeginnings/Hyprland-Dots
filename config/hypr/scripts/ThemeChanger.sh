@@ -276,7 +276,6 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/wallust/colors-waybar.css"
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
-    "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/colors-wallust.css"
   )
 
   # Normalize Ghostty palette syntax in case upstream templates or older targets used ':'
@@ -344,32 +343,8 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
     fi
   fi
 
-reload_gtk_theme_inplace() {
-  local gtk_css="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/gtk.css"
-  local wallust_gtk="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/colors-wallust.css"
-
-  if [ -f "$wallust_gtk" ]; then
-    printf "/* GTK 3 & Thunar styling with Wallust colors */\n@import 'colors-wallust.css';\n/* %s */\n" "$(date +%s%N 2>/dev/null || date +%s)" > "$gtk_css" 2>/dev/null || true
-  fi
-
-  killall -HUP xsettingsd 2>/dev/null || true
-
-  if command -v gsettings >/dev/null 2>&1; then
-    local current_theme alt_theme
-    current_theme="$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null | tr -d "'")"
-    if [ -n "$current_theme" ]; then
-      alt_theme="Adwaita"
-      [ "$current_theme" = "Adwaita" ] && alt_theme="Adwaita-dark"
-      gsettings set org.gnome.desktop.interface gtk-theme "$alt_theme" >/dev/null 2>&1 || true
-      sleep 0.05
-      gsettings set org.gnome.desktop.interface gtk-theme "$current_theme" >/dev/null 2>&1 || true
-    fi
-  fi
-}
-
   apply_hypr_border_fallback
   reload_hypr_preserve_layout
-  reload_gtk_theme_inplace
   ensure_wallust_waybar_style
   reload_running_cava_colors
 

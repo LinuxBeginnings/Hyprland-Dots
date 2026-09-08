@@ -56,9 +56,6 @@ quickshell.target = '~/.config/quickshell/qml_color.json'
 nwg-dock.template = 'colors-nwg-dock.css'
 nwg-dock.target = '~/.config/nwg-dock-hyprland/wallust/colors-wallust.css'
 
-gtk3.template = 'colors-gtk.css'
-gtk3.target = '~/.config/gtk-3.0/colors-wallust.css'
-
 #swaync.template = 'colors-swaync.css'
 #swaync.target = '~/.config/swaync/wallust/colors-wallust.css'
 

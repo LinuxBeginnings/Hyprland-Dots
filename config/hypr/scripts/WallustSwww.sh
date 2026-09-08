@@ -360,34 +360,10 @@ apply_hypr_gap_fallback() {
   [ -n "$border_size" ] && hyprctl keyword general:border_size "$border_size" >/dev/null 2>&1 || true
 }
 
-reload_gtk_theme_inplace() {
-  local gtk_css="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/gtk.css"
-  local wallust_gtk="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/colors-wallust.css"
-
-  if [ -f "$wallust_gtk" ]; then
-    printf "/* GTK 3 & Thunar styling with Wallust colors */\n@import 'colors-wallust.css';\n/* %s */\n" "$(date +%s%N 2>/dev/null || date +%s)" > "$gtk_css" 2>/dev/null || true
-  fi
-
-  killall -HUP xsettingsd 2>/dev/null || true
-
-  if command -v gsettings >/dev/null 2>&1; then
-    local current_theme alt_theme
-    current_theme="$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null | tr -d "'")"
-    if [ -n "$current_theme" ]; then
-      alt_theme="Adwaita"
-      [ "$current_theme" = "Adwaita" ] && alt_theme="Adwaita-dark"
-      gsettings set org.gnome.desktop.interface gtk-theme "$alt_theme" >/dev/null 2>&1 || true
-      sleep 0.05
-      gsettings set org.gnome.desktop.interface gtk-theme "$current_theme" >/dev/null 2>&1 || true
-    fi
-  fi
-}
-
 # Apply Hyprland updates immediately to avoid delayed border/gap changes.
-  apply_hypr_border_fallback
-  apply_hypr_gap_fallback
-  reload_hypr_preserve_layout
-  reload_gtk_theme_inplace
+apply_hypr_border_fallback
+apply_hypr_gap_fallback
+reload_hypr_preserve_layout
 
 kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-kitty.toml"
 if [ "${#wallust_kitty_args[@]}" -gt 0 ]; then
