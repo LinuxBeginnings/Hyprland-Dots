@@ -267,10 +267,29 @@ local function dispatch(name, args)
   end
   if name == "togglegroup" then
     return function()
+      local group_api = (dsp and dsp.group) or (hl and hl.dsp and hl.dsp.group) or {}
+      if group_api and group_api.toggle then
+        local ok, dispatcher = pcall(group_api.toggle)
+        if ok and dispatcher then
+          hl.dispatch(dispatcher)
+          return
+        end
+      end
       if dsp and dsp.exec_raw then
-        hl.dispatch(dsp.exec_raw("togglegroup"))
-      else
-        hl.exec_cmd("hyprctl dispatch togglegroup")
+        pcall(hl.dispatch, dsp.exec_raw("togglegroup"))
+      end
+    end
+  end
+  if name == "changegroupactive" then
+    local group_api = (dsp and dsp.group) or (hl and hl.dsp and hl.dsp.group) or {}
+    if group_api and group_api.next and group_api.prev then
+      if args == "b" or args == "prev" or args == "-1" then
+        return function()
+          hl.dispatch(group_api.prev())
+        end
+      end
+      return function()
+        hl.dispatch(group_api.next())
       end
     end
   end
