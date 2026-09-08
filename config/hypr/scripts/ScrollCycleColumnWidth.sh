@@ -57,4 +57,13 @@ for idx in "${!presets[@]}"; do
 done
 
 next_idx=$(( (closest_idx + 1) % ${#presets[@]} ))
-hyprctl dispatch layoutmsg "colresize ${presets[$next_idx]}" >/dev/null 2>&1 || true
+dispatch_layoutmsg() {
+  local msg="$1"
+  local output=""
+  output="$(hyprctl eval "hl.dispatch(hl.dsp.layout(\"${msg}\"))" 2>&1 || true)"
+  if [[ "$output" != "ok" ]]; then
+    hyprctl dispatch layoutmsg "$msg" >/dev/null 2>&1 || true
+  fi
+}
+
+dispatch_layoutmsg "colresize ${presets[$next_idx]}"
