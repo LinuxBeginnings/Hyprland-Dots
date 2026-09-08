@@ -325,12 +325,26 @@ apply_hypr_border_fallback() {
   color15="$(extract_wallust_hex color15)"
   color0="$(extract_wallust_hex color0)"
 
-  [ -n "$color12" ] && hyprctl keyword general:col.active_border "rgb($color12)" >/dev/null 2>&1 || true
-  [ -n "$color10" ] && hyprctl keyword general:col.inactive_border "rgb($color10)" >/dev/null 2>&1 || true
-  [ -n "$color12" ] && hyprctl keyword decoration:shadow:color "rgb($color12)" >/dev/null 2>&1 || true
-  [ -n "$color10" ] && hyprctl keyword decoration:shadow:color_inactive "rgb($color10)" >/dev/null 2>&1 || true
-  [ -n "$color15" ] && hyprctl keyword group:col.border_active "rgb($color15)" >/dev/null 2>&1 || true
-  [ -n "$color0" ] && hyprctl keyword group:groupbar:col.active "rgb($color0)" >/dev/null 2>&1 || true
+  if [ -n "$color12" ]; then
+    hyprctl keyword general:col.active_border "rgb($color12)" >/dev/null 2>&1 || \
+    hyprctl eval "hl.config({ general = { col = { active_border = \"rgba(${color12}ff)\" } } })" >/dev/null 2>&1 || true
+    hyprctl keyword decoration:shadow:color "rgb($color12)" >/dev/null 2>&1 || \
+    hyprctl eval "hl.config({ decoration = { shadow = { color = \"rgba(${color12}ff)\" } } })" >/dev/null 2>&1 || true
+  fi
+  if [ -n "$color10" ]; then
+    hyprctl keyword general:col.inactive_border "rgb($color10)" >/dev/null 2>&1 || \
+    hyprctl eval "hl.config({ general = { col = { inactive_border = \"rgba(${color10}ff)\" } } })" >/dev/null 2>&1 || true
+    hyprctl keyword decoration:shadow:color_inactive "rgb($color10)" >/dev/null 2>&1 || \
+    hyprctl eval "hl.config({ decoration = { shadow = { color_inactive = \"rgba(${color10}ff)\" } } })" >/dev/null 2>&1 || true
+  fi
+  if [ -n "$color15" ]; then
+    hyprctl keyword group:col.border_active "rgb($color15)" >/dev/null 2>&1 || \
+    hyprctl eval "hl.config({ group = { col = { border_active = \"rgba(${color15}ff)\" } } })" >/dev/null 2>&1 || true
+  fi
+  if [ -n "$color0" ]; then
+    hyprctl keyword group:groupbar:col.active "rgb($color0)" >/dev/null 2>&1 || \
+    hyprctl eval "hl.config({ group = { groupbar = { col = { active = \"rgba(${color0}ff)\" } } } })" >/dev/null 2>&1 || true
+  fi
 }
 
 apply_hypr_gap_fallback() {
@@ -347,6 +361,8 @@ apply_hypr_gap_fallback() {
 }
 
 # Apply Hyprland updates immediately to avoid delayed border/gap changes.
+  apply_hypr_border_fallback
+  apply_hypr_gap_fallback
   reload_hypr_preserve_layout
   killall -HUP xsettingsd 2>/dev/null || true
 
