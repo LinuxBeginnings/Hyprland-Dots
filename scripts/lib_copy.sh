@@ -85,15 +85,32 @@ _restore_waybar_customizations() {
     if [ -L "$symlink" ]; then
       symlink_target=$(readlink "$symlink")
       target_name=$(basename "$symlink_target")
+      # Normalize legacy names if needed
+      case "$target_name" in
+        "[TOP] Default"|"[TOP] Default Laptop"|"[TOP] Default (old v"*)
+          target_name="${target_name//\[TOP\] /TOP-}"
+          target_name="${target_name// Laptop/-Laptop}"
+          target_name="${target_name// (old v/-old-v}"
+          target_name="${target_name//)/}"
+          ;;
+        "[BOT] Default"|"[BOT] Default Laptop")
+          target_name="${target_name//\[BOT\] /BOT-}"
+          target_name="${target_name// Laptop/-Laptop}"
+          ;;
+      esac
       if [ "$file" = "config" ] && [ -f "$new_dir/configs/$target_name" ]; then
         rm -f "$target_file" && ln -sf "$new_dir/configs/$target_name" "$target_file"
       elif [ "$file" = "style.css" ] && [ -f "$new_dir/style/$target_name" ]; then
         rm -f "$target_file" && ln -sf "$new_dir/style/$target_name" "$target_file"
-      elif [ -f "$symlink_target" ]; then
-        rm -f "$target_file" && ln -sf "$symlink_target" "$target_file"
       fi
     elif [ -f "$symlink" ]; then
+      # If backup was a regular file with stale includes, patch them in-place
       rm -f "$target_file" && cp -f "$symlink" "$target_file"
+      if [ "$file" = "config" ]; then
+        sed -i 's#\$HOME/\.config/waybar/#$HOME/.config/hypr/waybar/#g; s#~/\.config/waybar/#~/.config/hypr/waybar/#g' "$target_file" 2>/dev/null || true
+      elif [ "$file" = "style.css" ]; then
+        sed -i -E 's#(@import[[:space:]]*["'"'"'])\.\./\.\./\.config/waybar/wallust/colors-waybar\.css(["'"'"'])#\1../../../.config/hypr/waybar/wallust/colors-waybar.css\2#g; s#\.config/waybar/#.config/hypr/waybar/#g' "$target_file" 2>/dev/null || true
+      fi
     fi
   done
   for dir in "$backup_dir/configs"/*; do
@@ -106,7 +123,10 @@ _restore_waybar_customizations() {
   for file in "$backup_dir/configs"/*; do
     [ -e "$file" ] || continue
     target_file="$new_dir/configs/$(basename "$file")"
-    [ -e "$target_file" ] || cp "$file" "$new_dir/configs/"
+    if [ ! -e "$target_file" ]; then
+      cp "$file" "$new_dir/configs/"
+      sed -i 's#\$HOME/\.config/waybar/#$HOME/.config/hypr/waybar/#g; s#~/\.config/waybar/#~/.config/hypr/waybar/#g' "$target_file" 2>/dev/null || true
+    fi
   done || true
   for file in "$backup_dir/style"/*; do
     [ -e "$file" ] || continue
@@ -115,25 +135,60 @@ _restore_waybar_customizations() {
       [ -d "$target_dir" ] || cp -r "$file" "$new_dir/style/"
     else
       target_file="$new_dir/style/$(basename "$file")"
-      [ -e "$target_file" ] || cp "$file" "$new_dir/style/"
+      if [ ! -e "$target_file" ]; then
+        cp "$file" "$new_dir/style/"
+        sed -i -E 's#(@import[[:space:]]*["'"'"'])\.\./\.\./\.config/waybar/wallust/colors-waybar\.css(["'"'"'])#\1../../../.config/hypr/waybar/wallust/colors-waybar.css\2#g; s#\.config/waybar/#.config/hypr/waybar/#g' "$target_file" 2>/dev/null || true
+      fi
     fi
   done || true
   BACKUP_FILEw="$backup_dir/UserModules"
   [ -f "$BACKUP_FILEw" ] && cp -f "$BACKUP_FILEw" "$new_dir/UserModules"
+
+  # Ensure config and style.css exist and are valid symlinks; if broken or missing, point to defaults
+  if [ ! -e "$new_dir/config" ]; then
+    local chassis
+    chassis="$(detect_waybar_config 2>/dev/null || echo "desktop")"
+    local d_cfg="$new_dir/configs/TOP-Default"
+    [ "$chassis" = "laptop" ] && d_cfg="$new_dir/configs/TOP-Default-Laptop"
+    [ -f "$d_cfg" ] && rm -f "$new_dir/config" && ln -sf "$d_cfg" "$new_dir/config"
+  fi
+  if [ ! -e "$new_dir/style.css" ]; then
+    local d_stl="$new_dir/style/Extra-Prismatic-Glow.css"
+    [ -f "$d_stl" ] && rm -f "$new_dir/style.css" && ln -sf "$d_stl" "$new_dir/style.css"
+  fi
 }
 
 # Detect a waybar directory whose configs/modules/styles still reference the
-# pre-migration "$HOME/.config/waybar/" path. That path no longer exists once
-# waybar moves under hypr/, so every include/@import using it silently fails
-# -- meaning modules (idle_inhibitor, workspaces, custom entries, etc.) never
-# load and styling breaks. This is a broken install, not a user preference,
-# so it must be repaired unconditionally -- even when express mode would
-# otherwise "keep existing" untouched, and even if a non-express upgrade
-# would otherwise let the user decline replacement.
+# pre-migration "$HOME/.config/waybar/" path, or whose config/style.css links
+# are broken, missing, or pointing to stale locations.
 _waybar_dir_has_stale_paths() {
   local dir="$1"
   [ -d "$dir" ] || return 1
-  grep -rq '\.config/waybar/' "$dir" 2>/dev/null
+
+  # 1. Check if config or style.css symlinks point to legacy path or are broken
+  for link in "$dir/config" "$dir/style.css"; do
+    if [ -L "$link" ]; then
+      local tgt
+      tgt="$(readlink "$link" 2>/dev/null || true)"
+      if [[ "$tgt" == *".config/waybar"* ]] || [ ! -e "$link" ]; then
+        return 0
+      fi
+    elif [ -f "$link" ]; then
+      # Regular file with stale includes is stale
+      if grep -rq '\.config/waybar/' "$link" 2>/dev/null; then
+        return 0
+      fi
+    elif [ ! -e "$link" ]; then
+      return 0
+    fi
+  done
+
+  # 2. Check if any file content inside directory has stale .config/waybar references
+  if grep -rq '\.config/waybar/' "$dir" 2>/dev/null; then
+    return 0
+  fi
+
+  return 1
 }
 
 copy_waybar() {
