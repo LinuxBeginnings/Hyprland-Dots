@@ -41,10 +41,11 @@ end
 
 local function raw_dispatch_cmd(command)
   if dsp and dsp.exec_raw then
-    return dsp.exec_raw(tostring(command))
+    return function()
+      hl.dispatch(dsp.exec_raw(tostring(command)))
+    end
   end
-  local expression = "hl.dsp.exec_raw(" .. string.format("%q", tostring(command)) .. ")"
-  return exec_cmd("hyprctl dispatch " .. shell_quote(expression))
+  return exec_cmd("hyprctl dispatch " .. tostring(command))
 end
 
 local function trim(value)
@@ -264,6 +265,15 @@ local function dispatch(name, args)
       hl.dispatch(window_api.float({ action = "toggle" }))
     end
   end
+  if name == "togglegroup" then
+    return function()
+      if dsp and dsp.exec_raw then
+        hl.dispatch(dsp.exec_raw("togglegroup"))
+      else
+        hl.exec_cmd("hyprctl dispatch togglegroup")
+      end
+    end
+  end
   if name == "pseudo" and window_api.pseudo then
     return function()
       hl.dispatch(window_api.pseudo())
@@ -473,17 +483,13 @@ bind(
 bind(
   "SUPER ALT",
   "mouse_down",
-  exec_cmd(
-    "hyprctl keyword cursor:zoom_factor \"$(hyprctl getoption cursor:zoom_factor | awk 'NR==1 {factor = $2; if (factor < 1) {factor = 1}; print factor * 2.0}')\""
-  ),
+  exec_cmd("$HOME/.config/hypr/scripts/Zoom.sh in"),
   { description = "zoom in" }
 )
 bind(
   "SUPER ALT",
   "mouse_up",
-  exec_cmd(
-    "hyprctl keyword cursor:zoom_factor \"$(hyprctl getoption cursor:zoom_factor | awk 'NR==1 {factor = $2; if (factor < 1) {factor = 1}; print factor / 2.0}')\""
-  ),
+  exec_cmd("$HOME/.config/hypr/scripts/Zoom.sh out"),
   { description = "zoom out" }
 )
 bind("SUPER CTRL ALT", "B", exec_cmd("pkill -SIGUSR1 waybar"), { description = "toggle waybar on/off" })

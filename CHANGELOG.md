@@ -4,6 +4,10 @@
 
 ## Fixed:
 
+- Fixed broken keybinds
+  - SUPER-R
+  - SUPER-G
+  - SUPER-ALT-Mouse Wheel (zoon)
 - Missing keybinds
 - Global Theme now persistent
   - Option added to return to wallpaper theme

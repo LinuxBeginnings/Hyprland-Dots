@@ -10,7 +10,11 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 workspace_json="$(hyprctl -j activeworkspace 2>/dev/null || true)"
-layout_name="$(jq -r '.tiledLayout // .tiled_layout // empty' <<<"$workspace_json")"
+layout_name="$(jq -r '.tiledLayout // .tiled_layout // .layout // empty' <<<"$workspace_json" 2>/dev/null || true)"
+
+if [[ -z "$layout_name" || "$layout_name" == "null" ]]; then
+  layout_name="$(hyprctl -j getoption general:layout 2>/dev/null | jq -r '.str // empty' 2>/dev/null || true)"
+fi
 
 if [[ "$layout_name" != "scrolling" ]]; then
   exit 0
