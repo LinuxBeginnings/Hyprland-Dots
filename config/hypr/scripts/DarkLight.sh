@@ -366,81 +366,177 @@ else
 fi
 
 
+read_user_env_var() {
+    local var_name="$1"
+    local val=""
+    local user_env_lua="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/user_env.lua"
+    local user_env_conf="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/ENVariables.conf"
+
+    if [ -f "$user_env_lua" ]; then
+        val=$(sed -nE 's/^[[:space:]]*hl\.env\([[:space:]]*["'"'"']'"$var_name"'["'"'"'][[:space:]]*,[[:space:]]*["'"'"']([^"'"'"']+)["'"'"'].*/\1/p' "$user_env_lua" | tail -n1)
+    fi
+    if [ -z "$val" ] && [ -f "$user_env_conf" ]; then
+        val=$(sed -nE 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*'"$var_name"'[[:space:]]*,[[:space:]]*([^#[:space:]]+).*/\1/p' "$user_env_conf" | tail -n1)
+    fi
+    if [ -z "$val" ]; then
+        val="${!var_name:-}"
+    fi
+    printf '%s' "$val"
+}
+
 # GTK themes and icons switching
 set_custom_gtk_theme() {
-    mode=$1
-    color_setting="org.gnome.desktop.interface color-scheme"
-    theme_setting="org.gnome.desktop.interface gtk-theme"
-    icon_setting="org.gnome.desktop.interface icon-theme"
+    local mode=$1
+    local color_setting="org.gnome.desktop.interface color-scheme"
+    local theme_setting="org.gnome.desktop.interface gtk-theme"
+    local icon_setting="org.gnome.desktop.interface icon-theme"
 
     local prefer_dark=1
     if [ "$mode" == "Light" ]; then
-        search_keywords="*Light*"
         prefer_dark=0
-        gsettings set $color_setting 'prefer-light'
+        gsettings set $color_setting 'prefer-light' 2>/dev/null || true
     elif [ "$mode" == "Dark" ]; then
-        search_keywords="*Dark*"
         prefer_dark=1
-        gsettings set $color_setting 'prefer-dark'
-    else
-        echo "Invalid mode provided."
-        return 1
+        gsettings set $color_setting 'prefer-dark' 2>/dev/null || true
     fi
 
-    local -a theme_search_dirs=("$HOME/.themes" "$HOME/.local/share/themes" "/usr/share/themes")
-    local -a icon_search_dirs=("$HOME/.icons" "$HOME/.local/share/icons" "/usr/share/icons")
-
-    themes=()
-    icons=()
-
-    for dir in "${theme_search_dirs[@]}"; do
-        if [ -d "$dir" ]; then
-            while IFS= read -r -d '' theme_search; do
-                if [ -d "$theme_search/gtk-3.0" ] || [ -d "$theme_search/gtk-4.0" ]; then
-                    local t_name
-                    t_name="$(basename "$theme_search")"
-                    [[ " ${themes[*]} " =~ " ${t_name} " ]] || themes+=("$t_name")
-                fi
-            done < <(find "$dir" -maxdepth 1 -type d -iname "$search_keywords" -print0 2>/dev/null)
-        fi
-    done
-
-    for dir in "${icon_search_dirs[@]}"; do
-        if [ -d "$dir" ]; then
-            while IFS= read -r -d '' icon_search; do
-                local i_name
-                i_name="$(basename "$icon_search")"
-                [[ " ${icons[*]} " =~ " ${i_name} " ]] || icons+=("$i_name")
-            done < <(find "$dir" -maxdepth 1 -type d -iname "$search_keywords" -print0 2>/dev/null)
-        fi
-    done
+    # 1. Check for explicit user environment overrides from user_env.lua / ENVariables.conf / environment
+    local override_theme override_icon
+    override_theme="$(read_user_env_var "GTK_THEME")"
+    override_icon="$(read_user_env_var "ICON_THEME")"
+    [ -z "$override_icon" ] && override_icon="$(read_user_env_var "GTK_ICON_THEME")"
 
     local selected_theme=""
-    if [ ${#themes[@]} -gt 0 ]; then
-        selected_theme=${themes[RANDOM % ${#themes[@]}]}
-    else
-        if [ "$mode" == "Dark" ]; then
-            selected_theme="Adwaita-dark"
+    local selected_icon=""
+
+    [ -n "$override_theme" ] && selected_theme="$override_theme"
+    [ -n "$override_icon" ] && selected_icon="$override_icon"
+
+    # 2. Read current theme/icon configured in GSettings, settings.ini, or xsettingsd (e.g. set by nwg-look)
+    local current_gtk_theme=""
+    current_gtk_theme="$(gsettings get $theme_setting 2>/dev/null | tr -d \"\'\" || true)"
+    if [ -z "$current_gtk_theme" ] && [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/settings.ini" ]; then
+        current_gtk_theme="$(sed -n 's/^[[:space:]]*gtk-theme-name[[:space:]]*=[[:space:]]*//p' "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/settings.ini" | head -n1)"
+    fi
+    if [ -z "$current_gtk_theme" ] && [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd/xsettingsd.conf" ]; then
+        current_gtk_theme="$(sed -n 's/^[[:space:]]*Net\/ThemeName[[:space:]]*"\(.*\)"/\1/p' "${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd/xsettingsd.conf" | head -n1)"
+    fi
+
+    local current_icon_theme=""
+    current_icon_theme="$(gsettings get $icon_setting 2>/dev/null | tr -d \"\'\" || true)"
+    if [ -z "$current_icon_theme" ] && [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/settings.ini" ]; then
+        current_icon_theme="$(sed -n 's/^[[:space:]]*gtk-icon-theme-name[[:space:]]*=[[:space:]]*//p' "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/settings.ini" | head -n1)"
+    fi
+    if [ -z "$current_icon_theme" ] && [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd/xsettingsd.conf" ]; then
+        current_icon_theme="$(sed -n 's/^[[:space:]]*Net\/IconThemeName[[:space:]]*"\(.*\)"/\1/p' "${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd/xsettingsd.conf" | head -n1)"
+    fi
+
+    # 3. If applying saved mode on startup (--apply-current), PRESERVE existing themes from nwg-look/settings.ini
+    if [ "$apply_saved_mode" -eq 1 ]; then
+        [ -z "$selected_theme" ] && selected_theme="$current_gtk_theme"
+        [ -z "$selected_icon" ] && selected_icon="$current_icon_theme"
+    fi
+
+    # 4. When toggling Dark <-> Light, find matching counterpart if one exists
+    if [ -z "$selected_theme" ] && [ -n "$current_gtk_theme" ]; then
+        local counterpart=""
+        if [ "$mode" == "Light" ]; then
+            case "$current_gtk_theme" in
+                *Dark|*dark|*-dark|*-Dark)
+                    counterpart="${current_gtk_theme//-dark/-light}"
+                    counterpart="${counterpart//-Dark/-Light}"
+                    counterpart="${counterpart//dark/light}"
+                    counterpart="${counterpart//Dark/Light}"
+                    ;;
+                Catppuccin-Mocha*|Catppuccin-Frappe*)
+                    counterpart="${current_gtk_theme//Catppuccin-Mocha/Catppuccin-Latte}"
+                    counterpart="${counterpart//Catppuccin-Frappe/Catppuccin-Latte}"
+                    ;;
+            esac
         else
-            selected_theme="Adwaita"
+            case "$current_gtk_theme" in
+                *Light|*light|*-light|*-Light)
+                    counterpart="${current_gtk_theme//-light/-dark}"
+                    counterpart="${counterpart//-Light/-Dark}"
+                    counterpart="${counterpart//light/dark}"
+                    counterpart="${counterpart//Light/Dark}"
+                    ;;
+                Catppuccin-Latte*)
+                    counterpart="${current_gtk_theme//Catppuccin-Latte/Catppuccin-Mocha}"
+                    ;;
+            esac
+        fi
+
+        if [ -n "$counterpart" ]; then
+            for tdir in "$HOME/.themes" "$HOME/.local/share/themes" "/usr/share/themes"; do
+                if [ -d "$tdir/$counterpart" ]; then
+                    selected_theme="$counterpart"
+                    break
+                fi
+            done
+        fi
+        # If no counterpart exists (e.g. Nordic, Dracula), keep current theme
+        [ -z "$selected_theme" ] && selected_theme="$current_gtk_theme"
+    fi
+
+    # 5. Initial fallback if still empty
+    if [ -z "$selected_theme" ]; then
+        local search_keywords="*Dark*"
+        [ "$mode" == "Light" ] && search_keywords="*Light*"
+        local -a theme_search_dirs=("$HOME/.themes" "$HOME/.local/share/themes" "/usr/share/themes")
+        local -a themes=()
+        for dir in "${theme_search_dirs[@]}"; do
+            if [ -d "$dir" ]; then
+                while IFS= read -r -d '' theme_search; do
+                    if [ -d "$theme_search/gtk-3.0" ] || [ -d "$theme_search/gtk-4.0" ]; then
+                        local t_name
+                        t_name="$(basename "$theme_search")"
+                        [[ " ${themes[*]} " =~ " ${t_name} " ]] || themes+=("$t_name")
+                    fi
+                done < <(find "$dir" -maxdepth 1 -type d -iname "$search_keywords" -print0 2>/dev/null)
+            fi
+        done
+        if [ ${#themes[@]} -gt 0 ]; then
+            selected_theme="${themes[0]}"
+        else
+            [ "$mode" == "Dark" ] && selected_theme="Adwaita-dark" || selected_theme="Adwaita"
+        fi
+    fi
+
+    # 6. Icon theme: keep current or fallback
+    if [ -z "$selected_icon" ]; then
+        [ -n "$current_icon_theme" ] && selected_icon="$current_icon_theme"
+    fi
+    if [ -z "$selected_icon" ]; then
+        local -a icon_search_dirs=("$HOME/.icons" "$HOME/.local/share/icons" "/usr/share/icons")
+        local -a icons=()
+        for dir in "${icon_search_dirs[@]}"; do
+            if [ -d "$dir" ]; then
+                while IFS= read -r -d '' icon_search; do
+                    local i_name
+                    i_name="$(basename "$icon_search")"
+                    [[ " ${icons[*]} " =~ " ${i_name} " ]] || icons+=("$i_name")
+                done < <(find "$dir" -maxdepth 1 -type d -iname "*Dark*" -print0 2>/dev/null)
+            fi
+        done
+        if [ ${#icons[@]} -gt 0 ]; then
+            selected_icon="${icons[0]}"
         fi
     fi
 
     echo "Selected GTK theme for $mode mode: $selected_theme"
-    gsettings set $theme_setting "$selected_theme"
+    [ -n "$selected_theme" ] && gsettings set $theme_setting "$selected_theme" 2>/dev/null || true
 
     # Flatpak GTK apps (themes)
     if command -v flatpak &> /dev/null; then
         flatpak --user override --filesystem=$HOME/.themes 2>/dev/null || true
-        flatpak --user override --env=GTK_THEME="$selected_theme" 2>/dev/null || true
+        [ -n "$selected_theme" ] && flatpak --user override --env=GTK_THEME="$selected_theme" 2>/dev/null || true
     fi
 
-    local selected_icon=""
-    if [ ${#icons[@]} -gt 0 ]; then
-        selected_icon=${icons[RANDOM % ${#icons[@]}]}
+    if [ -n "$selected_icon" ]; then
         echo "Selected icon theme for $mode mode: $selected_icon"
-        gsettings set $icon_setting "$selected_icon"
-        
+        gsettings set $icon_setting "$selected_icon" 2>/dev/null || true
+
         ## QT5ct / QT6ct icon_theme
         sed -i "s|^icon_theme=.*$|icon_theme=$selected_icon|" "${XDG_CONFIG_HOME:-$HOME/.config}/qt5ct/qt5ct.conf" 2>/dev/null || true
         sed -i "s|^icon_theme=.*$|icon_theme=$selected_icon|" "${XDG_CONFIG_HOME:-$HOME/.config}/qt6ct/qt6ct.conf" 2>/dev/null || true
@@ -459,11 +555,13 @@ set_custom_gtk_theme() {
         if [ ! -f "$ini_file" ]; then
             printf '[Settings]\ngtk-theme-name=%s\ngtk-icon-theme-name=%s\ngtk-application-prefer-dark-theme=%d\n' "$selected_theme" "$selected_icon" "$prefer_dark" > "$ini_file"
         else
-            grep -q '^\[Settings\]' "$ini_file" || sed -i '1i\[Settings\]' "$ini_file"
-            if grep -q '^gtk-theme-name=' "$ini_file"; then
-                sed -i "s|^gtk-theme-name=.*$|gtk-theme-name=$selected_theme|" "$ini_file"
-            else
-                echo "gtk-theme-name=$selected_theme" >> "$ini_file"
+            grep -q '^\\[Settings\\]' "$ini_file" || sed -i '1i\\[Settings\\]' "$ini_file"
+            if [ -n "$selected_theme" ]; then
+                if grep -q '^gtk-theme-name=' "$ini_file"; then
+                    sed -i "s|^gtk-theme-name=.*$|gtk-theme-name=$selected_theme|" "$ini_file"
+                else
+                    echo "gtk-theme-name=$selected_theme" >> "$ini_file"
+                fi
             fi
             if [ -n "$selected_icon" ]; then
                 if grep -q '^gtk-icon-theme-name=' "$ini_file"; then
@@ -482,7 +580,7 @@ set_custom_gtk_theme() {
 
     # Sync xsettingsd if present
     if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd/xsettingsd.conf" ]; then
-        sed -i "s|^Net/ThemeName .*$|Net/ThemeName \"$selected_theme\"|" "${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd/xsettingsd.conf" 2>/dev/null || true
+        [ -n "$selected_theme" ] && sed -i "s|^Net/ThemeName .*$|Net/ThemeName \"$selected_theme\"|" "${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd/xsettingsd.conf" 2>/dev/null || true
         [ -n "$selected_icon" ] && sed -i "s|^Net/IconThemeName .*$|Net/IconThemeName \"$selected_icon\"|" "${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd/xsettingsd.conf" 2>/dev/null || true
         touch "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/gtk.css" 2>/dev/null || true
         killall -HUP xsettingsd 2>/dev/null || true
