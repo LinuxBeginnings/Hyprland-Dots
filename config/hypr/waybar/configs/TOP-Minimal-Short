@@ -1,0 +1,42 @@
+/* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
+
+// ### Minimal -SHORT ### //
+
+{
+"include": [
+  "$HOME/.config/hypr/waybar/Modules",
+  "$HOME/.config/hypr/waybar/ModulesWorkspaces",
+  "$HOME/.config/hypr/waybar/ModulesCustom",
+  "$HOME/.config/hypr/waybar/ModulesGroups",
+  "$HOME/.config/hypr/waybar/UserModules",
+  ],
+"layer": "top",
+"position": "top",
+"width": 1050,
+"margin-top": 3,
+
+"modules-left": [
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
+	"clock",  
+	"custom/weather2", 
+	],
+
+"modules-center": [
+	"hyprland/workspaces#roman"
+	],
+
+"modules-right": [
+	"custom/menu", 
+	"tray",
+	"group/notify",
+	"mpris", 
+	"network", 
+	"bluetooth", 
+	"backlight", 
+	"pulseaudio", 
+	"battery", 
+	"custom/nightlight",
+	"custom/power"],
+}

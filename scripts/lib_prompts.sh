@@ -296,15 +296,15 @@ prompt_clock_12h() {
     answer=$(echo "$answer" | tr '[:upper:]' '[:lower:]')
     if [[ "$answer" == "y" ]]; then
       # waybar clocks
-      sed -i 's#^\(\s*\)//\("format": " {:%I:%M %p}",\) #\1\2 #g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": " {:%H:%M:%S}",\) #\1//\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": "  {:%H:%M}",\) #\1//\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)//\("format": "{:%I:%M %p - %d/%b}",\) #\1\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": "{:%H:%M - %d/%b}",\) #\1//\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)//\("format": "{:%B | %a %d, %Y | %I:%M %p}",\) #\1\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": "{:%B | %a %d, %Y | %H:%M}",\) #\1//\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)//\("format": "{:%A, %I:%M %P}",\) #\1\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": "{:%a %d | %H:%M}",\) #\1//\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)//\("format": " {:%I:%M %p}",\) #\1\2 #g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)\("format": " {:%H:%M:%S}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)\("format": "  {:%H:%M}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)//\("format": "{:%I:%M %p - %d/%b}",\) #\1\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)\("format": "{:%H:%M - %d/%b}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)//\("format": "{:%B | %a %d, %Y | %I:%M %p}",\) #\1\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)\("format": "{:%B | %a %d, %Y | %H:%M}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)//\("format": "{:%A, %I:%M %P}",\) #\1\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)\("format": "{:%a %d | %H:%M}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
 
       # hyprlock
       local HYPRLOCK_FILE="$base/config/hypr/hyprlock.conf"

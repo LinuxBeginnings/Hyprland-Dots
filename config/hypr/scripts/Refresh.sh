@@ -106,11 +106,18 @@ ensure_wayland_env() {
 restart_waybar() {
   ensure_wayland_env
   local restart_cmd
+  # Waybar only auto-discovers ~/.config/waybar by default; it has no
+  # knowledge of the hypr/-owned location, so direct launches must pass
+  # explicit -c/-s flags. Systemd-managed restarts rely on the packaged
+  # waybar.service unit, which is overridden separately (see
+  # config/systemd/user/waybar.service.d/override.conf) to add the same flags.
+  local waybar_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar"
+  local waybar_cli_args="-c '$waybar_dir/config' -s '$waybar_dir/style.css'"
 
   if is_waybar_systemd; then
     restart_cmd='systemctl --user stop waybar.service >/dev/null 2>&1 || true; pkill -INT -x waybar >/dev/null 2>&1 || true; pkill -INT -x .waybar-wrapped >/dev/null 2>&1 || true; sleep 0.2; if pgrep -x waybar >/dev/null 2>&1 || pgrep -x .waybar-wrapped >/dev/null 2>&1; then pkill -9 -x waybar >/dev/null 2>&1 || true; pkill -9 -x .waybar-wrapped >/dev/null 2>&1 || true; fi; sleep 0.1; systemctl --user reset-failed waybar.service >/dev/null 2>&1 || true; exec systemctl --user restart waybar.service'
   else
-    restart_cmd='systemctl --user stop waybar.service >/dev/null 2>&1 || true; pkill -INT -x waybar >/dev/null 2>&1 || true; pkill -INT -x .waybar-wrapped >/dev/null 2>&1 || true; sleep 0.2; if pgrep -x waybar >/dev/null 2>&1 || pgrep -x .waybar-wrapped >/dev/null 2>&1; then pkill -9 -x waybar >/dev/null 2>&1 || true; pkill -9 -x .waybar-wrapped >/dev/null 2>&1 || true; fi; sleep 0.1; if command -v .waybar-wrapped >/dev/null 2>&1; then exec .waybar-wrapped; else exec waybar; fi'
+    restart_cmd="systemctl --user stop waybar.service >/dev/null 2>&1 || true; pkill -INT -x waybar >/dev/null 2>&1 || true; pkill -INT -x .waybar-wrapped >/dev/null 2>&1 || true; sleep 0.2; if pgrep -x waybar >/dev/null 2>&1 || pgrep -x .waybar-wrapped >/dev/null 2>&1; then pkill -9 -x waybar >/dev/null 2>&1 || true; pkill -9 -x .waybar-wrapped >/dev/null 2>&1 || true; fi; sleep 0.1; if command -v .waybar-wrapped >/dev/null 2>&1; then exec .waybar-wrapped $waybar_cli_args; else exec waybar $waybar_cli_args; fi"
   fi
 
   if command -v systemd-run >/dev/null 2>&1 &&

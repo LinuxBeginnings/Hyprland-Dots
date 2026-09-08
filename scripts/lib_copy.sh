@@ -71,13 +71,116 @@ copy_phase1() {
   fi
 }
 
+# Restore symlink targets and custom user-added configs/styles from a waybar
+# backup directory into the freshly-copied waybar dir. Shared by both the
+# normal in-place upgrade path and the legacy ~/.config/waybar migration path.
+_restore_waybar_customizations() {
+  local new_dir="$1"
+  local backup_dir="$2"
+  local file dir symlink symlink_target target_name target_file target_dir BACKUP_FILEw
+
+  for file in "config" "style.css"; do
+    symlink="$backup_dir/$file"
+    target_file="$new_dir/$file"
+    if [ -L "$symlink" ]; then
+      symlink_target=$(readlink "$symlink")
+      target_name=$(basename "$symlink_target")
+      if [ "$file" = "config" ] && [ -f "$new_dir/configs/$target_name" ]; then
+        rm -f "$target_file" && ln -sf "$new_dir/configs/$target_name" "$target_file"
+      elif [ "$file" = "style.css" ] && [ -f "$new_dir/style/$target_name" ]; then
+        rm -f "$target_file" && ln -sf "$new_dir/style/$target_name" "$target_file"
+      elif [ -f "$symlink_target" ]; then
+        rm -f "$target_file" && ln -sf "$symlink_target" "$target_file"
+      fi
+    elif [ -f "$symlink" ]; then
+      rm -f "$target_file" && cp -f "$symlink" "$target_file"
+    fi
+  done
+  for dir in "$backup_dir/configs"/*; do
+    [ -e "$dir" ] || continue
+    if [ -d "$dir" ]; then
+      target_dir="$new_dir/configs/$(basename "$dir")"
+      [ -d "$target_dir" ] || cp -r "$dir" "$new_dir/configs/"
+    fi
+  done
+  for file in "$backup_dir/configs"/*; do
+    [ -e "$file" ] || continue
+    target_file="$new_dir/configs/$(basename "$file")"
+    [ -e "$target_file" ] || cp "$file" "$new_dir/configs/"
+  done || true
+  for file in "$backup_dir/style"/*; do
+    [ -e "$file" ] || continue
+    if [ -d "$file" ]; then
+      target_dir="$new_dir/style/$(basename "$file")"
+      [ -d "$target_dir" ] || cp -r "$file" "$new_dir/style/"
+    else
+      target_file="$new_dir/style/$(basename "$file")"
+      [ -e "$target_file" ] || cp "$file" "$new_dir/style/"
+    fi
+  done || true
+  BACKUP_FILEw="$backup_dir/UserModules"
+  [ -f "$BACKUP_FILEw" ] && cp -f "$BACKUP_FILEw" "$new_dir/UserModules"
+}
+
+# Detect a waybar directory whose configs/modules/styles still reference the
+# pre-migration "$HOME/.config/waybar/" path. That path no longer exists once
+# waybar moves under hypr/, so every include/@import using it silently fails
+# -- meaning modules (idle_inhibitor, workspaces, custom entries, etc.) never
+# load and styling breaks. This is a broken install, not a user preference,
+# so it must be repaired unconditionally -- even when express mode would
+# otherwise "keep existing" untouched, and even if a non-express upgrade
+# would otherwise let the user decline replacement.
+_waybar_dir_has_stale_paths() {
+  local dir="$1"
+  [ -d "$dir" ] || return 1
+  grep -rq '\.config/waybar/' "$dir" 2>/dev/null
+}
+
 copy_waybar() {
   local log="$1"
   local run_mode="${2:-${RUN_MODE:-}}"
   local base="${DOTFILES_DIR:-.}"
   local DIRW="waybar"
-  local DIRPATHw="${XDG_CONFIG_HOME:-$HOME/.config}/$DIRW"
+  local OLD_DIRPATHw="${XDG_CONFIG_HOME:-$HOME/.config}/$DIRW"
+  local DIRPATHw="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/$DIRW"
+
+  mkdir -p "$(dirname "$DIRPATHw")"
+
+  # One-time migration: a pre-migration install has waybar at the legacy
+  # top-level path (~/.config/waybar), but the new hypr-owned path
+  # (~/.config/hypr/waybar) does not exist yet. Its configs/modules/styles
+  # always reference the old "$HOME/.config/waybar/" path (correct for where
+  # they used to live), which breaks the moment they're relocated to a new
+  # parent directory -- so always back up, install a fresh repo copy, and
+  # restore customizations on top. A bare relocate is never safe here.
+  if [ -d "$OLD_DIRPATHw" ] && [ ! -d "$DIRPATHw" ]; then
+    echo -e "${NOTE:-[NOTE]} - Detected legacy ${YELLOW:-}$OLD_DIRPATHw${RESET:-}; migrating it to ${YELLOW:-}$DIRPATHw${RESET:-}." 2>&1 | tee -a "$log"
+    BACKUP_DIR=$(get_backup_dirname)
+    cp -r "$OLD_DIRPATHw" "$OLD_DIRPATHw-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
+    echo -e "${NOTE:-[NOTE]} - Backed up $DIRW to $OLD_DIRPATHw-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
+    rm -rf "$OLD_DIRPATHw"
+    cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
+    _restore_waybar_customizations "$DIRPATHw" "$OLD_DIRPATHw-backup-$BACKUP_DIR"
+    echo -e "${OK:-[OK]} - Migrated ${YELLOW:-}$DIRW${RESET:-} config to ${YELLOW:-}$DIRPATHw${RESET:-}." 2>&1 | tee -a "$log"
+    return 0
+  fi
+
   if [ -d "$DIRPATHw" ]; then
+    # Stale check runs first and bypasses both the express "keep existing"
+    # shortcut and the interactive y/n prompt below: a directory with broken
+    # path references (e.g. left behind by an earlier/interrupted copy of
+    # this dotfiles version) is not something either mode should preserve.
+    if _waybar_dir_has_stale_paths "$DIRPATHw"; then
+      echo -e "${WARN:-[WARN]} - ${YELLOW:-}$DIRPATHw${RESET:-} still contains pre-migration path references (\$HOME/.config/waybar/...) from an earlier/interrupted copy; module includes and CSS imports are broken as a result. Repairing automatically." 2>&1 | tee -a "$log"
+      BACKUP_DIR=$(get_backup_dirname)
+      cp -r "$DIRPATHw" "$DIRPATHw-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
+      echo -e "${NOTE:-[NOTE]} - Backed up $DIRW to $DIRPATHw-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
+      rm -rf "$DIRPATHw" && cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
+      _restore_waybar_customizations "$DIRPATHw" "$DIRPATHw-backup-$BACKUP_DIR"
+      echo -e "${OK:-[OK]} - Repaired stale ${YELLOW:-}$DIRW${RESET:-} config at ${YELLOW:-}$DIRPATHw${RESET:-} (runs regardless of express/upgrade mode since the old content was broken, not a preference)." 2>&1 | tee -a "$log"
+      return 0
+    fi
+
     if [ "$run_mode" = "express" ]; then
       echo -e "${NOTE:-[NOTE]} - Express mode: keeping existing ${YELLOW:-}$DIRW${RESET:-} config." 2>&1 | tee -a "$log"
       return 0
@@ -90,48 +193,8 @@ copy_waybar() {
         BACKUP_DIR=$(get_backup_dirname)
         cp -r "$DIRPATHw" "$DIRPATHw-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
         echo -e "${NOTE:-[NOTE]} - Backed up $DIRW to $DIRPATHw-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
-        rm -rf "$DIRPATHw" && cp -r "$base/config/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
-        for file in "config" "style.css"; do
-          symlink="$DIRPATHw-backup-$BACKUP_DIR/$file"
-          target_file="$DIRPATHw/$file"
-          if [ -L "$symlink" ]; then
-            symlink_target=$(readlink "$symlink")
-            target_name=$(basename "$symlink_target")
-            if [ "$file" = "config" ] && [ -f "$DIRPATHw/configs/$target_name" ]; then
-              rm -f "$target_file" && ln -sf "$DIRPATHw/configs/$target_name" "$target_file"
-            elif [ "$file" = "style.css" ] && [ -f "$DIRPATHw/style/$target_name" ]; then
-              rm -f "$target_file" && ln -sf "$DIRPATHw/style/$target_name" "$target_file"
-            elif [ -f "$symlink_target" ]; then
-              rm -f "$target_file" && ln -sf "$symlink_target" "$target_file"
-            fi
-          elif [ -f "$symlink" ]; then
-            rm -f "$target_file" && cp -f "$symlink" "$target_file"
-          fi
-        done
-        for dir in "$DIRPATHw-backup-$BACKUP_DIR/configs"/*; do
-          [ -e "$dir" ] || continue
-          if [ -d "$dir" ]; then
-            target_dir="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/$(basename "$dir")"
-            [ -d "$target_dir" ] || cp -r "$dir" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/"
-          fi
-        done
-        for file in "$DIRPATHw-backup-$BACKUP_DIR/configs"/*; do
-          [ -e "$file" ] || continue
-          target_file="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/$(basename "$file")"
-          [ -e "$target_file" ] || cp "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/"
-        done || true
-        for file in "$DIRPATHw-backup-$BACKUP_DIR/style"/*; do
-          [ -e "$file" ] || continue
-          if [ -d "$file" ]; then
-            target_dir="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/$(basename "$file")"
-            [ -d "$target_dir" ] || cp -r "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/"
-          else
-            target_file="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/$(basename "$file")"
-            [ -e "$target_file" ] || cp "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/"
-          fi
-        done || true
-        BACKUP_FILEw="$DIRPATHw-backup-$BACKUP_DIR/UserModules"
-        [ -f "$BACKUP_FILEw" ] && cp -f "$BACKUP_FILEw" "$DIRPATHw/UserModules"
+        rm -rf "$DIRPATHw" && cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
+        _restore_waybar_customizations "$DIRPATHw" "$DIRPATHw-backup-$BACKUP_DIR"
         break
         ;;
       [Nn]*)
@@ -142,7 +205,7 @@ copy_waybar() {
       esac
     done
   else
-    cp -r "$base/config/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
+    cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
     echo -e "${OK:-[OK]} - Copy completed for ${YELLOW:-}$DIRW${RESET:-}" 2>&1 | tee -a "$log"
   fi
 }
@@ -151,6 +214,20 @@ copy_phase2() {
   local log="$1"
   local base="${DOTFILES_DIR:-.}"
   local DIR="btop cava hypr Kvantum nwg-dock-hyprland qt5ct qt6ct starship swappy wlogout yazi"
+
+  # copy_waybar() (called before copy_phase2) already placed the final
+  # waybar content at ~/.config/hypr/waybar (fresh copy, or backed-up and
+  # restored from an existing/legacy install). Since waybar now lives
+  # underneath hypr/, the blanket "hypr" backup+recopy below would otherwise
+  # discard that work and replace it with an untouched repo copy. Stash it
+  # aside and put it back once the hypr copy is done.
+  local hypr_waybar_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar"
+  local hypr_waybar_stash=""
+  if [ -d "$hypr_waybar_dir" ]; then
+    hypr_waybar_stash="$(mktemp -d "${TMPDIR:-/tmp}/kooldots-waybar-stash.XXXXXX")"
+    mv "$hypr_waybar_dir" "$hypr_waybar_stash/waybar" 2>&1 | tee -a "$log"
+  fi
+
   for DIR_NAME in $DIR; do
     local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/$DIR_NAME"
     if [ -d "$DIRPATH" ]; then
@@ -165,6 +242,13 @@ copy_phase2() {
       echo "${ERROR:-[ERROR]} - Directory config/$DIR_NAME does not exist to copy." 2>&1 | tee -a "$log"
     fi
   done
+
+  if [ -n "$hypr_waybar_stash" ] && [ -d "$hypr_waybar_stash/waybar" ]; then
+    rm -rf "$hypr_waybar_dir"
+    mv "$hypr_waybar_stash/waybar" "$hypr_waybar_dir" 2>&1 | tee -a "$log"
+    rmdir "$hypr_waybar_stash" 2>/dev/null || true
+    echo -e "${NOTE:-[NOTE]} - Restored ${YELLOW:-}waybar${RESET:-} configuration (managed separately by copy_waybar())." 2>&1 | tee -a "$log"
+  fi
 
   # Handle ~/.config/wallust like rofi migration:
   # keep wallust data under ~/.config/hypr/wallust and leave ~/.config/wallust empty

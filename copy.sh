@@ -37,9 +37,9 @@
 clear
 wallpaper=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current
 # Defaults updated to normalized names
-waybar_style="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/Extra-Prismatic-Glow.css"
-waybar_config="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/TOP-Default"
-waybar_config_laptop="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/TOP-Default-Laptop"
+waybar_style="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/style/Extra-Prismatic-Glow.css"
+waybar_config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/configs/TOP-Default"
+waybar_config_laptop="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/configs/TOP-Default-Laptop"
 
 # Set some colors for output messages
 OK="$(tput setaf 2)[OK]$(tput sgr0)"
@@ -150,7 +150,7 @@ fi
 if ! declare -f capture_upgrade_runtime_selection_state >/dev/null 2>&1; then
   capture_upgrade_runtime_selection_state() {
     local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-    local waybar_dir="$cfg_home/waybar"
+    local waybar_dir="$cfg_home/hypr/waybar"
     KOOLDOTS_SAVED_WAYBAR_CONFIG=""
     KOOLDOTS_SAVED_WAYBAR_STYLE=""
 
@@ -215,7 +215,7 @@ if ! declare -f restore_upgrade_runtime_selection_state >/dev/null 2>&1; then
   restore_upgrade_runtime_selection_state() {
     local log="${1:-/dev/null}"
     local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-    local waybar_dir="$cfg_home/waybar"
+    local waybar_dir="$cfg_home/hypr/waybar"
     local config_link="$waybar_dir/config"
     local style_link="$waybar_dir/style.css"
 
@@ -1087,7 +1087,7 @@ fi
 # Ensure waybar config uses the normalized default.
 # - If the current path is not a symlink (regular file), convert it to a symlink.
 # - If the symlink points somewhere else (or is broken), reset it to the new default.
-WAYBAR_CONFIG_LINK="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/config"
+WAYBAR_CONFIG_LINK="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/config"
 WAYBAR_CONFIG_TARGET="$config_file"
 if [ "$RUN_MODE" = "install" ]; then
   if [ -e "$WAYBAR_CONFIG_TARGET" ]; then
@@ -1107,12 +1107,12 @@ else
 fi
 
 # Remove inappropriate waybar configs
-rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/[TOP] Default$config_remove" \
-  "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/[BOT] Default$config_remove" \
-  "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/[TOP] Default$config_remove (old v1)" \
-  "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/[TOP] Default$config_remove (old v2)" \
-  "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/[TOP] Default$config_remove (old v3)" \
-  "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/[TOP] Default$config_remove (old v4)" 2>&1 | tee -a "$LOG" || true
+rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/configs/[TOP] Default$config_remove" \
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/configs/[BOT] Default$config_remove" \
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/configs/[TOP] Default$config_remove (old v1)" \
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/configs/[TOP] Default$config_remove (old v2)" \
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/configs/[TOP] Default$config_remove (old v3)" \
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/configs/[TOP] Default$config_remove (old v4)" 2>&1 | tee -a "$LOG" || true
 
 printf "\n%.0s" {1..1}
 
@@ -1174,7 +1174,7 @@ fi
 # Ensure waybar style uses the normalized default.
 # - If the current path is not a symlink (regular file), convert it to a symlink.
 # - If the symlink points somewhere else (or is broken), reset it to the new default.
-WAYBAR_STYLE_LINK="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
+WAYBAR_STYLE_LINK="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/style.css"
 WAYBAR_STYLE_TARGET="$waybar_style"
 if [ "$RUN_MODE" = "install" ]; then
   if [ -e "$WAYBAR_STYLE_TARGET" ]; then

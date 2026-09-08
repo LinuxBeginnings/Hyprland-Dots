@@ -44,7 +44,7 @@ rofi.template = 'colors-rofi.rasi'
 rofi.target = '~/.config/hypr/rofi/wallust/colors-rofi.rasi'
 
 waybar.template = 'colors-waybar.css'
-waybar.target = '~/.config/waybar/wallust/colors-waybar.css'
+waybar.target = '~/.config/hypr/waybar/wallust/colors-waybar.css'
 
 ghostty.template = 'colors-ghostty.conf'
 ghostty.target = '~/.config/ghostty/wallust.conf'

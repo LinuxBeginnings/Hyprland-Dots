@@ -197,8 +197,8 @@ fi
 # Function to set Waybar style
 set_waybar_style() {
     local theme="$1"
-    local waybar_styles="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style"
-    local waybar_style_link="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
+    local waybar_styles="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/style"
+    local waybar_style_link="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/style.css"
 
     # If re-applying saved mode on startup (--apply-current), do NOT change the user's existing style.css
     if [ "$apply_saved_mode" -eq 1 ]; then

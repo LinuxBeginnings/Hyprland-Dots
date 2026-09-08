@@ -148,9 +148,9 @@ if [ ! -s "$theme_cache" ] || [ "$cache_age" -gt "$cache_max_age" ]; then
 fi
 
 ensure_wallust_waybar_style() {
-  local waybar_style="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
-  local colors_file="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
-  local styles_dir="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style"
+  local waybar_style="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/style.css"
+  local colors_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/wallust/colors-waybar.css"
+  local styles_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/style"
   [ -f "$colors_file" ] || return 0
   if [ -f "$waybar_style" ] || [ -L "$waybar_style" ]; then
     return 0
@@ -259,7 +259,7 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
   mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" || true
 
   targets=(
-    "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/wallust/colors-waybar.css"
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
   )
