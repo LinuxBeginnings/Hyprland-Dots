@@ -213,7 +213,7 @@ copy_waybar() {
 copy_phase2() {
   local log="$1"
   local base="${DOTFILES_DIR:-.}"
-  local DIR="btop cava hypr Kvantum nwg-dock-hyprland qt5ct qt6ct starship swappy wlogout yazi"
+  local DIR="btop cava gtk-3.0 hypr Kvantum nwg-dock-hyprland qt5ct qt6ct starship swappy wlogout yazi"
 
   # copy_waybar() (called before copy_phase2) already placed the final
   # waybar content at ~/.config/hypr/waybar (fresh copy, or backed-up and
@@ -237,6 +237,9 @@ copy_phase2() {
     fi
     if [ -d "$base/config/$DIR_NAME" ]; then
       cp -r "$base/config/$DIR_NAME/" "${XDG_CONFIG_HOME:-$HOME/.config}/$DIR_NAME" 2>&1 | tee -a "$log"
+      if [ "$DIR_NAME" = "gtk-3.0" ] && [ -n "$BACKUP_DIR" ] && [ -f "$DIRPATH-backup-$BACKUP_DIR/settings.ini" ]; then
+        cp -n "$DIRPATH-backup-$BACKUP_DIR/settings.ini" "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/settings.ini" 2>/dev/null || true
+      fi
       echo "${OK:-[OK]} - Copy of config for ${YELLOW:-}$DIR_NAME${RESET:-} completed!" 2>&1 | tee -a "$log"
     else
       echo "${ERROR:-[ERROR]} - Directory config/$DIR_NAME does not exist to copy." 2>&1 | tee -a "$log"

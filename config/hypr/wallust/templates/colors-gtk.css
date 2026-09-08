@@ -1,0 +1,114 @@
+/* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
+/* wallust template - colors-gtk.css (GTK 3 & Thunar) */
+
+@define-color theme_bg_color {{background}};
+@define-color theme_fg_color {{foreground}};
+@define-color theme_base_color {{background}};
+@define-color theme_text_color {{foreground}};
+@define-color theme_selected_bg_color {{color12}};
+@define-color theme_selected_fg_color {{color0}};
+@define-color theme_view_hover_color rgba({{color12 | rgb}}, 0.15);
+@define-color theme_view_active_color rgba({{color12 | rgb}}, 0.25);
+@define-color theme_border_color {{color10}};
+@define-color sidebar_bg rgba({{background | rgb}}, 0.9);
+@define-color sidebar_fg {{foreground}};
+
+@define-color color0 {{color0}};
+@define-color color1 {{color1}};
+@define-color color2 {{color2}};
+@define-color color3 {{color3}};
+@define-color color4 {{color4}};
+@define-color color5 {{color5}};
+@define-color color6 {{color6}};
+@define-color color7 {{color7}};
+@define-color color8 {{color8}};
+@define-color color9 {{color9}};
+@define-color color10 {{color10}};
+@define-color color11 {{color11}};
+@define-color color12 {{color12}};
+@define-color color13 {{color13}};
+@define-color color14 {{color14}};
+@define-color color15 {{color15}};
+
+/* Thunar-specific styling overrides */
+window.thunar,
+window#thunar-window {
+    background-color: @theme_bg_color;
+    color: @theme_fg_color;
+}
+
+window.thunar headerbar,
+window.thunar toolbar {
+    background-color: @theme_bg_color;
+    color: @theme_fg_color;
+    border-bottom: 1px solid @theme_border_color;
+}
+
+window.thunar .path-bar button {
+    background-color: alpha(@theme_selected_bg_color, 0.15);
+    color: @theme_fg_color;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    margin: 2px;
+}
+
+window.thunar .path-bar button:hover {
+    background-color: alpha(@theme_selected_bg_color, 0.3);
+    color: @theme_fg_color;
+}
+
+window.thunar .path-bar button:checked {
+    background-color: @theme_selected_bg_color;
+    color: @theme_selected_fg_color;
+    font-weight: bold;
+}
+
+window.thunar .sidebar,
+window.thunar .sidebar .view,
+window.thunar .sidebar treeview {
+    background-color: @sidebar_bg;
+    color: @sidebar_fg;
+}
+
+window.thunar .sidebar row:selected,
+window.thunar .sidebar treeview:selected {
+    background-color: @theme_selected_bg_color;
+    color: @theme_selected_fg_color;
+    border-radius: 6px;
+}
+
+window.thunar .sidebar row:hover,
+window.thunar .sidebar treeview:hover {
+    background-color: @theme_view_hover_color;
+}
+
+window.thunar .standard-view .view,
+window.thunar .view {
+    background-color: @theme_base_color;
+    color: @theme_text_color;
+}
+
+window.thunar .view:selected,
+window.thunar iconview:selected,
+window.thunar treeview.view:selected {
+    background-color: @theme_selected_bg_color;
+    color: @theme_selected_fg_color;
+    border-radius: 6px;
+}
+
+window.thunar .view:hover,
+window.thunar iconview:hover {
+    background-color: @theme_view_hover_color;
+}
+
+window.thunar paned > separator {
+    background-color: @theme_border_color;
+    min-width: 1px;
+    min-height: 1px;
+}
+
+window.thunar statusbar {
+    background-color: @theme_bg_color;
+    color: @theme_fg_color;
+    border-top: 1px solid @theme_border_color;
+}

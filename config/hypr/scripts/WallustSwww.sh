@@ -215,8 +215,8 @@ ln -sf "$wallpaper_path" "$rofi_link" || true
 mkdir -p "$(dirname "$wallpaper_current")"
 cp -f "$wallpaper_path" "$wallpaper_current" || true
 
-# Ensure Ghostty directory exists so Wallust can write target even if Ghostty isn't installed
-mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" || true
+# Ensure Ghostty and GTK-3.0 directories exist so Wallust can write targets even if not yet created
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0" || true
 wait_for_templates() {
   shift
   local files=("$@")
@@ -241,6 +241,7 @@ wallust_targets=(
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/wallust/colors-waybar.css"
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
+  "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/colors-wallust.css"
 )
 for target in "${wallust_targets[@]}"; do
   mkdir -p "$(dirname "$target")"
@@ -346,7 +347,8 @@ apply_hypr_gap_fallback() {
 }
 
 # Apply Hyprland updates immediately to avoid delayed border/gap changes.
-reload_hypr_preserve_layout
+  reload_hypr_preserve_layout
+  killall -HUP xsettingsd 2>/dev/null || true
 
 kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-kitty.toml"
 if [ "${#wallust_kitty_args[@]}" -gt 0 ]; then
