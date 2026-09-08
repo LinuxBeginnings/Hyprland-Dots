@@ -484,6 +484,7 @@ set_custom_gtk_theme() {
     if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd/xsettingsd.conf" ]; then
         sed -i "s|^Net/ThemeName .*$|Net/ThemeName \"$selected_theme\"|" "${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd/xsettingsd.conf" 2>/dev/null || true
         [ -n "$selected_icon" ] && sed -i "s|^Net/IconThemeName .*$|Net/IconThemeName \"$selected_icon\"|" "${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd/xsettingsd.conf" 2>/dev/null || true
+        touch "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/gtk.css" 2>/dev/null || true
         killall -HUP xsettingsd 2>/dev/null || true
     fi
 }

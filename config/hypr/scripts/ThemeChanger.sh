@@ -346,6 +346,7 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
 
   apply_hypr_border_fallback
   reload_hypr_preserve_layout
+  touch "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/gtk.css" 2>/dev/null || true
   killall -HUP xsettingsd 2>/dev/null || true
   ensure_wallust_waybar_style
   reload_running_cava_colors

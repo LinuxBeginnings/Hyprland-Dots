@@ -156,6 +156,7 @@ if pgrep -x "nwg-dock-hyprla" >/dev/null 2>&1 || pgrep -x "nwg-dock-hyprland" >/
 fi
 
 # reload GTK theme / styles across open GTK applications
+touch "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/gtk.css" 2>/dev/null || true
 killall -HUP xsettingsd 2>/dev/null || true
 
 # Relaunching rainbow borders based on selected mode

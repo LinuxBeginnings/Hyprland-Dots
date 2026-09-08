@@ -364,6 +364,7 @@ apply_hypr_gap_fallback() {
   apply_hypr_border_fallback
   apply_hypr_gap_fallback
   reload_hypr_preserve_layout
+  touch "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/gtk.css" 2>/dev/null || true
   killall -HUP xsettingsd 2>/dev/null || true
 
 kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-kitty.toml"
