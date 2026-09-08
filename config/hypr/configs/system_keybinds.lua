@@ -364,6 +364,12 @@ bind(
 bind("SUPER", "B", exec_cmd('xdg-open "https://"'), { description = "open default browser" })
 bind("SUPER", "A", exec_cmd("$HOME/.config/hypr/scripts/OverviewToggle.sh"), { description = "desktop overview" })
 bind(
+  "SUPER CTRL",
+  "A",
+  exec_cmd("pkill rofi || true && ags -t 'overview'"),
+  { description = "Ags overview" }
+)
+bind(
   "SUPER",
   "Return",
   exec_cmd("$HOME/.config/hypr/scripts/LaunchTerminal.sh '$term'"),
@@ -418,6 +424,12 @@ bind(
   "K",
   exec_cmd("$HOME/.config/hypr/scripts/Kitty_themes.sh"),
   { description = "Kitty theme selector" }
+)
+bind(
+  "SUPER CTRL",
+  "G",
+  exec_cmd("$HOME/.config/hypr/scripts/Ghostty_themes.sh"),
+  { description = "Ghostty theme selector" }
 )
 bind(
   "SUPER SHIFT",
@@ -603,12 +615,18 @@ bind("SUPER SHIFT", "comma", dispatch("layoutmsg", "move -col"), { description =
 bind("SUPER ALT", "comma", dispatch("layoutmsg", "swapcol l"), { description = "swap columns left" })
 bind("SUPER ALT", "period", dispatch("layoutmsg", "swapcol r"), { description = "swap columns right" })
 bind(
+  "SUPER",
+  "R",
+  exec_cmd("bash $HOME/.config/hypr/scripts/ScrollCycleColumnWidth.sh"),
+  { description = "Cycle column width preset (scrolling)" }
+)
+bind(
   "SUPER ALT",
   "H",
   exec_cmd("hyprctl keyword scrolling:direction right"),
   { description = "Horizonal scroll right" }
 )
-bind("SUPER ALT", "V", exec_cmd("hyprctl keyword scrolling:direction down"), { description = "Vertical Scroll down" })
+bind("SUPER CTRL", "V", exec_cmd("hyprctl keyword scrolling:direction down"), { description = "Vertical Scroll down" })
 bind(
   "SUPER ALT",
   "S",
@@ -857,7 +875,7 @@ bind("SUPER", "G", dispatch("togglegroup", ""), { description = "toggle group" }
 bind("SUPER", "Tab", dispatch("changegroupactive", "f"), { description = "Change Group Forward" })
 -- SUPER CTRL+Tab is Hyprview Toggle (not change active in group)
 bind("SUPER SHIFT", "Tab", dispatch("changegroupactive", "b"), { description = "Change Group Back" })
-bind("SUPER CTRL", "K", dispatch("moveintogroup", "l"), { description = "Move left into group" })
+bind("SUPER CTRL", "J", dispatch("moveintogroup", "l"), { description = "Move left into group" })
 bind("SUPER CTRL", "L", dispatch("moveintogroup", "r"), { description = "Move Right into group" })
 bind("SUPER CTRL", "H", dispatch("moveoutofgroup", ""), { description = "Move active out of group" })
 bind(

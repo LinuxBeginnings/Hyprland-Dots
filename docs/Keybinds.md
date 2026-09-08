@@ -46,8 +46,10 @@ Source: `config/hypr/lua/keybinds.lua`
 
 ## Panels / Menus / Bar
 - `SUPER + A` — Desktop overview (`OverviewToggle.sh`)
+- `SUPER + CTRL + A` — Ags overview (`ags -t 'overview'`)
 - `SUPER + SHIFT + E` — Quick settings menu (`Kool_Quick_Settings.sh`)
 - `SUPER + SHIFT + N` — Notification panel (`swaync-client -t -sw`)
+- `CTRL + ALT + D` — Toggle dock (`Dock.sh`)
 - `SUPER + CTRL + ALT + B` — Toggle Waybar on/off (`pkill -SIGUSR1 waybar`)
 - `SUPER + CTRL + B` — Waybar styles menu (`WaybarStyles.sh`)
 - `SUPER + ALT + B` — Waybar layout menu (`WaybarLayout.sh`)
@@ -126,6 +128,7 @@ Source: `config/hypr/lua/keybinds.lua`
 - `SUPER + Tab` — Cycle group window forward (`changegroupactive f`)
 - `SUPER + SHIFT + Tab` — Cycle group window back (`changegroupactive b`)
 - `SUPER + CTRL + J` — Move left into group (`moveintogroup l`)
+- `SUPER + CTRL + L` — Move right into group (`moveintogroup r`)
 - `SUPER + CTRL + H` — Move active window out of group (`moveoutofgroup`)
 
 ## Workspaces
