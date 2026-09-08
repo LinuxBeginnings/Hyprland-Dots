@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- Missing keybinds
 - Global Theme now persistent
   - Option added to return to wallpaper theme
 - Fixed default apps source order
