@@ -5,8 +5,8 @@
 ## Fixed:
 
 - Fixed broken keybinds
-  - SUPER-R
-  - SUPER-G
+  - SUPER-R (Column presets scrolling layout)
+  - SUPER-G (Group/Ungroup)
   - SUPER-ALT-Mouse Wheel (zoon)
 - Missing keybinds
 - Global Theme now persistent
