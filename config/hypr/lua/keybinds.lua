@@ -123,18 +123,8 @@ local app_binds = {
   { "SUPER CTRL", "SPACE", "$HOME/.config/hypr/scripts/float.all.samesize.lua", "Float all windows same size" },
   -- NOTE: Dropterminal is currently certified only with kitty. Not all terminals behave correctly as a dropdown.
   { "SUPER SHIFT", "Return", "$HOME/.config/hypr/scripts/Dropterminal.sh kitty", "DropDown terminal" },
-  {
-    "SUPER ALT",
-    "mouse_down",
-    "hyprctl keyword cursor:zoom_factor \"$(hyprctl getoption cursor:zoom_factor | awk 'NR==1 {factor = $2; if (factor < 1) {factor = 1}; print factor * 2.0}')\"",
-    "zoom in",
-  },
-  {
-    "SUPER ALT",
-    "mouse_up",
-    "hyprctl keyword cursor:zoom_factor \"$(hyprctl getoption cursor:zoom_factor | awk 'NR==1 {factor = $2; if (factor < 1) {factor = 1}; print factor / 2.0}')\"",
-    "zoom out",
-  },
+  { "SUPER ALT", "mouse_down", "$HOME/.config/hypr/scripts/Zoom.sh in", "zoom in" },
+  { "SUPER ALT", "mouse_up", "$HOME/.config/hypr/scripts/Zoom.sh out", "zoom out" },
   { "SUPER CTRL ALT", "B", "pkill -SIGUSR1 waybar", "toggle waybar on/off" },
   { "SUPER CTRL", "B", "$HOME/.config/hypr/scripts/WaybarStyles.sh", "waybar styles menu" },
   { "SUPER ALT", "B", "$HOME/.config/hypr/scripts/WaybarLayout.sh", "waybar layout menu" },
@@ -378,46 +368,7 @@ local function _monitor_width(win)
   end
   return nil
 end
-bind("SUPER", "R", function()
-  local ws = hl.get_active_workspace and hl.get_active_workspace() or nil
-  local ws_layout = ws and (ws.tiled_layout or ws.tiledLayout) or nil
-  if ws_layout ~= "scrolling" then
-    return
-  end
-
-  local w = hl.get_active_window and hl.get_active_window() or nil
-  local col = w ~= nil and w.layout and w.layout.column or nil
-  local current_width = nil
-  if type(col) == "table" then
-    current_width = _as_number(col.width)
-  else
-    current_width = _as_number(col)
-  end
-  if type(current_width) ~= "number" then
-    local ww = _window_width(w)
-    local mw = _monitor_width(w)
-    if type(ww) == "number" and type(mw) == "number" and mw > 0 then
-      current_width = ww / mw
-    end
-  end
-  if type(current_width) ~= "number" or current_width <= 0 then
-    return
-  end
-  if current_width > 1 then
-    current_width = 1
-  end
-
-  local closest, best = 1, math.huge
-  for i, v in ipairs(col_width_presets) do
-    local diff = math.abs(v - current_width)
-    if diff < best then
-      best, closest = diff, i
-    end
-  end
-
-  local nextIdx = closest % #col_width_presets + 1
-  hl.dispatch(hl.dsp.layout("colresize " .. tostring(col_width_presets[nextIdx])))
-end, { description = "cycle column width preset (scrolling)" })
+bind("SUPER", "R", exec_cmd("bash $HOME/.config/hypr/scripts/ScrollCycleColumnWidth.sh"), { description = "cycle column width preset (scrolling)" })
 bind("ALT", "Tab", exec_cmd("$HOME/.config/hypr/scripts/LuaCycleWindow.sh next"), { description = "cycle next window" })
 
 -- Section: Audio, media, and hardware keys
