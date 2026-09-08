@@ -1047,7 +1047,26 @@ MATCH_BOOL_FIELDS = {
     "modal",
 }
 
-def parse_rule_item(item, rule):
+MATCH_KEYS = {
+    "class", "title", "initialclass", "initialtitle", "tag", "xdgtag",
+    "xwayland", "floating", "fullscreen", "pinned", "focus", "group", "modal", "onworkspace",
+    "namespace", "address"
+}
+
+KNOWN_EFFECTS = {
+    "float", "floating", "tile", "tiled", "fullscreen", "fakefullscreen", "pin", "pinned",
+    "center", "nofocus", "noinitialfocus", "noanim", "noblur", "noshadow", "noborder",
+    "keepaspectratio", "forceopaque", "dimaround", "opaque", "opaque_toggle",
+    "blur", "ignorezero", "ignorealpha", "stayfocused"
+}
+
+EFFECT_PREFIXES = [
+    "workspace", "opacity", "size", "maxsize", "minsize", "move", "tag",
+    "idleinhibit", "idle_inhibit", "bordersize", "bordercolor", "rounding", "suppressevent",
+    "suppress_event", "animation", "blur", "ignorealpha", "ignorezero", "stayfocused"
+]
+
+def parse_rule_item(item, rule, rule_type="window"):
     if item.startswith("match:"):
         body = item[len("match:"):].strip()
         if "=" in body:
@@ -1061,13 +1080,66 @@ def parse_rule_item(item, rule):
         rule.setdefault("match", {})[key] = scalar(value, bool_words=key in MATCH_BOOL_FIELDS)
         return
 
-    parts = item.split(None, 1)
-    key = normalize_field(parts[0])
-    value = parts[1] if len(parts) > 1 else "on"
-    rule[key] = scalar(value)
+    m = re.match(r"^([A-Za-z_]+):(.*)$", item)
+    if m and m.group(1).lower() in MATCH_KEYS:
+        k = normalize_field(m.group(1))
+        rule.setdefault("match", {})[k] = scalar(m.group(2).strip(), bool_words=k in MATCH_BOOL_FIELDS)
+        return
+
+    if rule_type == "layer" and m and m.group(1).lower() in ("namespace", "address"):
+        rule.setdefault("match", {})[m.group(1).lower()] = scalar(m.group(2).strip())
+        return
+
+    lower = item.lower()
+    if lower in ("float", "floating"):
+        rule["float"] = "true"
+    elif lower in ("pin", "pinned"):
+        rule["pin"] = "true"
+    elif lower == "fullscreen":
+        rule["fullscreen"] = "true"
+    elif lower in ("center", "center 1", "center on"):
+        rule["center"] = "true"
+    elif lower in ("noanim", "no_anim"):
+        rule["no_anim"] = "true"
+    elif lower in ("noblur", "no_blur"):
+        rule["no_blur"] = "true"
+    elif lower in ("noinitialfocus", "no_initial_focus"):
+        rule["no_initial_focus"] = "true"
+    elif lower in ("nofocus", "no_focus"):
+        rule["no_focus"] = "true"
+    elif lower in ("keepaspectratio", "keep_aspect_ratio"):
+        rule["keep_aspect_ratio"] = "true"
+    elif lower.startswith("workspace "):
+        rule["workspace"] = scalar(item[len("workspace "):].strip(), bool_words=False)
+    elif lower.startswith("opacity "):
+        rule["opacity"] = scalar(item[len("opacity "):].strip(), bool_words=False)
+    elif lower.startswith("size "):
+        rule["size"] = scalar(item[len("size "):].strip(), bool_words=False)
+    elif lower.startswith("move "):
+        rule["move"] = scalar(item[len("move "):].strip(), bool_words=False)
+    elif lower.startswith("tag "):
+        rule["tag"] = scalar(item[len("tag "):].strip(), bool_words=False)
+    elif lower.startswith("idleinhibit ") or lower.startswith("idle_inhibit "):
+        rule["idle_inhibit"] = scalar(item.split(None, 1)[1].strip(), bool_words=False)
+    elif lower.startswith("maxsize ") or lower.startswith("max_size "):
+        rule["max_size"] = scalar(item.split(None, 1)[1].strip(), bool_words=False)
+    elif lower.startswith("minsize ") or lower.startswith("min_size "):
+        rule["min_size"] = scalar(item.split(None, 1)[1].strip(), bool_words=False)
+    elif lower.startswith("suppressevent ") or lower.startswith("suppress_event "):
+        rule["suppress_event"] = scalar(item.split(None, 1)[1].strip(), bool_words=False)
+    elif rule_type == "layer" and lower == "blur":
+        rule["blur"] = "true"
+    elif rule_type == "layer" and lower == "ignorezero":
+        rule["ignore_zero"] = "true"
+    else:
+        parts = item.split(None, 1)
+        key = normalize_field(parts[0])
+        value = parts[1] if len(parts) > 1 else "on"
+        rule[key] = scalar(value, bool_words=key in MATCH_BOOL_FIELDS)
 
 def parse_block(lines, start_index):
-    rule_type = "window" if lines[start_index].strip().startswith("windowrule") else "layer"
+    start_line = lines[start_index].strip().lower()
+    rule_type = "layer" if "layer" in start_line else "window"
     rule = {"match": {}}
     i = start_index + 1
     while i < len(lines):
@@ -1080,19 +1152,26 @@ def parse_block(lines, start_index):
                 if key.startswith("match:"):
                     match_key = normalize_field(key[len("match:"):])
                     rule["match"][match_key] = scalar(value, bool_words=match_key in MATCH_BOOL_FIELDS)
+                elif key.lower() in MATCH_KEYS:
+                    match_key = normalize_field(key)
+                    rule["match"][match_key] = scalar(value, bool_words=match_key in MATCH_BOOL_FIELDS)
                 elif key == "name":
                     rule["name"] = lua_string(value)
                 else:
-                    rule[normalize_field(key)] = scalar(value)
+                    rule[normalize_field(key)] = scalar(value, bool_words=normalize_field(key) in MATCH_BOOL_FIELDS)
         i += 1
     return rule_type, rule, i
 
-def parse_rules(path, prefix):
-    if not path.exists():
+def parse_rules(path, prefix, allow_legacy=True):
+    source_path = path if (path.exists() and has_active_hyprlang_content_py(path)) else (latest_legacy_file(path) if allow_legacy else None)
+    if source_path is None or not source_path.exists():
         return []
 
+    if source_path != path:
+        print(f"[INFO] {path.name} not found or inactive at {path}; using legacy source {source_path}")
+
     parsed = []
-    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    lines = source_path.read_text(encoding="utf-8", errors="ignore").splitlines()
     i = 0
     rule_index = 1
     layer_index = 1
@@ -1110,7 +1189,7 @@ def parse_rules(path, prefix):
             i += 1
             continue
 
-        if re.match(r"^(windowrule|layerrule)\s*\{", line):
+        if re.match(r"^(windowrulev2|windowrule|layerrulev2|layerrule)\s*\{", line):
             rule_type, rule, i = parse_block(lines, i)
             if rule.get("match"):
                 if "name" not in rule:
@@ -1127,12 +1206,21 @@ def parse_rules(path, prefix):
             i += 1
             continue
 
-        match = re.match(r"^(windowrule|layerrule)\s*=\s*(.+)$", line)
+        match = re.match(r"^(windowrulev2|windowrule|layerrulev2|layerrule)\s*=\s*(.+)$", line)
         if match:
-            rule_type = "window" if match.group(1) == "windowrule" else "layer"
+            rule_type = "layer" if "layer" in match.group(1) else "window"
             rule = {"match": {}}
-            for item in split_items(match.group(2)):
-                parse_rule_item(item, rule)
+            items = split_items(match.group(2))
+            # Handle legacy windowrule/layerrule syntax: e.g. windowrule = float, ^(pavucontrol)$
+            if not any(it.startswith("match:") or re.match(r"^[A-Za-z_]+:", it) for it in items):
+                if len(items) >= 2 and (items[-1].startswith("^") or "(" in items[-1] or not any(items[-1].lower().startswith(p) for p in EFFECT_PREFIXES)):
+                    if rule_type == "window":
+                        rule.setdefault("match", {})["class"] = scalar(items[-1])
+                    else:
+                        rule.setdefault("match", {})["namespace"] = scalar(items[-1])
+                    items = items[:-1]
+            for item in items:
+                parse_rule_item(item, rule, rule_type)
             if rule.get("match"):
                 if "name" not in rule:
                     if pending_name is not None:
@@ -1374,6 +1462,15 @@ def lua_file_is_generated(lua_path):
         "Converted from",
         "No active entries were found",
         "Source reference from",
+        "User window-rule overrides template",
+        "User layer-rule overrides template",
+        "User startup overrides template",
+        "User keybind overrides template",
+        "User defaults overrides",
+        "No active window rules were found",
+        "No active layer rules were found",
+        "No active startup entries were found",
+        "No active env entries were found",
     ])
 
 if files_out["monitors"].exists():
@@ -1888,7 +1985,7 @@ env_lines = [
     "-- hl.env(\"MOZ_ENABLE_WAYLAND\", \"1\")",
     "",
 ]
-if files_out["env"].exists():
+if files_out["env"].exists() and not lua_file_is_generated(files_out["env"]):
     print(f"[INFO] Preserving existing custom Lua env file: {files_out['env']}")
 elif env_entries:
     env_lines.append("-- Converted from ENVariables.conf")
@@ -1896,13 +1993,16 @@ elif env_entries:
         env_lines.append(f"hl.env({lua_string(key)}, {lua_string(value)})")
     write_file(files_out["env"], env_lines)
 else:
-    env_lines.extend([
-        "-- No active env entries were found in ENVariables.conf.",
-        "-- Uncomment and customize examples below:",
-        '-- hl.env("GDK_SCALE", "1")',
-        '-- hl.env("QT_SCALE_FACTOR", "1")',
-    ])
-    write_file(files_out["env"], env_lines)
+    if not files_out["env"].exists():
+        env_lines.extend([
+            "-- No active env entries were found in ENVariables.conf.",
+            "-- Uncomment and customize examples below:",
+            '-- hl.env("GDK_SCALE", "1")',
+            '-- hl.env("QT_SCALE_FACTOR", "1")',
+        ])
+        write_file(files_out["env"], env_lines)
+    else:
+        print(f"[INFO] Keeping existing {files_out['env']}")
 
 startup_lines = [
     "-- User startup overrides (auto-generated).",
@@ -1945,7 +2045,7 @@ startup_lines = [
     "local exec_once = user_startup_helper.exec_once",
     "",
 ]
-if files_out["startup"].exists():
+if files_out["startup"].exists() and not lua_file_is_generated(files_out["startup"]):
     print(f"[INFO] Preserving existing custom Lua startup file: {files_out['startup']}")
 elif startup_entries:
     startup_lines.append("-- Converted from Startup_Apps.conf")
@@ -1969,11 +2069,14 @@ elif startup_entries:
     ])
     write_file(files_out["startup"], startup_lines)
 else:
-    startup_lines.extend([
-        "-- No active startup entries were found in Startup_Apps.conf.",
-        "-- exec_once(\"nm-applet --indicator\")",
-    ])
-    write_file(files_out["startup"], startup_lines)
+    if not files_out["startup"].exists():
+        startup_lines.extend([
+            "-- No active startup entries were found in Startup_Apps.conf.",
+            "-- exec_once(\"nm-applet --indicator\")",
+        ])
+        write_file(files_out["startup"], startup_lines)
+    else:
+        print(f"[INFO] Keeping existing {files_out['startup']}")
 
 window_lines = [
     "-- User window rule overrides (auto-generated).",
@@ -2021,7 +2124,7 @@ window_lines = [
     "local apply_window_rule = user_window_rules_helper.apply_window_rule",
     "",
 ]
-if files_out["window_rules"].exists():
+if files_out["window_rules"].exists() and not lua_file_is_generated(files_out["window_rules"]):
     print(f"[INFO] Preserving existing custom Lua window rules file: {files_out['window_rules']}")
 elif window_rules:
     window_lines.append("-- Converted from WindowRules.conf")
@@ -2030,8 +2133,11 @@ elif window_rules:
         window_lines.append("")
     write_file(files_out["window_rules"], window_lines)
 else:
-    window_lines.append("-- No active window rules were found in WindowRules.conf.")
-    write_file(files_out["window_rules"], window_lines)
+    if not files_out["window_rules"].exists():
+        window_lines.append("-- No active window rules were found in WindowRules.conf.")
+        write_file(files_out["window_rules"], window_lines)
+    else:
+        print(f"[INFO] Keeping existing {files_out['window_rules']}")
 
 layer_lines = [
     "-- User layer rule overrides (auto-generated).",
@@ -2078,7 +2184,7 @@ layer_lines = [
     "local apply_layer_rule = user_layer_rules_helper.apply_layer_rule",
     "",
 ]
-if files_out["layer_rules"].exists():
+if files_out["layer_rules"].exists() and not lua_file_is_generated(files_out["layer_rules"]):
     print(f"[INFO] Preserving existing custom Lua layer rules file: {files_out['layer_rules']}")
 elif layer_rules:
     layer_lines.append("-- Converted from LayerRules.conf")
@@ -2087,8 +2193,11 @@ elif layer_rules:
         layer_lines.append("")
     write_file(files_out["layer_rules"], layer_lines)
 else:
-    layer_lines.append("-- No active layer rules were found in LayerRules.conf.")
-    write_file(files_out["layer_rules"], layer_lines)
+    if not files_out["layer_rules"].exists():
+        layer_lines.append("-- No active layer rules were found in LayerRules.conf.")
+        write_file(files_out["layer_rules"], layer_lines)
+    else:
+        print(f"[INFO] Keeping existing {files_out['layer_rules']}")
 
 keybind_lines = [
     "-- User keybind overrides (auto-generated).",
@@ -2155,14 +2264,17 @@ keybind_lines = [
     "local unbind = user_keybinds_helper.unbind",
     "",
 ]
-if files_out["keybinds"].exists():
+if files_out["keybinds"].exists() and not lua_file_is_generated(files_out["keybinds"]):
     print(f"[INFO] Preserving existing custom Lua keybinds file: {files_out['keybinds']}")
 elif keybinds:
     keybind_lines.append("-- Converted from UserKeybinds.conf")
     keybind_lines.extend(keybinds)
     write_file(files_out["keybinds"], keybind_lines)
 else:
-    write_file(files_out["keybinds"], keybind_lines)
+    if not files_out["keybinds"].exists():
+        write_file(files_out["keybinds"], keybind_lines)
+    else:
+        print(f"[INFO] Keeping existing {files_out['keybinds']}")
 
 for name, source in [
     ("settings", settings_path),

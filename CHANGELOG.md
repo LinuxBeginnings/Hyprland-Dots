@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- WindowRules weren't being migrated
 - Support for `nwg-look` to set theme / icons
   - REMOVED `DarkLight.sh` and `ApplyThemeMode.sh`
   - Working to greatly simplify theming
