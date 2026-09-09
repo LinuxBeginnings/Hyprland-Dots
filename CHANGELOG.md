@@ -29,6 +29,8 @@
 
 ## Updated:
 
+- Kitty has a remote exploit current when `enable_remote_acces = yes`
+  - It's now disabled by default
 - Moved `$HOME/.config/waybar` to `$HOME/.config/hypr/waybar`
   - Updated scripts, and theming
   - `copy.sh` now has check for stale links and updates them
