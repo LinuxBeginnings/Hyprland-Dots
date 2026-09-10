@@ -145,16 +145,16 @@ show_update_window() {
     yad_text+="<b>Most current version detected:</b> ${new_v}\n\n"
     yad_text+="<b>Changelog:</b>\n<a href=\"${CHANGELOG_URL}\">${CHANGELOG_URL}</a>\n"
 
+    local ret=0
     yad --center \
       --title="KooL Hyprland Update" \
       --window-icon="$yad_icon" \
       --text="$yad_text" \
-      --button="View Changelog:2" \
+      --button="View Changelogs:2" \
       --button="OK:0" \
       --width=480 \
-      --fixed || true
+      --fixed || ret=$?
 
-    local ret=$?
     if [[ $ret -eq 2 ]]; then
       if command -v xdg-open >/dev/null 2>&1; then
         xdg-open "$CHANGELOG_URL" >/dev/null 2>&1 &
