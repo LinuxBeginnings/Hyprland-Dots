@@ -1,0 +1,44 @@
+/* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
+/* KooL Hyprland User Defaults Rofi Config */
+
+@import "~/.config/hypr/rofi/config.rasi"
+
+/* ---- Mainbox ---- */
+mainbox {
+  children: [ "inputbar", "message", "listview" ];
+}
+
+/* ---- Window ---- */
+window {
+  width: 55%;
+  height: inherit;
+}
+
+/* ---- Entry input ---- */
+entry {
+  expand: true;
+  placeholder: " ⚙️  Manage User Defaults  ⚙️";
+  horizontal-align: 0.5;
+}
+
+/* ---- Listview ---- */
+listview {
+  columns: 1;
+  lines: 8;
+  fixed-height: false;
+  scrollbar: true;
+  spacing: 6px;
+  cycle: true;
+}
+
+/* ---- Elements ---- */
+element-icon {
+  size: 0%;
+}
+
+element-text {
+  horizontal-align: 0.0;
+  vertical-align: 0.5;
+  margin: 0px;
+  padding: 0px;
+}

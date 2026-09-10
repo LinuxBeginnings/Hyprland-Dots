@@ -7,29 +7,39 @@
 # ==================================================
 # For Searching via web browsers
 
-# Define the path to the config file
+# Define the path to the config files
 config_file=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/01-UserDefaults.conf
+lua_user_defaults=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/user_defaults.lua
+lua_sys_defaults=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/user_defaults.lua
+
 if ! command -v jq >/dev/null 2>&1; then
     notify-send -u low "Rofi Search" "jq is required for URL encoding. Please install jq."
     exit 1
 fi
 
-# Check if the config file exists
-if [[ ! -f "$config_file" ]]; then
-    echo "Error: Configuration file not found!"
-    exit 1
+Search_Engine=""
+
+# 1. Check Lua user defaults
+if [[ -f "$lua_user_defaults" ]]; then
+    lua_engine=$(sed -nE 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.(search_engine|Search_Engine)[[:space:]]*=[[:space:]]*["'\'']([^"'\'']+)["'\''][[:space:]]*(;?([[:space:]]*--.*)?)?$/\2/p' "$lua_user_defaults" | tail -n1)
+    [[ -n "$lua_engine" ]] && Search_Engine="$lua_engine"
 fi
 
-# Process the config file in memory, removing the $ and fixing spaces
-config_content=$(sed 's/\$//g' "$config_file" | sed 's/ = /=/')
+# 2. Check legacy 01-UserDefaults.conf if not set in Lua user defaults
+if [[ -z "$Search_Engine" && -f "$config_file" ]]; then
+    config_content=$(sed 's/\$//g' "$config_file" | sed 's/ = /=/')
+    eval "$config_content"
+fi
 
-# Source the modified content directly from the variable
-eval "$config_content"
+# 3. Check Lua system defaults if still unset
+if [[ -z "$Search_Engine" && -f "$lua_sys_defaults" ]]; then
+    sys_engine=$(sed -nE 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.(search_engine|Search_Engine)[[:space:]]*=[[:space:]]*["'\'']([^"'\'']+)["'\''][[:space:]]*(;?([[:space:]]*--.*)?)?$/\2/p' "$lua_sys_defaults" | tail -n1)
+    [[ -n "$sys_engine" ]] && Search_Engine="$sys_engine"
+fi
 
-# Check if $term is set correctly
+# Fallback default
 if [[ -z "$Search_Engine" ]]; then
-    echo "Error: \$Search_Engine is not set in the configuration file!"
-    exit 1
+    Search_Engine="https://www.google.com/search?q={}"
 fi
 
 # Rofi theme and message
@@ -50,4 +60,9 @@ if [[ -z "$query" ]]; then
 fi
 
 encoded_query=$(printf '%s' "$query" | jq -sRr @uri)
-xdg-open "${Search_Engine}${encoded_query}" >/dev/null 2>&1 &
+if [[ "$Search_Engine" == *"{}"* ]]; then
+    search_url="${Search_Engine//\{\}/$encoded_query}"
+else
+    search_url="${Search_Engine}${encoded_query}"
+fi
+xdg-open "$search_url" >/dev/null 2>&1 &

@@ -500,6 +500,13 @@ handle_choice() {
   local file=""
 
   case "$choice" in
+  "Manage User Defaults" | "Configure User Defaults" | "Set User Defaults")
+    if [[ -x "$scriptsDir/RofiUserDefaults.sh" ]]; then
+      "$scriptsDir/RofiUserDefaults.sh"
+    elif [[ -x "${BASH_SOURCE[0]%/*}/RofiUserDefaults.sh" ]]; then
+      "${BASH_SOURCE[0]%/*}/RofiUserDefaults.sh"
+    fi
+    ;;
   "Edit User Defaults")
     file="$(resolve_user_overlay_file "$user_defaults_lua" "$user_defaults_conf")"
     ;;
@@ -672,6 +679,7 @@ show_category_menu() {
   "[[ User Settings ]]")
     options=$(
       cat <<EOF
+Manage User Defaults
 Edit User Defaults
 Edit User Keybinds
 Edit User ENV variables
@@ -754,11 +762,12 @@ show_main_menu() {
   local weather_label
   weather_label="$(get_weather_units_label)"
   printf '%s\n' "[ Settings ]"
-  printf '%b\n' "[[ User Settings ]]\x00meta\x1fEdit User Defaults Edit User Keybinds Edit User ENV variables Edit User Startup Apps overlay Edit User Window Rules overlay Edit User Layer Rules overlay Edit User Settings Edit User Decorations Edit User Animations Edit User Laptop Settings Edit User Monitor config Select Hyprview Layout"
+  printf '%b\n' "[[ User Settings ]]\x00meta\x1fManage User Defaults Edit User Defaults Edit User Keybinds Edit User ENV variables Edit User Startup Apps overlay Edit User Window Rules overlay Edit User Layer Rules overlay Edit User Settings Edit User Decorations Edit User Animations Edit User Laptop Settings Edit User Monitor config Select Hyprview Layout"
   printf '%b\n' "[[ System Settings ]]\x00meta\x1fEdit System Default Keybinds Edit System Default Startup Apps Edit System Default Window Rules Edit System Default Layer Rules Edit System Default Settings"
   printf '%b\n' "[[ Toggle Options ]]\x00meta\x1fToggle Waybar Weather units C F Toggle Waybar Clock 12H 24H Toggle Game Mode"
   printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Configure Workspace Rules nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Rainbow Borders Mode"
   printf '%s\n' "[ Quick Links]"
+  printf '%s\n' "Manage User Defaults"
   printf '%s\n' "Set User Keybinds"
   printf '%s\n' "Set User Decorations"
   printf '%s\n' "Set Hyprlock paper"
