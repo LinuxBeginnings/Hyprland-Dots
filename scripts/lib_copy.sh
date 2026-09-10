@@ -562,6 +562,40 @@ restore_hypr_assets() {
       done
     fi
 
+    # Restore custom Rofi themes and configurations from backup
+    local BACKUP_ROFI_DIR="$BACKUP_HYPR_PATH/rofi"
+    if [ ! -d "$BACKUP_ROFI_DIR" ] && [ -d "${HYPR_DIR}-${BACKUP_DIR}/rofi" ]; then
+      BACKUP_ROFI_DIR="${HYPR_DIR}-${BACKUP_DIR}/rofi"
+    fi
+
+    if [ -d "$BACKUP_ROFI_DIR" ]; then
+      # 1. Restore custom themes in rofi/themes/
+      if [ -d "$BACKUP_ROFI_DIR/themes" ]; then
+        mkdir -p "$HYPR_DIR/rofi/themes"
+        for theme_file in "$BACKUP_ROFI_DIR/themes"/*; do
+          [ -e "$theme_file" ] || continue
+          local theme_name
+          theme_name="$(basename "$theme_file")"
+          if [ ! -e "$HYPR_DIR/rofi/themes/$theme_name" ]; then
+            cp -r "$theme_file" "$HYPR_DIR/rofi/themes/$theme_name" 2>&1 | tee -a "$log" || true
+            echo "${OK:-[OK]} - Restored custom rofi theme: ${MAGENTA:-}$theme_name${RESET:-}" 2>&1 | tee -a "$log"
+          fi
+        done
+      fi
+
+      # 2. Restore any custom/extra files in rofi/ root
+      for rofi_file in "$BACKUP_ROFI_DIR"/*; do
+        [ -e "$rofi_file" ] || continue
+        [ -d "$rofi_file" ] && continue
+        local rname
+        rname="$(basename "$rofi_file")"
+        if [ ! -e "$HYPR_DIR/rofi/$rname" ]; then
+          cp -r "$rofi_file" "$HYPR_DIR/rofi/$rname" 2>&1 | tee -a "$log" || true
+          echo "${OK:-[OK]} - Restored custom rofi file: ${MAGENTA:-}$rname${RESET:-}" 2>&1 | tee -a "$log"
+        fi
+      done
+    fi
+
     # Keep monitor/workspace state across upgrades, including express mode.
     if [ "${RUN_MODE:-}" != "install" ]; then
       local LUA_USER_DIR="$HYPR_DIR/UserConfigs"
