@@ -14,7 +14,7 @@ set -euo pipefail
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
 env_lua="$config_dir/lua/env.lua"
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
-CHANGELOG_URL="https://github.com/LinuxBeginnings/Hyprland-Dots/CHANGELOG.md"
+CHANGELOG_URL="https://github.com/LinuxBeginnings/Hyprland-Dots/Changelogs.md"
 REMOTE_ENV_URL="https://raw.githubusercontent.com/LinuxBeginnings/Hyprland-Dots/main/config/hypr/lua/env.lua"
 REMOTE_API_CONTENTS="https://api.github.com/repos/LinuxBeginnings/Hyprland-Dots/contents/config/hypr"
 REMOTE_TREE_URL="https://github.com/LinuxBeginnings/Hyprland-Dots/tree/main/config/hypr"
@@ -166,7 +166,7 @@ show_update_window() {
   # Priority 2: Rofi (guaranteed available in KooL Hyprland)
   if command -v rofi >/dev/null 2>&1; then
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
-    
+
     local rofi_msg="<b>Update Available for KooL Hyprland Dots!</b>\n\n"
     rofi_msg+="• Current installed version:      <b>${cur_v}</b>\n"
     rofi_msg+="• Most current version detected:  <b>${new_v}</b>\n\n"
