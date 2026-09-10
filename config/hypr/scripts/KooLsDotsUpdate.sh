@@ -14,7 +14,7 @@ set -euo pipefail
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
 env_lua="$config_dir/lua/env.lua"
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
-CHANGELOG_URL="https://github.com/LinuxBeginnings/Hyprland-Dots/Changelogs.md"
+CHANGELOG_URL="https://github.com/LinuxBeginnings/Hyprland-Dots/wiki/Changelogs"
 REMOTE_ENV_URL="https://raw.githubusercontent.com/LinuxBeginnings/Hyprland-Dots/main/config/hypr/lua/env.lua"
 REMOTE_API_CONTENTS="https://api.github.com/repos/LinuxBeginnings/Hyprland-Dots/contents/config/hypr"
 REMOTE_TREE_URL="https://github.com/LinuxBeginnings/Hyprland-Dots/tree/main/config/hypr"
