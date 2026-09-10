@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- Custom scripts weren't preserved on updates
 - WindowRules weren't being migrated
 - Support for `nwg-look` to set theme / icons
   - REMOVED `DarkLight.sh` and `ApplyThemeMode.sh`

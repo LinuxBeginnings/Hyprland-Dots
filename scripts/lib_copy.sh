@@ -899,6 +899,17 @@ restore_user_configs() {
           fi
         fi
       done
+
+      # Restore any additional custom files in UserConfigs that were not in the standard list
+      for extra_file in "$BACKUP_DIR_PATH"/*; do
+        [ -e "$extra_file" ] || continue
+        local extra_name
+        extra_name="$(basename "$extra_file")"
+        if [ ! -e "$DIRPATH/UserConfigs/$extra_name" ]; then
+          cp -r "$extra_file" "$DIRPATH/UserConfigs/$extra_name" 2>/dev/null || true
+          echo "${OK:-[OK]} - Custom user config restored: $extra_name" 2>&1 | tee -a "$log"
+        fi
+      done
     fi
   fi
 
@@ -924,34 +935,46 @@ restore_user_scripts() {
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_DIR_PATH_S="$DIRSHPATH-backup-$BACKUP_DIR/UserScripts"
-  local SCRIPTS_TO_RESTORE=("RofiBeats.sh" "Weather.py" "Weather.sh")
 
-  if [ -d "$BACKUP_DIR_PATH_S" ] && [ "$express_mode" -eq 1 ]; then
-    echo "${NOTE:-[NOTE]} Express mode: skipping UserScripts restoration prompts." 2>&1 | tee -a "$log"
-    return
+  if [ -z "$BACKUP_DIR" ]; then
+    return 0
   fi
 
-  if [ -d "$BACKUP_DIR_PATH_S" ] && [ "$express_mode" -eq 0 ]; then
-    echo -e "${NOTE:-[NOTE]} Restoring previous ${MAGENTA:-}User-Scripts${RESET:-}..." 2>&1 | tee -a "$log"
-
-    for SCRIPT_NAME in "${SCRIPTS_TO_RESTORE[@]}"; do
-      local BACKUP_SCRIPT="$BACKUP_DIR_PATH_S/$SCRIPT_NAME"
-      if [ -f "$BACKUP_SCRIPT" ]; then
-        printf "\n${INFO:-[INFO]} Found ${YELLOW:-}$SCRIPT_NAME${RESET:-} in hypr backup...\n"
-        read -r -p "${CAT:-[ACTION]} Do you want to restore ${YELLOW:-}$SCRIPT_NAME${RESET:-} from backup? (y/N): " script_restore
-
-        if [[ "$script_restore" == [Yy]* ]]; then
-          if cp "$BACKUP_SCRIPT" "$DIRSHPATH/UserScripts/$SCRIPT_NAME"; then
-            echo "${OK:-[OK]} - $SCRIPT_NAME restored!" 2>&1 | tee -a "$log"
-          else
-            echo "${ERROR:-[ERROR]} - Failed to restore $SCRIPT_NAME!" 2>&1 | tee -a "$log"
-          fi
-        else
-          echo "${NOTE:-[NOTE]} - Skipped restoring $SCRIPT_NAME." 2>&1 | tee -a "$log"
-        fi
-      fi
-    done
+  # Check alternate backup path used by prepare_fresh_install_hypr
+  if [ ! -d "$BACKUP_DIR_PATH_S" ] && [ -d "${DIRSHPATH}-${BACKUP_DIR}/UserScripts" ]; then
+    BACKUP_DIR_PATH_S="${DIRSHPATH}-${BACKUP_DIR}/UserScripts"
   fi
+
+  if [ ! -d "$BACKUP_DIR_PATH_S" ]; then
+    return 0
+  fi
+
+  if [ "${RUN_MODE:-}" = "install" ]; then
+    echo "${NOTE:-[NOTE]} Preserving existing UserScripts directory during install." 2>&1 | tee -a "$log"
+    rsync -a "$BACKUP_DIR_PATH_S/" "$DIRSHPATH/UserScripts/" 2>&1 | tee -a "$log"
+    echo "${OK:-[OK]} - UserScripts directory preserved." 2>&1 | tee -a "$log"
+    chmod +x "$DIRSHPATH/UserScripts/"* 2>/dev/null || true
+    return 0
+  fi
+
+  echo -e "${NOTE:-[NOTE]} Restoring previous ${MAGENTA:-}User-Scripts${RESET:-}... " 2>&1 | tee -a "$log"
+
+  if [ "$express_mode" -eq 1 ]; then
+    echo "${NOTE:-[NOTE]} Restoring UserScripts directory automatically." 2>&1 | tee -a "$log"
+    rsync -a "$BACKUP_DIR_PATH_S/" "$DIRSHPATH/UserScripts/" 2>&1 | tee -a "$log"
+    echo "${OK:-[OK]} - UserScripts directory restored." 2>&1 | tee -a "$log"
+  else
+    read -r -p "${CAT:-[ACTION]} Do you want to restore your previous UserScripts directory? (Y/n): " restore_userscripts_dir
+    if [[ "$restore_userscripts_dir" != [Nn]* ]]; then
+      echo "${NOTE:-[NOTE]} Restoring UserScripts directory..." 2>&1 | tee -a "$log"
+      rsync -a "$BACKUP_DIR_PATH_S/" "$DIRSHPATH/UserScripts/" 2>&1 | tee -a "$log"
+      echo "${OK:-[OK]} - UserScripts directory restored." 2>&1 | tee -a "$log"
+    else
+      echo "${NOTE:-[NOTE]} - Skipped restoring UserScripts." 2>&1 | tee -a "$log"
+    fi
+  fi
+
+  chmod +x "$DIRSHPATH/UserScripts/"* 2>/dev/null || true
 }
 
 restore_terminal_configs() {
