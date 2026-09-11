@@ -62,17 +62,11 @@ detect_vm_adjust() {
   fi
 }
 
-# NixOS tweaks: ensure polkit overlay is enabled and default disabled.
+# NixOS tweaks: log detection; polkit handling is delegated inside Polkit.sh
 detect_nixos_adjust() {
   local log="$1"
   if hostnamectl | grep -q 'Operating System: NixOS'; then
-    echo "${INFO:-[INFO]} NixOS Distro Detected. Setting up proper env's and configs." 2>&1 | tee -a "$log" || true
-    local OVERLAY_SA="config/hypr/configs/Startup_Apps.conf"
-    local DISABLE_SA="config/hypr/configs/Startup_Apps.disable"
-    mkdir -p "$(dirname "$OVERLAY_SA")"
-    touch "$OVERLAY_SA" "$DISABLE_SA"
-    grep -qx 'exec-once = $scriptsDir/Polkit-NixOS.sh' "$OVERLAY_SA" || echo 'exec-once = $scriptsDir/Polkit-NixOS.sh' >>"$OVERLAY_SA"
-    grep -qx '\$scriptsDir/Polkit.sh' "$DISABLE_SA" || echo '$scriptsDir/Polkit.sh' >>"$DISABLE_SA"
+    echo "${INFO:-[INFO]} NixOS Distro Detected." 2>&1 | tee -a "$log" || true
   fi
 }
 # Qt Quick Controls style safety: enable Hyprland style only when module exists.

@@ -12,6 +12,13 @@ if pgrep -u "$UID" -f 'xfce-polkit|polkit-gnome-authentication-agent-1|polkit-kd
   exit 0
 fi
 
+# On NixOS, delegate to Polkit-NixOS.sh which locates agents in the /nix/store
+if grep -qi '^ID=nixos' /etc/os-release 2>/dev/null; then
+  if [ -x "$(dirname "$0")/Polkit-NixOS.sh" ]; then
+    exec "$(dirname "$0")/Polkit-NixOS.sh"
+  fi
+fi
+
 # If hyprpolkitagent is managed as a user service, defer to systemd.
 # This avoids race conditions where both this script and systemd start an
 # agent at the same time, which can trigger "authentication agent already exists"
