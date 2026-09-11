@@ -19,7 +19,18 @@ wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wal
 read_cached_wallpaper() {
   local cache_file="$1"
   [ -f "$cache_file" ] || return 1
-  awk 'NF && $0 !~ /^filter/ {print; exit}' "$cache_file"
+  local raw_line extracted
+  raw_line="$(awk 'NF && $0 !~ /^filter/ {print; exit}' "$cache_file" 2>/dev/null || true)"
+  extracted="$(printf '%s' "$raw_line" | sed -E 's|^[^/]*(/.*)$|\1|')"
+  if [ -n "$extracted" ] && [ -f "$extracted" ]; then
+    printf '%s\n' "$extracted"
+    return 0
+  fi
+  if [ -n "$raw_line" ] && [ -f "$raw_line" ]; then
+    printf '%s\n' "$raw_line"
+    return 0
+  fi
+  return 1
 }
 
 get_monitors() {
@@ -97,15 +108,24 @@ apply_wallpaper_for_monitor() {
   # Last resort: use per-monitor cache
   if [ -z "$wallpaper_path" ]; then
     local cache_file="$WWW_CACHE_DIR/$monitor"
+    if [ ! -f "$cache_file" ] && [ -d "$WWW_CACHE_DIR" ]; then
+      cache_file="$(find "$WWW_CACHE_DIR" -maxdepth 2 -type f -name "$monitor" 2>/dev/null | head -n1 || true)"
+    fi
     local cache_fallback=""
     if [ "$WWW_CACHE_DIR" = "$HOME/.cache/awww" ]; then
       cache_fallback="$HOME/.cache/swww/$monitor"
+      if [ ! -f "$cache_fallback" ] && [ -d "$HOME/.cache/swww" ]; then
+        cache_fallback="$(find "$HOME/.cache/swww" -maxdepth 2 -type f -name "$monitor" 2>/dev/null | head -n1 || true)"
+      fi
     else
       cache_fallback="$HOME/.cache/awww/$monitor"
+      if [ ! -f "$cache_fallback" ] && [ -d "$HOME/.cache/awww" ]; then
+        cache_fallback="$(find "$HOME/.cache/awww" -maxdepth 2 -type f -name "$monitor" 2>/dev/null | head -n1 || true)"
+      fi
     fi
-    wallpaper_path="$(read_cached_wallpaper "$cache_file")"
+    wallpaper_path="$(read_cached_wallpaper "$cache_file" 2>/dev/null || true)"
     if [ -z "$wallpaper_path" ] && [ -n "$cache_fallback" ]; then
-      wallpaper_path="$(read_cached_wallpaper "$cache_fallback")"
+      wallpaper_path="$(read_cached_wallpaper "$cache_fallback" 2>/dev/null || true)"
     fi
   fi
 

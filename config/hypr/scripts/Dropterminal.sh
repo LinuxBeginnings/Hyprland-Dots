@@ -24,55 +24,28 @@ LOCK_FILE="/tmp/dropdown_terminal_lock"
 LAST_TOGGLE_FILE="/tmp/dropdown_terminal_last_toggle"
 MIN_TOGGLE_INTERVAL_MS=250
 DROPDOWN_KITTY_CLASS="kitty-dropterm"
-CONFIG_HOME="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
-HYPR_DIR="$CONFIG_HOME/hypr"
-LUA_ENTRY="$HYPR_DIR/hyprland.lua"
-LEGACY_LUA_ENTRY="$CONFIG_HOME/hyprland.lua"
-
-if [[ -f "$LUA_ENTRY" || -f "$LEGACY_LUA_ENTRY" ]]; then
-  HYPR_CONFIG_MODE="lua"
-else
-  HYPR_CONFIG_MODE="conf"
-fi
-
 focus_window() {
   local addr="$1"
-  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    hyprctl dispatch "hl.dsp.focus({ window = 'address:$addr' })" >/dev/null 2>&1 || true
-  else
-    hyprctl dispatch focuswindow "address:$addr" >/dev/null 2>&1 || true
-  fi
+  hyprctl dispatch "hl.dsp.focus({ window = 'address:$addr' })" >/dev/null 2>&1 || true
 }
 
 set_window_floating() {
   local addr="$1"
-  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    hyprctl dispatch "hl.dsp.window.float({ window = 'address:$addr', action = 'on' })" >/dev/null 2>&1 || true
-  else
-    hyprctl dispatch setfloating "address:$addr" >/dev/null 2>&1 || true
-  fi
+  hyprctl dispatch "hl.dsp.window.float({ window = 'address:$addr', action = 'on' })" >/dev/null 2>&1 || true
 }
 
 resize_window_exact() {
   local addr="$1"
   local width="$2"
   local height="$3"
-  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    hyprctl dispatch "hl.dsp.window.resize({ window = 'address:$addr', x = $width, y = $height, exact = true })" >/dev/null 2>&1 || true
-  else
-    hyprctl dispatch resizewindowpixel "exact $width $height,address:$addr" >/dev/null 2>&1 || true
-  fi
+  hyprctl dispatch "hl.dsp.window.resize({ window = 'address:$addr', x = $width, y = $height, exact = true })" >/dev/null 2>&1 || true
 }
 
 move_window_exact() {
   local addr="$1"
   local x="$2"
   local y="$3"
-  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', x = $x, y = $y, exact = true })" >/dev/null 2>&1 || true
-  else
-    hyprctl dispatch movewindowpixel "exact $x $y,address:$addr" >/dev/null 2>&1 || true
-  fi
+  hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', x = $x, y = $y, exact = true })" >/dev/null 2>&1 || true
 }
 
 # Dropdown size and position configuration (percentages)
@@ -527,17 +500,13 @@ move_window_to_workspace_silent() {
   local addr="$2"
   local post_ws=""
 
-  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    local ws_expr
-    if [[ "$target_ws" =~ ^-?[0-9]+$ ]]; then
-      ws_expr="$target_ws"
-    else
-      ws_expr="'$target_ws'"
-    fi
-    hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', workspace = $ws_expr, follow = false })" >/dev/null 2>&1 || true
+  local ws_expr
+  if [[ "$target_ws" =~ ^-?[0-9]+$ ]]; then
+    ws_expr="$target_ws"
   else
-    hyprctl dispatch movetoworkspacesilent "$target_ws,address:$addr" >/dev/null 2>&1 || true
+    ws_expr="'$target_ws'"
   fi
+  hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', workspace = $ws_expr, follow = false })" >/dev/null 2>&1 || true
   sleep 0.02
   post_ws=$(window_workspace_name "$addr")
   if workspace_matches_target "$target_ws" "$post_ws"; then
@@ -748,12 +717,8 @@ spawn_terminal() {
 
   # Launch terminal with pre-applied workspace/geometry hints to avoid visible zigzag.
   local launch_cmd="[workspace $SPECIAL_WS silent;float;size $width $height;move $target_x $target_y] $TERMINAL_CMD"
-  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    local escaped="${launch_cmd//\"/\\\"}"
-    hyprctl dispatch "hl.dsp.exec_cmd(\"$escaped\")" >/dev/null 2>&1 || true
-  else
-    hyprctl dispatch exec "$launch_cmd" >/dev/null 2>&1 || true
-  fi
+  local escaped="${launch_cmd//\"/\\\"}"
+  hyprctl dispatch "hl.dsp.exec_cmd(\"$escaped\")" >/dev/null 2>&1 || true
 
   local new_addr=""
   for _ in $(seq 1 20); do

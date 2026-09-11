@@ -4,6 +4,10 @@
 
 ## Fixed:
 
+- Fixed black wallpaper on resume or lid open
+- Fixed `awww` to actualy randomize transistions
+- Huge delay and HL IPC stall when changing themes
+  - Removed hyprlang code and replaced with LUA
 - Huge delay and HL IPC stall when changing themes 
   - Removed hyprlang code and replaced with LUA 
   - Thank you Angel Spano @jasueh
@@ -33,7 +37,8 @@
 
 ## Updated:
 
-- Began removal of hyprlang based config files 
+- Removed hyprlang code from `hypr/scripts`
+- Began removal of hyprlang based config files
 - Kitty has a remote exploit current when `enable_remote_acces = yes`
   - It's now disabled by default
 - Moved `$HOME/.config/waybar` to `$HOME/.config/hypr/waybar`
@@ -53,16 +58,16 @@
 
 ## Added:
 
-- Manage User Defaults Menu 
-  - From Quick Settings menu 
-    - Set default: 
-      - Text editor 
-      - GUI editor 
+- Manage User Defaults Menu
+  - From Quick Settings menu
+    - Set default:
+      - Text editor
+      - GUI editor
       - File manager (thunar, etc)
-      - Default search engine for search keybind 
-        - Has list of commont search engines pulldown 
-        - Not all use same search format in URL 
-    - Validates apps are installed 
+      - Default search engine for search keybind
+        - Has list of commont search engines pulldown
+        - Not all use same search format in URL
+    - Validates apps are installed
 - Docs:
   - Bindings
   - Window Rules

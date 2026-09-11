@@ -17,7 +17,6 @@ AGENT_SCRIPT="$SCRIPT_DIR/kooldots-add-ssh-agent.sh"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 HYPR_DIR="$CONFIG_HOME/hypr"
 USER_CONFIGS_DIR="$HYPR_DIR/UserConfigs"
-ENV_CONF="$USER_CONFIGS_DIR/ENVariables.conf"
 ENV_LUA="$USER_CONFIGS_DIR/user_env.lua"
 ZSHRC="$HOME/.zshrc"
 BASHRC="$HOME/.bashrc"
@@ -188,18 +187,7 @@ LUA
     changes_made=1
   fi
 
-  # 5. Hyprland ENVariables.conf (for hybrid/conf mode)
-  if ! has_conf_env; then
-    echo -e "${ACTION_TAG} Adding SSH_AUTH_SOCK to ${YELLOW}$ENV_CONF${RESET}"
-    if [[ $DRY_RUN -eq 0 ]]; then
-      mkdir -p "$USER_CONFIGS_DIR"
-      touch "$ENV_CONF"
-      printf '\n# SSH agent socket\nenv = SSH_AUTH_SOCK,$XDG_RUNTIME_DIR/ssh-agent.socket\n' >> "$ENV_CONF"
-    fi
-    changes_made=1
-  fi
-
-  # 6. ~/.ssh/config (AddKeysToAgent & GitHub entry)
+  # 5. ~/.ssh/config (AddKeysToAgent & GitHub entry)
   if [[ -f "$SSH_CONFIG" ]]; then
     if ! has_ssh_add_keys; then
       echo -e "${ACTION_TAG} Adding AddKeysToAgent to ${YELLOW}$SSH_CONFIG${RESET}"
@@ -251,15 +239,6 @@ remove_configurations() {
     if [[ $DRY_RUN -eq 0 ]]; then
       sed -i '/-- SSH agent socket/d' "$ENV_LUA"
       sed -i '/hl\.env("SSH_AUTH_SOCK"/d' "$ENV_LUA"
-    fi
-  fi
-
-  # Remove from ENVariables.conf
-  if [[ -f "$ENV_CONF" ]] && has_conf_env; then
-    echo -e "${ACTION_TAG} Removing SSH_AUTH_SOCK from ${YELLOW}$ENV_CONF${RESET}"
-    if [[ $DRY_RUN -eq 0 ]]; then
-      sed -i '/# SSH agent socket/d' "$ENV_CONF"
-      sed -i '/env = SSH_AUTH_SOCK,/d' "$ENV_CONF"
     fi
   fi
 
@@ -318,13 +297,6 @@ show_status_report() {
     echo -e "   [${GREEN}${ICON_CHECK}${RESET}] Hyprland Lua (user_env.lua)     : ${GREEN}configured${RESET}"
   else
     echo -e "   [${RED}${ICON_CROSS}${RESET}] Hyprland Lua (user_env.lua)     : ${RED}missing SSH_AUTH_SOCK${RESET}"
-  fi
-
-  # ENVariables.conf
-  if has_conf_env; then
-    echo -e "   [${GREEN}${ICON_CHECK}${RESET}] Hyprland Conf (ENVariables.conf): ${GREEN}configured${RESET}"
-  else
-    echo -e "   [${YELLOW}${ICON_CROSS}${RESET}] Hyprland Conf (ENVariables.conf): ${YELLOW}missing SSH_AUTH_SOCK${RESET}"
   fi
 
   # ~/.ssh/config

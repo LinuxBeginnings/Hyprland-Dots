@@ -24,7 +24,7 @@ iDIRi="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/icons"
 
 # swww/awww transition config
 FPS=60
-TYPE="any"
+TYPE="random"
 DURATION=2
 BEZIER=".43,1.19,1,.4"
 if [[ "$WWW_CMD" == "swww" || "$WWW_CMD" == "awww" ]]; then
@@ -81,17 +81,54 @@ mapfile -d '' PICS < <(find -L "${wallDIR}" -type f \( \
 RANDOM_PIC="${PICS[$((RANDOM % ${#PICS[@]}))]}"
 RANDOM_PIC_NAME="$(basename "$RANDOM_PIC")"
 
-CURRENT_MON_PIC_PATH=$("$WWW_CMD" query 2>/dev/null | grep "$focused_monitor" | awk '{print $NF}')
-if [[ -z "$CURRENT_MON_PIC_PATH" ]]; then
-  if [[ -L "$wallpaper_link" ]]; then
-    CURRENT_MON_PIC_PATH="$(readlink -f "$wallpaper_link")"
-  elif [[ -f "$wallpaper_link" ]]; then
-    CURRENT_MON_PIC_PATH="$wallpaper_link"
-  elif [[ -f "$wallpaper_current" ]]; then
+read_wallpaper_from_query() {
+  local monitor="$1"
+  [ -n "$monitor" ] || return 1
+  [ -n "${WWW_CMD:-}" ] || return 1
+  command -v "$WWW_CMD" >/dev/null 2>&1 || return 1
+  "$WWW_CMD" query 2>/dev/null | awk -v mon="$monitor" '
+    {
+      line=$0
+      sub(/^Monitor[[:space:]]+/, "", line)
+      sub(/^:[[:space:]]*/, "", line)
+      mon_name=line
+      sub(/:.*/, "", mon_name)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", mon_name)
+      if (mon_name != mon) next
+
+      path=line
+      sub(/^.*image:[[:space:]]*/, "", path)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", path)
+      if (path != line && length(path) > 0) {
+        print path
+        exit
+      }
+    }
+  '
+}
+
+CURRENT_MON_PIC_PATH="$(read_wallpaper_from_query "$focused_monitor" 2>/dev/null || true)"
+if [[ -z "$CURRENT_MON_PIC_PATH" || ! -f "$CURRENT_MON_PIC_PATH" ]]; then
+  if [[ -L "$per_monitor_wallpaper_link" ]]; then
+    CURRENT_MON_PIC_PATH="$(readlink -f "$per_monitor_wallpaper_link" 2>/dev/null || true)"
+  fi
+  if [[ -z "$CURRENT_MON_PIC_PATH" || ! -f "$CURRENT_MON_PIC_PATH" ]] && [[ -f "$per_monitor_wallpaper_current" ]]; then
+    CURRENT_MON_PIC_PATH="$per_monitor_wallpaper_current"
+  fi
+  if [[ -z "$CURRENT_MON_PIC_PATH" || ! -f "$CURRENT_MON_PIC_PATH" ]] && [[ -L "$wallpaper_link" ]]; then
+    CURRENT_MON_PIC_PATH="$(readlink -f "$wallpaper_link" 2>/dev/null || true)"
+  fi
+  if [[ -z "$CURRENT_MON_PIC_PATH" || ! -f "$CURRENT_MON_PIC_PATH" ]] && [[ -f "$wallpaper_current" ]]; then
     CURRENT_MON_PIC_PATH="$wallpaper_current"
   fi
+  if [[ ! -f "$CURRENT_MON_PIC_PATH" ]]; then
+    CURRENT_MON_PIC_PATH=""
+  fi
 fi
-CURRENT_MON_PIC_NAME=$(basename "$CURRENT_MON_PIC_PATH")
+CURRENT_MON_PIC_NAME=""
+if [[ -n "$CURRENT_MON_PIC_PATH" ]]; then
+  CURRENT_MON_PIC_NAME=$(basename "$CURRENT_MON_PIC_PATH")
+fi
 
 # Rofi command
 rofi_command="rofi -i -show -dmenu -config $rofi_theme -theme-str $rofi_override"
@@ -101,7 +138,7 @@ menu() {
   IFS=$'\n' sorted_options=($(sort <<<"${PICS[*]}"))
 
   printf "%s\x00icon\x1f%s\n" "Random: $RANDOM_PIC_NAME" "$RANDOM_PIC"
-  if [[ -n "$CURRENT_MON_PIC_PATH" ]]; then
+  if [[ -n "$CURRENT_MON_PIC_PATH" && -f "$CURRENT_MON_PIC_PATH" ]]; then
     printf "%s\x00icon\x1f%s\n" "Current: $CURRENT_MON_PIC_NAME" "$CURRENT_MON_PIC_PATH"
   fi
 
@@ -158,6 +195,10 @@ modify_startup_config() {
 # Apply Image Wallpaper
 apply_image_wallpaper() {
   local image_path="$1"
+  if [[ -z "$image_path" || ! -f "$image_path" ]]; then
+    echo "Invalid image path: $image_path" >&2
+    return 1
+  fi
 
   kill_wallpaper_for_image
 
@@ -221,7 +262,7 @@ main() {
   # Resolve selection directly when using Random/Current entries
   if [[ "$raw_choice" == Random:\ * ]]; then
     selected_file="$RANDOM_PIC"
-  elif [[ "$raw_choice" == Current:\ * && -n "$CURRENT_MON_PIC_PATH" ]]; then
+  elif [[ "$raw_choice" == Current:\ * && -n "$CURRENT_MON_PIC_PATH" && -f "$CURRENT_MON_PIC_PATH" ]]; then
     selected_file="$CURRENT_MON_PIC_PATH"
   elif [[ -f "$choice" ]]; then
     selected_file="$choice"

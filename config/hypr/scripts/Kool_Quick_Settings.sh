@@ -8,19 +8,10 @@
 # Rofi menu for KooL Hyprland Quick Settings (SUPER SHIFT E)
 # Updated for UserConfigs/configs separation
 
-# Detect active Hyprland config mode (Lua entrypoint vs legacy .conf includes)
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 hypr_dir="$config_home/hypr"
-lua_entry="$hypr_dir/hyprland.lua"
-legacy_lua_entry="$config_home/hyprland.lua"
-if [[ -f "$lua_entry" || -f "$legacy_lua_entry" ]]; then
-  hypr_config_mode="lua"
-else
-  hypr_config_mode="conf"
-fi
 
 # Resolve defaults file used to get terminal/editor values
-config_file="$hypr_dir/UserConfigs/01-UserDefaults.conf"
 lua_defaults_file="$hypr_dir/UserConfigs/user_defaults.lua"
 lua_system_defaults_file="$hypr_dir/lua/user_defaults.lua"
 user_env_lua="$hypr_dir/UserConfigs/user_env.lua"
@@ -29,49 +20,32 @@ term="${term:-${TERMINAL:-kitty}}"
 edit="${edit:-${EDITOR:-}}"
 visual="${visual:-${VISUAL:-}}"
 
-if [[ "$hypr_config_mode" == "conf" && -f "$config_file" ]]; then
-  tmp_config_file=$(mktemp)
-  sed 's/^\$//g; s/ = /=/g' "$config_file" >"$tmp_config_file"
-  source "$tmp_config_file"
-  conf_editor=$(sed -n 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*EDITOR[[:space:]]*,[[:space:]]*\([^#[:space:]]*\).*$/\1/p' "$config_file" | tail -n1)
-  conf_visual=$(sed -n 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*VISUAL[[:space:]]*,[[:space:]]*\([^#[:space:]]*\).*$/\1/p' "$config_file" | tail -n1)
-  [[ -n "$conf_editor" ]] && edit="$conf_editor"
-  [[ -n "$conf_visual" ]] && visual="$conf_visual"
-elif [[ "$hypr_config_mode" == "lua" ]]; then
-  # 1. Parse active overrides from user_defaults.lua
-  if [[ -f "$lua_defaults_file" ]]; then
-    lua_term=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.term[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
-    lua_edit=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.edit[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
-    lua_visual=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.visual[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
-    [[ -n "$lua_term" ]] && term="$lua_term"
-    [[ -n "$lua_edit" ]] && edit="$lua_edit"
-    [[ -n "$lua_visual" ]] && visual="$lua_visual"
+# 1. Parse active overrides from user_defaults.lua
+if [[ -f "$lua_defaults_file" ]]; then
+  lua_term=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.term[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
+  lua_edit=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.edit[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
+  lua_visual=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.visual[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
+  [[ -n "$lua_term" ]] && term="$lua_term"
+  [[ -n "$lua_edit" ]] && edit="$lua_edit"
+  [[ -n "$lua_visual" ]] && visual="$lua_visual"
+fi
+# 2. Parse env overrides from user_env.lua / system_env.lua
+for env_file in "$user_env_lua" "$system_env_lua"; do
+  if [[ -f "$env_file" ]]; then
+    env_edit=$(sed -n 's/^[[:space:]]*hl\.env([[:space:]]*["\x27]EDITOR["\x27][[:space:]]*,[[:space:]]*["\x27]\([^"\x27]*\)["\x27].*$/\1/p' "$env_file" | tail -n1)
+    env_visual=$(sed -n 's/^[[:space:]]*hl\.env([[:space:]]*["\x27]VISUAL["\x27][[:space:]]*,[[:space:]]*["\x27]\([^"\x27]*\)["\x27].*$/\1/p' "$env_file" | tail -n1)
+    [[ -n "$env_edit" ]] && edit="$env_edit"
+    [[ -n "$env_visual" ]] && visual="$env_visual"
   fi
-  # 2. Parse env overrides from user_env.lua / system_env.lua
-  for env_file in "$user_env_lua" "$system_env_lua"; do
-    if [[ -f "$env_file" ]]; then
-      env_edit=$(sed -n 's/^[[:space:]]*hl\.env([[:space:]]*["\x27]EDITOR["\x27][[:space:]]*,[[:space:]]*["\x27]\([^"\x27]*\)["\x27].*$/\1/p' "$env_file" | tail -n1)
-      env_visual=$(sed -n 's/^[[:space:]]*hl\.env([[:space:]]*["\x27]VISUAL["\x27][[:space:]]*,[[:space:]]*["\x27]\([^"\x27]*\)["\x27].*$/\1/p' "$env_file" | tail -n1)
-      [[ -n "$env_edit" ]] && edit="$env_edit"
-      [[ -n "$env_visual" ]] && visual="$env_visual"
-    fi
-  done
-  # 3. Fallback to 01-UserDefaults.conf if edit is still unset
-  if [[ -z "${edit:-}" && -f "$config_file" ]]; then
-    conf_editor=$(sed -n 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*EDITOR[[:space:]]*,[[:space:]]*\([^#[:space:]]*\).*$/\1/p' "$config_file" | tail -n1)
-    conf_visual=$(sed -n 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*VISUAL[[:space:]]*,[[:space:]]*\([^#[:space:]]*\).*$/\1/p' "$config_file" | tail -n1)
-    [[ -n "$conf_editor" ]] && edit="$conf_editor"
-    [[ -n "$conf_visual" ]] && visual="$conf_visual"
-  fi
-  # 4. Fallback to system lua defaults
-  if [[ -z "${lua_term:-}" && -f "$lua_system_defaults_file" ]]; then
-    sys_term=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.term[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_system_defaults_file" | tail -n1)
-    [[ -n "$sys_term" ]] && term="$sys_term"
-  fi
-  if [[ -z "${edit:-}" && -f "$lua_system_defaults_file" ]]; then
-    sys_edit=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.edit[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_system_defaults_file" | tail -n1)
-    [[ -n "$sys_edit" ]] && edit="$sys_edit"
-  fi
+done
+# 3. Fallback to system lua defaults
+if [[ -z "${lua_term:-}" && -f "$lua_system_defaults_file" ]]; then
+  sys_term=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.term[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_system_defaults_file" | tail -n1)
+  [[ -n "$sys_term" ]] && term="$sys_term"
+fi
+if [[ -z "${edit:-}" && -f "$lua_system_defaults_file" ]]; then
+  sys_edit=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.edit[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_system_defaults_file" | tail -n1)
+  [[ -n "$sys_edit" ]] && edit="$sys_edit"
 fi
 
 # Final fallback for editor
@@ -94,27 +68,16 @@ msg=' ⁉️ Choose what to do ⁉️'
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
 scriptsDir="$hypr_dir/scripts"
 UserScripts="$hypr_dir/UserScripts"
-user_defaults_conf="$UserConfigs/01-UserDefaults.conf"
 user_defaults_lua="$UserConfigs/user_defaults.lua"
-user_env_conf="$UserConfigs/ENVariables.conf"
 user_env_lua="$UserConfigs/user_env.lua"
-user_keybinds_conf="$UserConfigs/UserKeybinds.conf"
 user_keybinds_lua="$UserConfigs/user_keybinds.lua"
-user_startup_conf="$UserConfigs/Startup_Apps.conf"
 user_startup_lua="$UserConfigs/user_startup.lua"
-user_window_rules_conf="$UserConfigs/WindowRules.conf"
 user_window_rules_lua="$UserConfigs/user_window_rules.lua"
-user_layer_rules_conf="$UserConfigs/LayerRules.conf"
 user_layer_rules_lua="$UserConfigs/user_layer_rules.lua"
-user_settings_conf="$UserConfigs/UserSettings.conf"
 user_settings_lua="$UserConfigs/user_settings.lua"
-user_decorations_conf="$UserConfigs/UserDecorations.conf"
 user_decorations_lua="$UserConfigs/user_decorations.lua"
-user_animations_conf="$UserConfigs/UserAnimations.conf"
 user_animations_lua="$UserConfigs/user_animations.lua"
-user_laptops_conf="$UserConfigs/Laptops.conf"
 user_laptops_lua="$UserConfigs/user_laptops.lua"
-user_monitors_conf="$hypr_dir/monitors.conf"
 user_monitors_lua="$UserConfigs/monitors.lua"
 
 # Function to show info notification
@@ -184,40 +147,10 @@ resolve_system_lua_file() {
 resolve_system_keybinds_file() {
   local lua_keybinds="$hypr_dir/lua/keybinds.lua"
   local legacy_system_lua="$configs/system_keybinds.lua"
-  local conf_file="$configs/Keybinds.conf"
-
-  if [[ "$hypr_config_mode" == "lua" ]]; then
-    if [[ -f "$lua_keybinds" || ! -f "$legacy_system_lua" ]]; then
-      printf '%s' "$lua_keybinds"
-    else
-      printf '%s' "$legacy_system_lua"
-    fi
+  if [[ -f "$lua_keybinds" || ! -f "$legacy_system_lua" ]]; then
+    printf '%s' "$lua_keybinds"
   else
-    if [[ -f "$conf_file" || ! -f "$lua_keybinds" ]]; then
-      printf '%s' "$conf_file"
-    else
-      printf '%s' "$lua_keybinds"
-    fi
-  fi
-}
-
-resolve_mode_file() {
-  local preferred="$1"
-  local fallback="$2"
-  if [[ -f "$preferred" || ! -f "$fallback" ]]; then
-    printf '%s' "$preferred"
-  else
-    printf '%s' "$fallback"
-  fi
-}
-
-resolve_user_overlay_file() {
-  local lua_file="$1"
-  local conf_file="$2"
-  if [[ "$hypr_config_mode" == "lua" ]]; then
-    resolve_mode_file "$lua_file" "$conf_file"
-  else
-    resolve_mode_file "$conf_file" "$lua_file"
+    printf '%s' "$legacy_system_lua"
   fi
 }
 rainbow_mode_file() {
@@ -508,34 +441,34 @@ handle_choice() {
     fi
     ;;
   "Edit User Defaults")
-    file="$(resolve_user_overlay_file "$user_defaults_lua" "$user_defaults_conf")"
+    file="$user_defaults_lua"
     ;;
   "Edit User ENV variables" | "Set User ENV variables")
-    file="$(resolve_user_overlay_file "$user_env_lua" "$user_env_conf")"
+    file="$user_env_lua"
     ;;
   "Edit User Keybinds" | "Set User Keybinds")
-    file="$(resolve_user_overlay_file "$user_keybinds_lua" "$user_keybinds_conf")"
+    file="$user_keybinds_lua"
     ;;
   "Edit User Startup Apps (overlay)")
-    file="$(resolve_user_overlay_file "$user_startup_lua" "$user_startup_conf")"
+    file="$user_startup_lua"
     ;;
   "Edit User Window Rules (overlay)")
-    file="$(resolve_user_overlay_file "$user_window_rules_lua" "$user_window_rules_conf")"
+    file="$user_window_rules_lua"
     ;;
   "Edit User Layer Rules (overlay)")
-    file="$(resolve_user_overlay_file "$user_layer_rules_lua" "$user_layer_rules_conf")"
+    file="$user_layer_rules_lua"
     ;;
   "Edit User Settings")
-    file="$(resolve_user_overlay_file "$user_settings_lua" "$user_settings_conf")"
+    file="$user_settings_lua"
     ;;
   "Edit User Decorations" | "Set User Decorations")
-    file="$(resolve_user_overlay_file "$user_decorations_lua" "$user_decorations_conf")"
+    file="$user_decorations_lua"
     ;;
   "Edit User Animations")
-    file="$(resolve_user_overlay_file "$user_animations_lua" "$user_animations_conf")"
+    file="$user_animations_lua"
     ;;
   "Edit User Laptop Settings")
-    file="$(resolve_user_overlay_file "$user_laptops_lua" "$user_laptops_conf")"
+    file="$user_laptops_lua"
     ;;
   "Select Hyprview Layout")
     "$scriptsDir/select-hyprview-layout.sh"
@@ -544,16 +477,16 @@ handle_choice() {
     file="$(resolve_system_keybinds_file)"
     ;;
   "Edit System Default Startup Apps")
-    if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_startup.lua)"; else file="$configs/Startup_Apps.conf"; fi
+    file="$(resolve_system_lua_file system_startup.lua)"
     ;;
   "Edit System Default Window Rules")
-    if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_window_rules.lua)"; else file="$configs/WindowRules.conf"; fi
+    file="$(resolve_system_lua_file system_window_rules.lua)"
     ;;
   "Edit System Default Layer Rules")
-    if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_layer_rules.lua)"; else file="$configs/LayerRules.conf"; fi
+    file="$(resolve_system_lua_file system_layer_rules.lua)"
     ;;
   "Edit System Default Settings")
-    if [[ "$hypr_config_mode" == "lua" ]]; then file="$(resolve_system_lua_file system_settings.lua)"; else file="$configs/SystemSettings.conf"; fi
+    file="$(resolve_system_lua_file system_settings.lua)"
     ;;
   "Change Starship Prompt") "$scriptsDir/ChangeStarshipPrompt.sh" ;;
   "Set SDDM Wallpaper")
@@ -566,7 +499,7 @@ handle_choice() {
   "Choose Kitty Terminal Theme") "$scriptsDir/Kitty_themes.sh" ;;
   "Choose Ghostty Terminal Theme") "$scriptsDir/Ghostty_themes.sh" ;;
   "Edit User Monitor config")
-    file="$(resolve_user_overlay_file "$user_monitors_lua" "$user_monitors_conf")"
+    file="$user_monitors_lua"
     ;;
   "Configure Workspace Rules (nwg-displays)")
     if ! command -v nwg-displays &>/dev/null; then
@@ -643,20 +576,15 @@ handle_choice() {
 get_weather_units_label() {
   local unit="metric"
   local env_lua="$UserConfigs/user_env.lua"
-  local env_conf="$UserConfigs/ENVariables.conf"
   local waybar_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/waybar-weather/config.toml"
 
-  if [[ -f "$env_lua" ]] && grep -qE '^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\'']' "$env_lua"; then
+  if [[ -f "$env_lua" ]]; then
     local val
-    val=$(sed -nE 's/^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\''][[:space:]]*,[[:space:]]*["'\'']([^"'\'']+)["'\''].*/\1/p' "$env_lua" | tail -n1)
+    val=$(awk -F'[,()]' '/^[[:space:]]*hl\.env/ && /WEATHER_UNITS/ { val=$3; gsub(/[^a-zA-Z0-9_-]/, "", val); print val }' "$env_lua" | tail -n1)
     [[ -n "$val" ]] && unit="$val"
-  elif [[ -f "$env_conf" ]] && grep -qE '^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS' "$env_conf"; then
+  elif [[ -f "$waybar_cfg" ]]; then
     local val
-    val=$(sed -nE 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS[[:space:]]*,[[:space:]]*([^#[:space:]]+).*/\1/p' "$env_conf" | tail -n1)
-    [[ -n "$val" ]] && unit="$val"
-  elif [[ -f "$waybar_cfg" ]] && grep -qE '^[[:space:]]*units[[:space:]]*=' "$waybar_cfg"; then
-    local val
-    val=$(sed -nE 's/^[[:space:]]*units[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$waybar_cfg" | tail -n1)
+    val=$(awk -F'=' '/^[[:space:]]*units/ { val=$2; sub(/#.*$/, "", val); gsub(/[^a-zA-Z0-9_-]/, "", val); print val }' "$waybar_cfg" | tail -n1)
     [[ -n "$val" ]] && unit="$val"
   elif [[ -n "${WEATHER_UNITS:-}" ]]; then
     unit="$WEATHER_UNITS"

@@ -13,7 +13,6 @@ SCRIPT_NAME="$(basename "$0")"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 HYPR_DIR="$CONFIG_HOME/hypr"
 USER_CONFIGS_DIR="$HYPR_DIR/UserConfigs"
-ENV_CONF="$USER_CONFIGS_DIR/ENVariables.conf"
 ENV_LUA="$USER_CONFIGS_DIR/user_env.lua"
 SYSTEMD_USER_DIR="$CONFIG_HOME/systemd/user"
 SERVICE_NAME="ssh-agent"
@@ -94,22 +93,7 @@ run_cmd() {
 }
 
 detect_hypr_config_mode() {
-  local lua_entry="$HYPR_DIR/hyprland.lua"
-  local legacy_lua_entry="$CONFIG_HOME/hyprland.lua"
-  local mode="${HYPR_CONFIG_MODE:-}"
-  if [ -n "$mode" ]; then
-    case "${mode,,}" in
-      lua) echo "lua"; return ;;
-      conf|hyprlang) echo "conf"; return ;;
-      auto) ;;
-      *) ;;
-    esac
-  fi
-  if [ -f "$lua_entry" ] || [ -f "$legacy_lua_entry" ]; then
-    echo "lua"
-  else
-    echo "conf"
-  fi
+  echo "lua"
 }
 
 service_exists() {
@@ -251,9 +235,8 @@ remove_service() {
 }
 
 show_status() {
-  info "Detected Hyprland config mode: $(detect_hypr_config_mode)"
+  info "Detected Hyprland config mode: lua"
   service_status_summary
-  info "SSH_AUTH_SOCK in ENVariables.conf: $(env_present_conf && echo yes || echo no)"
   info "SSH_AUTH_SOCK in user_env.lua: $(env_present_lua && echo yes || echo no)"
   if [ -f "$SSH_CONFIG" ]; then
     info "AddKeysToAgent in ~/.ssh/config: $(grep -Eq '^[[:space:]]*AddKeysToAgent[[:space:]]+yes' "$SSH_CONFIG" && echo yes || echo no)"
@@ -266,13 +249,7 @@ show_status() {
 }
 
 apply_hypr_env() {
-  local mode
-  mode="$(detect_hypr_config_mode)"
-  if [ "$mode" = "lua" ]; then
-    ensure_env_lua
-  else
-    ensure_env_conf
-  fi
+  ensure_env_lua
 }
 
 if [ "$SHOW_HELP" -eq 1 ]; then

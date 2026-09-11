@@ -18,16 +18,6 @@ MIN_OPACITY=0.20
 MAX_OPACITY=1.00
 
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-hypr_dir="$config_home/hypr"
-lua_entry="$hypr_dir/hyprland.lua"
-legacy_lua_entry="$config_home/hyprland.lua"
-
-if [[ -f "$lua_entry" || -f "$legacy_lua_entry" ]]; then
-    hypr_config_mode="lua"
-else
-    hypr_config_mode="conf"
-fi
-
 icons_dir="$config_home/swaync/icons"
 images_dir="$config_home/swaync/images"
 
@@ -125,17 +115,11 @@ fi
     DISPLAY_MSG="${PERCENT}%"
   fi
 
-  if [[ "$hypr_config_mode" == "lua" ]]; then
-    # Set window-level property so it affects the active window even when windowrules are active
-    hyprctl eval "return hl.dispatch(hl.dsp.window.set_prop({ prop = 'opacity', value = '${TARGET_PROP}' }))" >/dev/null 2>&1 || true
-    hyprctl eval "return hl.dispatch(hl.dsp.window.set_prop({ prop = 'opaque', value = '${OPAQUE_ACTION}' }))" >/dev/null 2>&1 || true
-    # Also update global active_opacity config
-    hyprctl eval "hl.config({ decoration = { active_opacity = ${TARGET_NUM} } })" >/dev/null 2>&1 || true
-  else
-    hyprctl dispatch setprop active opacity "$TARGET_PROP" >/dev/null 2>&1 || true
-    hyprctl dispatch setprop active opaque "$OPAQUE_ACTION" >/dev/null 2>&1 || true
-    hyprctl keyword decoration:active_opacity "$TARGET_NUM" >/dev/null 2>&1 || true
-  fi
+  # Set window-level property so it affects the active window even when windowrules are active
+  hyprctl eval "return hl.dispatch(hl.dsp.window.set_prop({ prop = 'opacity', value = '${TARGET_PROP}' }))" >/dev/null 2>&1 || true
+  hyprctl eval "return hl.dispatch(hl.dsp.window.set_prop({ prop = 'opaque', value = '${OPAQUE_ACTION}' }))" >/dev/null 2>&1 || true
+  # Also update global active_opacity config
+  hyprctl eval "hl.config({ decoration = { active_opacity = ${TARGET_NUM} } })" >/dev/null 2>&1 || true
 
   # Send notification
   if command -v notify-send >/dev/null 2>&1 && [[ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]]; then

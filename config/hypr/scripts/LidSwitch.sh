@@ -12,6 +12,7 @@ set -euo pipefail
 ACTION="${1:-check}"
 LOGFILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hypr_lid.log"
 STATE_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hypr_internal_monitor.json"
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 
 log() {
     printf '%s - %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOGFILE" 2>&1 || true
@@ -55,13 +56,8 @@ handle_close() {
     log "Handling lid close for $mon"
     save_monitor_state "$mon"
 
-    # Disable monitor via Lua eval path (Hyprland 0.55+)
-    if hyprctl -r eval "hl.monitor({ output = [[$mon]], disabled = true })" >> "$LOGFILE" 2>&1; then
-        return 0
-    fi
-
-    # Fallback to legacy Hyprlang keyword
-    hyprctl keyword monitor "$mon, disable" >> "$LOGFILE" 2>&1 || true
+    # Disable monitor via Lua eval path
+    hyprctl -r eval "hl.monitor({ output = [[$mon]], disabled = true })" >> "$LOGFILE" 2>&1 || true
 }
 
 handle_open() {
@@ -97,21 +93,14 @@ handle_open() {
 
     # Re-enable monitor with retry loop (display controller handshake on resume)
     for _ in 1 2 3; do
-        # 1. Try Lua eval path (Hyprland 0.55+)
-        local lua_applied=false
+        # 1. Apply via native Lua eval path
         if hyprctl -r eval "hl.monitor({ output = [[$mon]], disabled = false, mode = [[$mode]], position = [[$pos]], scale = [[$scale]] })" >> "$LOGFILE" 2>&1; then
-            lua_applied=true
-        elif hyprctl -r eval "hl.monitor({ output = [[$mon]], disabled = false })" >> "$LOGFILE" 2>&1; then
-            lua_applied=true
+            :
+        else
+            hyprctl -r eval "hl.monitor({ output = [[$mon]], disabled = false })" >> "$LOGFILE" 2>&1 || true
         fi
 
-        # 2. Fallback to legacy keyword
-        if [ "$lua_applied" = false ]; then
-            hyprctl keyword monitor "$mon, $mode, $pos, $scale" >> "$LOGFILE" 2>&1 || \
-            hyprctl keyword monitor "$mon, preferred, auto, 1" >> "$LOGFILE" 2>&1 || true
-        fi
-
-        # 3. Ensure DPMS is powered on
+        # 2. Ensure DPMS is powered on
         hyprctl dispatch dpms on "$mon" >> "$LOGFILE" 2>&1 || true
 
         # Check if active
@@ -123,6 +112,11 @@ handle_open() {
         fi
         sleep 0.2
     done
+
+    # Restore wallpaper on re-enabled internal monitor
+    if [ -x "$SCRIPTSDIR/WallpaperDaemon.sh" ]; then
+        "$SCRIPTSDIR/WallpaperDaemon.sh" >> "$LOGFILE" 2>&1 &
+    fi
 }
 
 case "$ACTION" in

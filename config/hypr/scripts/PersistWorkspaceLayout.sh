@@ -137,93 +137,6 @@ if [[ -z "$workspace_selector" || -z "$monitor_name" || -z "$layout_name" ]]; th
   exit 1
 fi
 
-mkdir -p "$(dirname "$workspaces_file")"
-touch "$workspaces_file"
-
-tmp_file="$(mktemp "${workspaces_file}.XXXXXX")"
-cleanup() {
-  rm -f "$tmp_file"
-}
-trap cleanup EXIT
-
-awk \
-  -v target_ws="$workspace_selector" \
-  -v target_mon="$monitor_name" \
-  -v target_layout="$layout_name" '
-function trim(v) {
-  gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
-  return v
-}
-BEGIN {
-  updated = 0
-}
-{
-  line = $0
-  content = line
-  comment = ""
-  hash_pos = index(line, "#")
-  if (hash_pos > 0) {
-    content = substr(line, 1, hash_pos - 1)
-    comment = substr(line, hash_pos)
-  }
-  stripped = trim(content)
-  indent_len = match(line, /[^[:space:]]/) - 1
-  if (indent_len < 0) {
-    indent_len = length(line)
-  }
-  indent = substr(line, 1, indent_len)
-
-  if (stripped ~ /^workspace[[:space:]]*=/) {
-    sub(/^workspace[[:space:]]*=[[:space:]]*/, "", stripped)
-    token_count = split(stripped, tokens, /,/)
-    ws = trim(tokens[1])
-    mon = ""
-    extras_count = 0
-    delete extras
-
-    for (i = 2; i <= token_count; i++) {
-      token = trim(tokens[i])
-      if (token == "") {
-        continue
-      }
-      if (token ~ /^monitor:/) {
-        mon = trim(substr(token, 9))
-        continue
-      }
-      if (token ~ /^layout:/) {
-        continue
-      }
-      extras[++extras_count] = token
-    }
-
-    if (ws == target_ws && mon == target_mon) {
-      if (!updated) {
-        rebuilt = indent "workspace = " ws ", monitor:" target_mon ", layout:" target_layout
-        for (i = 1; i <= extras_count; i++) {
-          rebuilt = rebuilt ", " extras[i]
-        }
-        if (comment != "") {
-          rebuilt = rebuilt " " comment
-        }
-        print rebuilt
-        updated = 1
-      }
-      next
-    }
-  }
-
-  print line
-}
-END {
-  if (!updated) {
-    print "workspace = " target_ws ", monitor:" target_mon ", layout:" target_layout
-  }
-}
-' "$workspaces_file" >"$tmp_file"
-
-mv "$tmp_file" "$workspaces_file"
-trap - EXIT
-
 update_lua_workspaces() {
   local target_ws="$1"
   local target_mon="$2"
@@ -307,8 +220,96 @@ lua_path.write_text(new_content, encoding="utf-8")
 PY
 }
 
+# Always update Lua workspace rules in UserConfigs/workspaces.lua
 if command -v python3 >/dev/null 2>&1; then
   update_lua_workspaces "$workspace_selector" "$monitor_name" "$layout_name" "$lua_workspaces_file"
+fi
+
+# Optionally update workspaces.conf only if it already exists
+if [[ -f "$workspaces_file" ]]; then
+  tmp_file="$(mktemp "${workspaces_file}.XXXXXX")"
+  cleanup() {
+    rm -f "$tmp_file"
+  }
+  trap cleanup EXIT
+
+  awk \
+    -v target_ws="$workspace_selector" \
+    -v target_mon="$monitor_name" \
+    -v target_layout="$layout_name" '
+function trim(v) {
+  gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+  return v
+}
+BEGIN {
+  updated = 0
+}
+{
+  line = $0
+  content = line
+  comment = ""
+  hash_pos = index(line, "#")
+  if (hash_pos > 0) {
+    content = substr(line, 1, hash_pos - 1)
+    comment = substr(line, hash_pos)
+  }
+  stripped = trim(content)
+  indent_len = match(line, /[^[:space:]]/) - 1
+  if (indent_len < 0) {
+    indent_len = length(line)
+  }
+  indent = substr(line, 1, indent_len)
+
+  if (stripped ~ /^workspace[[:space:]]*=/) {
+    sub(/^workspace[[:space:]]*=[[:space:]]*/, "", stripped)
+    token_count = split(stripped, tokens, /,/)
+    ws = trim(tokens[1])
+    mon = ""
+    extras_count = 0
+    delete extras
+
+    for (i = 2; i <= token_count; i++) {
+      token = trim(tokens[i])
+      if (token == "") {
+        continue
+      }
+      if (token ~ /^monitor:/) {
+        mon = trim(substr(token, 9))
+        continue
+      }
+      if (token ~ /^layout:/) {
+        continue
+      }
+      extras[++extras_count] = token
+    }
+
+    if (ws == target_ws && mon == target_mon) {
+      if (!updated) {
+        rebuilt = indent "workspace = " ws ", monitor:" target_mon ", layout:" target_layout
+        for (i = 1; i <= extras_count; i++) {
+          rebuilt = rebuilt ", " extras[i]
+        }
+        if (comment != "") {
+          rebuilt = rebuilt " " comment
+        }
+        print rebuilt
+        updated = 1
+      }
+      next
+    }
+  }
+
+  print line
+}
+END {
+  if (!updated) {
+    print "workspace = " target_ws ", monitor:" target_mon ", layout:" target_layout
+  }
+}
+' "$workspaces_file" >"$tmp_file"
+
+  mv "$tmp_file" "$workspaces_file"
+  trap - EXIT
 fi
 
 if [[ "$quiet_mode" -eq 0 ]]; then

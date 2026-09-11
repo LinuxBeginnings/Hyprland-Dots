@@ -17,29 +17,6 @@ state_file="/tmp/external_brightness_bus"
 cache_file="/tmp/external_brightness_displays.cache"
 cache_ttl=300 # 5 minutes
 
-# Detect active Hyprland config mode (Lua entrypoint vs legacy .conf includes)
-config_home="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
-hypr_dir="$config_home/hypr"
-lua_entry="$hypr_dir/hyprland.lua"
-legacy_lua_entry="$config_home/hyprland.lua"
-
-if [[ -n "${HYPR_CONFIG_MODE:-}" ]]; then
-    case "${HYPR_CONFIG_MODE,,}" in
-        lua) hypr_config_mode="lua" ;;
-        conf|hyprlang) hypr_config_mode="conf" ;;
-        auto) hypr_config_mode="" ;;
-        *) hypr_config_mode="" ;;
-    esac
-fi
-
-if [[ -z "${hypr_config_mode:-}" ]]; then
-    if [[ -f "$lua_entry" || -f "$legacy_lua_entry" ]]; then
-        hypr_config_mode="lua"
-    else
-        hypr_config_mode="conf"
-    fi
-fi
-
 # Get list of displays: bus model index
 # Format: BUS|MODEL|INDEX
 get_displays() {
