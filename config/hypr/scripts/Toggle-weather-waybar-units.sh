@@ -18,11 +18,11 @@ scripts_dir="$hypr_dir/scripts"
 # Determine current units
 current_units="metric"
 
-if [[ -f "$user_env_lua" ]] && grep -qE '^[[:space:]]*hl\.env\([[:space:]]*[\"'\'']WEATHER_UNITS[\"'\\'']' "$user_env_lua"; then
-  val=$(sed -nE 's/^[[:space:]]*hl\.env\([[:space:]]*[\"'\'']WEATHER_UNITS[\"'\\''][[:space:]]*,[[:space:]]*[\"'\'']([^\"'\'']+)[\"'\\''].*/\1/p' "$user_env_lua" | tail -n1)
+if [[ -f "$user_env_lua" ]]; then
+  val=$(awk -F'[,()]' '/^[[:space:]]*hl\.env/ && /WEATHER_UNITS/ { val=$3; gsub(/[^a-zA-Z0-9_-]/, "", val); print val }' "$user_env_lua" | tail -n1)
   [[ -n "$val" ]] && current_units="$val"
-elif [[ -f "$waybar_weather_cfg" ]] && grep -qE '^[[:space:]]*units[[:space:]]*=' "$waybar_weather_cfg"; then
-  val=$(sed -nE 's/^[[:space:]]*units[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$waybar_weather_cfg" | tail -n1)
+elif [[ -f "$waybar_weather_cfg" ]]; then
+  val=$(awk -F'=' '/^[[:space:]]*units/ { val=$2; sub(/#.*$/, "", val); gsub(/[^a-zA-Z0-9_-]/, "", val); print val }' "$waybar_weather_cfg" | tail -n1)
   [[ -n "$val" ]] && current_units="$val"
 elif [[ -n "${WEATHER_UNITS:-}" ]]; then
   current_units="$WEATHER_UNITS"
@@ -40,10 +40,10 @@ fi
 
 # 1. Update user_env.lua
 if [[ -f "$user_env_lua" ]]; then
-  if grep -qE '^[[:space:]]*hl\.env\([[:space:]]*[\"'\'']WEATHER_UNITS[\"'\\'']' "$user_env_lua"; then
-    sed -i -E 's/^[[:space:]]*hl\.env\([[:space:]]*[\"'\'']WEATHER_UNITS[\"'\\''].*/hl.env("WEATHER_UNITS", "'"$new_units"'")/' "$user_env_lua"
-  elif grep -qE '^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*[\"'\'']WEATHER_UNITS[\"'\\'']' "$user_env_lua"; then
-    sed -i -E 's/^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*[\"'\'']WEATHER_UNITS[\"'\\''].*/hl.env("WEATHER_UNITS", "'"$new_units"'")/' "$user_env_lua"
+  if grep -qE '^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS' "$user_env_lua"; then
+    sed -i -E "s/^[[:space:]]*hl\\.env\\([[:space:]]*[\"']WEATHER_UNITS[\"'].*/hl.env(\"WEATHER_UNITS\", \"${new_units}\")/" "$user_env_lua"
+  elif grep -qE '^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS' "$user_env_lua"; then
+    sed -i -E "s/^[[:space:]]*--[[:space:]]*hl\\.env\\([[:space:]]*[\"']WEATHER_UNITS[\"'].*/hl.env(\"WEATHER_UNITS\", \"${new_units}\")/" "$user_env_lua"
   else
     printf '\nhl.env("WEATHER_UNITS", "%s")\n' "$new_units" >> "$user_env_lua"
   fi

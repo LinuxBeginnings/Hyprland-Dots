@@ -578,17 +578,13 @@ get_weather_units_label() {
   local env_lua="$UserConfigs/user_env.lua"
   local waybar_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/waybar-weather/config.toml"
 
-  if [[ -f "$env_lua" ]] && grep -qE '^[[:space:]]*hl\.env\([[:space:]]*[\"'\'']WEATHER_UNITS[\"'\\'']' "$env_lua"; then
+  if [[ -f "$env_lua" ]]; then
     local val
-    val=$(sed -nE 's/^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\''][[:space:]]*,[[:space:]]*["'\'']([^"'\'']+)["'\''].*/\1/p' "$env_lua" | tail -n1)
+    val=$(awk -F'[,()]' '/^[[:space:]]*hl\.env/ && /WEATHER_UNITS/ { val=$3; gsub(/[^a-zA-Z0-9_-]/, "", val); print val }' "$env_lua" | tail -n1)
     [[ -n "$val" ]] && unit="$val"
-  elif [[ -f "$env_conf" ]] && grep -qE '^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS' "$env_conf"; then
+  elif [[ -f "$waybar_cfg" ]]; then
     local val
-    val=$(sed -nE 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS[[:space:]]*,[[:space:]]*([^#[:space:]]+).*/\1/p' "$env_conf" | tail -n1)
-    [[ -n "$val" ]] && unit="$val"
-  elif [[ -f "$waybar_cfg" ]] && grep -qE '^[[:space:]]*units[[:space:]]*=' "$waybar_cfg"; then
-    local val
-    val=$(sed -nE 's/^[[:space:]]*units[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$waybar_cfg" | tail -n1)
+    val=$(awk -F'=' '/^[[:space:]]*units/ { val=$2; sub(/#.*$/, "", val); gsub(/[^a-zA-Z0-9_-]/, "", val); print val }' "$waybar_cfg" | tail -n1)
     [[ -n "$val" ]] && unit="$val"
   elif [[ -n "${WEATHER_UNITS:-}" ]]; then
     unit="$WEATHER_UNITS"
