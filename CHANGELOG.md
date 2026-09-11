@@ -49,6 +49,16 @@
 
 ## Added:
 
+- Manage User Defaults Menu 
+  - From Quick Settings menu 
+    - Set default: 
+      - Text editor 
+      - GUI editor 
+      - File manager (thunar, etc)
+      - Default search engine for search keybind 
+        - Has list of commont search engines pulldown 
+        - Not all use same search format in URL 
+    - Validates apps are installed 
 - Docs:
   - Bindings
   - Window Rules

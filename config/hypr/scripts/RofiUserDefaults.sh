@@ -146,6 +146,40 @@ EOF
       printf 'KOOLDOTS_DEFAULTS.%s = "%s"\n' "$key" "$val" >> "$USER_DEFAULTS_LUA"
     fi
   fi
+
+  # Also keep 01-UserDefaults.conf synchronized if present
+  local user_defaults_conf="$USER_CONFIGS/01-UserDefaults.conf"
+  if [[ -f "$user_defaults_conf" ]]; then
+    case "$key" in
+      term)
+        if grep -q '^[[:space:]]*\$term[[:space:]]*=' "$user_defaults_conf"; then
+          sed -i -E "s|^[[:space:]]*\\\$term[[:space:]]*=.*$|\$term = ${val} # Terminal|" "$user_defaults_conf"
+        fi
+        ;;
+      files)
+        if grep -q '^[[:space:]]*\$files[[:space:]]*=' "$user_defaults_conf"; then
+          sed -i -E "s|^[[:space:]]*\\\$files[[:space:]]*=.*$|\$files = ${val} # File Manager|" "$user_defaults_conf"
+        fi
+        ;;
+      edit)
+        if grep -q '^[[:space:]#]*env[[:space:]]*=[[:space:]]*EDITOR,' "$user_defaults_conf"; then
+          sed -i -E "s|^[[:space:]#]*env[[:space:]]*=[[:space:]]*EDITOR,.*$|env = EDITOR,${val} #default editor|" "$user_defaults_conf"
+        fi
+        ;;
+      visual)
+        if grep -q '^[[:space:]#]*env[[:space:]]*=[[:space:]]*VISUAL,' "$user_defaults_conf"; then
+          sed -i -E "s|^[[:space:]#]*env[[:space:]]*=[[:space:]]*VISUAL,.*$|env = VISUAL,${val} #default visual editor for quick settings (optional)|" "$user_defaults_conf"
+        elif [[ -n "$val" ]]; then
+          echo "env = VISUAL,${val} #default visual editor for quick settings (optional)" >> "$user_defaults_conf"
+        fi
+        ;;
+      search_engine)
+        if grep -q '^[[:space:]]*\$Search_Engine[[:space:]]*=' "$user_defaults_conf"; then
+          sed -i -E "s|^[[:space:]]*\\\$Search_Engine[[:space:]]*=.*$|\$Search_Engine = \"${val}\"|" "$user_defaults_conf"
+        fi
+        ;;
+    esac
+  fi
 }
 
 # Remove single field override
@@ -159,6 +193,28 @@ restore_single_default() {
       sed -i -E "/^[[:space:]]*KOOLDOTS_DEFAULTS\.${key}[[:space:]]*=/d" "$USER_DEFAULTS_LUA"
     fi
   fi
+
+  local user_defaults_conf="$USER_CONFIGS/01-UserDefaults.conf"
+  if [[ -f "$user_defaults_conf" ]]; then
+    case "$key" in
+      visual)
+        sed -i -E "/^[[:space:]#]*env[[:space:]]*=[[:space:]]*VISUAL,/d" "$user_defaults_conf"
+        ;;
+      edit)
+        sed -i -E "s|^[[:space:]#]*env[[:space:]]*=[[:space:]]*EDITOR,.*$|env = EDITOR,nano #default editor|" "$user_defaults_conf"
+        ;;
+      term)
+        sed -i -E "s|^[[:space:]]*\\\$term[[:space:]]*=.*$|\$term = kitty # Terminal|" "$user_defaults_conf"
+        ;;
+      files)
+        sed -i -E "s|^[[:space:]]*\\\$files[[:space:]]*=.*$|\$files = thunar # File Manager|" "$user_defaults_conf"
+        ;;
+      search_engine)
+        sed -i -E "s|^[[:space:]]*\\\$Search_Engine[[:space:]]*=.*$|\$Search_Engine = \"https://www.google.com/search?q={}\"|" "$user_defaults_conf"
+        ;;
+    esac
+  fi
+
   local def_val
   def_val="$(get_system_default "$key")"
   [[ -z "$def_val" ]] && def_val="(none)"
@@ -169,6 +225,14 @@ restore_single_default() {
 restore_all_defaults() {
   if [[ -f "$USER_DEFAULTS_LUA" ]]; then
     sed -i -E "/^[[:space:]]*KOOLDOTS_DEFAULTS\.(edit|visual|term|files|search_engine|Search_Engine)[[:space:]]*=/d" "$USER_DEFAULTS_LUA"
+  fi
+  local user_defaults_conf="$USER_CONFIGS/01-UserDefaults.conf"
+  if [[ -f "$user_defaults_conf" ]]; then
+    sed -i -E "/^[[:space:]#]*env[[:space:]]*=[[:space:]]*VISUAL,/d" "$user_defaults_conf"
+    sed -i -E "s|^[[:space:]#]*env[[:space:]]*=[[:space:]]*EDITOR,.*$|env = EDITOR,nano #default editor|" "$user_defaults_conf"
+    sed -i -E "s|^[[:space:]]*\\\$term[[:space:]]*=.*$|\$term = kitty # Terminal|" "$user_defaults_conf"
+    sed -i -E "s|^[[:space:]]*\\\$files[[:space:]]*=.*$|\$files = thunar # File Manager|" "$user_defaults_conf"
+    sed -i -E "s|^[[:space:]]*\\\$Search_Engine[[:space:]]*=.*$|\$Search_Engine = \"https://www.google.com/search?q={}\"|" "$user_defaults_conf"
   fi
   notify_success "All user defaults restored to system defaults."
 }
@@ -334,6 +398,96 @@ run_rofi() {
   "${cmd[@]}" "$@"
 }
 
+# Scan desktop files for applications matching category
+get_desktop_apps() {
+  local category="$1"
+  local require_term="${2:-}"
+  local -a found=()
+  if command -v python3 >/dev/null 2>&1; then
+    mapfile -t found < <(python3 -c "
+import os
+desktop_dirs = [
+    os.path.expanduser('~/.local/share/applications'),
+    '/usr/local/share/applications',
+    '/usr/share/applications',
+    '/var/lib/flatpak/exports/share/applications',
+    os.path.expanduser('~/.local/share/flatpak/exports/share/applications'),
+]
+cat_target = '${category}'
+req_term = '${require_term}'
+apps = set()
+for d in desktop_dirs:
+    if not os.path.isdir(d):
+        continue
+    for root, _, files in os.walk(d):
+        for f in files:
+            if not f.endswith('.desktop'):
+                continue
+            try:
+                with open(os.path.join(root, f), 'r', encoding='utf-8', errors='ignore') as fp:
+                    in_entry = False
+                    cats = ''
+                    term = False
+                    nodisplay = False
+                    exec_cmd = ''
+                    for line in fp:
+                        line = line.strip()
+                        if line == '[Desktop Entry]':
+                            in_entry = True
+                        elif line.startswith('[') and in_entry:
+                            break
+                        elif in_entry:
+                            if line.startswith('Categories='):
+                                cats = line.split('=', 1)[1]
+                            elif line.startswith('Terminal='):
+                                term = line.split('=', 1)[1].lower() == 'true'
+                            elif line.startswith('NoDisplay='):
+                                nodisplay = line.split('=', 1)[1].lower() == 'true'
+                            elif line.startswith('Exec='):
+                                exec_cmd = line.split('=', 1)[1]
+                    if in_entry and not nodisplay and (cat_target in cats or (cat_target == 'TextEditor' and 'IDE' in cats)):
+                        if req_term == 'true' and not term:
+                            continue
+                        if req_term == 'false' and term:
+                            continue
+                        if exec_cmd:
+                            bin_name = os.path.basename(exec_cmd.split()[0].replace('\"', '').replace(\"'\", ''))
+                            if bin_name:
+                                apps.add(bin_name)
+            except Exception:
+                pass
+for a in sorted(apps):
+    print(a)
+" 2>/dev/null)
+  else
+    local d_dirs=(
+      "$HOME/.local/share/applications"
+      "/usr/local/share/applications"
+      "/usr/share/applications"
+    )
+    for d in "${d_dirs[@]}"; do
+      [[ -d "$d" ]] || continue
+      while IFS= read -r f; do
+        if grep -q -E "^Categories=.*${category}" "$f" 2>/dev/null; then
+          if [[ "$require_term" == "false" ]] && grep -q -E '^Terminal=true' "$f" 2>/dev/null; then
+            continue
+          fi
+          if [[ "$require_term" == "true" ]] && ! grep -q -E '^Terminal=true' "$f" 2>/dev/null; then
+            continue
+          fi
+          local exec_line
+          exec_line=$(grep -E '^Exec=' "$f" 2>/dev/null | head -n1 | sed -e 's/^Exec=//' -e 's/ %[a-zA-Z]//g')
+          local bin
+          read -r bin _ <<< "$exec_line"
+          bin="$(basename "${bin//\"/}")"
+          [[ -n "$bin" ]] && found+=("$bin")
+        fi
+      done < <(find "$d" -maxdepth 2 -name "*.desktop" 2>/dev/null)
+    done
+  fi
+  printf '%s\n' "${found[@]}"
+}
+
 # Submenu to edit a command-based field
 edit_command_field() {
   local key="$1"
@@ -346,35 +500,71 @@ edit_command_field() {
   options+=("🔄 Restore Default")
 
   if [[ "$key" == "visual" ]]; then
-    options+=("None / Clear (empty)")
+    if [[ "$current_val" == "(none)" ]]; then
+      options+=("None / Clear (empty) (current)")
+    else
+      options+=("None / Clear (empty)")
+    fi
   fi
 
   local -a candidates=()
   case "$key" in
     term)
-      candidates=(kitty ghostty alacritty foot wezterm urxvt xterm)
+      candidates=(kitty ghostty alacritty foot wezterm urxvt xterm ptyxis warp-terminal konsole gnome-terminal xfce4-terminal)
       ;;
     edit)
-      candidates=(nvim vim nano hx helix micro emacs)
+      candidates=(nvim vim nano hx helix micro emacs jed joe mg)
       ;;
     visual)
-      candidates=(code vscodium kate gedit subl emacs)
+      candidates=(neovide code vscodium codium cursor zed zed-editor subl sublime_text kate gedit gnome-text-editor mousepad geany emacs atom featherpad xed pluma)
       ;;
     files)
-      candidates=(thunar nautilus dolphin nemo pcmanfm yazi ranger)
+      candidates=(thunar nautilus dolphin nemo pcmanfm pcmanfm-qt yazi ranger lf doublecmd spacefm)
       ;;
   esac
 
+  # Dynamically discover installed apps from .desktop files
+  local -a discovered=()
+  case "$key" in
+    visual)
+      mapfile -t discovered < <(get_desktop_apps "TextEditor" "false" 2>/dev/null)
+      ;;
+    term)
+      mapfile -t discovered < <(get_desktop_apps "TerminalEmulator" 2>/dev/null)
+      ;;
+    files)
+      mapfile -t discovered < <(get_desktop_apps "FileManager" 2>/dev/null)
+      ;;
+  esac
+  for d_bin in "${discovered[@]}"; do
+    [[ -n "$d_bin" ]] && candidates+=("$d_bin")
+  done
+
+  # Include currently active value if valid and set so it is always selectable
+  if [[ "$current_val" != "(none)" && -n "$current_val" ]] && validate_command "$current_val"; then
+    candidates+=("$current_val")
+  fi
+
+  # Filter to installed binaries and mark current selection
+  declare -A seen_candidates=()
   for c in "${candidates[@]}"; do
-    if command -v "$c" >/dev/null 2>&1 && [[ "$c" != "$current_val" ]]; then
-      options+=("$c")
+    [[ -z "$c" ]] && continue
+    if [[ -z "${seen_candidates[$c]:-}" ]]; then
+      seen_candidates["$c"]=1
+      if validate_command "$c"; then
+        if [[ "$c" == "$current_val" ]]; then
+          options+=("$c (current)")
+        else
+          options+=("$c")
+        fi
+      fi
     fi
   done
 
   options+=("✏️  Enter custom value...")
 
   local choice
-  choice=$(printf '%s\n' "${options[@]}" | run_rofi "$friendly_name | Current: $current_val" "listview { lines: 6; }")
+  choice=$(printf '%s\n' "${options[@]}" | run_rofi "$friendly_name | Current: $current_val" "listview { lines: 8; }")
   [[ -z "$choice" ]] && return 0
 
   if [[ "$choice" == "🔄 Restore Default"* ]]; then
@@ -382,17 +572,20 @@ edit_command_field() {
     return 0
   fi
 
-  if [[ "$key" == "visual" && "$choice" == "None / Clear (empty)" ]]; then
+  if [[ "$key" == "visual" && "$choice" == "None / Clear (empty)"* ]]; then
     set_user_override "$key" ""
     notify_success "$friendly_name set to none."
     return 0
   fi
 
   local new_cmd="$choice"
-  if [[ "$choice" == "✏️  Enter custom value..." ]]; then
+  if [[ "$choice" == "✏️  Enter custom value..."* ]]; then
     new_cmd=$(printf '' | run_rofi "Enter executable name for $friendly_name:" "" -p "$friendly_name")
     [[ -z "$new_cmd" ]] && return 0
   fi
+
+  # Strip (current) tag if user selected current item
+  new_cmd="${new_cmd% (current)}"
 
   # For visual, empty is allowed
   if [[ "$key" == "visual" && ("$new_cmd" == "none" || "$new_cmd" == "clear" || "$new_cmd" == "empty") ]]; then
