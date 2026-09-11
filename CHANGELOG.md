@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- Fixed black wallpaper on resume or lid open
 - Fixed `awww` to actualy randomize transistions
 - Huge delay and HL IPC stall when changing themes
   - Removed hyprlang code and replaced with LUA

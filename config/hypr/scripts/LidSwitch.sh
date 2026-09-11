@@ -12,6 +12,7 @@ set -euo pipefail
 ACTION="${1:-check}"
 LOGFILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hypr_lid.log"
 STATE_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hypr_internal_monitor.json"
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 
 log() {
     printf '%s - %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOGFILE" 2>&1 || true
@@ -111,6 +112,11 @@ handle_open() {
         fi
         sleep 0.2
     done
+
+    # Restore wallpaper on re-enabled internal monitor
+    if [ -x "$SCRIPTSDIR/WallpaperDaemon.sh" ]; then
+        "$SCRIPTSDIR/WallpaperDaemon.sh" >> "$LOGFILE" 2>&1 &
+    fi
 }
 
 case "$ACTION" in
