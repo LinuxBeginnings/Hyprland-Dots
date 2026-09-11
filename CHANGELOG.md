@@ -8,6 +8,8 @@
 - Fixed `awww` to actualy randomize transistions
 - Huge delay and HL IPC stall when changing themes
   - Removed hyprlang code and replaced with LUA
+- Huge delay and HL IPC stall when changing themes 
+  - Removed hyprlang code and replaced with LUA 
   - Thank you Angel Spano @jasueh
 - Custom scripts weren't preserved on updates
 - WindowRules weren't being migrated
