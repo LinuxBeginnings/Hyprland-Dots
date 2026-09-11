@@ -15,17 +15,6 @@ set -uo pipefail
 notif="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
 icons_dir="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/icons"
 
-config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-hypr_dir="$config_home/hypr"
-lua_entry="$hypr_dir/hyprland.lua"
-legacy_lua_entry="$config_home/hyprland.lua"
-
-if [[ -f "$lua_entry" || -f "$legacy_lua_entry" ]]; then
-    hypr_config_mode="lua"
-else
-    hypr_config_mode="conf"
-fi
-
 LOCK="/tmp/.hypr_change_blur_${HYPRLAND_INSTANCE_SIGNATURE:-default}.lock"
 
 # Pick appropriate icons
@@ -165,20 +154,8 @@ fi
       ;;
   esac
 
-  if [[ "$hypr_config_mode" == "lua" ]]; then
-    hyprctl -r eval "hl.config({ decoration = { blur = { enabled = ${SET_ENABLED}, size = ${SET_SIZE}, passes = ${SET_PASSES}, ignore_opacity = true, xray = false, new_optimizations = true } } })" >/dev/null 2>&1 || true
-  else
-    if [[ "$SET_ENABLED" == "true" ]]; then
-      hyprctl keyword decoration:blur:enabled 1
-    else
-      hyprctl keyword decoration:blur:enabled 0
-    fi
-    hyprctl keyword decoration:blur:size "$SET_SIZE"
-    hyprctl keyword decoration:blur:passes "$SET_PASSES"
-    hyprctl keyword decoration:blur:ignore_opacity 1
-    hyprctl keyword decoration:blur:xray 0
-    hyprctl keyword decoration:blur:new_optimizations 1
-  fi
+  # Apply blur properties using native Lua hl.config
+  hyprctl -r eval "hl.config({ decoration = { blur = { enabled = ${SET_ENABLED}, size = ${SET_SIZE}, passes = ${SET_PASSES}, ignore_opacity = true, xray = false, new_optimizations = true } } })" >/dev/null 2>&1 || true
 
   # Send notification
   if command -v notify-send >/dev/null 2>&1 && [[ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]]; then

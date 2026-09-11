@@ -147,39 +147,7 @@ EOF
     fi
   fi
 
-  # Also keep 01-UserDefaults.conf synchronized if present
-  local user_defaults_conf="$USER_CONFIGS/01-UserDefaults.conf"
-  if [[ -f "$user_defaults_conf" ]]; then
-    case "$key" in
-      term)
-        if grep -q '^[[:space:]]*\$term[[:space:]]*=' "$user_defaults_conf"; then
-          sed -i -E "s|^[[:space:]]*\\\$term[[:space:]]*=.*$|\$term = ${val} # Terminal|" "$user_defaults_conf"
-        fi
-        ;;
-      files)
-        if grep -q '^[[:space:]]*\$files[[:space:]]*=' "$user_defaults_conf"; then
-          sed -i -E "s|^[[:space:]]*\\\$files[[:space:]]*=.*$|\$files = ${val} # File Manager|" "$user_defaults_conf"
-        fi
-        ;;
-      edit)
-        if grep -q '^[[:space:]#]*env[[:space:]]*=[[:space:]]*EDITOR,' "$user_defaults_conf"; then
-          sed -i -E "s|^[[:space:]#]*env[[:space:]]*=[[:space:]]*EDITOR,.*$|env = EDITOR,${val} #default editor|" "$user_defaults_conf"
-        fi
-        ;;
-      visual)
-        if grep -q '^[[:space:]#]*env[[:space:]]*=[[:space:]]*VISUAL,' "$user_defaults_conf"; then
-          sed -i -E "s|^[[:space:]#]*env[[:space:]]*=[[:space:]]*VISUAL,.*$|env = VISUAL,${val} #default visual editor for quick settings (optional)|" "$user_defaults_conf"
-        elif [[ -n "$val" ]]; then
-          echo "env = VISUAL,${val} #default visual editor for quick settings (optional)" >> "$user_defaults_conf"
-        fi
-        ;;
-      search_engine)
-        if grep -q '^[[:space:]]*\$Search_Engine[[:space:]]*=' "$user_defaults_conf"; then
-          sed -i -E "s|^[[:space:]]*\\\$Search_Engine[[:space:]]*=.*$|\$Search_Engine = \"${val}\"|" "$user_defaults_conf"
-        fi
-        ;;
-    esac
-  fi
+  # User defaults updated in UserConfigs/user_defaults.lua
 }
 
 # Remove single field override
@@ -194,27 +162,6 @@ restore_single_default() {
     fi
   fi
 
-  local user_defaults_conf="$USER_CONFIGS/01-UserDefaults.conf"
-  if [[ -f "$user_defaults_conf" ]]; then
-    case "$key" in
-      visual)
-        sed -i -E "/^[[:space:]#]*env[[:space:]]*=[[:space:]]*VISUAL,/d" "$user_defaults_conf"
-        ;;
-      edit)
-        sed -i -E "s|^[[:space:]#]*env[[:space:]]*=[[:space:]]*EDITOR,.*$|env = EDITOR,nano #default editor|" "$user_defaults_conf"
-        ;;
-      term)
-        sed -i -E "s|^[[:space:]]*\\\$term[[:space:]]*=.*$|\$term = kitty # Terminal|" "$user_defaults_conf"
-        ;;
-      files)
-        sed -i -E "s|^[[:space:]]*\\\$files[[:space:]]*=.*$|\$files = thunar # File Manager|" "$user_defaults_conf"
-        ;;
-      search_engine)
-        sed -i -E "s|^[[:space:]]*\\\$Search_Engine[[:space:]]*=.*$|\$Search_Engine = \"https://www.google.com/search?q={}\"|" "$user_defaults_conf"
-        ;;
-    esac
-  fi
-
   local def_val
   def_val="$(get_system_default "$key")"
   [[ -z "$def_val" ]] && def_val="(none)"
@@ -225,14 +172,6 @@ restore_single_default() {
 restore_all_defaults() {
   if [[ -f "$USER_DEFAULTS_LUA" ]]; then
     sed -i -E "/^[[:space:]]*KOOLDOTS_DEFAULTS\.(edit|visual|term|files|search_engine|Search_Engine)[[:space:]]*=/d" "$USER_DEFAULTS_LUA"
-  fi
-  local user_defaults_conf="$USER_CONFIGS/01-UserDefaults.conf"
-  if [[ -f "$user_defaults_conf" ]]; then
-    sed -i -E "/^[[:space:]#]*env[[:space:]]*=[[:space:]]*VISUAL,/d" "$user_defaults_conf"
-    sed -i -E "s|^[[:space:]#]*env[[:space:]]*=[[:space:]]*EDITOR,.*$|env = EDITOR,nano #default editor|" "$user_defaults_conf"
-    sed -i -E "s|^[[:space:]]*\\\$term[[:space:]]*=.*$|\$term = kitty # Terminal|" "$user_defaults_conf"
-    sed -i -E "s|^[[:space:]]*\\\$files[[:space:]]*=.*$|\$files = thunar # File Manager|" "$user_defaults_conf"
-    sed -i -E "s|^[[:space:]]*\\\$Search_Engine[[:space:]]*=.*$|\$Search_Engine = \"https://www.google.com/search?q={}\"|" "$user_defaults_conf"
   fi
   notify_success "All user defaults restored to system defaults."
 }

@@ -12,18 +12,14 @@ set -euo pipefail
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 hypr_dir="$config_home/hypr"
 user_env_lua="$hypr_dir/UserConfigs/user_env.lua"
-user_env_conf="$hypr_dir/UserConfigs/ENVariables.conf"
 waybar_weather_cfg="$config_home/waybar-weather/config.toml"
 scripts_dir="$hypr_dir/scripts"
 
 # Determine current units
 current_units="metric"
 
-if [[ -f "$user_env_lua" ]] && grep -qE '^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\'']' "$user_env_lua"; then
-  val=$(sed -nE 's/^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\''][[:space:]]*,[[:space:]]*["'\'']([^"'\'']+)["'\''].*/\1/p' "$user_env_lua" | tail -n1)
-  [[ -n "$val" ]] && current_units="$val"
-elif [[ -f "$user_env_conf" ]] && grep -qE '^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS' "$user_env_conf"; then
-  val=$(sed -nE 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS[[:space:]]*,[[:space:]]*([^#[:space:]]+).*/\1/p' "$user_env_conf" | tail -n1)
+if [[ -f "$user_env_lua" ]] && grep -qE '^[[:space:]]*hl\.env\([[:space:]]*[\"'\'']WEATHER_UNITS[\"'\\'']' "$user_env_lua"; then
+  val=$(sed -nE 's/^[[:space:]]*hl\.env\([[:space:]]*[\"'\'']WEATHER_UNITS[\"'\\''][[:space:]]*,[[:space:]]*[\"'\'']([^\"'\'']+)[\"'\\''].*/\1/p' "$user_env_lua" | tail -n1)
   [[ -n "$val" ]] && current_units="$val"
 elif [[ -f "$waybar_weather_cfg" ]] && grep -qE '^[[:space:]]*units[[:space:]]*=' "$waybar_weather_cfg"; then
   val=$(sed -nE 's/^[[:space:]]*units[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$waybar_weather_cfg" | tail -n1)
@@ -44,27 +40,16 @@ fi
 
 # 1. Update user_env.lua
 if [[ -f "$user_env_lua" ]]; then
-  if grep -qE '^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\'']' "$user_env_lua"; then
-    sed -i -E 's/^[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\''].*/hl.env("WEATHER_UNITS", "'"$new_units"'")/' "$user_env_lua"
-  elif grep -qE '^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\'']' "$user_env_lua"; then
-    sed -i -E 's/^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*["'\'']WEATHER_UNITS["'\''].*/hl.env("WEATHER_UNITS", "'"$new_units"'")/' "$user_env_lua"
+  if grep -qE '^[[:space:]]*hl\.env\([[:space:]]*[\"'\'']WEATHER_UNITS[\"'\\'']' "$user_env_lua"; then
+    sed -i -E 's/^[[:space:]]*hl\.env\([[:space:]]*[\"'\'']WEATHER_UNITS[\"'\\''].*/hl.env("WEATHER_UNITS", "'"$new_units"'")/' "$user_env_lua"
+  elif grep -qE '^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*[\"'\'']WEATHER_UNITS[\"'\\'']' "$user_env_lua"; then
+    sed -i -E 's/^[[:space:]]*--[[:space:]]*hl\.env\([[:space:]]*[\"'\'']WEATHER_UNITS[\"'\\''].*/hl.env("WEATHER_UNITS", "'"$new_units"'")/' "$user_env_lua"
   else
     printf '\nhl.env("WEATHER_UNITS", "%s")\n' "$new_units" >> "$user_env_lua"
   fi
 fi
 
-# 2. Update ENVariables.conf
-if [[ -f "$user_env_conf" ]]; then
-  if grep -qE '^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS' "$user_env_conf"; then
-    sed -i -E 's/^[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS.*/env = WEATHER_UNITS,'"$new_units"'/' "$user_env_conf"
-  elif grep -qE '^[[:space:]]*#[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS' "$user_env_conf"; then
-    sed -i -E 's/^[[:space:]]*#[[:space:]]*env[[:space:]]*=[[:space:]]*WEATHER_UNITS.*/env = WEATHER_UNITS,'"$new_units"'/' "$user_env_conf"
-  else
-    printf '\nenv = WEATHER_UNITS,%s\n' "$new_units" >> "$user_env_conf"
-  fi
-fi
-
-# 3. Update waybar-weather config.toml if present
+# 2. Update waybar-weather config.toml if present
 if [[ -f "$waybar_weather_cfg" ]]; then
   if grep -qE '^[[:space:]]*units[[:space:]]*=' "$waybar_weather_cfg"; then
     sed -i 's/^[[:space:]]*units[[:space:]]*=.*/units = "'"$new_units"'"/' "$waybar_weather_cfg"

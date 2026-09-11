@@ -8,7 +8,6 @@
 # For Searching via web browsers
 
 # Define the path to the config files
-config_file=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/01-UserDefaults.conf
 lua_user_defaults=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/user_defaults.lua
 lua_sys_defaults=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/user_defaults.lua
 
@@ -25,13 +24,7 @@ if [[ -f "$lua_user_defaults" ]]; then
     [[ -n "$lua_engine" ]] && Search_Engine="$lua_engine"
 fi
 
-# 2. Check legacy 01-UserDefaults.conf if not set in Lua user defaults
-if [[ -z "$Search_Engine" && -f "$config_file" ]]; then
-    config_content=$(sed 's/\$//g' "$config_file" | sed 's/ = /=/')
-    eval "$config_content"
-fi
-
-# 3. Check Lua system defaults if still unset
+# 2. Check Lua system defaults if still unset
 if [[ -z "$Search_Engine" && -f "$lua_sys_defaults" ]]; then
     sys_engine=$(sed -nE 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.(search_engine|Search_Engine)[[:space:]]*=[[:space:]]*["'\'']([^"'\'']+)["'\''][[:space:]]*(;?([[:space:]]*--.*)?)?$/\2/p' "$lua_sys_defaults" | tail -n1)
     [[ -n "$sys_engine" ]] && Search_Engine="$sys_engine"

@@ -153,13 +153,10 @@ set_workspace_layout_rule() {
     return 1
   fi
 
-  output="$(hyprctl keyword workspace "${workspace_selector}, monitor:${monitor_name}, layout:${target}" 2>&1 || true)"
-  if grep -q "keyword can't work with non-legacy parsers" <<<"$output"; then
-    ws_escaped="$(escape_lua_string "$workspace_selector")"
-    monitor_escaped="$(escape_lua_string "$monitor_name")"
-    target_escaped="$(escape_lua_string "$target")"
-    output="$(hyprctl eval "hl.workspace_rule({ workspace = \"${ws_escaped}\", monitor = \"${monitor_escaped}\", layout = \"${target_escaped}\" })" 2>&1 || true)"
-  fi
+  ws_escaped="$(escape_lua_string "$workspace_selector")"
+  monitor_escaped="$(escape_lua_string "$monitor_name")"
+  target_escaped="$(escape_lua_string "$target")"
+  output="$(hyprctl eval "hl.workspace_rule({ workspace = \"${ws_escaped}\", monitor = \"${monitor_escaped}\", layout = \"${target_escaped}\" })" 2>&1 || true)"
 
   if ! is_ok_output "$output"; then
     echo "$output" >&2
