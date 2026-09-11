@@ -54,9 +54,9 @@ notify_success() {
 notify_error() {
   local msg="$1"
   if [[ -f "$iDIR/error.png" ]]; then
-    notify-send -u normal -i "$iDIR/error.png" "E-R-R-O-R" "$msg"
+    notify-send -u normal -i "$iDIR/error.png" "User Defaults" "$msg"
   else
-    notify-send -u normal "E-R-R-O-R" "$msg"
+    notify-send -u normal "User Defaults" "$msg"
   fi
 }
 
@@ -597,7 +597,9 @@ edit_command_field() {
   if ! validate_command "$new_cmd"; then
     local bin
     read -r bin _ <<< "$new_cmd"
-    notify_error "'$bin' is not installed or misspelled. Value was not updated."
+    [[ -z "$bin" ]] && bin="$new_cmd"
+    notify_error "Application \"$bin\" cannot be found."
+    MENU_ERROR="Application \"$bin\" cannot be found"
     return 1
   fi
 
@@ -664,6 +666,7 @@ edit_search_engine_field() {
 
 # Main menu loop
 main_menu() {
+  local status_msg=""
   while true; do
     local edit_val visual_val term_val files_val search_val
     edit_val="$(get_effective_value "edit")"
@@ -682,25 +685,36 @@ main_menu() {
       "Restore defaults"
     )
 
+    local rofi_msg="Select item to edit or restore defaults"
+    if [[ -n "$status_msg" ]]; then
+      rofi_msg="$status_msg"
+      status_msg=""
+    fi
+
     local choice
-    choice=$(printf '%s\n' "${menu_items[@]}" | run_rofi "Select item to edit or restore defaults" "listview { lines: 6; }")
+    choice=$(printf '%s\n' "${menu_items[@]}" | run_rofi "$rofi_msg" "listview { lines: 6; }")
     [[ -z "$choice" ]] && break
 
     case "$choice" in
       "Text Editor:"*)
-        edit_command_field "edit" "Text Editor"
+        MENU_ERROR=""
+        edit_command_field "edit" "Text Editor" || status_msg="$MENU_ERROR"
         ;;
       "GUI editor:"*)
-        edit_command_field "visual" "GUI editor"
+        MENU_ERROR=""
+        edit_command_field "visual" "GUI editor" || status_msg="$MENU_ERROR"
         ;;
       "Terminal:"*)
-        edit_command_field "term" "Terminal"
+        MENU_ERROR=""
+        edit_command_field "term" "Terminal" || status_msg="$MENU_ERROR"
         ;;
       "File Manager:"*)
-        edit_command_field "files" "File Manager"
+        MENU_ERROR=""
+        edit_command_field "files" "File Manager" || status_msg="$MENU_ERROR"
         ;;
       "Default Search Engine:"*)
-        edit_search_engine_field
+        MENU_ERROR=""
+        edit_search_engine_field || status_msg="$MENU_ERROR"
         ;;
       "Restore defaults"*)
         restore_all_defaults
