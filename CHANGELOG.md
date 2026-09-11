@@ -4,6 +4,9 @@
 
 ## Fixed:
 
+- Huge delay and HL IPC stall when changing themes 
+  - Removed hyprlang code and replaced with LUA 
+  - Thank you Angel Spano @jasueh
 - Custom scripts weren't preserved on updates
 - WindowRules weren't being migrated
 - Support for `nwg-look` to set theme / icons
@@ -30,6 +33,7 @@
 
 ## Updated:
 
+- Began removal of hyprlang based config files 
 - Kitty has a remote exploit current when `enable_remote_acces = yes`
   - It's now disabled by default
 - Moved `$HOME/.config/waybar` to `$HOME/.config/hypr/waybar`

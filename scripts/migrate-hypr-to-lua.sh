@@ -61,8 +61,6 @@ USER_CONFIGS_PRESERVED_CONFS=(
   "kitty.conf"
   "ghostty.conf"
   "hyprview-layout.conf"
-  "LaptopDisplay.conf"
-  "WorkSpaceRules.conf"
 )
 
 usage() {
@@ -72,7 +70,8 @@ Usage: $(basename "$0") [--yes] [--dry-run] [--revert]
 Copies the repo's Hyprland Lua entrypoint into:
   $DEST_HYPR_DIR
 
-This preserves hyprland.conf as fallback and creates a full backup of the
+This migrates Hyprlang configuration to Lua and archives legacy .conf files
+into LegacyConfigs/<timestamp> while creating a full backup of the
 current Hyprland config directory before changing files.
 
 Options:
@@ -134,11 +133,11 @@ echo "[INFO] Source: $SRC_HYPR_DIR"
 echo "[INFO] Target: $DEST_HYPR_DIR"
 echo "[INFO] Backup: $BACKUP_DIR"
 if [ "$REVERT" -eq 1 ]; then
-  echo "[WARN] Revert mode: restores latest LegacyConfigs/<timestamp> .conf files in UserConfigs and configs."
+  echo "[WARN] Revert mode: restores latest LegacyConfigs/<timestamp> .conf files in UserConfigs, configs, and hypr root."
 else
-  echo "[WARN] This enables Hyprland's Lua entrypoint for builds that support hyprland.lua."
-  echo "[WARN] hyprland.conf remains in place as fallback; old .conf files move into LegacyConfigs/<timestamp>."
-  echo "[INFO] hypridle.conf and hyprlock*.conf stay as native .conf files because Hypridle/Hyprlock do not use Hyprland's Lua API."
+  echo "[WARN] This enables Hyprland's Lua entrypoint (project is Lua-only)."
+  echo "[WARN] Legacy .conf files (including hyprland.conf, monitors.conf, workspaces.conf) move into LegacyConfigs/<timestamp>."
+  echo "[INFO] hypridle.conf, hyprlock*.conf, and application-style.conf stay as native .conf files because they do not use Hyprland's Lua API."
 fi
 
 restore_latest_conf_backup() {
@@ -298,6 +297,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
     if [ -d "$CONFIGS_DIR" ]; then
       echo "[DRY-RUN] Would move configs/*.conf into: $CONFIGS_LEGACY_DIR"
     fi
+    echo "[DRY-RUN] Would move legacy root *.conf (hyprland.conf, monitors.conf, workspaces.conf) into: $DEST_HYPR_DIR/$LEGACY_CONFIGS_DIR_NAME/$MIGRATION_TS"
   fi
   exit 0
 fi
@@ -316,6 +316,7 @@ if [ "$REVERT" -eq 1 ]; then
   fi
   restore_latest_conf_backup "$USER_CONFIGS_DIR" "$USER_CONFIGS_DIR"
   restore_latest_conf_backup "$CONFIGS_DIR" "$CONFIGS_DIR"
+  restore_latest_conf_backup "$DEST_HYPR_DIR" "$DEST_HYPR_DIR"
   echo "[OK] Revert complete."
   echo "[INFO] Restart Hyprland to load restored .conf files."
   exit 0
@@ -1475,10 +1476,10 @@ def lua_file_is_generated(lua_path):
 
 if files_out["monitors"].exists():
     print(f"[INFO] Preserving existing custom Lua monitors file: {files_out['monitors']}")
-elif monitor_entries and not files_match(monitors_conf_path, src_monitors_conf_path):
+elif monitor_entries and (src_monitors_conf_path is None or not src_monitors_conf_path.exists() or not files_match(monitors_conf_path, src_monitors_conf_path)):
     monitor_lines = [
         "-- Monitors migrated from monitors.conf (auto-generated).",
-        "-- Edit monitors.conf and rerun scripts/migrate-hypr-to-lua.sh to regenerate this file.",
+        "-- Edit ~/.config/hypr/UserConfigs/monitors.lua to modify monitors in Lua mode.",
         "",
     ]
     for spec in monitor_entries:
@@ -1494,10 +1495,10 @@ else:
 
 if files_out["workspaces"].exists():
     print(f"[INFO] Preserving existing custom Lua workspaces file: {files_out['workspaces']}")
-elif workspace_entries and not files_match(workspaces_conf_path, src_workspaces_conf_path):
+elif workspace_entries and (src_workspaces_conf_path is None or not src_workspaces_conf_path.exists() or not files_match(workspaces_conf_path, src_workspaces_conf_path)):
     workspace_lines = [
         "-- Workspace rules migrated from workspaces.conf (auto-generated).",
-        "-- Edit workspaces.conf and rerun scripts/migrate-hypr-to-lua.sh to regenerate this file.",
+        "-- Edit ~/.config/hypr/UserConfigs/workspaces.lua to modify workspace rules in Lua mode.",
         "",
     ]
     for spec in workspace_entries:
@@ -2653,6 +2654,7 @@ fi
 USER_CONFIGS_CONVERTED_CONFS=(
   "01-UserDefaults.conf"
   "ENVariables.conf"
+  "LaptopDisplay.conf"
   "Laptops.conf"
   "LayerRules.conf"
   "Startup_Apps.conf"
@@ -2661,6 +2663,7 @@ USER_CONFIGS_CONVERTED_CONFS=(
   "UserKeybinds.conf"
   "UserSettings.conf"
   "WindowRules.conf"
+  "WorkSpaceRules.conf"
 )
 
 move_converted_user_confs_to_legacy() {
@@ -2718,10 +2721,32 @@ move_conf_files_to_legacy() {
     echo "[OK] Moved $label/*.conf -> $legacy_dir"
   fi
 }
+move_root_confs_to_legacy() {
+  local root_dir="$1"
+  local legacy_dir="$2"
+  local moved=0
+  local conf_file
+
+  [ -d "$root_dir" ] || return 0
+  mkdir -p "$legacy_dir"
+
+  for conf_file in hyprland.conf monitors.conf workspaces.conf; do
+    if [ -f "$root_dir/$conf_file" ]; then
+      mv "$root_dir/$conf_file" "$legacy_dir/"
+      moved=1
+    fi
+  done
+
+  if [ "$moved" -eq 1 ]; then
+    echo "[OK] Moved root legacy *.conf (hyprland.conf, monitors.conf, workspaces.conf) -> $legacy_dir"
+  fi
+}
+
 print_conversion_coverage_summary() {
   echo "[INFO] Migration coverage summary (Hyprland Lua mode):"
   cat <<SUMMARY
 [INFO]   Converted .conf -> .lua:
+    - $DEST_HYPR_DIR/hyprland.conf -> $DEST_LUA_ENTRY
     - $DEST_MONITORS_CONF -> $DEST_LUA_MONITORS
     - $DEST_WORKSPACES_CONF -> $DEST_LUA_WORKSPACES
     - $SYSTEM_ENV_VARS -> $CONFIGS_DIR/system_env.lua
@@ -2741,15 +2766,16 @@ print_conversion_coverage_summary() {
     - $USER_ANIMATIONS -> $USER_CONFIGS_DIR/user_animations.lua
     - $USER_LAPTOPS -> $USER_CONFIGS_DIR/user_laptops.lua
     - $USER_CONFIGS_DIR/01-UserDefaults.conf -> $USER_CONFIGS_DIR/user_defaults.lua
-[INFO]   Intentionally native/template .conf files:
+    - $USER_CONFIGS_DIR/LaptopDisplay.conf -> $USER_CONFIGS_DIR/user_laptops.lua
+    - $USER_CONFIGS_DIR/WorkSpaceRules.conf -> $USER_CONFIGS_DIR/workspaces.lua
+[INFO]   Preserved native non-Hyprland / standalone .conf files:
     - $DEST_HYPR_DIR/hypridle.conf
     - $DEST_HYPR_DIR/hyprlock.conf, hyprlock-1080p.conf, hyprlock-2k.conf
-    - $DEST_HYPR_DIR/hyprland.conf (fallback/non-Lua entrypoint)
-    - $DEST_HYPR_DIR/Monitor_Profiles/*.conf and $DEST_HYPR_DIR/animations/*.conf (preset profiles)
+    - $DEST_HYPR_DIR/application-style.conf
     - $USER_CONFIGS_DIR/kitty.conf, $USER_CONFIGS_DIR/ghostty.conf, $USER_CONFIGS_DIR/hyprview-layout.conf
-    - $USER_CONFIGS_DIR/LaptopDisplay.conf and $USER_CONFIGS_DIR/WorkSpaceRules.conf (legacy/helper files)
 SUMMARY
 }
+
 if [ -f "$DEST_HYPR_DIR/hypridle.conf" ]; then
   sed -i "s|hyprctl dispatch dpms off|hyprctl dispatch hl.dsp.dpms '{ action = \"off\" }'|g" "$DEST_HYPR_DIR/hypridle.conf"
   sed -i "s|hyprctl dispatch dpms on|hyprctl dispatch hl.dsp.dpms '{ action = \"on\" }'|g" "$DEST_HYPR_DIR/hypridle.conf"
@@ -2757,6 +2783,7 @@ fi
 
 move_converted_user_confs_to_legacy "$USER_CONFIGS_DIR" "$USER_CONFIGS_LEGACY_DIR"
 move_conf_files_to_legacy "$CONFIGS_DIR" "$CONFIGS_LEGACY_DIR" "$CONFIGS_DIR"
+move_root_confs_to_legacy "$DEST_HYPR_DIR" "$DEST_HYPR_DIR/$LEGACY_CONFIGS_DIR_NAME/$MIGRATION_TS"
 print_conversion_coverage_summary
 
 echo "[OK] Lua Hyprland config copied."
