@@ -728,6 +728,8 @@ fi
 ensure_oh_my_zsh "$LOG"
 printf "\n%.0s" {1..1}
 
+prompt_express_upgrade "$EXPRESS_SUPPORTED" "$LOG"
+
 choose_default_editor "$LOG"
 resolution=""
 while true; do
@@ -773,8 +775,6 @@ fi
 printf "\n%.0s" {1..1}
 prompt_clock_12h "$LOG"
 printf "\n%.0s" {1..1}
-printf "\n%.0s" {1..1}
-prompt_express_upgrade "$EXPRESS_SUPPORTED" "$LOG"
 
 # Upgrade/express: confirm Hyprlang -> Lua migration (default yes).
 # Lua requires Hyprland 0.55+; otherwise stay on Hyprlang.
@@ -1032,17 +1032,6 @@ if [ ! -d "$DIRPATH_QS_HYPRVIEW" ] && [ -d "$DOTFILES_DIR/config/quickshell/qs-h
   echo "${OK} - Quickshell qs-hyprview config copied successfully" 2>&1 | tee -a "$LOG"
 fi
 
-# Check for old quickshell startup commands and update them
-HYPR_STARTUP="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/configs/Startup_Apps.conf"
-if [ -f "$HYPR_STARTUP" ]; then
-  if grep -q '^exec-once = qs\s*$\|^exec-once = qs &' "$HYPR_STARTUP"; then
-    echo "${NOTE} - Found old Quickshell startup command, updating to new overview config..." 2>&1 | tee -a "$LOG"
-    # Replace old 'qs' or 'qs &' with new 'qs -c overview'
-    sed -i 's/^\(\s*\)exec-once = qs\s*$/\1exec-once = qs -c overview  # Quickshell Overview/' "$HYPR_STARTUP" 2>&1 | tee -a "$LOG"
-    sed -i 's/^\(\s*\)exec-once = qs &$/\1exec-once = qs -c overview  # Quickshell Overview/' "$HYPR_STARTUP" 2>&1 | tee -a "$LOG"
-    echo "${OK} - Updated Quickshell startup command to use overview config" 2>&1 | tee -a "$LOG"
-  fi
-fi
 printf "\n%.0s" {1..1}
 
 restore_hypr_assets "$LOG" "$EXPRESS_MODE"

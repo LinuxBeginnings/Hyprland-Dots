@@ -289,6 +289,16 @@ prompt_resolution_choice() {
 prompt_clock_12h() {
   local log="$1"
   local base="${DOTFILES_DIR:-.}"
+
+  if [ "${EXPRESS_MODE:-0}" -eq 1 ] || [ "${RUN_MODE:-}" = "express" ]; then
+    echo "${NOTE:-[NOTE]} Express mode: keeping existing clock format (change anytime via Quick Settings -> Toggle Waybar Clock)." 2>&1 | tee -a "$log"
+    return 0
+  fi
+
+  if [ "${RUN_MODE:-}" = "upgrade" ]; then
+    echo "${NOTE:-[NOTE]} Upgrade mode: keeping existing clock format (change anytime via Quick Settings -> Toggle Waybar Clock)." 2>&1 | tee -a "$log"
+    return 0
+  fi
   while true; do
     echo -e "${NOTE} ${SKY_BLUE} By default, KooL's Dots are configured in 24H clock format."
     echo -n "$CAT Do you want to change to 12H (AM/PM) clock format? (y/n): "

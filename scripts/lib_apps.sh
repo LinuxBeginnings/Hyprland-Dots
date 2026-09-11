@@ -159,6 +159,22 @@ choose_default_editor() {
   local base="${DOTFILES_DIR:-.}"
   local editor_set=0
 
+  if [ "${EXPRESS_MODE:-0}" -eq 1 ] || [ "${RUN_MODE:-}" = "express" ]; then
+    echo "${NOTE:-[NOTE]} Express mode: keeping existing editor settings (manage anytime via Rofi Quick Settings: SUPER+SHIFT+E)." 2>&1 | tee -a "$log"
+    return 0
+  fi
+
+  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local user_def_lua="$cfg_home/hypr/UserConfigs/user_defaults.lua"
+  if [ "${RUN_MODE:-}" = "upgrade" ] && [ -f "$user_def_lua" ]; then
+    local current_edit
+    current_edit=$(sed -nE 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.edit[[:space:]]*=[[:space:]]*["'"'"']([^"'"'"']*)["'"'"'].*/\1/p' "$user_def_lua" | tail -n1)
+    if [ -n "$current_edit" ]; then
+      echo "${NOTE:-[NOTE]} Existing editor '$current_edit' preserved from user_defaults.lua (manage anytime via Rofi Quick Settings: SUPER+SHIFT+E)." 2>&1 | tee -a "$log"
+      return 0
+    fi
+  fi
+
   update_editor() {
     local editor=$1
     export KOOLDOTS_SELECTED_EDITOR="$editor"
