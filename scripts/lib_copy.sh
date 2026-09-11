@@ -348,7 +348,10 @@ enable_fresh_install_lua_config() {
   local src_entry
   local base="${DOTFILES_DIR:-.}"
   hypr_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
-  src_entry="$base/config/hypr/hyprland.lua.disable"
+  src_entry="$base/config/hypr/hyprland.lua"
+  if [ ! -f "$src_entry" ] && [ -f "$base/config/hypr/hyprland.lua.disable" ]; then
+    src_entry="$base/config/hypr/hyprland.lua.disable"
+  fi
 
   mkdir -p "$hypr_dir"
 

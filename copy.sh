@@ -692,11 +692,20 @@ report_waybar_weather_missing() {
 # activating hyprcursor on env by checking if the directory ~/.icons/Bibata-Modern-Ice/hyprcursors exists
 if [ -d "$HOME/.icons/Bibata-Modern-Ice/hyprcursors" ]; then
   HYPRCURSOR_ENV_FILE="$DOTFILES_DIR/config/hypr/configs/ENVariables.conf"
-  echo "${INFO} Bibata-Hyprcursor directory detected. Activating Hyprcursor...." 2>&1 | tee -a "$LOG" || true
-  sed -i 's/^#env = HYPRCURSOR_THEME,Bibata-Modern-Ice/env = HYPRCURSOR_THEME,Bibata-Modern-Ice/' "$HYPRCURSOR_ENV_FILE"
-  sed -i 's/^#env = HYPRCURSOR_SIZE,24/env = HYPRCURSOR_SIZE,24/' "$HYPRCURSOR_ENV_FILE"
-  sed -i 's/^#env = XCURSOR_THEME,Bibata-Modern-Ice/env = XCURSOR_THEME,Bibata-Modern-Ice/' "$HYPRCURSOR_ENV_FILE"
-  sed -i 's/^#env = XCURSOR_SIZE,24/env = XCURSOR_SIZE,24/' "$HYPRCURSOR_ENV_FILE"
+  if [ -f "$HYPRCURSOR_ENV_FILE" ]; then
+    echo "${INFO} Bibata-Hyprcursor directory detected. Activating Hyprcursor...." 2>&1 | tee -a "$LOG" || true
+    sed -i 's/^#env = HYPRCURSOR_THEME,Bibata-Modern-Ice/env = HYPRCURSOR_THEME,Bibata-Modern-Ice/' "$HYPRCURSOR_ENV_FILE"
+    sed -i 's/^#env = HYPRCURSOR_SIZE,24/env = HYPRCURSOR_SIZE,24/' "$HYPRCURSOR_ENV_FILE"
+    sed -i 's/^#env = XCURSOR_THEME,Bibata-Modern-Ice/env = XCURSOR_THEME,Bibata-Modern-Ice/' "$HYPRCURSOR_ENV_FILE"
+    sed -i 's/^#env = XCURSOR_SIZE,24/env = XCURSOR_SIZE,24/' "$HYPRCURSOR_ENV_FILE"
+  fi
+  LUA_ENV_FILE="$DOTFILES_DIR/config/hypr/lua/env.lua"
+  if [ -f "$LUA_ENV_FILE" ]; then
+    sed -i 's/^--[[:space:]]*hl\.env("HYPRCURSOR_THEME"/hl.env("HYPRCURSOR_THEME"/' "$LUA_ENV_FILE"
+    sed -i 's/^--[[:space:]]*hl\.env("HYPRCURSOR_SIZE"/hl.env("HYPRCURSOR_SIZE"/' "$LUA_ENV_FILE"
+    sed -i 's/^--[[:space:]]*hl\.env("XCURSOR_THEME"/hl.env("XCURSOR_THEME"/' "$LUA_ENV_FILE"
+    sed -i 's/^--[[:space:]]*hl\.env("XCURSOR_SIZE"/hl.env("XCURSOR_SIZE"/' "$LUA_ENV_FILE"
+  fi
 fi
 
 printf "\n%.0s" {1..1}
