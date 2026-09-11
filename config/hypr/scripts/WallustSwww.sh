@@ -303,66 +303,40 @@ run_wallust_with_config() {
   # Legacy fallback for builds that still honor env-based config override.
   WALLUST_CONFIG="$cfg" wallust run -s "$wallpaper_path" || true
 }
-wallust_hypr_colors="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
-extract_wallust_hex() {
-  local key="$1"
-  awk -v key="$key" '
-    $1 == "$" key && $2 == "=" {
-      if (match($3, /^rgb\(([0-9A-Fa-f]{6})\)$/, m)) {
-        print toupper(m[1])
-        exit
-      }
-    }
-  ' "$wallust_hypr_colors"
-}
-
+# Native Lua socket evaluation: re-evaluates decorations and applies fresh Wallust colors
+# directly within Hyprland's embedded Lua state via hl.config (~9ms, zero compositor stall).
 apply_hypr_border_fallback() {
-  [ -s "$wallust_hypr_colors" ] || return 0
-  local color12 color10 color15 color0
-  color12="$(extract_wallust_hex color12)"
-  color10="$(extract_wallust_hex color10)"
-  color15="$(extract_wallust_hex color15)"
-  color0="$(extract_wallust_hex color0)"
+  command -v hyprctl >/dev/null 2>&1 || return 0
 
-  if [ -n "$color12" ]; then
-    hyprctl keyword general:col.active_border "rgb($color12)" >/dev/null 2>&1 || \
-    hyprctl eval "hl.config({ general = { col = { active_border = \"rgba(${color12}ff)\" } } })" >/dev/null 2>&1 || true
-    hyprctl keyword decoration:shadow:color "rgb($color12)" >/dev/null 2>&1 || \
-    hyprctl eval "hl.config({ decoration = { shadow = { color = \"rgba(${color12}ff)\" } } })" >/dev/null 2>&1 || true
-  fi
-  if [ -n "$color10" ]; then
-    hyprctl keyword general:col.inactive_border "rgb($color10)" >/dev/null 2>&1 || \
-    hyprctl eval "hl.config({ general = { col = { inactive_border = \"rgba(${color10}ff)\" } } })" >/dev/null 2>&1 || true
-    hyprctl keyword decoration:shadow:color_inactive "rgb($color10)" >/dev/null 2>&1 || \
-    hyprctl eval "hl.config({ decoration = { shadow = { color_inactive = \"rgba(${color10}ff)\" } } })" >/dev/null 2>&1 || true
-  fi
-  if [ -n "$color15" ]; then
-    hyprctl keyword group:col.border_active "rgb($color15)" >/dev/null 2>&1 || \
-    hyprctl eval "hl.config({ group = { col = { border_active = \"rgba(${color15}ff)\" } } })" >/dev/null 2>&1 || true
-  fi
-  if [ -n "$color0" ]; then
-    hyprctl keyword group:groupbar:col.active "rgb($color0)" >/dev/null 2>&1 || \
-    hyprctl eval "hl.config({ group = { groupbar = { col = { active = \"rgba(${color0}ff)\" } } } })" >/dev/null 2>&1 || true
-  fi
+  hyprctl eval '
+    local home = os.getenv("HOME") or ""
+    local ok = pcall(dofile, home .. "/.config/hypr/UserConfigs/user_decorations.lua")
+    if not ok then pcall(dofile, home .. "/.config/hypr/lua/decorations.lua") end
+    local hok, helper = pcall(dofile, home .. "/.config/hypr/lua/user_decorations_helper.lua")
+    if hok and helper and helper.load_wallust_colors then
+      local wallust = helper.load_wallust_colors(home .. "/.config/hypr/wallust/wallust-hyprland.conf")
+      if wallust then
+        local c12 = wallust.color12 or "rgba(8db4ffff)"
+        local c10 = wallust.color10 or "rgba(5f6578ff)"
+        local c15 = wallust.color15 or c12
+        local c0  = wallust.color0  or "rgba(0f111aff)"
+        hl.config({
+          general = { col = { active_border = c12, inactive_border = c10 } },
+          decoration = { shadow = { color = c12, color_inactive = c10 } },
+          group = { col = { border_active = c15 }, groupbar = { col = { active = c0 } } }
+        })
+      end
+    end
+  ' >/dev/null 2>&1 || true
 }
 
-apply_hypr_gap_fallback() {
-  local decorations_lua="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/user_decorations.lua"
-  [ -s "$decorations_lua" ] || return 0
-  local gaps_in gaps_out border_size
-  gaps_in="$(sed -n 's/^[[:space:]]*gaps_in[[:space:]]*=[[:space:]]*\([0-9]\+\).*/\1/p' "$decorations_lua" | head -n1)"
-  gaps_out="$(sed -n 's/^[[:space:]]*gaps_out[[:space:]]*=[[:space:]]*\([0-9]\+\).*/\1/p' "$decorations_lua" | head -n1)"
-  border_size="$(sed -n 's/^[[:space:]]*border_size[[:space:]]*=[[:space:]]*\([0-9]\+\).*/\1/p' "$decorations_lua" | head -n1)"
-
-  [ -n "$gaps_in" ] && hyprctl keyword general:gaps_in "$gaps_in" >/dev/null 2>&1 || true
-  [ -n "$gaps_out" ] && hyprctl keyword general:gaps_out "$gaps_out" >/dev/null 2>&1 || true
-  [ -n "$border_size" ] && hyprctl keyword general:border_size "$border_size" >/dev/null 2>&1 || true
-}
-
-# Apply Hyprland updates immediately to avoid delayed border/gap changes.
+# Apply Hyprland updates immediately using native Lua hl.config socket evaluation (~9ms).
+# Skips full config reload to eliminate compositor IPC stalls and avoid layout resets (#68, #126).
 apply_hypr_border_fallback
-apply_hypr_gap_fallback
-reload_hypr_preserve_layout
+
+if [ "${HYPR_FULL_RELOAD_ON_WALLPAPER:-0}" = "1" ] || [ "${KOOLDOTS_FULL_RELOAD_ON_WALLPAPER:-0}" = "1" ]; then
+  reload_hypr_preserve_layout
+fi
 
 kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-kitty.toml"
 if [ "${#wallust_kitty_args[@]}" -gt 0 ]; then

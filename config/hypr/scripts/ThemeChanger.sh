@@ -176,47 +176,31 @@ reload_running_cava_colors() {
   fi
 }
 
-wallust_hypr_colors="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
-extract_wallust_hex() {
-  local key="$1"
-  awk -v key="$key" '
-    $1 == "$" key && $2 == "=" {
-      if (match($3, /^rgb\(([0-9A-Fa-f]{6})\)$/, m)) {
-        print toupper(m[1])
-        exit
-      }
-    }
-  ' "$wallust_hypr_colors"
-}
-
+# Native Lua socket evaluation: re-evaluates decorations and applies fresh Wallust colors
+# directly within Hyprland's embedded Lua state via hl.config (~9ms, zero compositor stall).
 apply_hypr_border_fallback() {
-  [ -s "$wallust_hypr_colors" ] || return 0
-  local color12 color10 color15 color0
-  color12="$(extract_wallust_hex color12)"
-  color10="$(extract_wallust_hex color10)"
-  color15="$(extract_wallust_hex color15)"
-  color0="$(extract_wallust_hex color0)"
+  command -v hyprctl >/dev/null 2>&1 || return 0
 
-  if [ -n "$color12" ]; then
-    hyprctl keyword general:col.active_border "rgb($color12)" >/dev/null 2>&1 || \
-    hyprctl eval "hl.config({ general = { col = { active_border = \"rgba(${color12}ff)\" } } })" >/dev/null 2>&1 || true
-    hyprctl keyword decoration:shadow:color "rgb($color12)" >/dev/null 2>&1 || \
-    hyprctl eval "hl.config({ decoration = { shadow = { color = \"rgba(${color12}ff)\" } } })" >/dev/null 2>&1 || true
-  fi
-  if [ -n "$color10" ]; then
-    hyprctl keyword general:col.inactive_border "rgb($color10)" >/dev/null 2>&1 || \
-    hyprctl eval "hl.config({ general = { col = { inactive_border = \"rgba(${color10}ff)\" } } })" >/dev/null 2>&1 || true
-    hyprctl keyword decoration:shadow:color_inactive "rgb($color10)" >/dev/null 2>&1 || \
-    hyprctl eval "hl.config({ decoration = { shadow = { color_inactive = \"rgba(${color10}ff)\" } } })" >/dev/null 2>&1 || true
-  fi
-  if [ -n "$color15" ]; then
-    hyprctl keyword group:col.border_active "rgb($color15)" >/dev/null 2>&1 || \
-    hyprctl eval "hl.config({ group = { col = { border_active = \"rgba(${color15}ff)\" } } })" >/dev/null 2>&1 || true
-  fi
-  if [ -n "$color0" ]; then
-    hyprctl keyword group:groupbar:col.active "rgb($color0)" >/dev/null 2>&1 || \
-    hyprctl eval "hl.config({ group = { groupbar = { col = { active = \"rgba(${color0}ff)\" } } } })" >/dev/null 2>&1 || true
-  fi
+  hyprctl eval '
+    local home = os.getenv("HOME") or ""
+    local ok = pcall(dofile, home .. "/.config/hypr/UserConfigs/user_decorations.lua")
+    if not ok then pcall(dofile, home .. "/.config/hypr/lua/decorations.lua") end
+    local hok, helper = pcall(dofile, home .. "/.config/hypr/lua/user_decorations_helper.lua")
+    if hok and helper and helper.load_wallust_colors then
+      local wallust = helper.load_wallust_colors(home .. "/.config/hypr/wallust/wallust-hyprland.conf")
+      if wallust then
+        local c12 = wallust.color12 or "rgba(8db4ffff)"
+        local c10 = wallust.color10 or "rgba(5f6578ff)"
+        local c15 = wallust.color15 or c12
+        local c0  = wallust.color0  or "rgba(0f111aff)"
+        hl.config({
+          general = { col = { active_border = c12, inactive_border = c10 } },
+          decoration = { shadow = { color = c12, color_inactive = c10 } },
+          group = { col = { border_active = c15 }, groupbar = { col = { active = c0 } } }
+        })
+      end
+    end
+  ' >/dev/null 2>&1 || true
 }
 
 # Prompt for theme; guard -e on cancel
@@ -344,7 +328,9 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
   fi
 
   apply_hypr_border_fallback
-  reload_hypr_preserve_layout
+  if [ "${HYPR_FULL_RELOAD_ON_THEME:-0}" = "1" ] || [ "${KOOLDOTS_FULL_RELOAD_ON_WALLPAPER:-0}" = "1" ]; then
+    reload_hypr_preserve_layout
+  fi
   ensure_wallust_waybar_style
   reload_running_cava_colors
 
