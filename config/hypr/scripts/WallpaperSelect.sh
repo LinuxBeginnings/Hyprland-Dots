@@ -24,7 +24,7 @@ iDIRi="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/icons"
 
 # swww/awww transition config
 FPS=60
-TYPE="any"
+TYPE="random"
 DURATION=2
 BEZIER=".43,1.19,1,.4"
 if [[ "$WWW_CMD" == "swww" || "$WWW_CMD" == "awww" ]]; then

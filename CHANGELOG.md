@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- Fixed `awww` to actualy randomize transistions
 - Huge delay and HL IPC stall when changing themes
   - Removed hyprlang code and replaced with LUA
   - Thank you Angel Spano @jasueh
