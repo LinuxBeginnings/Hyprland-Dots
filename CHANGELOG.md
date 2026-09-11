@@ -37,6 +37,11 @@
 
 ## Updated:
 
+- Express upgrade removed redundant questions 
+  - Text and Visual editors 
+  - Waybar 12/24hr setting 
+- Full upgrade removed redundnat questions 
+  - Restoring hyprlang based configs 
 - Removed hyprlang code from `hypr/scripts`
 - Began removal of hyprlang based config files
 - Kitty has a remote exploit current when `enable_remote_acces = yes`
