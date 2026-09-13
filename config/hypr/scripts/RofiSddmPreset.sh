@@ -27,8 +27,13 @@ if [[ ! -d "/usr/share/sddm/themes/silent" ]]; then
         -config "$ROFI_CONFIG")
 
     if [[ "$INSTALL_CHOICE" =~ "Install" ]]; then
-        TERMINAL="${TERMINAL:-kitty}"
-        "$TERMINAL" --hold sh -c "echo '==> Cloning and installing Silent SDDM Theme...'; rm -rf /tmp/sddm-theme && git clone --depth=1 $THEME_REPO /tmp/sddm-theme && cd /tmp/sddm-theme && ./install.sh && echo '==> Done! You can now press SUPER+ALT+S to switch presets.'" &
+        TERMINAL="${TERMINAL:-$(command -v kitty || command -v alacritty || command -v foot || command -v xterm || echo "")}"
+        INSTALL_CMD="echo '==> Cloning and installing Silent SDDM Theme...'; rm -rf /tmp/sddm-theme && git clone --depth=1 $THEME_REPO /tmp/sddm-theme && cd /tmp/sddm-theme && ./install.sh && echo '==> Done! Press Enter to exit.'; read -r"
+        if [[ "$TERMINAL" =~ kitty ]]; then
+            "$TERMINAL" --hold sh -c "$INSTALL_CMD" &
+        elif [[ -n "$TERMINAL" ]]; then
+            "$TERMINAL" -e sh -c "$INSTALL_CMD" &
+        fi
     fi
     exit 0
 fi
@@ -38,7 +43,8 @@ CURRENT_PRESET="default"
 if [[ -f "$META" ]]; then
     CURRENT_LINE=$(grep "^ConfigFile=" "$META" || true)
     if [[ -n "$CURRENT_LINE" ]]; then
-        CURRENT_PRESET=$(basename "$CURRENT_LINE" .conf | sed 's/configs\///')
+        CLEAN_CONFIG="${CURRENT_LINE#ConfigFile=}"
+        CURRENT_PRESET=$(basename "$CLEAN_CONFIG" .conf | sed 's|^configs/||')
     fi
 fi
 
@@ -116,9 +122,9 @@ if [[ "$CLEAN_CHOICE" == "👁️  Test Current in Preview Window" ]]; then
         notify-send -u low "SDDM" "Launching preview window (Press Esc to close)"
     fi
     if command -v sddm-greeter-qt6 >/dev/null 2>&1; then
-        sddm-greeter-qt6 --test-mode --theme /usr/share/sddm/themes/silent &
+        QT_IM_MODULE=qtvirtualkeyboard QML2_IMPORT_PATH="/usr/share/sddm/themes/silent/components/" sddm-greeter-qt6 --test-mode --theme /usr/share/sddm/themes/silent &
     elif command -v sddm-greeter >/dev/null 2>&1; then
-        sddm-greeter --test-mode --theme /usr/share/sddm/themes/silent &
+        QT_IM_MODULE=qtvirtualkeyboard QML2_IMPORT_PATH="/usr/share/sddm/themes/silent/components/" sddm-greeter --test-mode --theme /usr/share/sddm/themes/silent &
     fi
     exit 0
 fi
@@ -126,17 +132,30 @@ fi
 SELECTED_PRESET="${PRESET_MAP[$CLEAN_CHOICE]}"
 
 if [[ -n "$SELECTED_PRESET" ]]; then
+    SUCCESS=0
     if command -v set-sddm-preset >/dev/null 2>&1; then
-        sudo -n set-sddm-preset "$SELECTED_PRESET" 2>/dev/null || sudo set-sddm-preset "$SELECTED_PRESET"
+        if sudo -n set-sddm-preset "$SELECTED_PRESET" 2>/dev/null; then
+            SUCCESS=1
+        elif command -v pkexec >/dev/null 2>&1 && pkexec set-sddm-preset "$SELECTED_PRESET"; then
+            SUCCESS=1
+        elif sudo set-sddm-preset "$SELECTED_PRESET"; then
+            SUCCESS=1
+        fi
     elif [[ -w "$META" ]]; then
-        sed -i "s|^ConfigFile=.*|ConfigFile=configs/${SELECTED_PRESET}.conf|" "$META"
+        sed -i "s|^ConfigFile=.*|ConfigFile=configs/${SELECTED_PRESET}.conf|" "$META" && SUCCESS=1
     elif command -v pkexec >/dev/null 2>&1; then
-        pkexec sed -i "s|^ConfigFile=.*|ConfigFile=configs/${SELECTED_PRESET}.conf|" "$META"
+        pkexec sed -i "s|^ConfigFile=.*|ConfigFile=configs/${SELECTED_PRESET}.conf|" "$META" && SUCCESS=1
     else
-        sudo sed -i "s|^ConfigFile=.*|ConfigFile=configs/${SELECTED_PRESET}.conf|" "$META"
+        sudo sed -i "s|^ConfigFile=.*|ConfigFile=configs/${SELECTED_PRESET}.conf|" "$META" && SUCCESS=1
     fi
 
-    if command -v notify-send >/dev/null 2>&1; then
-        notify-send -u normal -i "preferences-desktop-theme" "SDDM Theme" "Switched to: $SELECTED_PRESET"
+    if [[ $SUCCESS -eq 1 ]]; then
+        if command -v notify-send >/dev/null 2>&1; then
+            notify-send -u normal -i "preferences-desktop-theme" "SDDM Theme" "Switched to: $SELECTED_PRESET"
+        fi
+    else
+        if command -v notify-send >/dev/null 2>&1; then
+            notify-send -u critical -i "dialog-error" "SDDM Theme" "Failed to switch preset to: $SELECTED_PRESET"
+        fi
     fi
 fi
