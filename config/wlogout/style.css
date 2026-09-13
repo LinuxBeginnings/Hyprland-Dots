@@ -3,14 +3,9 @@
 window {
     font-family: "Oriental Chicken", "Cracked Code", "Fira Code", sans-serif;
     color: #ffffff;
-    /* Soft blurred background overlay using pre-composited sharp banner wallpaper */
-    background-color: rgba(10, 10, 10, 0.20);
     background-image: image(url("./sekiro_blurred.png"));
     background-size: cover;
     background-position: center;
-
-    /* Push the button grid down significantly to ensure it sits beautifully in the lower section */
-    padding-top: 380px;
 }
 
 button {
@@ -20,12 +15,11 @@ button {
     /* Light translucent crimson glass card background to shine consistently on dark areas */
     background-color: rgba(22, 18, 18, 0.45);
     /* Vibrant, visible premium crimson border for consistency */
-    border: 1.5px solid rgba(177, 64, 70, 0.30);
-    box-shadow: inset 0 0 15px rgba(177, 64, 70, 0.10), 0 8px 32px rgba(0, 0, 0, 0.5);
+    border: 1.5px solid rgba(186, 27, 29, 0.35);
+    box-shadow: inset 0 0 15px rgba(186, 27, 29, 0.12), 0 8px 32px rgba(0, 0, 0, 0.5);
     border-radius: 20px;
     
-    /* Large vertical margins (70px) to force LESS height, and wider horizontal margins (58px) to shrink cards */
-    margin: 70px 58px;
+    margin: 20px 25px;
     
     color: rgba(255, 255, 255, 0.95);
     font-size: 16pt;
@@ -35,21 +29,20 @@ button {
 }
 
 button:focus {
-    border: 2px solid #b14046;
-    background-color: rgba(177, 64, 70, 0.15);
+    border: 2px solid #ba1b1d;
+    background-color: rgba(186, 27, 29, 0.18);
     outline-style: none;
 }
 
 button:hover {
-    background-color: rgba(177, 64, 70, 0.25); /* Vibrant crimson tint */
-    color: #b14046; /* Crimson text color */
-    border: 1.5px solid #b14046; /* Animate only color, keep width 1.5px */
+    background-color: rgba(186, 27, 29, 0.28); /* Vibrant crimson tint */
+    color: #ba1b1d; /* Crimson text color */
+    border: 1.5px solid #ba1b1d; /* Animate only color, keep width 1.5px */
     /* Beautiful glowing aura */
-    box-shadow: 0 0 35px rgba(177, 64, 70, 0.55), inset 0 0 10px rgba(177, 64, 70, 0.3); 
+    box-shadow: 0 0 35px rgba(186, 27, 29, 0.55), inset 0 0 10px rgba(186, 27, 29, 0.3); 
     background-size: 52%; /* Standard premium hover zoom */
-    /* Keep layout properties identical to prevent GTK layout recalculation lag */
     border-radius: 20px;
-    margin: 70px 58px;
+    margin: 20px 25px;
     outline-style: none;
 }
 
