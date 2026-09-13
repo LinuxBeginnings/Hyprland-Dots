@@ -12,12 +12,14 @@
 
 local dsp = hl.dsp or hl
 local function resolve_cmd(cmd)
+  local home = os.getenv("HOME") or ""
   local defaults = rawget(_G, "KOOLDOTS_DEFAULTS") or {}
   local resolved_term = defaults.term or os.getenv("TERMINAL") or "kitty"
   local resolved_files = defaults.files or "thunar"
   local resolved_edit = defaults.edit or os.getenv("EDITOR") or "nano"
   local resolved_visual = defaults.visual or os.getenv("VISUAL") or ""
   cmd = tostring(cmd)
+  cmd = cmd:gsub("%$HOME", home)
   cmd = cmd:gsub("%$term", resolved_term)
   cmd = cmd:gsub("%$files", resolved_files)
   cmd = cmd:gsub("%$edit", resolved_edit)
@@ -421,6 +423,7 @@ bind("SUPER", "H", exec_cmd("$HOME/.config/hypr/scripts/KeyHints.sh"), { descrip
 bind("SUPER ALT", "R", exec_cmd("$HOME/.config/hypr/scripts/Refresh.sh"), { description = "refresh bar and menus" })
 bind("SUPER ALT", "E", exec_cmd("$HOME/.config/hypr/scripts/RofiEmoji.sh"), { description = "emoji menu" })
 bind("SUPER", "S", exec_cmd("$HOME/.config/hypr/scripts/RofiSearch.sh"), { description = "web search" })
+bind("SUPER ALT", "S", exec_cmd("$HOME/.config/hypr/scripts/RofiSddmPreset.sh"), { description = "SDDM preset menu" })
 bind(
   "SUPER CTRL",
   "S",
