@@ -1,50 +1,59 @@
-/* ----------- 💫 https://github.com/LinuxBeginnings 💫 -------- */
-/* wallust-wlogout */
-
-/* Importing wallust colors */
-@import '../../.config/hypr/waybar/wallust/colors-waybar.css';
+/* ----------- 💫 Sekiro Sumi-e Theme Powermenu Styling 💫 -------- */
 
 window {
-    font-size: 24pt;
-    color: @foreground; /* text */
-    background-color: rgba(30, 30, 46, 0.8);
+    font-family: "Oriental Chicken", "Cracked Code", "Fira Code", sans-serif;
+    color: #ffffff;
+    /* Soft blurred background overlay using pre-composited sharp banner wallpaper */
+    background-color: rgba(10, 10, 10, 0.20);
+    background-image: image(url("./sekiro_blurred.png"));
+    background-size: cover;
+    background-position: center;
+
+    /* Push the button grid down significantly to ensure it sits beautifully in the lower section */
+    padding-top: 380px;
 }
 
 button {
     background-repeat: no-repeat;
     background-position: center;
-    background-size: 20%;
-    background-color: rgba(200, 220, 255, 0);
-    animation: gradient_f 10s ease-in infinite;
-    transition: all 0.3s cubic-bezier(.55, 0.0, .28, 1.682), box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
-    border-radius: 80px;
-	border:0px;
-	outline-style: none;
+    background-size: 45%; /* Balanced size for clean sumi-e icons */
+    /* Light translucent crimson glass card background to shine consistently on dark areas */
+    background-color: rgba(22, 18, 18, 0.45);
+    /* Vibrant, visible premium crimson border for consistency */
+    border: 1.5px solid rgba(177, 64, 70, 0.30);
+    box-shadow: inset 0 0 15px rgba(177, 64, 70, 0.10), 0 8px 32px rgba(0, 0, 0, 0.5);
+    border-radius: 20px;
+    
+    /* Large vertical margins (70px) to force LESS height, and wider horizontal margins (58px) to shrink cards */
+    margin: 70px 58px;
+    
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 16pt;
+    /* Smooth transition for animations and hover effects */
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    outline-style: none;
 }
 
 button:focus {
-    background-size: 50%;
-	border: 0px;
-	outline-style: none;
-
+    border: 2px solid #b14046;
+    background-color: rgba(177, 64, 70, 0.15);
+    outline-style: none;
 }
 
 button:hover {
-    background-color: transparent; 
-    color: @color13;
-    background-size: 50%;
-    margin: 30px;
-    border-radius: 80px;
+    background-color: rgba(177, 64, 70, 0.25); /* Vibrant crimson tint */
+    color: #b14046; /* Crimson text color */
+    border: 1.5px solid #b14046; /* Animate only color, keep width 1.5px */
+    /* Beautiful glowing aura */
+    box-shadow: 0 0 35px rgba(177, 64, 70, 0.55), inset 0 0 10px rgba(177, 64, 70, 0.3); 
+    background-size: 52%; /* Standard premium hover zoom */
+    /* Keep layout properties identical to prevent GTK layout recalculation lag */
+    border-radius: 20px;
+    margin: 70px 58px;
     outline-style: none;
-	
 }
 
-/* Adjust the size of the icon or content inside the button */
-button span {
-    font-size: 1.2em; /* Increase the font size */
-}
-
-
+/* Base mappings for the 6 custom Sumi-e symbol icons */
 #lock {
     background-image: image(url("./icons/lock.png"));
 }
