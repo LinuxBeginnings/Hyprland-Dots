@@ -6,8 +6,15 @@
 
 SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 ROFI_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-sddm.rasi"
-META="/usr/share/sddm/themes/silent/metadata.desktop"
 THEME_REPO="https://github.com/Mr-Hasan-Hamid/sddm-theme.git"
+
+# Resolve SDDM themes root (standard Linux vs NixOS fallback)
+SDDM_THEMES_DIR="/usr/share/sddm/themes"
+if [[ ! -d "$SDDM_THEMES_DIR" && -d "/run/current-system/sw/share/sddm/themes" ]]; then
+    SDDM_THEMES_DIR="/run/current-system/sw/share/sddm/themes"
+fi
+THEME_DIR="${SDDM_THEMES_DIR}/silent"
+META="${THEME_DIR}/metadata.desktop"
 
 # Fallback to default rofi config if custom sddm config is absent
 if [[ ! -f "$ROFI_CONFIG" ]]; then
@@ -20,7 +27,7 @@ if [[ -x "$SCRIPTSDIR/RofiFocusedWallpaperLink.sh" ]]; then
 fi
 
 # If Silent theme is not installed, provide one-click install option
-if [[ ! -d "/usr/share/sddm/themes/silent" ]]; then
+if [[ ! -d "$THEME_DIR" ]]; then
     INSTALL_CHOICE=$(printf "⬇️  Install Silent SDDM Theme & Assets\n❌  Cancel" | rofi -i -dmenu \
         -p "SDDM Theme" \
         -mesg "Silent theme is not installed. Would you like to install it?" \
@@ -122,9 +129,9 @@ if [[ "$CLEAN_CHOICE" == "👁️  Test Current in Preview Window" ]]; then
         notify-send -u low "SDDM" "Launching preview window (Press Esc to close)"
     fi
     if command -v sddm-greeter-qt6 >/dev/null 2>&1; then
-        QT_IM_MODULE=qtvirtualkeyboard QML2_IMPORT_PATH="/usr/share/sddm/themes/silent/components/" sddm-greeter-qt6 --test-mode --theme /usr/share/sddm/themes/silent &
+        QT_IM_MODULE=qtvirtualkeyboard QML2_IMPORT_PATH="${THEME_DIR}/components/" sddm-greeter-qt6 --test-mode --theme "$THEME_DIR" &
     elif command -v sddm-greeter >/dev/null 2>&1; then
-        QT_IM_MODULE=qtvirtualkeyboard QML2_IMPORT_PATH="/usr/share/sddm/themes/silent/components/" sddm-greeter --test-mode --theme /usr/share/sddm/themes/silent &
+        QT_IM_MODULE=qtvirtualkeyboard QML2_IMPORT_PATH="${THEME_DIR}/components/" sddm-greeter --test-mode --theme "$THEME_DIR" &
     fi
     exit 0
 fi

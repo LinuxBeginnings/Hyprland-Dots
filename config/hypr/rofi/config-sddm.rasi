@@ -1,6 +1,4 @@
-/* ---- 💫 SDDM Theme Preset Selector (Clean Vertical List) 💫 ---- */
-
-@import "~/.config/hypr/rofi/config.rasi"
+@import "config.rasi"
 
 /* ---- Mainbox ---- */
 mainbox {
