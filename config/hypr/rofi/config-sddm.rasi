@@ -1,0 +1,66 @@
+/* ---- 💫 SDDM Theme Preset Selector (Clean Vertical List) 💫 ---- */
+
+@import "~/.config/hypr/rofi/config.rasi"
+
+/* ---- Mainbox ---- */
+mainbox {
+  children: [ "inputbar", "message", "listview" ];
+  spacing: 10px;
+  padding: 14px;
+}
+
+/* ---- Window ---- */
+window {
+  width: 460px;
+  height: 520px;
+  border-radius: 16px;
+}
+
+/* ---- Entry ---- */
+entry {
+  expand: true;
+  placeholder: " 󰄛  Search SDDM Theme Preset...";
+}
+
+/* ---- Message ---- */
+message {
+  enabled: true;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background-color: inherit;
+}
+
+textbox {
+  text-color: inherit;
+  background-color: inherit;
+}
+
+/* ---- Listview (Single column, no clipping) ---- */
+listview {
+  columns: 1;
+  lines: 11;
+  fixed-height: false;
+  scrollbar: false;
+  spacing: 5px;
+  cycle: true;
+  padding: 4px;
+}
+
+/* ---- Elements ---- */
+element {
+  orientation: horizontal;
+  padding: 9px 14px;
+  border-radius: 10px;
+  spacing: 10px;
+}
+
+element-icon {
+  size: 0%;
+  enabled: false;
+}
+
+element-text {
+  horizontal-align: 0.0;
+  vertical-align: 0.5;
+  expand: true;
+}
