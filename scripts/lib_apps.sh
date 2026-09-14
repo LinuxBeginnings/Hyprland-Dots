@@ -9,37 +9,49 @@
 
 enable_asusctl() {
   local log="$1"
-  local base="${DOTFILES_DIR:-.}"
+  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
   if command -v asusctl >/dev/null 2>&1; then
-    local OVERLAY_SA="$base/config/hypr/configs/Startup_Apps.conf"
-    mkdir -p "$(dirname "$OVERLAY_SA")"
-    touch "$OVERLAY_SA"
-    grep -qx 'exec-once = rog-control-center' "$OVERLAY_SA" || echo 'exec-once = rog-control-center' >>"$OVERLAY_SA"
+    local target="$cfg_home/hypr/UserConfigs/user_startup.lua"
+    if [ -f "$target" ]; then
+      if ! grep -q '"rog-control-center"' "$target"; then
+        sed -i '/local startup_commands = {/a \  "rog-control-center",' "$target"
+        echo "${INFO:-[INFO]} Added rog-control-center to user_startup.lua" 2>&1 | tee -a "$log"
+      fi
+    fi
   fi
 }
 
 enable_blueman() {
   local log="$1"
-  local base="${DOTFILES_DIR:-.}"
+  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
   if command -v blueman-applet >/dev/null 2>&1; then
-    local OVERLAY_SA="$base/config/hypr/configs/Startup_Apps.conf"
-    mkdir -p "$(dirname "$OVERLAY_SA")"
-    touch "$OVERLAY_SA"
-    grep -qx 'exec-once = blueman-applet' "$OVERLAY_SA" || echo 'exec-once = blueman-applet' >>"$OVERLAY_SA"
+    local target="$cfg_home/hypr/UserConfigs/user_startup.lua"
+    if [ -f "$target" ]; then
+      if grep -q '^[[:space:]]*--[[:space:]]*"blueman-applet"' "$target"; then
+        sed -i 's/^[[:space:]]*--[[:space:]]*\("blueman-applet"\)/\1/' "$target"
+        echo "${INFO:-[INFO]} Enabled blueman-applet in user_startup.lua" 2>&1 | tee -a "$log"
+      elif ! grep -q '"blueman-applet"' "$target"; then
+        sed -i '/local startup_commands = {/a \  "blueman-applet",' "$target"
+        echo "${INFO:-[INFO]} Added blueman-applet to user_startup.lua" 2>&1 | tee -a "$log"
+      fi
+    fi
   fi
 }
 
 enable_ags() {
   local log="$1"
   local base="${DOTFILES_DIR:-.}"
+  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
   if command -v ags >/dev/null 2>&1; then
     echo "${INFO:-[INFO]} AGS detected - enabling in startup and refresh scripts" 2>&1 | tee -a "$log"
-    local OVERLAY_SA="$base/config/hypr/configs/Startup_Apps.conf"
-    mkdir -p "$(dirname "$OVERLAY_SA")"
-    touch "$OVERLAY_SA"
-    grep -qx 'exec-once = ags' "$OVERLAY_SA" || echo 'exec-once = ags' >>"$OVERLAY_SA"
-    sed -i '/#ags -q && ags &/s/^#//' "$base/config/hypr/scripts/RefreshNoWaybar.sh"
-    sed -i '/#ags -q && ags &/s/^#//' "$base/config/hypr/scripts/Refresh.sh"
+    local target="$cfg_home/hypr/UserConfigs/user_startup.lua"
+    if [ -f "$target" ]; then
+      if ! grep -q '"ags"' "$target"; then
+        sed -i '/local startup_commands = {/a \  "ags",' "$target"
+      fi
+    fi
+    sed -i '/#ags -q && ags &/s/^#//' "$base/config/hypr/scripts/RefreshNoWaybar.sh" 2>/dev/null || true
+    sed -i '/#ags -q && ags &/s/^#//' "$base/config/hypr/scripts/Refresh.sh" 2>/dev/null || true
   fi
 }
 
@@ -47,25 +59,16 @@ enable_quickshell() {
   local log="$1"
   local base="${DOTFILES_DIR:-.}"
   if command -v qs >/dev/null 2>&1; then
-    echo "${INFO:-[INFO]} Quickshell detected - enabling in startup and refresh scripts" 2>&1 | tee -a "$log"
-    local OVERLAY_SA="$base/config/hypr/configs/Startup_Apps.conf"
-    mkdir -p "$(dirname "$OVERLAY_SA")"
-    touch "$OVERLAY_SA"
-    grep -qx 'exec-once = qs' "$OVERLAY_SA" || echo 'exec-once = qs' >>"$OVERLAY_SA"
-    sed -i '/#pkill qs && qs &/s/^#//' "$base/config/hypr/scripts/RefreshNoWaybar.sh"
-    sed -i '/#pkill qs && qs &/s/^#//' "$base/config/hypr/scripts/Refresh.sh"
+    echo "${INFO:-[INFO]} Quickshell detected - enabling in refresh scripts" 2>&1 | tee -a "$log"
+    sed -i '/#pkill qs && qs &/s/^#//' "$base/config/hypr/scripts/RefreshNoWaybar.sh" 2>/dev/null || true
+    sed -i '/#pkill qs && qs &/s/^#//' "$base/config/hypr/scripts/Refresh.sh" 2>/dev/null || true
   fi
 }
 
 ensure_keybinds_init() {
-  local log="$1"
-  local base="${DOTFILES_DIR:-.}"
-  local OVERLAY_SA="$base/config/hypr/configs/Startup_Apps.conf"
-  mkdir -p "$(dirname "$OVERLAY_SA")"
-  if ! grep -qx 'exec-once = \$scriptsDir/KeybindsLayoutInit.sh' "$OVERLAY_SA"; then
-    echo 'exec-once = $scriptsDir/KeybindsLayoutInit.sh' >>"$OVERLAY_SA"
-    echo "${INFO:-[INFO]} Added KeybindsLayoutInit.sh to user Startup_Apps overlay" 2>&1 | tee -a "$log"
-  fi
+  # In Lua mode, keybindings are evaluated dynamically via system_keybinds.lua.
+  # KeybindsLayoutInit.sh is obsolete.
+  return 0
 }
 
 install_terminal_configs() {

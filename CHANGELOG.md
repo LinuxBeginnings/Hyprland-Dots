@@ -9,6 +9,16 @@
 - Media Key `stop/pause/play` not working
   - Updated `system_keybinds.lua` to fix this
 - Fixed black wallpaper on resume or lid open
+  - Added post-layout refresh in `user_laptops.lua` and `LidSwitch.sh refresh`
+- Fixed Waybar not displaying on external monitor on lid close/open ("space reserved but no bar")
+  - Reloads Waybar via `SIGUSR2` after layout shifts to update layer surface coordinates and recreate bars
+- Fixed monitor scale fallback in `user_laptops.lua`
+  - Uses `default_fallback.scale` / `auto` instead of hardcoding scale 1 so HiDPI/4K laptop displays retain proper scaling
+- Fixed `copy.sh` recreating deleted `Startup_Apps.conf`
+  - Updated `scripts/lib_apps.sh` to target `user_startup.lua` for `asusctl`, `blueman`, and `ags`
+  - Removed obsolete `Startup_Apps.conf` cursor edit from `scripts/lib_detect.sh`
+  - Guarded `WallpaperSelect.sh` when `Startup_Apps.conf` is absent
+  - Retired obsolete `ensure_keybinds_init` hook for dynamic Lua keybind workflow
 - Fixed `awww` to actualy randomize transistions
 - Huge delay and HL IPC stall when changing themes
   - Removed hyprlang code and replaced with LUA

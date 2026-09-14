@@ -117,11 +117,45 @@ handle_open() {
     if [ -x "$SCRIPTSDIR/WallpaperDaemon.sh" ]; then
         "$SCRIPTSDIR/WallpaperDaemon.sh" >> "$LOGFILE" 2>&1 &
     fi
+
+    sleep 0.3
+    if pgrep -x waybar >/dev/null 2>&1; then
+        pkill -SIGUSR2 -x waybar >> "$LOGFILE" 2>&1 || true
+    fi
+}
+
+handle_refresh() {
+    log "Handling post-layout refresh (wallpaper and waybar)"
+
+    # Settle time for Hyprland DRM modesetting and Wayland output registration
+    sleep 0.3
+
+    # Ensure DPMS is turned on for active displays
+    hyprctl dispatch dpms on >> "$LOGFILE" 2>&1 || true
+
+    # Restore wallpaper on all active displays
+    if [ -x "$SCRIPTSDIR/WallpaperDaemon.sh" ]; then
+        "$SCRIPTSDIR/WallpaperDaemon.sh" >> "$LOGFILE" 2>&1 || true
+    fi
+
+    # Refresh Waybar so its layer surfaces match the updated monitor positions
+    if pgrep -x waybar >/dev/null 2>&1; then
+        pkill -SIGUSR2 -x waybar >> "$LOGFILE" 2>&1 || true
+        sleep 0.2
+    fi
+
+    # If Waybar is not running or crashed, restart it cleanly
+    if ! pgrep -x waybar >/dev/null 2>&1; then
+        if [ -x "$SCRIPTSDIR/Refresh.sh" ]; then
+            "$SCRIPTSDIR/Refresh.sh" >> "$LOGFILE" 2>&1 &
+        fi
+    fi
 }
 
 case "$ACTION" in
-    close) handle_close ;;
-    open)  handle_open ;;
-    check) log "Lid check (no-op)" ;;
-    *)     log "Unknown action: $ACTION"; exit 1 ;;
+    close)   handle_close ;;
+    open)    handle_open ;;
+    refresh) handle_refresh ;;
+    check)   log "Lid check (no-op)" ;;
+    *)       log "Unknown action: $ACTION"; exit 1 ;;
 esac

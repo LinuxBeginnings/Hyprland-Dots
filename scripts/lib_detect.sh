@@ -42,7 +42,6 @@ detect_nvidia_adjust() {
       echo "${INFO:-[INFO]} Hybrid GPU detected (Intel/NVIDIA or AMD/NVIDIA). Applying cursor handoff fixes." 2>&1 | tee -a "$log" || true
       [ -f config/hypr/configs/SystemSettings.conf ] && sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 0/' config/hypr/configs/SystemSettings.conf
       [ -f config/hypr/lua/settings.lua ] && sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 0/' config/hypr/lua/settings.lua
-      [ -f config/hypr/configs/Startup_Apps.conf ] && sed -i '/hyprctl setcursor/s/^#//' config/hypr/configs/Startup_Apps.conf
     else
       [ -f config/hypr/configs/SystemSettings.conf ] && sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/configs/SystemSettings.conf
       [ -f config/hypr/lua/settings.lua ] && sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/lua/settings.lua

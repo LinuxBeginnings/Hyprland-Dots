@@ -135,8 +135,18 @@ local function load_user_monitor_configs()
   return configs
 end
 
+local function post_layout_refresh()
+  local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")
+  local script = configHome .. "/hypr/scripts/LidSwitch.sh refresh"
+  if hl and hl.exec_cmd then
+    hl.exec_cmd(script)
+  else
+    os.execute(script .. " >/dev/null 2>&1 &")
+  end
+end
+
 -- Apply appropriate monitor layout based on connected displays, user configs, and lid state
-local function apply_laptop_monitor_layout()
+local function apply_laptop_monitor_layout(trigger_refresh)
   local connected = get_connected_monitors()
   local internal = detect_internal_monitor(connected)
   local lid_closed = is_lid_closed()
@@ -162,7 +172,13 @@ local function apply_laptop_monitor_layout()
       if int_cfg then
         hl.monitor(int_cfg)
       else
-        hl.monitor({ output = internal, disabled = false, mode = "preferred", position = "auto", scale = "1" })
+        hl.monitor({
+          output = internal,
+          disabled = false,
+          mode = default_fallback.mode or "preferred",
+          position = default_fallback.position or "auto",
+          scale = default_fallback.scale or "auto",
+        })
       end
     end
 
@@ -190,34 +206,47 @@ local function apply_laptop_monitor_layout()
     elseif int_cfg then
       hl.monitor(int_cfg)
     else
-      hl.monitor({ output = internal, disabled = false, mode = "preferred", position = "0x0", scale = "1" })
+      hl.monitor({
+        output = internal,
+        disabled = false,
+        mode = default_fallback.mode or "preferred",
+        position = "0x0",
+        scale = default_fallback.scale or "auto",
+      })
     end
+  end
+
+  if trigger_refresh then
+    post_layout_refresh()
   end
 end
 
+-- Export for direct CLI / eval access
+_G.apply_laptop_monitor_layout = apply_laptop_monitor_layout
+
 -- Initial apply at config load time
-apply_laptop_monitor_layout()
+apply_laptop_monitor_layout(false)
 
 -- Event hooks for dynamic hotplugging
 if hl and hl.on then
   hl.on("hyprland.start", function()
-    apply_laptop_monitor_layout()
+    apply_laptop_monitor_layout(false)
   end)
 
   hl.on("monitor.added", function()
-    apply_laptop_monitor_layout()
+    apply_laptop_monitor_layout(true)
   end)
 
   hl.on("monitor.removed", function()
-    apply_laptop_monitor_layout()
+    apply_laptop_monitor_layout(true)
   end)
 end
 
 -- Lid switch triggers
 hl.bind("switch:on:Lid Switch", function()
-  apply_laptop_monitor_layout()
+  apply_laptop_monitor_layout(true)
 end)
 
 hl.bind("switch:off:Lid Switch", function()
-  apply_laptop_monitor_layout()
+  apply_laptop_monitor_layout(true)
 end)

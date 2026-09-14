@@ -168,6 +168,7 @@ menu() {
 modify_startup_config() {
   local selected_file="$1"
   local startup_config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/Startup_Apps.conf"
+  [ -f "$startup_config" ] || return 0
 
   # Check if it's a live wallpaper (video)
   if [[ "$selected_file" =~ \.(mp4|mkv|mov|webm)$ ]]; then
