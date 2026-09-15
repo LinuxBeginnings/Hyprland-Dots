@@ -373,3 +373,12 @@ fi
   fi
   # Hyprland reload/keyword updates are applied above to avoid delayed color/gap updates.
 ) >/dev/null 2>&1 &
+
+# If wlogout is currently set to a wallust-aware theme (silvia, kurenai, or fuji), sync its colors and background
+if [[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/wlogout/.current_theme" && -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiWlogoutWallust.sh" ]]; then
+  cur_theme=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/wlogout/.current_theme" 2>/dev/null || echo "")
+  if [[ "$cur_theme" == "silvia" || "$cur_theme" == "kurenai" || "$cur_theme" == "fuji" ]]; then
+    bash "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiWlogoutWallust.sh" --auto "$wallpaper_path" >/dev/null 2>&1 &
+  fi
+fi
+

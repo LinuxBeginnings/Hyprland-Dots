@@ -1,0 +1,93 @@
+/* ----------- 💫 Sekiro Sumi-e wlogout Theme 💫 -------- */
+
+window {
+    font-family: "Oriental Chicken", "Cracked Code", "Fira Code", sans-serif;
+    color: #ffffff;
+    background-image: image(url("./bg.png"));
+    background-size: cover;
+    background-position: center;
+}
+
+button {
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 45%; /* Balanced size for clean sumi-e icons */
+    /* Light translucent crimson glass card background */
+    background-color: rgba(22, 18, 18, 0.45);
+    /* Vibrant, visible premium crimson border */
+    border: 1.5px solid rgba(186, 27, 29, 0.35);
+    box-shadow: inset 0 0 15px rgba(186, 27, 29, 0.12), 0 8px 32px rgba(0, 0, 0, 0.5);
+    border-radius: 20px;
+    
+    /* Enforce exact uniform width across all cards regardless of label length */
+    min-width: 200px;
+    margin: 100px 12px;
+    
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 16pt;
+    /* Smooth transition for animations and hover effects */
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    outline-style: none;
+}
+
+button:focus {
+    border: 2px solid #ba1b1d;
+    background-color: rgba(186, 27, 29, 0.18);
+    outline-style: none;
+}
+
+button:hover {
+    background-color: rgba(186, 27, 29, 0.28); /* Vibrant crimson tint */
+    color: #ba1b1d; /* Crimson text color */
+    border: 1.5px solid #ba1b1d; /* Animate only color */
+    /* Beautiful glowing aura */
+    box-shadow: 0 0 35px rgba(186, 27, 29, 0.55), inset 0 0 10px rgba(186, 27, 29, 0.3); 
+    background-size: 52%; /* Standard premium hover zoom */
+    border-radius: 20px;
+    min-width: 200px;
+    margin: 100px 12px;
+    outline-style: none;
+}
+
+/* Base mappings for the custom Sumi-e symbol icons */
+#lock {
+    background-image: image(url("./icons/lock.png"));
+}
+#lock:hover {
+    background-image: image(url("./icons/lock-hover.png"));
+}
+
+#logout {
+    background-image: image(url("./icons/logout.png"));
+}
+#logout:hover {
+    background-image: image(url("./icons/logout-hover.png"));
+}
+
+#suspend, #sleep {
+    background-image: image(url("./icons/sleep.png"));
+}
+#suspend:hover, #sleep:hover {
+    background-image: image(url("./icons/sleep-hover.png"));
+}
+
+#shutdown {
+    background-image: image(url("./icons/power.png"));
+}
+#shutdown:hover {
+    background-image: image(url("./icons/power-hover.png"));
+}
+
+#reboot {
+    background-image: image(url("./icons/restart.png"));
+}
+#reboot:hover {
+    background-image: image(url("./icons/restart-hover.png"));
+}
+
+#hibernate {
+    background-image: image(url("./icons/hibernate.png"));
+}
+#hibernate:hover {
+    background-image: image(url("./icons/hibernate-hover.png"));
+}

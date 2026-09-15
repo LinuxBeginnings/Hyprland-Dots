@@ -1,0 +1,17 @@
+{ "label" : "s0", "action" : "true", "text" : " ", "keybind" : "1" }
+{ "label" : "sleep", "action" : "systemctl suspend", "text" : "Sleep", "keybind" : "z" }
+{ "label" : "s1", "action" : "true", "text" : " ", "keybind" : "2" }
+{ "label" : "suspend", "action" : "systemctl suspend", "text" : "Suspend", "keybind" : "u" }
+{ "label" : "s2", "action" : "true", "text" : " ", "keybind" : "3" }
+
+{ "label" : "lock", "action" : "$HOME/.config/hypr/scripts/LockScreen.sh", "text" : "Lock", "keybind" : "l" }
+{ "label" : "s3", "action" : "true", "text" : " ", "keybind" : "4" }
+{ "label" : "shutdown", "action" : "systemctl poweroff", "text" : "Shutdown", "keybind" : "s" }
+{ "label" : "s4", "action" : "true", "text" : " ", "keybind" : "5" }
+{ "label" : "hibernate", "action" : "systemctl hibernate", "text" : "Hibernate", "keybind" : "h" }
+
+{ "label" : "s5", "action" : "true", "text" : " ", "keybind" : "6" }
+{ "label" : "reboot", "action" : "systemctl reboot", "text" : "Reboot", "keybind" : "r" }
+{ "label" : "s6", "action" : "true", "text" : " ", "keybind" : "7" }
+{ "label" : "logout", "action" : "hyprctl dispatch exit 0", "text" : "Logout", "keybind" : "e" }
+{ "label" : "s7", "action" : "true", "text" : " ", "keybind" : "8" }

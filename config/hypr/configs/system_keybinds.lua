@@ -461,6 +461,18 @@ bind(
   { description = "Ghostty theme selector" }
 )
 bind(
+  "SUPER CTRL",
+  "W",
+  exec_cmd("$HOME/.config/hypr/scripts/RofiWlogoutTheme.sh"),
+  { description = "wlogout theme selector" }
+)
+bind(
+  "SUPER CTRL SHIFT",
+  "W",
+  exec_cmd("$HOME/.config/hypr/scripts/RofiWlogoutWallust.sh"),
+  { description = "wlogout dynamic wallpaper selector" }
+)
+bind(
   "SUPER SHIFT",
   "B",
   exec_cmd("$HOME/.config/hypr/UserScripts/RainbowBorders-low-cpu.sh  --run-once"),

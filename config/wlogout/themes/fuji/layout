@@ -1,0 +1,36 @@
+{
+    "label" : "lock",
+    "action" : "$HOME/.config/hypr/scripts/LockScreen.sh",
+    "text" : " ",
+    "keybind" : "l"
+}
+{
+    "label" : "reboot",
+    "action" : "systemctl reboot",
+    "text" : " ",
+    "keybind" : "r"
+}
+{
+    "label" : "logout",
+    "action" : "hyprctl dispatch exit 0",
+    "text" : " ",
+    "keybind" : "e"
+}
+{
+    "label" : "suspend",
+    "action" : "systemctl suspend",
+    "text" : " ",
+    "keybind" : "u"
+}
+{
+    "label" : "shutdown",
+    "action" : "systemctl poweroff",
+    "text" : " ",
+    "keybind" : "s"
+}
+{
+    "label" : "hibernate",
+    "action" : "systemctl hibernate",
+    "text" : " ",
+    "keybind" : "h"
+}

@@ -33,6 +33,8 @@ Source: `config/hypr/lua/keybinds.lua`
 - `SUPER + CTRL + SHIFT + R` — Modified Rofi theme selector (`RofiThemeSelector-modified.sh`)
 - `SUPER + CTRL + K` — Kitty theme selector (`Kitty_themes.sh`)
 - `SUPER + CTRL + G` — Ghostty theme selector (`Ghostty_themes.sh`)
+- `SUPER + CTRL + W` — Wlogout theme preset selector (`RofiWlogoutTheme.sh`)
+- `SUPER + CTRL + SHIFT + W` — Wlogout background & Wallust theme selector (`RofiWlogoutWallust.sh`)
 - `SUPER + SHIFT + O` — Change Oh-My-Zsh theme (`ZshChangeTheme.sh`)
 - `SUPER + SHIFT + A` — Animations menu (`Animations.sh`)
 - `SUPER + W` — Select wallpaper (`WallpaperSelect.sh`)

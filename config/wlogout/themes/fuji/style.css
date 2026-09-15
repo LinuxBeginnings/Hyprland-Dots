@@ -1,0 +1,61 @@
+/* ==============================================================================
+   ⛩️  Fuji (Mount Fuji & Torii / 富士) Wlogout Theme
+   Sumi-e Enso Calligraphy & Tech Grid Matrix with Violet/Crimson Glow
+   ============================================================================== */
+
+window {
+    font-family: "Noto Sans", "Cantarell", sans-serif;
+    color: transparent;
+    background-image: image(url("./bg.png"));
+    background-size: cover;
+    background-position: center;
+}
+
+button {
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 190px;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    color: transparent;
+    outline-style: none;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button:focus {
+    outline-style: none;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+button:hover {
+    background-size: 202px;
+    background-color: transparent;
+    border: none;
+    outline-style: none;
+}
+
+button:active {
+    background-size: 186px;
+    opacity: 0.90;
+}
+
+#lock { background-image: image(url("./icons/lock.png")); }
+#lock:hover { background-image: image(url("./icons/lock-hover.png")); }
+
+#reboot, #restart { background-image: image(url("./icons/reboot.png")); }
+#reboot:hover, #restart:hover { background-image: image(url("./icons/reboot-hover.png")); }
+
+#logout { background-image: image(url("./icons/logout.png")); }
+#logout:hover { background-image: image(url("./icons/logout-hover.png")); }
+
+#suspend, #sleep { background-image: image(url("./icons/suspend.png")); }
+#suspend:hover, #sleep:hover { background-image: image(url("./icons/suspend-hover.png")); }
+
+#shutdown, #power { background-image: image(url("./icons/shutdown.png")); }
+#shutdown:hover, #power:hover { background-image: image(url("./icons/shutdown-hover.png")); }
+
+#hibernate { background-image: image(url("./icons/hibernate.png")); }
+#hibernate:hover { background-image: image(url("./icons/hibernate-hover.png")); }

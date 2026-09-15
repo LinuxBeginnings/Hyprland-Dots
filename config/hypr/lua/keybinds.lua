@@ -101,6 +101,8 @@ local app_binds = {
   },
   { "SUPER CTRL", "K", "$HOME/.config/hypr/scripts/Kitty_themes.sh", "Kitty theme selector" },
   { "SUPER CTRL", "G", "$HOME/.config/hypr/scripts/Ghostty_themes.sh", "Ghostty theme selector" },
+  { "SUPER CTRL", "W", "$HOME/.config/hypr/scripts/RofiWlogoutTheme.sh", "wlogout theme selector" },
+  { "SUPER CTRL SHIFT", "W", "$HOME/.config/hypr/scripts/RofiWlogoutWallust.sh", "wlogout dynamic wallpaper selector" },
   {
     "SUPER SHIFT",
     "B",
