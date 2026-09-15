@@ -1164,69 +1164,96 @@ printf "\n%.0s" {1..1}
 
 # additional wallpapers
 printf "\n%.0s" {1..1}
-echo "${MAGENTA}By default only a few wallpapers are copied${RESET}..."
 
 # The additional wallpapers come from Wallpaper-Bank. The revision that was
 # installed is stored next to the wallpapers, so an existing install is
 # detected and only asked about again when a newer revision is available.
 WALLPAPER_BANK_REPO="${WALLPAPER_BANK_REPO:-https://github.com/LinuxBeginnings/Wallpaper-Bank.git}"
 WALLPAPER_BANK_MARKER="$PICTURES_DIR/wallpapers/.wallpaper-bank-revision"
-# Only a few wallpapers ship with the dots; a lot more than this means the
-# pack was already downloaded (e.g. before the revision marker existed).
-WALLPAPER_BANK_MIN_FILES=20
+# Dynamically calculate threshold: only a few default wallpapers ship with the dots
+default_wallpapers_count=$(find "$SCRIPT_DIR/wallpapers" -type f 2>/dev/null | wc -l || echo 0)
+WALLPAPER_BANK_MIN_FILES=$(( ${default_wallpapers_count:-0} + 15 ))
 
 download_wallpaper_bank() {
   local clone_dir revision
   clone_dir=$(mktemp -d "${TMPDIR:-/tmp}/wallpaper-bank.XXXXXX") || return 1
+  trap 'rm -rf "$clone_dir"' EXIT INT TERM
 
-  if ! git clone --depth 1 "$WALLPAPER_BANK_REPO" "$clone_dir/Wallpaper-Bank" >>"$LOG" 2>&1; then
+  if ! git clone --depth 1 --single-branch "$WALLPAPER_BANK_REPO" "$clone_dir/Wallpaper-Bank" >>"$LOG" 2>&1; then
     echo "${ERROR} Downloading additional wallpapers failed" | tee -a "$LOG"
+    trap - EXIT INT TERM
+    rm -rf "$clone_dir"
+    return 1
+  fi
+
+  if [ ! -d "$clone_dir/Wallpaper-Bank/wallpapers" ]; then
+    echo "${ERROR} Wallpapers folder not found in repository." | tee -a "$LOG"
+    trap - EXIT INT TERM
     rm -rf "$clone_dir"
     return 1
   fi
 
   revision=$(git -C "$clone_dir/Wallpaper-Bank" rev-parse HEAD 2>/dev/null || true)
+  mkdir -p "$PICTURES_DIR/wallpapers"
 
   if cp -R "$clone_dir/Wallpaper-Bank/wallpapers/." "$PICTURES_DIR/wallpapers/" >>"$LOG" 2>&1; then
     if [ -n "$revision" ]; then
       printf '%s\n' "$revision" >"$WALLPAPER_BANK_MARKER" 2>/dev/null || true
     fi
-    echo "${OK} Wallpapers copied successfully." | tee -a "$LOG"
+    echo "${OK} Additional wallpapers copied successfully." | tee -a "$LOG"
+    trap - EXIT INT TERM
     rm -rf "$clone_dir"
     return 0
   fi
 
   echo "${ERROR} Copying wallpapers failed" | tee -a "$LOG"
+  trap - EXIT INT TERM
   rm -rf "$clone_dir"
   return 1
 }
 
 wallpaper_bank_revision=""
 if [ -f "$WALLPAPER_BANK_MARKER" ]; then
-  wallpaper_bank_revision=$(cat "$WALLPAPER_BANK_MARKER" 2>/dev/null || true)
+  wallpaper_bank_revision=$(awk 'NF {print $1; exit}' "$WALLPAPER_BANK_MARKER" 2>/dev/null || true)
+  if [[ ! "$wallpaper_bank_revision" =~ ^[0-9a-fA-F]{40,64}$ ]]; then
+    wallpaper_bank_revision=""
+  fi
 fi
-wallpaper_bank_files=$(find "$PICTURES_DIR/wallpapers" -type f 2>/dev/null | wc -l)
+
+wallpaper_bank_files=0
+if [ -d "$PICTURES_DIR/wallpapers" ]; then
+  wallpaper_bank_files=$(find "$PICTURES_DIR/wallpapers" -type f 2>/dev/null | wc -l)
+fi
+wallpaper_bank_files=$(( ${wallpaper_bank_files:-0} + 0 ))
+
 wallpaper_bank_installed=0
 if [ -n "$wallpaper_bank_revision" ] || [ "$wallpaper_bank_files" -ge "$WALLPAPER_BANK_MIN_FILES" ]; then
   wallpaper_bank_installed=1
 fi
 
-if [ "$EXPRESS_MODE" -eq 1 ]; then
+if [ "${WALLPAPER_BANK_FORCE_UPDATE:-0}" -eq 1 ]; then
+  echo "${NOTE} WALLPAPER_BANK_FORCE_UPDATE set: forcing additional wallpaper download..." 2>&1 | tee -a "$LOG"
+  download_wallpaper_bank || true
+elif [ "$EXPRESS_MODE" -eq 1 ]; then
   if [ "$wallpaper_bank_installed" -eq 1 ]; then
     echo "${NOTE} Express mode: additional wallpapers already installed. Skipping update check." 2>&1 | tee -a "$LOG"
   else
     echo "${NOTE} Express mode: skipping additional wallpaper download prompt." 2>&1 | tee -a "$LOG"
   fi
 elif [ "$wallpaper_bank_installed" -eq 1 ]; then
-  wallpaper_bank_latest=$(git ls-remote "$WALLPAPER_BANK_REPO" HEAD 2>/dev/null | cut -f1 || true)
+  echo "${INFO} Checking for additional wallpaper updates..." 2>&1 | tee -a "$LOG"
+  wallpaper_bank_latest=$(git -c http.connectTimeout=10 ls-remote "$WALLPAPER_BANK_REPO" HEAD 2>/dev/null | awk '{print $1; exit}' || true)
+  if [[ ! "$wallpaper_bank_latest" =~ ^[0-9a-fA-F]{40,64}$ ]]; then
+    wallpaper_bank_latest=""
+  fi
 
   if [ -z "$wallpaper_bank_latest" ]; then
-    echo "${WARN} Could not check for wallpaper updates. Keeping the installed wallpapers." 2>&1 | tee -a "$LOG"
+    echo "${WARN} Could not check for wallpaper updates (remote unreachable or offline). Keeping the installed wallpapers." 2>&1 | tee -a "$LOG"
   elif [ -z "$wallpaper_bank_revision" ]; then
     printf '%s\n' "$wallpaper_bank_latest" >"$WALLPAPER_BANK_MARKER" 2>/dev/null || true
-    echo "${OK} Additional wallpapers already installed (revision ${wallpaper_bank_latest:0:8}). Skipping download." 2>&1 | tee -a "$LOG"
+    echo "${OK} Additional wallpapers already installed (recorded revision ${wallpaper_bank_latest:0:8}). Skipping download." 2>&1 | tee -a "$LOG"
   elif [ "$wallpaper_bank_revision" = "$wallpaper_bank_latest" ]; then
-    echo "${OK} Additional wallpapers already installed and up to date. Skipping." 2>&1 | tee -a "$LOG"
+    echo "${OK} Additional wallpapers already installed and up to date (${wallpaper_bank_latest:0:8}). Skipping." 2>&1 | tee -a "$LOG"
   else
     echo "${NOTE} Wallpaper update available: installed ${wallpaper_bank_revision:0:8}, latest ${wallpaper_bank_latest:0:8}."
     while true; do
@@ -1254,6 +1281,7 @@ elif [ "$wallpaper_bank_installed" -eq 1 ]; then
     done
   fi
 else
+  echo "${MAGENTA}By default only a few wallpapers are copied${RESET}..."
   while true; do
     echo "${NOTE} A number of these wallpapers are AI generated or enhanced. Select (N/n) if this is an issue for you. "
     echo -n "${CAT} Would you like to download additional wallpapers? ${WARN} This is 1GB in size (y/n): "
