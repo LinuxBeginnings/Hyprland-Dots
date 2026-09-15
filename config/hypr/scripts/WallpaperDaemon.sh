@@ -148,6 +148,22 @@ apply_wallpaper_for_monitor() {
   return 1
 }
 
+# Hotplug mode: put the wallpaper back on a single monitor without touching
+# colors. This is called on monitor.added, because a display that is connected
+# again comes back with the daemon's plain background color and no image.
+if [ "${1:-}" = "--monitor" ]; then
+  hotplug_monitor="${2:-}"
+  [ -n "$hotplug_monitor" ] || exit 1
+  for _ in {1..50}; do
+    if get_monitors 2>/dev/null | grep -qx "$hotplug_monitor"; then
+      break
+    fi
+    sleep 0.1
+  done
+  apply_wallpaper_for_monitor "$hotplug_monitor" >/dev/null 2>&1 || true
+  exit 0
+fi
+
 applied_wallpaper=""
 while read -r monitor; do
   [ -n "$monitor" ] || continue

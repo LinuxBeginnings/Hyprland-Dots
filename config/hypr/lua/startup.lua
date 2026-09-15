@@ -76,6 +76,18 @@ else
   run_startup_commands()
 end
 
+-- Give a display its wallpaper back when it is connected again. Without this a
+-- re-plugged monitor keeps the wallpaper daemon's plain color until the
+-- wallpaper is set by hand.
+if hl and hl.on then
+  hl.on("monitor.added", function(monitor)
+    if not (monitor and monitor.name) then
+      return
+    end
+    hl.exec_cmd(scriptsDir .. "/WallpaperDaemon.sh --monitor " .. monitor.name)
+  end)
+end
+
 -- Optional startup examples retained from the original config:
 -- exec_once("mpvpaper '*' -o \"load-scripts=no no-audio --loop\" \"\"")
 -- exec_once(scriptsDir .. "/WallpaperAutoChange.sh " .. wallDir)
