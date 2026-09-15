@@ -1166,35 +1166,107 @@ printf "\n%.0s" {1..1}
 printf "\n%.0s" {1..1}
 echo "${MAGENTA}By default only a few wallpapers are copied${RESET}..."
 
+# The additional wallpapers come from Wallpaper-Bank. The revision that was
+# installed is stored next to the wallpapers, so an existing install is
+# detected and only asked about again when a newer revision is available.
+WALLPAPER_BANK_REPO="${WALLPAPER_BANK_REPO:-https://github.com/LinuxBeginnings/Wallpaper-Bank.git}"
+WALLPAPER_BANK_MARKER="$PICTURES_DIR/wallpapers/.wallpaper-bank-revision"
+# Only a few wallpapers ship with the dots; a lot more than this means the
+# pack was already downloaded (e.g. before the revision marker existed).
+WALLPAPER_BANK_MIN_FILES=20
+
+download_wallpaper_bank() {
+  local clone_dir revision
+  clone_dir=$(mktemp -d "${TMPDIR:-/tmp}/wallpaper-bank.XXXXXX") || return 1
+
+  if ! git clone --depth 1 "$WALLPAPER_BANK_REPO" "$clone_dir/Wallpaper-Bank" >>"$LOG" 2>&1; then
+    echo "${ERROR} Downloading additional wallpapers failed" | tee -a "$LOG"
+    rm -rf "$clone_dir"
+    return 1
+  fi
+
+  revision=$(git -C "$clone_dir/Wallpaper-Bank" rev-parse HEAD 2>/dev/null || true)
+
+  if cp -R "$clone_dir/Wallpaper-Bank/wallpapers/." "$PICTURES_DIR/wallpapers/" >>"$LOG" 2>&1; then
+    if [ -n "$revision" ]; then
+      printf '%s\n' "$revision" >"$WALLPAPER_BANK_MARKER" 2>/dev/null || true
+    fi
+    echo "${OK} Wallpapers copied successfully." | tee -a "$LOG"
+    rm -rf "$clone_dir"
+    return 0
+  fi
+
+  echo "${ERROR} Copying wallpapers failed" | tee -a "$LOG"
+  rm -rf "$clone_dir"
+  return 1
+}
+
+wallpaper_bank_revision=""
+if [ -f "$WALLPAPER_BANK_MARKER" ]; then
+  wallpaper_bank_revision=$(cat "$WALLPAPER_BANK_MARKER" 2>/dev/null || true)
+fi
+wallpaper_bank_files=$(find "$PICTURES_DIR/wallpapers" -type f 2>/dev/null | wc -l)
+wallpaper_bank_installed=0
+if [ -n "$wallpaper_bank_revision" ] || [ "$wallpaper_bank_files" -ge "$WALLPAPER_BANK_MIN_FILES" ]; then
+  wallpaper_bank_installed=1
+fi
+
 if [ "$EXPRESS_MODE" -eq 1 ]; then
-  echo "${NOTE} Express mode: skipping additional wallpaper download prompt." 2>&1 | tee -a "$LOG"
+  if [ "$wallpaper_bank_installed" -eq 1 ]; then
+    echo "${NOTE} Express mode: additional wallpapers already installed. Skipping update check." 2>&1 | tee -a "$LOG"
+  else
+    echo "${NOTE} Express mode: skipping additional wallpaper download prompt." 2>&1 | tee -a "$LOG"
+  fi
+elif [ "$wallpaper_bank_installed" -eq 1 ]; then
+  wallpaper_bank_latest=$(git ls-remote "$WALLPAPER_BANK_REPO" HEAD 2>/dev/null | cut -f1 || true)
+
+  if [ -z "$wallpaper_bank_latest" ]; then
+    echo "${WARN} Could not check for wallpaper updates. Keeping the installed wallpapers." 2>&1 | tee -a "$LOG"
+  elif [ -z "$wallpaper_bank_revision" ]; then
+    printf '%s\n' "$wallpaper_bank_latest" >"$WALLPAPER_BANK_MARKER" 2>/dev/null || true
+    echo "${OK} Additional wallpapers already installed (revision ${wallpaper_bank_latest:0:8}). Skipping download." 2>&1 | tee -a "$LOG"
+  elif [ "$wallpaper_bank_revision" = "$wallpaper_bank_latest" ]; then
+    echo "${OK} Additional wallpapers already installed and up to date. Skipping." 2>&1 | tee -a "$LOG"
+  else
+    echo "${NOTE} Wallpaper update available: installed ${wallpaper_bank_revision:0:8}, latest ${wallpaper_bank_latest:0:8}."
+    while true; do
+      echo -n "${CAT} Update the additional wallpapers? ${WARN} This downloads ~1GB (y/n): "
+      if ! read -r WALL; then
+        echo "${WARN} No input available. Keeping the installed wallpapers." 2>&1 | tee -a "$LOG"
+        break
+      fi
+
+      case $WALL in
+      [Yy])
+        echo "${NOTE} Updating additional wallpapers..."
+        if download_wallpaper_bank; then
+          break
+        fi
+        ;;
+      [Nn])
+        echo "${NOTE} Keeping the installed wallpapers." 2>&1 | tee -a "$LOG"
+        break
+        ;;
+      *)
+        echo "Please enter 'y' or 'n' to proceed."
+        ;;
+      esac
+    done
+  fi
 else
   while true; do
     echo "${NOTE} A number of these wallpapers are AI generated or enhanced. Select (N/n) if this is an issue for you. "
     echo -n "${CAT} Would you like to download additional wallpapers? ${WARN} This is 1GB in size (y/n): "
-    read WALL
+    if ! read -r WALL; then
+      echo "${WARN} No input available. Skipping additional wallpapers." 2>&1 | tee -a "$LOG"
+      break
+    fi
 
     case $WALL in
     [Yy])
       echo "${NOTE} Downloading additional wallpapers..."
-      if git clone "https://github.com/LinuxBeginnings/Wallpaper-Bank.git"; then
-        echo "${OK} Wallpapers downloaded successfully." 2>&1 | tee -a "$LOG"
-
-        # Check if wallpapers directory exists and create it if not
-        if [ ! -d "$PICTURES_DIR/wallpapers" ]; then
-          mkdir -p "$PICTURES_DIR/wallpapers"
-          echo "${OK} Created wallpapers directory." 2>&1 | tee -a "$LOG"
-        fi
-
-        if cp -R Wallpaper-Bank/wallpapers/* "$PICTURES_DIR/wallpapers/" >>"$LOG" 2>&1; then
-          echo "${OK} Wallpapers copied successfully." 2>&1 | tee -a "$LOG"
-          rm -rf Wallpaper-Bank 2>&1 # Remove cloned repository after copying wallpapers
-          break
-        else
-          echo "${ERROR} Copying wallpapers failed" 2>&1 | tee -a "$LOG"
-        fi
-      else
-        echo "${ERROR} Downloading additional wallpapers failed" 2>&1 | tee -a "$LOG"
+      if download_wallpaper_bank; then
+        break
       fi
       ;;
     [Nn])
