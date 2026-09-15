@@ -498,6 +498,8 @@ handle_choice() {
     ;;
   "Choose Kitty Terminal Theme") "$scriptsDir/Kitty_themes.sh" ;;
   "Choose Ghostty Terminal Theme") "$scriptsDir/Ghostty_themes.sh" ;;
+  "Choose Wlogout Theme") "$scriptsDir/RofiWlogoutTheme.sh" ;;
+  "Choose Wlogout Wallpaper") "$scriptsDir/RofiWlogoutWallust.sh" ;;
   "Edit User Monitor config")
     file="$user_monitors_lua"
     ;;
@@ -652,6 +654,8 @@ Change Starship Prompt
 Set SDDM Wallpaper
 Choose Kitty Terminal Theme
 Choose Ghostty Terminal Theme
+Choose Wlogout Theme
+Choose Wlogout Wallpaper
 Configure Workspace Rules (nwg-displays)
 GTK Settings (nwg-look)
 QT Apps Settings (qt6ct)
@@ -693,7 +697,7 @@ show_main_menu() {
   printf '%b\n' "[[ User Settings ]]\x00meta\x1fManage User Defaults Edit User Defaults Edit User Keybinds Edit User ENV variables Edit User Startup Apps overlay Edit User Window Rules overlay Edit User Layer Rules overlay Edit User Settings Edit User Decorations Edit User Animations Edit User Laptop Settings Edit User Monitor config Select Hyprview Layout"
   printf '%b\n' "[[ System Settings ]]\x00meta\x1fEdit System Default Keybinds Edit System Default Startup Apps Edit System Default Window Rules Edit System Default Layer Rules Edit System Default Settings"
   printf '%b\n' "[[ Toggle Options ]]\x00meta\x1fToggle Waybar Weather units C F Toggle Waybar Clock 12H 24H Toggle Game Mode"
-  printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Configure Workspace Rules nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Rainbow Borders Mode"
+  printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Choose Wlogout Theme Choose Wlogout Wallpaper Configure Workspace Rules nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Rainbow Borders Mode"
   printf '%s\n' "[ Quick Links]"
   printf '%s\n' "Manage User Defaults"
   printf '%s\n' "Set User Keybinds"
@@ -724,6 +728,8 @@ show_main_menu() {
   printf '%s\n' "Set SDDM Wallpaper"
   printf '%s\n' "Choose Kitty Terminal Theme"
   printf '%s\n' "Choose Ghostty Terminal Theme"
+  printf '%s\n' "Choose Wlogout Theme"
+  printf '%s\n' "Choose Wlogout Wallpaper"
   printf '%s\n' "Configure Workspace Rules (nwg-displays)"
   printf '%s\n' "GTK Settings (nwg-look)"
   printf '%s\n' "QT Apps Settings (qt6ct)"

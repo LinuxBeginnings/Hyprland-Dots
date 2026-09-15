@@ -21,8 +21,14 @@ fi
 PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
 wallDIR="$PICTURES_DIR/wallpapers"
 SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
-ROFI_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config.rasi"
-ROFI_WALLPAPER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-wallpaper.rasi"
+ROFI_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config.rasi"
+if [[ ! -f "$ROFI_CONFIG" && -f "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config.rasi" ]]; then
+    ROFI_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config.rasi"
+fi
+ROFI_WALLPAPER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-wallpaper.rasi"
+if [[ ! -f "$ROFI_WALLPAPER_CONFIG" && -f "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-wallpaper.rasi" ]]; then
+    ROFI_WALLPAPER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-wallpaper.rasi"
+fi
 WLOGOUT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/wlogout"
 THEMES_DIR="${WLOGOUT_DIR}/themes"
 RAW_WALL="${WLOGOUT_DIR}/.current_wall_raw"
@@ -30,10 +36,11 @@ BLUR_FILE="${WLOGOUT_DIR}/.blur_radius"
 CURRENT_WALL="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current"
 
 # Current theme preset
-CURRENT_THEME="sekiro"
+CURRENT_THEME="default"
 if [[ -f "${WLOGOUT_DIR}/.current_theme" ]]; then
-    CURRENT_THEME=$(cat "${WLOGOUT_DIR}/.current_theme" 2>/dev/null || echo "sekiro")
+    CURRENT_THEME=$(cat "${WLOGOUT_DIR}/.current_theme" 2>/dev/null || echo "default")
 fi
+[[ -z "$CURRENT_THEME" ]] && CURRENT_THEME="default"
 
 # Current blur radius (default 20 if not set)
 BLUR_RADIUS=20
@@ -113,6 +120,8 @@ get_active_wallpaper() {
     if [[ -z "$selected" || ! -f "$selected" ]]; then
         if [[ -f "$RAW_WALL" && -s "$RAW_WALL" ]]; then
             selected=$(cat "$RAW_WALL")
+        elif [[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/.current_wallpaper" ]]; then
+            selected=$(readlink -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/.current_wallpaper" 2>/dev/null || true)
         elif [[ -f "$HOME/.config/rofi/.current_wallpaper" ]]; then
             selected=$(readlink -f "$HOME/.config/rofi/.current_wallpaper" 2>/dev/null || true)
         elif [[ -f "$CURRENT_WALL" ]]; then
@@ -120,6 +129,86 @@ get_active_wallpaper() {
         fi
     fi
     echo "$selected"
+}
+
+# Multi-engine background blur renderer (Python-Pillow -> ImageMagick -> ffmpeg -> fallback)
+render_theme_background() {
+    local src_raw="$1"
+    local dst_bg="$2"
+    local radius="${3:-20}"
+    local theme="${4:-}"
+    local overlay="${5:-}"
+    local rendered=0
+
+    # 1. Try Python 3 with Pillow
+    if python3 -c "import PIL" >/dev/null 2>&1; then
+        if python3 -c "
+from PIL import Image, ImageFilter
+import sys, os
+try:
+    im = Image.open(sys.argv[1]).convert('RGBA')
+    im = im.resize((1920, 1080), Image.Resampling.LANCZOS)
+    radius = int(sys.argv[3])
+    if radius > 0:
+        im = im.filter(ImageFilter.GaussianBlur(radius=radius))
+    theme = sys.argv[4] if len(sys.argv) > 4 else ''
+    if theme == 'fuji':
+        ov = sys.argv[5] if len(sys.argv) > 5 else ''
+        if ov and os.path.exists(ov):
+            overlay = Image.open(ov).convert('RGBA')
+            im = Image.alpha_composite(im, overlay)
+    im.convert('RGB').save(sys.argv[2], 'PNG')
+except Exception:
+    sys.exit(1)
+" "$src_raw" "$dst_bg" "$radius" "$theme" "$overlay" 2>/dev/null; then
+            rendered=1
+        fi
+    fi
+
+    # 2. Try ImageMagick (magick / convert)
+    if [[ $rendered -eq 0 ]]; then
+        local im_cmd=""
+        if command -v magick >/dev/null 2>&1; then
+            im_cmd="magick"
+        elif command -v convert >/dev/null 2>&1; then
+            im_cmd="convert"
+        fi
+        if [[ -n "$im_cmd" ]]; then
+            local blur_opt=()
+            if [[ "$radius" -gt 0 ]]; then
+                blur_opt=(-blur "0x${radius}")
+            fi
+            if [[ "$theme" == "fuji" && -n "$overlay" && -f "$overlay" ]]; then
+                $im_cmd "$src_raw" -resize 1920x1080^ -gravity center -extent 1920x1080 "${blur_opt[@]}" "$overlay" -composite "$dst_bg" 2>/dev/null && rendered=1
+            else
+                $im_cmd "$src_raw" -resize 1920x1080^ -gravity center -extent 1920x1080 "${blur_opt[@]}" "$dst_bg" 2>/dev/null && rendered=1
+            fi
+        fi
+    fi
+
+    # 3. Try ffmpeg
+    if [[ $rendered -eq 0 ]] && command -v ffmpeg >/dev/null 2>&1; then
+        local vf="scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080"
+        if [[ "$radius" -gt 0 ]]; then
+            vf="${vf},gblur=sigma=${radius}"
+        fi
+        if [[ "$theme" == "fuji" && -n "$overlay" && -f "$overlay" ]]; then
+            ffmpeg -y -i "$src_raw" -i "$overlay" -filter_complex "[0:v]${vf}[bg];[bg][1:v]overlay=0:0" -frames:v 1 -update 1 "$dst_bg" >/dev/null 2>&1 && rendered=1
+        else
+            ffmpeg -y -i "$src_raw" -vf "$vf" -frames:v 1 -update 1 "$dst_bg" >/dev/null 2>&1 && rendered=1
+        fi
+    fi
+
+    # 4. Fallback: Pre-rendered bg.png or direct copy
+    if [[ $rendered -eq 0 || ! -s "$dst_bg" ]]; then
+        local theme_dir
+        theme_dir="$(dirname "$src_raw")"
+        if [[ -f "${theme_dir}/bg.png" ]]; then
+            cp -f "${theme_dir}/bg.png" "$dst_bg"
+        else
+            cp -f "$src_raw" "$dst_bg"
+        fi
+    fi
 }
 
 # Function to apply image, blur, wallust, and theme-aware CSS
@@ -142,44 +231,19 @@ apply_wlogout_background() {
         notify-send -u low "Wlogout BG" "Applying image (Blur: ${radius}px) with ${CURRENT_THEME} theme..."
     fi
 
-    # 2. Blur image and save directly to bg.png & sekiro_blurred.png
-    python3 -c "
-from PIL import Image, ImageFilter
-import sys, os
-
-img_path = sys.argv[1]
-out_path = sys.argv[2]
-try:
-    radius = int(sys.argv[3])
-except Exception:
-    radius = 20
-
-theme = sys.argv[4] if len(sys.argv) > 4 else ''
-
-im = Image.open(img_path).convert('RGBA')
-im = im.resize((1920, 1080), Image.Resampling.LANCZOS)
-if radius > 0:
-    im = im.filter(ImageFilter.GaussianBlur(radius=radius))
-
-if theme == 'fuji':
-    overlay_path = sys.argv[5] if len(sys.argv) > 5 else os.path.expanduser('~/.config/wlogout/themes/fuji/grid_overlay.png')
-    if os.path.exists(overlay_path):
-        overlay = Image.open(overlay_path).convert('RGBA')
-        im = Image.alpha_composite(im, overlay)
-
-im.convert('RGB').save(out_path, 'PNG')
-" "$img_path" "${WLOGOUT_DIR}/bg.png" "$radius" "$CURRENT_THEME" "${THEMES_DIR}/fuji/grid_overlay.png"
-
-    rm -f "${WLOGOUT_DIR}/sekiro_blurred.png"
-    cp -f "${WLOGOUT_DIR}/bg.png" "${WLOGOUT_DIR}/sekiro_blurred.png"
+    # 2. Render blurred background
+    render_theme_background "$img_path" "${WLOGOUT_DIR}/bg.png" "$radius" "$CURRENT_THEME" "${THEMES_DIR}/fuji/grid_overlay.png"
 
     # 3. Run wallust on the raw image to extract palette
     if command -v wallust >/dev/null 2>&1; then
         wallust run -s "$img_path" || true
     fi
 
-    # 4. Read Wallust accent color from waybar template
-    local waybar_wallust="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
+    # 4. Read Wallust accent color from waybar template (prefer KoolDots location)
+    local waybar_wallust="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/wallust/colors-waybar.css"
+    if [[ ! -f "$waybar_wallust" && -f "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css" ]]; then
+        waybar_wallust="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
+    fi
     local accent_color="#f0a6b2"
 
     if [[ -f "$waybar_wallust" ]]; then
@@ -522,6 +586,21 @@ EOF
 
         echo "sekiro" > "${WLOGOUT_DIR}/.current_theme"
 
+    elif [[ "$CURRENT_THEME" == "default" ]]; then
+        # Default KoolDots theme: restore clean layout and remove custom theme flags
+        if [[ -f "${THEMES_DIR}/default/style.css" ]]; then
+            cp -f "${THEMES_DIR}/default/style.css" "${WLOGOUT_DIR}/style.css"
+        fi
+        if [[ -f "${THEMES_DIR}/default/layout" ]]; then
+            cp -f "${THEMES_DIR}/default/layout" "${WLOGOUT_DIR}/layout"
+        fi
+        rm -f "${WLOGOUT_DIR}/.theme_flags"
+        if [[ -d "${THEMES_DIR}/default/icons" ]]; then
+            mkdir -p "${WLOGOUT_DIR}/icons"
+            cp -rf "${THEMES_DIR}/default/icons/"* "${WLOGOUT_DIR}/icons/"
+        fi
+        echo "default" > "${WLOGOUT_DIR}/.current_theme"
+
     else
         # Default dynamic wallust styling for other themes
         if [[ -f "${THEMES_DIR}/${CURRENT_THEME}/style.css" ]]; then
@@ -532,6 +611,8 @@ EOF
         fi
         if [[ -f "${THEMES_DIR}/${CURRENT_THEME}/.theme_flags" ]]; then
             cp -f "${THEMES_DIR}/${CURRENT_THEME}/.theme_flags" "${WLOGOUT_DIR}/.theme_flags"
+        else
+            rm -f "${WLOGOUT_DIR}/.theme_flags"
         fi
         if [[ -d "${THEMES_DIR}/${CURRENT_THEME}/icons" ]]; then
             mkdir -p "${WLOGOUT_DIR}/icons"
@@ -552,6 +633,10 @@ if [[ -n "${AUTO_IMAGE:-}" && -f "${AUTO_IMAGE:-}" ]]; then
 fi
 
 # Main Menu
+if [[ -x "${SCRIPTSDIR}/RofiFocusedWallpaperLink.sh" ]]; then
+    "${SCRIPTSDIR}/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
+fi
+
 MENU_OPTIONS=(
     "🖼️   Use Current Desktop Wallpaper"
     "📁   Choose from Wallpapers Folder (Thumbnails)"
@@ -581,6 +666,8 @@ if [[ "$CHOICE" =~ "Adjust Blur Radius" ]]; then
         if [[ -z "$RAW_IMAGE" || ! -f "$RAW_IMAGE" ]]; then
             if [[ -f "${THEMES_DIR}/${CURRENT_THEME}/bg_raw.png" ]]; then
                 RAW_IMAGE="${THEMES_DIR}/${CURRENT_THEME}/bg_raw.png"
+            elif [[ -f "${THEMES_DIR}/${CURRENT_THEME}/bg.png" ]]; then
+                RAW_IMAGE="${THEMES_DIR}/${CURRENT_THEME}/bg.png"
             else
                 RAW_IMAGE=$(get_active_wallpaper)
             fi
