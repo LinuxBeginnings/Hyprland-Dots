@@ -4,6 +4,12 @@
 
 ## Fixed:
 
+- Potential issue with `lockscreen.sh` not logging out
+  - If hypridle dies status is updated but no lock is enabled
+  - Updating weather info is impromved as well
+  - No longer killing/restarting hypridle using wayland inhibit instead
+    - Keeps hypridle service active
+  - Thanks to `Jitendra dara @jitendradara12` for finding this and proposing fix
 - New wlogout themes weren't logging out correctly
 - Fixed wlogout theme sending notifications at login
 - Fixed Hyprsunset staying enabled after reboot and failing to toggle off
