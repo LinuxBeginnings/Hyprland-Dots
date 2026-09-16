@@ -55,6 +55,7 @@
 --
 -- =============================================================================
 local user_keybinds_helper = nil
+local submap_helper = nil
 do
   local source = (debug.getinfo(1, "S") or {}).source or ""
   local source_path = source:match("^@(.+)$")
@@ -62,8 +63,11 @@ do
   local home = os.getenv("HOME") or ""
   local candidate_paths = {
     source_dir and (source_dir .. "/../lua/user_keybinds_helper.lua") or nil,
+    source_dir and (source_dir .. "/../lua/submap_helper.lua") or nil,
     home ~= "" and (home .. "/.config/hypr/lua/user_keybinds_helper.lua") or nil,
+    home ~= "" and (home .. "/.config/hypr/lua/submap_helper.lua") or nil,
     home ~= "" and (home .. "/.config/hypr/user_keybinds_helper.lua") or nil,
+    home ~= "" and (home .. "/.config/hypr/submap_helper.lua") or nil,
   }
 
   local tried_paths = {}
@@ -74,9 +78,14 @@ do
       if f then
         f:close()
         local loaded_ok, loaded_helpers = pcall(dofile, helper_path)
-        if loaded_ok and type(loaded_helpers) == "table" and loaded_helpers.bind then
-          user_keybinds_helper = loaded_helpers
-          break
+        print("Loaded: ", helper_path)
+        if loaded_ok and type(loaded_helpers) == "table" then
+          if loaded_helpers.bind then
+            user_keybinds_helper = loaded_helpers
+          end
+          if loaded_helpers.submap then
+            submap_helper = loaded_helpers
+          end
         end
       end
     end
@@ -86,8 +95,10 @@ do
     error("Failed to load user_keybinds_helper.lua from: " .. table.concat(tried_paths, ", "))
   end
 end
+
 local exec_cmd = user_keybinds_helper.exec_cmd
 local dispatch = user_keybinds_helper.dispatch
 local bind = user_keybinds_helper.bind
 local unbind = user_keybinds_helper.unbind
+local submap = submap_helper.submap
 
