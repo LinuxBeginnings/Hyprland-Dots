@@ -106,7 +106,7 @@
 	"interval": 60,
 	"exec": "$HOME/.config/hypr/scripts/Hypridle.sh status",
 	"on-click": "$HOME/.config/hypr/scripts/Hypridle.sh toggle",
-	"on-click-right": "hyprlock"
+	"on-click-right": "$HOME/.config/hypr/scripts/LockScreen.sh"
 },
 
 "custom/keyboard": {
