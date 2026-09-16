@@ -7,10 +7,9 @@
 # ==================================================
 
 # For Hyprlock
-#pidof hyprlock || hyprlock -q
+pidof hyprlock >/dev/null || { hyprlock -q & disown; }
+loginctl lock-session
 
 # Ensure weather cache is up-to-date before locking (Waybar/lockscreen readers)
 bash "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserScripts/WeatherWrap.sh" >/dev/null 2>&1 &
-
-loginctl lock-session
 
