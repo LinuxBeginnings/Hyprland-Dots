@@ -78,7 +78,6 @@ do
       if f then
         f:close()
         local loaded_ok, loaded_helpers = pcall(dofile, helper_path)
-        print("Loaded: ", helper_path)
         if loaded_ok and type(loaded_helpers) == "table" then
           if loaded_helpers.bind then
             user_keybinds_helper = loaded_helpers
