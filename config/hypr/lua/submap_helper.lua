@@ -196,8 +196,7 @@ end
 function Submap.define(name, binds, fn)
   local helper = submap_logic(name, binds, fn)
   if helper and helper.success then
-    helper.create()
-    helper.define()
+    return helper.create() and helper.define()
   end
 end
 
