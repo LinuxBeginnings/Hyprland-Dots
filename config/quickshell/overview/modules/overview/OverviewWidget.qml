@@ -249,11 +249,13 @@ Item {
                             window.Drag.active = false
                             root.draggingFromWorkspace = -1
                             if (targetWorkspace !== -1 && targetWorkspace !== windowData?.workspace.id) {
-                                const address = window.windowData?.address
-                                Hyprland.dispatch(Hyprland.usingLua
-                                    ? `hl.dsp.window.move({ workspace = ${targetWorkspace}, follow = false, window = "address:${address}" })`
-                                    : `movetoworkspacesilent ${targetWorkspace}, address:${address}`)
-                                updateWindowPosition.restart()
+                                const address = windowData?.address ?? window.windowData?.address
+                                if (address) {
+                                    Hyprland.dispatch(Hyprland.usingLua
+                                        ? `hl.dsp.window.move({ workspace = ${targetWorkspace}, follow = false, window = "address:${address}" })`
+                                        : `movetoworkspacesilent ${targetWorkspace}, address:${address}`)
+                                    updateWindowPosition.restart()
+                                }
                             }
                             else {
                                 window.x = window.initX
