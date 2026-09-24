@@ -4,13 +4,12 @@
 
 ## Fixed:
 
-
-- Replaced `io.open` calls with LUA API 
-   - This prevents hyprland stall when code active
-- Mouse zoom guesture causing hyprland to stall 
-   - Thank you Angel Spano  `@jasueh` 
-- Quickshell `overview` mouse functions restored 
-  - Thank you to ``@nettucui`` for the code to fix it 
+- Replaced `io.open` calls with LUA API
+  - This prevents hyprland stall when code active
+- Mouse zoom guesture causing hyprland to stall
+  - Thank you Angel Spano `@jasueh`
+- Quickshell `overview` mouse functions restored
+  - Thank you to `@nettucui` for the code to fix it
 - Wlogout menu too short to display all options
 - Another cause of duplicate waybars
 - NixOS installed wrong fastfetch config file
@@ -117,6 +116,9 @@
 
 ## Added:
 
+- Script `Fix-Fedora-45-overview.sh`
+  - The QT libs require `quickshell-git` to resolve errors
+    - `qs: symbol lookup error: qs: undefined symbol: _ZN23QUntypedPropertyBindingC1EP23QPropertyBindingPrivate, version Qt_6.11_PRIVATE_API`
 - Wlogout theme - `hadi493` adapted from `hadi493/wlogout` repo
   - Fully acreditied in source files
 - Wlogout theme from `hadi493` but icons from `LordWorm1996`
