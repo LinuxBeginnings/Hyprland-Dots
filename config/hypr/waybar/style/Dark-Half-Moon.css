@@ -120,6 +120,7 @@ tooltip label {
   padding: 2px 15px;
 }
 
+#submap,
 #temperature,
 #memory {
   color: #e6b673;
@@ -360,4 +361,9 @@ tooltip label {
   -gtk-icon-style: symbolic;
   -gtk-icon-effect: none;
   opacity: 1;
+}
+
+/*-----Submap indicator (visible only while a submap is active)----*/
+#submap {
+  margin-right: 8px;
 }

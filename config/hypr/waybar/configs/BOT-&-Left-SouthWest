@@ -34,6 +34,7 @@
     ],
     
 "modules-center": [
+    "hyprland/submap",
     //"hyprland/window",
     "hyprland/workspaces#roman",
 	],
@@ -81,6 +82,7 @@
     ],
     
 "modules-center": [
+    "hyprland/submap",
     "clock#vertical"
     ],
     

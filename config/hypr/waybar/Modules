@@ -182,7 +182,7 @@
 },
 
 "hyprland/submap": {
-	"format": "<span style=\"italic\">  {}</span>", // Icon: expand-arrows-alt
+	"format": "submap: {}", // Shows "submap: <name>" while a submap is active; hidden when none is active
 	"tooltip": false,
 },
 

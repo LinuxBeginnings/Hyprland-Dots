@@ -122,6 +122,7 @@ tooltip {
 #idle_inhibitor,
 #keyboard-state,
 #memory,
+#submap,
 #mode,
 #mpris,
 #network,
@@ -256,4 +257,9 @@ tooltip {
   -gtk-icon-style: symbolic;
   -gtk-icon-effect: none;
   opacity: 1;
+}
+
+/*-----Submap indicator (visible only while a submap is active)----*/
+#submap {
+  margin-right: 8px;
 }

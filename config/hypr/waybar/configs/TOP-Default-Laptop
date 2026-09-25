@@ -33,6 +33,7 @@
 	],
 
 "modules-center": [
+	"hyprland/submap",
 	"custom/separator#blank",
   "group/app_drawer",
 	"group/notify",

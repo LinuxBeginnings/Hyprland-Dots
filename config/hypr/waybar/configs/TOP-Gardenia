@@ -35,7 +35,7 @@
 	"group/notify"
 	],
 	  
-"modules-center": ["hyprland/workspaces#kanji"], 
+"modules-center": ["hyprland/submap", "hyprland/workspaces#kanji"], 
 	
 "modules-right": [
 	"pulseaudio#1",

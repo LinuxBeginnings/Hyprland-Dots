@@ -30,7 +30,7 @@
       "bluetooth",
       "network",
     ],
-    "modules-center": ["hyprland/window"],
+    "modules-center": ["hyprland/submap", "hyprland/window"],
 "modules-right": [
       "mpris",
       "battery",
@@ -62,7 +62,7 @@
     "gtk-layer-shell": true,
     "reload_style_on_change": true,
     "modules-left": ["hyprland/workspaces#rw"],
-    "modules-center": ["wlr/taskbar"],
+    "modules-center": ["hyprland/submap", "wlr/taskbar"],
     "modules-right": ["tray", "custom/updater", "group/notify"],
   }
 ]

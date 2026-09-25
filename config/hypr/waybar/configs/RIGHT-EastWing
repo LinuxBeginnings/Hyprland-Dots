@@ -31,6 +31,7 @@
 ],
 
 "modules-center": [
+	"hyprland/submap",
 	"idle_inhibitor",
 	"hyprland/workspaces",
 ],

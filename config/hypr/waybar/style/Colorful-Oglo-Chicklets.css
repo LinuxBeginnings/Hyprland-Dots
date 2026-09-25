@@ -79,6 +79,7 @@ button.active {
 #disk,
 #idle_inhibitor,
 #memory,
+#submap,
 #mode,
 #mpris,
 #network,
@@ -537,4 +538,9 @@ tooltip label {
   -gtk-icon-style: symbolic;
   -gtk-icon-effect: none;
   opacity: 1;
+}
+
+/*-----Submap indicator (visible only while a submap is active)----*/
+#submap {
+  margin-right: 8px;
 }

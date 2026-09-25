@@ -33,6 +33,7 @@
 	"tray",
 	],
 "modules-center": [
+	"hyprland/submap",
 	"clock#forest",
 	"idle_inhibitor",
 	],

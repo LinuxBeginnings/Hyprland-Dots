@@ -24,6 +24,10 @@
 		"hyprland/window"
 	],
 
+	"modules-center": [
+		"hyprland/submap",
+	],
+
 	"modules-right": [
 		"custom/arrow9",
 		"pulseaudio",

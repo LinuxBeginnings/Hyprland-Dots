@@ -154,6 +154,7 @@ window#waybar.empty {
 #idle_inhibitor,
 #keyboard-state,
 #memory,
+#submap,
 #mode,
 #network,
 #power-profiles-daemon,
@@ -325,4 +326,9 @@ label:focus {
   -gtk-icon-style: symbolic;
   -gtk-icon-effect: none;
   opacity: 1;
+}
+
+/*-----Submap indicator (visible only while a submap is active)----*/
+#submap {
+  margin-right: 8px;
 }

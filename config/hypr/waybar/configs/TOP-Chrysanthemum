@@ -34,7 +34,7 @@
 	"group/notify"
 	],
   
-"modules-center": ["hyprland/workspaces"], 
+"modules-center": ["hyprland/submap", "hyprland/workspaces"], 
 	
 "modules-right": [
 	"pulseaudio#1",

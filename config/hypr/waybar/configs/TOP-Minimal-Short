@@ -24,6 +24,7 @@
 	],
 
 "modules-center": [
+	"hyprland/submap",
 	"hyprland/workspaces#roman"
 	],
 

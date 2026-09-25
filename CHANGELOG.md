@@ -121,6 +121,9 @@
 
 ## Added:
 
+- `submap` active indicator in Waybar
+  - Hidden when not in use
+  - Shows name of the active submap
 - Script `Fix-Fedora-45-overview.sh`
   - The QT libs require `quickshell-git` to resolve errors
     - `qs: symbol lookup error: qs: undefined symbol: _ZN23QUntypedPropertyBindingC1EP23QPropertyBindingPrivate, version Qt_6.11_PRIVATE_API`

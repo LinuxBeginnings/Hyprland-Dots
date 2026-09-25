@@ -37,7 +37,7 @@
 	"tray", 
 	"wlr/taskbar"],
 
-"modules-center": ["hyprland/window"], 
+"modules-center": ["hyprland/submap", "hyprland/window"], 
 	
 "modules-right": [
 	"custom/backlight",

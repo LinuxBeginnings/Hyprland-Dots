@@ -35,7 +35,7 @@
 	"tray"
 	],
   
-"modules-center": ["clock#4"], 
+"modules-center": ["hyprland/submap", "clock#4"], 
 	
 "modules-right": [
 	"battery",

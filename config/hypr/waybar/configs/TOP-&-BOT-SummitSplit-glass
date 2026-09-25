@@ -34,6 +34,7 @@
 	],
   
 "modules-center": [
+	"hyprland/submap",
 	"idle_inhibitor",
 	"clock",  
 	"custom/light_dark",
@@ -82,6 +83,7 @@
 	 ],
 
 "modules-center": [
+	"hyprland/submap",
 	"hyprland/workspaces#rw", 
 	],
 

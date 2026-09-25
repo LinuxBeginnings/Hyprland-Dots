@@ -34,6 +34,7 @@
 	],
 
 "modules-center": [
+	"hyprland/submap",
 	"custom/separator#blank",
 	"custom/swaync",
 	"hyprland/workspaces#rw",

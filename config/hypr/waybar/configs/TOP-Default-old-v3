@@ -36,6 +36,7 @@
 	],
 
 "modules-center": [
+	"hyprland/submap",
 	"group/notify",
 	"custom/cava_mviz",
 	"custom/separator#dot-line",

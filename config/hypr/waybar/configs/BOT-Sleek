@@ -30,6 +30,7 @@
 ],
 
 "modules-center": [
+	"hyprland/submap",
 	"idle_inhibitor",
 	"custom/separator#blank",
 	"clock",

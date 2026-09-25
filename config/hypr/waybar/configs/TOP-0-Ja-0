@@ -35,6 +35,7 @@
 	],
 
 "modules-center": [
+	"hyprland/submap",
 	"group/app_drawer",
 	"custom/separator#dot-line",
 	"hyprland/workspaces#rw",

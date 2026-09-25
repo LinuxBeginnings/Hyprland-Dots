@@ -33,6 +33,7 @@
     ],
     
 "modules-center": [
+  	"hyprland/submap",
   	//"hyprland/window",
  	"hyprland/workspaces#pacman",
 	],
@@ -75,6 +76,7 @@
     ],
     
 "modules-center": [
+    "hyprland/submap",
     "clock#vertical",
     ],
     
