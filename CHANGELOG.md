@@ -83,6 +83,11 @@
 
 ## Updated:
 
+- Improved `Cliphistory.sh`
+  - Fixed quoting issues
+  - Improved error and image handling
+- Rofi Emoji menu shows most recently used first
+  - Thank you `@BenedettiLucca` for the PR
 - `kitty.conf` added `remember_window_size no`
   - Kitty v0.49+ split window opens terminal w/o this setting
   - Thanks to `@卄乇尺ㄩ'ㄩ尺` for posting it
@@ -144,6 +149,67 @@
   - Adding Apps at startup
   - HowTo Install and Upgrade KoolDots
     - In English and Spanish
+
+---
+
+## v2.3.26.5
+
+- Fixed:
+  - Keyboard layout switcher ALT + SHIFT
+
+---
+
+## v2.3.6.4
+
+- Fixed:
+  - Missing or incorrect Keybinds
+    - Kitty
+    - Group/Ungroup
+  - Broken keybinds
+    - SUPER-R (Column presets scrolling layout)
+    - SUPER-G (Group/Ungroup)
+    - SUPER-ALT-Mouse Wheel (zoon)
+- Added:
+  - Docs for overriding GTK and Icon themes
+    - In English and Spanish
+
+---
+
+## v2.3.6.3
+
+## Fixed:
+
+- Global Theme now persistent
+  - Option added to return to wallpaper theme
+- Fixed default apps source order
+  - user variables now properly sourced
+- Wallust directory move to `~/.config/hypr`
+- `swaync` restarted with `SIG1`
+  - `swaync` doesn't have a handler for that
+  - Added `systemd --user` service instead
+  - Also prevents potential race condition
+  - Thanks to @hyperion-ak for finding and fixing this
+- Hardcoded `eDP-1` caused restore from sleep to fail and lose custom settings
+- Hardcoded entries in backlight scripts
+- TouchPad, keypad, slidepad detection
+  - Thanks to @goldyfruit for the fixes
+- `copy.sh` tries to update `~/.zprofile`
+  - NixOS systems using Home Manager use RO hard links
+  - Updated `copy.sh` to handle those and not exit with error
+
+## Updated:
+
+- Keyboard brightness improved across different HW
+- TouchPad auto detection of HW
+- Waybar backlight detection improved
+- Laptop lid switch detection improved with multi-monitor detection
+- Made global theme persistent
+  - Menu option to disable and go back to theme by wallpaper
+- `WindowRules.conf` isn't used in LUA mode
+  - Updated file to point to the .lua file
+  - Also added WindowRules.conf to the migraiton process properly
+- Moved `~/.config/wallust` to `!/.config/hypr/wallust`
+  - Phase 2 of moving out common config dirs for HL
 
 ---
 

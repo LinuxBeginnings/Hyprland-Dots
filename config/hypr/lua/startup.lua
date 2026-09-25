@@ -59,8 +59,9 @@ local startup_commands = {
   scriptsDir .. "/Hyprsunset.sh init",
   -- NOTE: Dropterminal is currently certified only with kitty. Not all terminals behave correctly as a dropdown.
   scriptsDir .. "/Dropterminal.sh --startup kitty",
-  "wl-paste --type text --watch cliphist store",
-  "wl-paste --type image --watch cliphist store",
+  -- Clipboard history: one supervised watcher handles every offered type
+  -- (text, images, uri-lists) and is restarted if wl-paste dies.
+  scriptsDir .. "/ClipboardWatcher.sh",
 }
 
 local function run_startup_commands()
