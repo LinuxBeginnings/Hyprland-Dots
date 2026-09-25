@@ -4,200 +4,239 @@
 --  License: GNU GPLv3
 --  SPDX-License-Identifier: GPL-3.0-or-later
 -- ==================================================
+--
+-- Submap helper: creates and wires up Hyprland keybind submaps.
+--
+-- Public API (exposed as `submap` by UserConfigs/user_keybinds.lua):
+--   submap.auto.release(name, keybind, fn)    -- hold the key to stay in the submap
+--   submap.auto.toggle(name, keybind, fn)     -- press to enter, press again to leave
+--   submap.man(name, entry, exit, fn)         -- enter with `entry`, leave with `exit`
+--   submap.create(name, keybind, fn)          -- only create the submap entry bind
+--   submap.define(name, keybind, fn)          -- create the entry bind + register the body
+--
+-- IMPORTANT: `hl` is resolved lazily on every call, never captured at load time.
+-- Hyprland only guarantees the `hl` global while it is executing config files,
+-- and it rebuilds the entire Lua state on reload. Caching `hl` (or
+-- `hl.dsp`/`hl.bind`) into locals at module load means one bad load permanently
+-- disables every submap - silently, or with confusing nil errors - until
+-- Hyprland restarts. Resolving per call keeps the module immune to load order.
+
 local Submap = {
   auto = {},
 }
-local hl = hl or {}
-local dsp = hl.dsp or {}
-local dispatch = hl.dispatch or {}
-local bind = hl.bind or {}
 
-local function submap_logic(name, binds, opt, fn)
-  if type(opt) == "function" or (type(opt) == "table" and getmetatable(opt) and type(getmetatable(opt).__call) == "function") then
+-- Recognised modifiers, mirroring user_keybinds_helper.lua plus MOD2/MOD3.
+-- Values are the canonical spelling emitted in the keybind chord.
+local MODIFIER_ALIASES = {
+  super = "SUPER",
+  super_l = "SUPER",
+  super_r = "SUPER",
+  meta = "META",
+  meta_l = "META",
+  meta_r = "META",
+  ctrl = "CTRL",
+  ctrl_l = "CTRL",
+  ctrl_r = "CTRL",
+  control = "CTRL",
+  control_l = "CTRL",
+  control_r = "CTRL",
+  crtl = "CTRL", -- common typo for CTRL
+  alt = "ALT",
+  alt_l = "ALT",
+  alt_r = "ALT",
+  shift = "SHIFT",
+  shift_l = "SHIFT",
+  shift_r = "SHIFT",
+  mod1 = "MOD1",
+  mod2 = "MOD2",
+  mod3 = "MOD3",
+  mod4 = "MOD4",
+  mod5 = "MOD5",
+}
+
+-- Resolve Hyprland's `hl` API at call time and fail loudly if it is missing
+-- instead of degrading to an empty table (which yields silent no-ops).
+local function require_hl()
+  local api = rawget(_G, "hl")
+  if type(api) ~= "table" then
+    error(
+      "[submap_helper] Hyprland's 'hl' API is not available. This module must run "
+        .. "inside Hyprland's Lua config and cannot be executed standalone.",
+      3
+    )
+  end
+  return api
+end
+
+local function require_hl_function(field)
+  local api = require_hl()
+  if type(api[field]) ~= "function" then
+    error(string.format("[submap_helper] Hyprland's 'hl.%s' API is not available in this Hyprland build.", field), 3)
+  end
+  return api[field]
+end
+
+-- `hl.dsp.submap(name)` is a dispatcher factory: it must be RETURNED and handed
+-- to hl.bind. Calling it and discarding the result binds a nil dispatcher.
+local function submap_dispatcher(target)
+  local dsp = require_hl().dsp
+  if type(dsp) ~= "table" or type(dsp.submap) ~= "function" then
+    error("[submap_helper] Hyprland's 'hl.dsp.submap' API is not available in this Hyprland build.", 3)
+  end
+  return dsp.submap(target)
+end
+
+local function submap_bind(chord, dispatcher, opts)
+  local bind = require_hl_function("bind")
+  if opts then
+    return bind(chord, dispatcher, opts)
+  end
+  return bind(chord, dispatcher)
+end
+
+local function submap_define(name, body)
+  return require_hl_function("define_submap")(name, body)
+end
+
+local function require_callable(fn, what)
+  if type(fn) == "function" then
+    return fn
+  end
+  error(string.format("Submap Error: %s must be a function, got %s.", what or "argument", type(fn)), 3)
+end
+
+-- Normalise a keybind spec into a Hyprland chord string.
+-- Accepts "SUPER SHIFT E", "SUPER, SHIFT, E", "SUPER + SHIFT + E" or a table.
+local function parse_keybind(spec)
+  local tokens = {}
+  if type(spec) == "string" and spec ~= "" then
+    for token in spec:gmatch("[^%s,+]+") do
+      tokens[#tokens + 1] = token
+    end
+  elseif type(spec) == "table" then
+    for _, token in ipairs(spec) do
+      tokens[#tokens + 1] = tostring(token)
+    end
+  end
+
+  if #tokens == 0 then
+    error("Submap Error: a keybind is required, e.g. \"SUPER + E\" or \"mouse:274\".", 3)
+  end
+
+  local mods, keys = {}, {}
+  for _, token in ipairs(tokens) do
+    local canonical = MODIFIER_ALIASES[tostring(token):lower()]
+    if canonical then
+      mods[#mods + 1] = canonical
+    else
+      keys[#keys + 1] = tostring(token)
+    end
+  end
+
+  if #keys ~= 1 then
+    error(
+      string.format(
+        "Submap Error: a keybind needs exactly one non-modifier key, got %d (%s). "
+          .. "Supported modifiers: SUPER, CTRL, ALT, SHIFT, MOD1-MOD5, META.",
+        #keys,
+        tostring(spec)
+      ),
+      3
+    )
+  end
+  if #mods > 2 then
+    error(string.format("Submap Error: a maximum of 2 modifiers is supported, got %d (%s).", #mods, tostring(spec)), 3)
+  end
+
+  if #mods == 0 then
+    return keys[1]
+  end
+  return table.concat(mods, " + ") .. " + " .. keys[1]
+end
+
+-- Shared validation. `opt` is the separate exit chord for submap.man(); when it
+-- is a function it is the submap body instead (auto.release / auto.toggle).
+local function submap_logic(name, entry_spec, opt, fn)
+  local exit_spec
+  if type(opt) == "function" then
     fn = opt
-    opt = nil
+  else
+    exit_spec = opt
   end
 
-  local function check_name(name)
-    local checked_name = tostring(name or "")
-    if checked_name == "" or checked_name == "nil" then
-      error("Submap Error: Name cannot be an empty.")
-    end
-    return checked_name
+  local checked_name = tostring(name or "")
+  if checked_name == "" or checked_name == "nil" then
+    error("Submap Error: submap name cannot be empty.", 3)
   end
 
-  local function check_keys(binds)
-    local indiv_keys = {}
-    if type(binds) == "string" and binds ~= "" then
-      for k in string.gmatch(binds, "[^,%s]+") do
-        table.insert(indiv_keys, k)
-      end
-    elseif type(binds) == "table" then
-      for _, v in ipairs(binds) do
-        table.insert(indiv_keys, v)
-      end
-    else
-      error("Submap Error: Keybinds cannot be empty and cannot be >3 buttons.")
-    end
-    local all_mods = {
-      SUPER = true,
-      CTRL = true,
-      CONTROL = true,
-      ALT = true,
-      SHIFT = true,
-      MOD1 = true,
-      MOD4 = true,
-      MOD5 = true
-    }
-    local keys = {}
-    local mods = {}
-    for _, indiv_key in ipairs(indiv_keys) do
-      if all_mods[tostring(indiv_key):upper()] then
-        table.insert(mods, indiv_key)
-      else
-        table.insert(keys, indiv_key)
-      end
-    end
-    if #mods > 2 then
-      error(string.format("Submap Error: There is a maximum of 2 modifier keys when using submap."))
-    elseif #keys ~= 1 then
-      error(string.format("Submap Error: There needs to be one non-modifer key when using submap."))
-    end
-    local mod_str = #mods > 1 and table.concat(mods, " + ") or mods[1] or ""
-    local key_str = tostring(keys[1])
-    if mod_str ~= "" then
-      Keybind = string.format("%s, %s", mod_str, key_str)
-    else
-      Keybind = string.format("%s", key_str)
-    end
-    return Keybind
-  end
-
-  local function is_callable(fn)
-    if type(fn) == "function" or (type(fn) == "table" and getmetatable(fn) and type(getmetatable(fn).__call) == "function") then
-      return fn
-    else
-      error("Submap Error: Function(s) not callable. Please enter valid function(s)")
-      return nil
-    end
-  end
-
-  local function check_function(fn)
-    local checked_function = nil
-    if not is_callable(fn) then
-      error(string.format("Submap Error: %s is not a valid function", tostring(fn)))
-    else
-      checked_function = fn
-    end
-    return checked_function
-  end
-  local checked_name = check_name(name)
-  local keybind = check_keys(binds)
-  local keybind2 = opt and check_keys(opt) or nil
-  local checked_function = check_function(fn)
-  if not checked_name or not checked_function or not keybind then
-    error("Submap Error: There's been an error checking params set while using submap.")
-    return { success = false }
-  end
-  local function dsp_submap(submap_target)
-    local target = submap_target
-    if hl and hl.dsp and type(hl.dsp.submap) == "function" then
-      hl.dsp.submap(target)
-    elseif hl and type(dispatch) == "function" then
-      dispatch(submap(target))
-    else
-      os.execute(string.format("hyprctl dispatch submap %s", target))
-    end
-  end
-
-  local function create_submap()
-    if hl and hl.dsp then
-      return bind(keybind, dsp_submap(checked_name))
-    end
-  end
-
-  local function define_submap(fn)
-    if hl and hl.define_submap then
-      return hl.define_submap(checked_name, fn)
-    end
-  end
-
-  local function reset_submap()
-    if hl and hl.dsp then
-      return dsp_submap("reset")
-    end
-  end
-
-  local function toggle_submap()
-    bind(keybind, dsp.submap(checked_name))
-    hl.define_submap(checked_name, function()
-      bind(keybind, dsp.submap("reset"))
-      checked_function()
-    end)
-  end
-
-  local function release_submap()
-    bind(keybind, dsp.submap(checked_name))
-    hl.define_submap(checked_name, checked_function)
-    bind(keybind, dsp.submap("reset"), { release = true })
-  end
-
-  local function separate_binds()
-    bind(keybind, dsp.submap(checked_name))
-    hl.define_submap(checked_name, function()
-      bind(keybind2, dsp.submap("reset"))
-      checked_function()
-    end)
-  end
-
-  return{
-    success = true,
-    binds = binds,
+  return {
     name = checked_name,
-    fn = checked_function,
-    create = create_submap,
-    define = define_submap,
-    reset = reset_submap,
-    toggle_submap = toggle_submap,
-    release_submap = release_submap,
-    separate_binds = separate_binds,
+    entry_chord = parse_keybind(entry_spec),
+    exit_chord = exit_spec ~= nil and parse_keybind(exit_spec) or nil,
+    body = fn,
   }
 end
 
+-- Only create the submap: bind the entry chord to the submap dispatcher.
+local function create_submap(ctx)
+  return submap_bind(ctx.entry_chord, submap_dispatcher(ctx.name))
+end
+
+-- Register the submap body. Hyprland runs `body` in the submap's context, so any
+-- binds created inside it are only active while the submap is active.
+local function define_body(ctx)
+  return submap_define(ctx.name, require_callable(ctx.body, "the submap body"))
+end
+
+local function toggle_submap(ctx)
+  create_submap(ctx)
+  submap_define(ctx.name, function()
+    submap_bind(ctx.entry_chord, submap_dispatcher("reset"))
+    require_callable(ctx.body, "the submap body")()
+  end)
+end
+
+local function release_submap(ctx)
+  create_submap(ctx)
+  submap_define(ctx.name, function()
+    -- Binds registered in the parent submap are inactive once this submap is
+    -- active, so the release-to-exit bind has to live inside the submap body.
+    submap_bind(ctx.entry_chord, submap_dispatcher("reset"), { release = true })
+    require_callable(ctx.body, "the submap body")()
+  end)
+end
+
+local function separate_binds(ctx)
+  if not ctx.exit_chord then
+    error("Submap Error: submap.man() requires separate entry and exit keybinds.", 3)
+  end
+  create_submap(ctx)
+  submap_define(ctx.name, function()
+    submap_bind(ctx.exit_chord, submap_dispatcher("reset"))
+    require_callable(ctx.body, "the submap body")()
+  end)
+end
 
 function Submap.auto.release(name, binds, fn)
-  local helper = submap_logic(name, binds, fn)
-  if helper and helper.success then
-    return helper.release_submap()
-  end
+  return release_submap(submap_logic(name, binds, fn))
 end
 
 function Submap.auto.toggle(name, binds, fn)
-  local helper = submap_logic(name, binds, fn)
-  if helper and helper.success then
-    return helper.toggle_submap()
-  end
+  return toggle_submap(submap_logic(name, binds, fn))
 end
 
 function Submap.man(name, bind1, bind2, fn)
-  local helper = submap_logic(name, bind1, bind2, fn)
-  if helper and helper.success then
-    return helper.separate_binds()
-  end
+  return separate_binds(submap_logic(name, bind1, bind2, fn))
 end
 
 function Submap.create(name, binds, fn)
-  local helper = submap_logic(name, binds, fn)
-  if helper and helper.success then
-    return helper.create()
-  end
+  return create_submap(submap_logic(name, binds, fn))
 end
 
 function Submap.define(name, binds, fn)
-  local helper = submap_logic(name, binds, fn)
-  if helper and helper.success then
-    return helper.create() and helper.define()
-  end
+  local ctx = submap_logic(name, binds, nil, fn)
+  create_submap(ctx)
+  return define_body(ctx)
 end
 
 return { submap = Submap }
