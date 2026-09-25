@@ -1043,3 +1043,12 @@ bind("SUPER", "period", dispatch("workspace", "e+1"), { description = "next work
 bind("SUPER", "comma", dispatch("workspace", "e-1"), { description = "previous workspace" })
 bind("SUPER", "mouse:272", dispatch("movewindow", ""), { description = "move window" })
 bind("SUPER", "mouse:273", dispatch("resizewindow", ""), { description = "resize window" })
+
+-- KB passthrough submap: SUPER SHIFT P enters a submap that lets the keyboard
+-- pass through to the focused window. The only key bound inside the submap is
+-- SUPER ALT P, which resets back to the normal submap. Waybar's hyprland/submap
+-- module shows "submap: Bind KB" only while it is active.
+bind("SUPER SHIFT", "P", hl.dsp.submap("Bind KB"), { description = "Enter KB passthrough submap" })
+hl.define_submap("Bind KB", function()
+  bind("SUPER ALT", "P", hl.dsp.submap("reset"), { description = "Exit KB passthrough submap" })
+end)
