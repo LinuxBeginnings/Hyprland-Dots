@@ -61,43 +61,57 @@ do
   local source_path = source:match("^@(.+)$")
   local source_dir = source_path and source_path:match("^(.*)/[^/]+$") or nil
   local home = os.getenv("HOME") or ""
-  local candidate_paths = {
-    source_dir and (source_dir .. "/../lua/user_keybinds_helper.lua") or nil,
-    source_dir and (source_dir .. "/../lua/submap_helper.lua") or nil,
-    home ~= "" and (home .. "/.config/hypr/lua/user_keybinds_helper.lua") or nil,
-    home ~= "" and (home .. "/.config/hypr/lua/submap_helper.lua") or nil,
-    home ~= "" and (home .. "/.config/hypr/user_keybinds_helper.lua") or nil,
-    home ~= "" and (home .. "/.config/hypr/submap_helper.lua") or nil,
-  }
 
-  local tried_paths = {}
-  for _, helper_path in ipairs(candidate_paths) do
-    if helper_path then
-      table.insert(tried_paths, helper_path)
-      local f = io.open(helper_path, "r")
-      if f then
-        f:close()
-        local loaded_ok, loaded_helpers = pcall(dofile, helper_path)
-        if loaded_ok and type(loaded_helpers) == "table" then
-          if loaded_helpers.bind then
-            user_keybinds_helper = loaded_helpers
-          end
-          if loaded_helpers.submap then
-            submap_helper = loaded_helpers
+  -- Load a helper module from the first candidate path that defines what we
+  -- expect. Each helper is loaded exactly once, so a local copy always wins
+  -- over the shipped template and no module is executed twice.
+  local function load_helper(file_name, validate)
+    local candidate_paths = {
+      source_dir and (source_dir .. "/../lua/" .. file_name) or nil,
+      home ~= "" and (home .. "/.config/hypr/lua/" .. file_name) or nil,
+      home ~= "" and (home .. "/.config/hypr/" .. file_name) or nil,
+    }
+
+    local tried_paths = {}
+    for _, helper_path in ipairs(candidate_paths) do
+      if helper_path then
+        table.insert(tried_paths, helper_path)
+        local f = io.open(helper_path, "r")
+        if f then
+          f:close()
+          local loaded_ok, loaded_helpers = pcall(dofile, helper_path)
+          if loaded_ok and type(loaded_helpers) == "table" and validate(loaded_helpers) then
+            return loaded_helpers
           end
         end
       end
     end
+
+    return nil, tried_paths
   end
 
+  local tried_paths
+  user_keybinds_helper, tried_paths = load_helper("user_keybinds_helper.lua", function(helpers)
+    return helpers.bind ~= nil
+  end)
   if not user_keybinds_helper then
-    error("Failed to load user_keybinds_helper.lua from: " .. table.concat(tried_paths, ", "))
+    error("Failed to load user_keybinds_helper.lua from: " .. table.concat(tried_paths or {}, ", "))
   end
+
+  -- submap_helper is optional: a missing or broken file must not take down all
+  -- user keybinds, so it degrades to a warning and the keybinds below still load.
+  submap_helper = load_helper("submap_helper.lua", function(helpers)
+    return helpers.submap ~= nil
+  end)
 end
 
 local exec_cmd = user_keybinds_helper.exec_cmd
 local dispatch = user_keybinds_helper.dispatch
 local bind = user_keybinds_helper.bind
 local unbind = user_keybinds_helper.unbind
-local submap = submap_helper.submap
+local submap = submap_helper and submap_helper.submap or nil
+if not submap then
+  print("[WARN] submap_helper.lua was not found; the submap.* helpers are unavailable. "
+    .. "Copy config/hypr/lua/submap_helper.lua to ~/.config/hypr/lua/ to enable them.")
+end
 
