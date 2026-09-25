@@ -1,125 +1,154 @@
 # **Submaps**
 
-Submaps allow you to create a new set of keybinds, separate from the standard bindings. They work in modes (e.g in or out of a submap). You can set up a many submaps as you'd like This makes the customisability of keybindings almost infinite. 
+Submaps let you activate a separate set of keybinds — for example a "resize mode" or a
+media-control mode — without giving up your normal bindings. You can create as many
+submaps as you like, which makes keybinding customisation very flexible.
 
-The official documentation in the hyprland wiki can be found [here](https://wiki.hypr.land/configuring/core/binds/submaps/).
+The official Hyprland documentation is
+[here](https://wiki.hypr.land/configuring/core/binds/submaps/).
 
-## **Kool-dots Submap**
+## **KoolDots Submap**
 
-The submap function, available in /hypr/UserConfigs/user_keybings.lua, allows you to set up and execute submaps without the extra set-up (especially because they can be finicky).
-
-The submap function has a few options available:
-
-
- submap  
-├── auto  
-│      ├── release  
-│      └── toggle  
-├── man  
-├── create  
-└── define  
-
-#### auto - Automatically sets up the complete submap with the options of toggle or while holding the triggering key. 
-
+`submap_helper.lua` (in `hypr/lua/`) wraps Hyprland's native
+[`hl.dsp.submap`](https://wiki.hypr.land/configuring/core/binds/submaps/) and
+`hl.define_submap` so you don't have to wire up the entry bind, the submap body and the
+exit bind yourself. It is loaded for you in `hypr/UserConfigs/user_keybinds.lua` and
+exposed as the `submap` table:
 
 ```
+ submap
+├── auto
+│      ├── release
+│      └── toggle
+├── man
+├── create
+└── define
+```
+
+All of these are defined inside `hypr/UserConfigs/user_keybinds.lua`, so `submap`,
+`bind`, `unbind`, `exec_cmd` and `hl` are all in scope when you call them.
+
+If `submap_helper.lua` cannot be found you will see a `[WARN]` in the log and `submap`
+will be `nil`; every other keybind still loads normally.
+
+### Trigger keybind rules
+
+The trigger keybind you pass to these helpers can be written as a string
+(`"SUPER + SHIFT + E"`, `"SUPER, SHIFT, E"` or `"SUPER SHIFT E"`) or as a table. It must
+contain **exactly one non-modifier key** and **at most 2 modifiers**. Recognised
+modifiers are `SUPER`, `CTRL` (also `CONTROL`), `ALT`, `SHIFT`, `META` and `MOD1`–`MOD5`.
+Keys may be ordinary keysyms (`E`), keycodes (`code:11`) or mouse buttons (`mouse:274`).
+
+### `auto`
+
+Sets up the complete submap — entry bind, body and exit — in one call. Use `release`
+to stay in the submap only while the trigger key is held, or `toggle` to enter on one
+press and leave on the next.
+
+```lua
 submap.auto.release(name, keybind, function()
-
--- your binds here
-
+  -- binds that are only active inside the submap
 end)
 
 submap.auto.toggle(name, keybind, function()
-
--- your binds here
-
+  -- binds that are only active inside the submap
 end)
 ```
 
-#### man - Allows you to use separate binds for entry and exiting your submap.
+> **Note:** `submap.auto.release` needs the submap to receive the key-release event that
+> entered it. This was unreliable in Hyprland's Lua config before ~0.56; on older
+> versions prefer `submap.man()` with separate entry and exit chords.
 
-```
-submap.man(name, keybind1, keybind2, function()
+### `man`
 
--- your binds here
+Uses separate keybinds to enter and leave the submap. This is the most portable option
+and the one to use when the same trigger chord for entry and exit is a problem.
 
+```lua
+submap.man(name, entry_keybind, exit_keybind, function()
+  -- binds that are only active inside the submap
 end)
 ```
 
-#### create - only triggers the creation of the submap 
+### `create`
 
-```
-submap.create(name, keybind, function()
+Only binds the entry keybind to the submap. You are responsible for registering the
+submap body yourself with `hl.define_submap(name, function() ... end)`. `create` takes no
+body.
 
-hl.define_submap(name)
-
--- your binds here
-
-bind(keybind, hl.dsp.submap("reset"), {flags}
-end)
+```lua
+submap.create(name, keybind)
 ```
 
-#### define - only outputs the create and define functions
+### `define`
 
-```
-submap.define(name, keybind, function() 
+Binds the entry keybind **and** registers the body you pass in. Unlike `auto`, it does not
+add an exit bind for you, so add one (`hl.dsp.submap("reset")`) inside the body.
 
--- your binds here
+```lua
+submap.define(name, keybind, function()
+  -- binds that are only active inside the submap
 
-bind(keybind, hl.dsp.submap("reset"), {flags}
+  bind("", "escape", hl.dsp.submap("reset"), { description = "Leave the submap" })
 end)
 ```
 
 ## Examples
 
-- Note that keybinds do not need to have mod keys, but they can be used.
+- Trigger keybinds do not need modifiers, but they can use them.
+- Remember to always provide a way out. A submap with no exit bind will trap you; if it
+  happens, run `hyprctl dispatch 'hl.dsp.submap("reset")'` from another TTY.
 
-### Example 1  
-This alows you to perform media controls while holding down the middle mouse buttion. 
+### Example 1
 
-```
-Submap.auto.release("Media", "mouse:274", function()
+Media controls while holding down the middle mouse button. Holding the button opens the
+submap, and releasing it goes back to your normal binds.
 
-bind("", "w", exec_cmd("playerctl volume 0.1+"))
+```lua
+submap.auto.release("Media", "mouse:274", function()
 
-bind("", "s", exec_cmd("playerctl volume 0.1-"))
-
-bind("", "a", exec_cmd("playerctl previous"))
-
-bind("", "d", exec_cmd("playerctl next"))
-
-bind("", "e", exec_cmd("playerctl play-pause"))
+  bind("", "w", exec_cmd("playerctl volume 0.1+"))
+  bind("", "s", exec_cmd("playerctl volume 0.1-"))
+  bind("", "a", exec_cmd("playerctl previous"))
+  bind("", "d", exec_cmd("playerctl next"))
+  bind("", "e", exec_cmd("playerctl play-pause"))
 
 end)
 ```
 
 ### Example 2
-Here is a way to switch into a secondary mode that allows you to insert text macros.
-```
-submap.auto.toggle("Macros", "CRTL ALT + code:11", function()
 
-bind("SUPER", "E", exec_cmd('ydotool type "e-mail address"'))
-bind("SUPER + SHIFT", "E", exec_cmd('ydotool type "e-mail address 2"'))
-bind("SUPER", "U", exec_cmd('ydotool type "Username"'))
-bind("SUPER + SHIFT", "U", exec_cmd('ydotool type "Username 2"'))
+A secondary mode for inserting text macros. Press the trigger to enter, press it again to
+leave.
 
-bind("", "1", 
-exec_cmd('ydotool type "#include<stdio.h>" -k Return "#include<stdlib.h>" -k Return "int main()" -k Return "{)"'),
-{description = "Create std C file"})
+```lua
+submap.auto.toggle("Macros", "CTRL ALT code:11", function()
+
+  bind("", "E", exec_cmd('ydotool type "e-mail address"'))
+  bind("SHIFT", "E", exec_cmd('ydotool type "e-mail address 2"'))
+  bind("", "U", exec_cmd('ydotool type "Username"'))
+  bind("SHIFT", "U", exec_cmd('ydotool type "Username 2"'))
+
+  bind("", "1",
+    exec_cmd('ydotool type "#include<stdio.h>" -k Return "#include<stdlib.h>" -k Return "int main()" -k Return "{}"'),
+    { description = "Create std C file" })
 
 end)
 ```
-- Note when using macros to input text use ydotool, as using wtype results in undefined behavior.
+
+- When injecting text, use `ydotool`; `wtype` results in undefined behaviour.
 
 ### Example 3
-Submaps can also be used as a way to launch additional applications not already bound. If you would like to change
-the default app launch bindings, you can use unbind to free the default bindings for different uses. 
-```
-submap.auto.release("App-Shortcuts", "Mod2", function()
 
-bind("", "S", exec_cmd("Steam &"))
-bind("", "F", exec_cmd("org.ferdium.Ferdium")) --[[great app btw ;)]]
-bind("", "M", exec_cmd("spotify-launcher &"))
+Submaps can also launch applications that have no binding of their own. If you would
+rather reuse a chord that is already bound, call `unbind("MODS", "KEY")` first to free it.
+
+```lua
+submap.auto.toggle("App-Shortcuts", "SUPER ALT A", function()
+
+  bind("", "S", exec_cmd("steam &"))
+  bind("", "F", exec_cmd("org.ferdium.Ferdium")) --[[ great app btw ;) ]]
+  bind("", "M", exec_cmd("spotify-launcher &"))
 
 end)
 ```
