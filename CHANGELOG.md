@@ -83,6 +83,7 @@
 
 ## Updated:
 
+- `copy.sh` express upgrade copies waybar files now
 - Improved `Cliphistory.sh`
   - Fixed quoting issues
   - Improved error and image handling

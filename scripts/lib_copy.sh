@@ -231,6 +231,29 @@ _waybar_dir_has_stale_paths() {
   return 1
 }
 
+# Sync repo-managed Waybar files into an already-installed waybar directory
+# without clobbering user-created files. Files shipped by the repo (Modules,
+# Modules*, configs/, style/) are refreshed, but anything that only exists in
+# the user's install is left in place because rsync runs without --delete.
+# User-owned and runtime-generated content is excluded so it is never
+# overwritten: UserModules, generated wallust colors, and the top-level
+# config/style.css symlinks (the user's active layout/style selection).
+_rsync_waybar_system_files() {
+  local target_dir="$1"
+  local source_dir="$2"
+  local log="${3:-/dev/null}"
+
+  [ -d "$source_dir" ] || return 1
+  [ -d "$target_dir" ] || return 1
+
+  rsync -a \
+    --exclude='/UserModules' \
+    --exclude='/wallust/' \
+    --exclude='/config' \
+    --exclude='/style.css' \
+    "$source_dir/" "$target_dir/" >>"$log" 2>&1
+}
+
 copy_waybar() {
   local log="$1"
   local run_mode="${2:-${RUN_MODE:-}}"
@@ -277,7 +300,14 @@ copy_waybar() {
     fi
 
     if [ "$run_mode" = "express" ]; then
-      echo -e "${NOTE:-[NOTE]} - Express mode: keeping existing ${YELLOW:-}$DIRW${RESET:-} config." 2>&1 | tee -a "$log"
+      # Express keeps the user's layout/style choice, but still refreshes the
+      # repo-managed Waybar files so dotfiles updates (e.g. new modules) apply.
+      echo -e "${NOTE:-[NOTE]} - Express mode: syncing system ${YELLOW:-}$DIRW${RESET:-} files (user-created files preserved)." 2>&1 | tee -a "$log"
+      if _rsync_waybar_system_files "$DIRPATHw" "$base/config/hypr/$DIRW" "$log"; then
+        echo -e "${OK:-[OK]} - Synced system ${YELLOW:-}$DIRW${RESET:-} files into ${YELLOW:-}$DIRPATHw${RESET:-}." 2>&1 | tee -a "$log"
+      else
+        echo -e "${WARN:-[WARN]} - ${YELLOW:-}$DIRW${RESET:-} system sync skipped (missing source or target)." 2>&1 | tee -a "$log"
+      fi
       return 0
     fi
     while true; do
