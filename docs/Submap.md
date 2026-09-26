@@ -55,9 +55,13 @@ submap.auto.toggle(name, keybind, function()
 end)
 ```
 
-> **Note:** `submap.auto.release` needs the submap to receive the key-release event that
-> entered it. This was unreliable in Hyprland's Lua config before ~0.56; on older
-> versions prefer `submap.man()` with separate entry and exit chords.
+> **Note:** `submap.auto.release` registers the release-to-exit bind in the parent
+> submap, alongside the entry bind, rather than inside the submap body. Hyprland
+> matches a key-release against the submap that was active when the key was
+> *pressed*, so a release bind placed inside the submap body would never fire and
+> the chord would behave like a toggle instead of releasing. If a trigger chord for
+> entry and exit is a problem on your setup, prefer `submap.man()` with separate
+> entry and exit chords.
 
 ### `man`
 

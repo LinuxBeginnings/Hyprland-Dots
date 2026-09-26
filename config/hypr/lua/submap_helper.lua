@@ -198,12 +198,18 @@ end
 
 local function release_submap(ctx)
   create_submap(ctx)
-  submap_define(ctx.name, function()
-    -- Binds registered in the parent submap are inactive once this submap is
-    -- active, so the release-to-exit bind has to live inside the submap body.
-    submap_bind(ctx.entry_chord, submap_dispatcher("reset"), { release = true })
-    require_callable(ctx.body, "the submap body")()
-  end)
+  -- The release-to-exit bind is deliberately registered in the PARENT scope,
+  -- next to the entry bind, and NOT inside the submap body.
+  --
+  -- Hyprland matches a bind against the submap that was active when the key was
+  -- *pressed* (the stored `submapAtPress`), not the submap that is active when
+  -- the key is *released*. The entry press happens in the parent submap, so a
+  -- release bind stored in this submap's body (submap = ctx.name) never matches
+  -- the release event: the submap then stays active and the chord appears to
+  -- toggle instead of releasing. Registering it outside define_submap keeps it
+  -- in the parent submap, where it matches `submapAtPress` and resets on release.
+  submap_bind(ctx.entry_chord, submap_dispatcher("reset"), { release = true })
+  submap_define(ctx.name, require_callable(ctx.body, "the submap body"))
 end
 
 local function separate_binds(ctx)
