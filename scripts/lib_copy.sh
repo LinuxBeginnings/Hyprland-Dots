@@ -411,6 +411,65 @@ copy_phase2() {
   install_terminal_configs "$log"
 }
 
+# Sync repo-managed quickshell files into an already-installed quickshell
+# directory without clobbering user-created content. Because rsync runs
+# without --delete, repo files are refreshed while user-only files and
+# directories (e.g. custom quickshell apps) are left untouched. The
+# user-tunable/runtime files config.json and qml_color.json are preserved when
+# present so a user's shell settings and generated theme colors are not reset
+# on upgrade. A non-destructive safety copy is taken first.
+sync_quickshell_config() {
+  local log="${1:-/dev/null}"
+  local base="${DOTFILES_DIR:-.}"
+  local src_dir="$base/config/quickshell"
+  local dest_dir="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
+
+  [ -d "$src_dir" ] || return 1
+  mkdir -p "$dest_dir"
+
+  # Non-destructive safety copy so nothing is ever unrecoverable.
+  local BACKUP_DIR
+  BACKUP_DIR=$(get_backup_dirname)
+  if [ -n "$(ls -A "$dest_dir" 2>/dev/null)" ] && [ ! -d "${dest_dir}-backup-$BACKUP_DIR" ]; then
+    cp -r "$dest_dir" "${dest_dir}-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
+    echo "${NOTE:-[NOTE]} - Backed up quickshell to ${dest_dir}-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
+  fi
+
+  # Refresh repo-managed files; exclude user-tunable/runtime files that exist.
+  local rsync_args=(-a)
+  local f
+  for f in config.json qml_color.json; do
+    if [ -f "$dest_dir/$f" ]; then
+      rsync_args+=(--exclude="/$f")
+    fi
+  done
+
+  if rsync "${rsync_args[@]}" "$src_dir/" "$dest_dir/" 2>&1 | tee -a "$log"; then
+    echo "${OK:-[OK]} - Synced ${YELLOW:-}quickshell${RESET:-} files (user custom apps preserved)." 2>&1 | tee -a "$log"
+  else
+    echo "${ERROR:-[ERROR]} - Failed to sync ${YELLOW:-}quickshell${RESET:-} config." 2>&1 | tee -a "$log"
+    return 1
+  fi
+
+  # Install defaults for preserved files only when they are missing.
+  for f in config.json qml_color.json; do
+    if [ ! -f "$dest_dir/$f" ] && [ -f "$src_dir/$f" ]; then
+      cp -f "$src_dir/$f" "$dest_dir/$f" 2>&1 | tee -a "$log"
+    fi
+  done
+
+  # Ensure overview and qs-hyprview subdirectories exist if missing.
+  local sub
+  for sub in overview qs-hyprview; do
+    if [ ! -d "$dest_dir/$sub" ] && [ -d "$src_dir/$sub" ]; then
+      echo "${INFO:-[INFO]} - Copying quickshell $sub config..." 2>&1 | tee -a "$log"
+      cp -r "$src_dir/$sub" "$dest_dir/" 2>&1 | tee -a "$log"
+    fi
+  done
+
+  return 0
+}
+
 # Fresh install default: enable Hyprland Lua entrypoint (next release is Lua-only).
 enable_fresh_install_lua_config() {
   local log="${1:-/dev/null}"

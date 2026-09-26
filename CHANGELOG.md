@@ -83,6 +83,7 @@
 
 ## Updated:
 
+- `copy.sh` properly syncs quickshell apps w/o overwritting user apps/widgets
 - `copy.sh` express upgrade copies waybar files now
 - Improved `Cliphistory.sh`
   - Fixed quoting issues
@@ -122,6 +123,10 @@
 
 ## Added:
 
+- A `UserConfig`, `UserScripts` patch system
+  - Will allow important updates w/o overwritting user changes
+- `submap` helper to make creating and managing submaps easier
+  - Thank you `@Treinator` for the code
 - `submap` active indicator in Waybar
   - Hidden when not in use
   - Shows name of the active submap

@@ -91,6 +91,7 @@ PROMPTS_HELPER="$SCRIPT_DIR/scripts/lib_prompts.sh"
 APPS_HELPER="$SCRIPT_DIR/scripts/lib_apps.sh"
 COPY_HELPER="$SCRIPT_DIR/scripts/lib_copy.sh"
 UPDATE_HELPER="$SCRIPT_DIR/scripts/lib_update.sh"
+PATCHES_HELPER="$SCRIPT_DIR/scripts/lib_patches.sh"
 if [ -f "$MENU_HELPER" ]; then
   # shellcheck source=./scripts/copy_menu.sh
   . "$MENU_HELPER"
@@ -136,6 +137,10 @@ if [ -f "$UPDATE_HELPER" ]; then
 else
   echo "${ERROR} Update helper not found at $UPDATE_HELPER. Exiting."
   exit 1
+fi
+if [ -f "$PATCHES_HELPER" ]; then
+  # shellcheck source=./scripts/lib_patches.sh
+  . "$PATCHES_HELPER"
 fi
 
 # Optional helper fallbacks
@@ -215,6 +220,12 @@ if ! declare -f capture_runtime_personal_state >/dev/null 2>&1; then
 fi
 if ! declare -f preserve_custom_sddm_configs >/dev/null 2>&1; then
   preserve_custom_sddm_configs() { :; }
+fi
+if ! declare -f apply_user_patches >/dev/null 2>&1; then
+  apply_user_patches() {
+    local log="${1:-/dev/null}"
+    echo "${NOTE} apply_user_patches helper unavailable; skipping user-config patches." 2>&1 | tee -a "$log"
+  }
 fi
 if ! declare -f restore_upgrade_runtime_selection_state >/dev/null 2>&1; then
   restore_upgrade_runtime_selection_state() {
@@ -1024,37 +1035,47 @@ INSTALLED_VERSION_AT_START="$(get_installed_dotfiles_version || true)"
 # quickshell (ags alternative)
 DIRPATH_QS="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
 
-if [ -d "$DIRPATH_QS" ]; then
-  # Back up existing quickshell config
-  BACKUP_DIR=$(get_backup_dirname)
-  mv "$DIRPATH_QS" "$DIRPATH_QS-backup-$BACKUP_DIR" 2>&1 | tee -a "$LOG"
-  echo -e "${NOTE} - Backed up quickshell to $DIRPATH_QS-backup-$BACKUP_DIR"
-fi
-
-echo "${INFO} - Copying quickshell config..." 2>&1 | tee -a "$LOG"
-if [ -d "$DOTFILES_DIR/config/quickshell" ]; then
-  if cp -r "$DOTFILES_DIR/config/quickshell/" "$DIRPATH_QS" 2>&1 | tee -a "$LOG"; then
-    echo "${OK} - ${YELLOW}quickshell${RESET} copied successfully." 2>&1 | tee -a "$LOG"
-    # Remove default shell.qml from copy to enable overview detection
-    rm -f "$DIRPATH_QS/shell.qml" 2>&1 | tee -a "$LOG"
-  else
-    echo "${ERROR} - Failed to copy ${YELLOW}quickshell${RESET} config." 2>&1 | tee -a "$LOG"
-    exit 1
+if [ "$RUN_MODE" = "install" ]; then
+  # Fresh install: clean replace (existing dir is backed up then recopied).
+  if [ -d "$DIRPATH_QS" ]; then
+    # Back up existing quickshell config
+    BACKUP_DIR=$(get_backup_dirname)
+    mv "$DIRPATH_QS" "$DIRPATH_QS-backup-$BACKUP_DIR" 2>&1 | tee -a "$LOG"
+    echo -e "${NOTE} - Backed up quickshell to $DIRPATH_QS-backup-$BACKUP_DIR"
   fi
-fi
 
-# Ensure overview and qs-hyprview subdirectories exist
-DIRPATH_OVERVIEW="$DIRPATH_QS/overview"
-if [ ! -d "$DIRPATH_OVERVIEW" ] && [ -d "$DOTFILES_DIR/config/quickshell/overview" ]; then
-  echo "${INFO} - Copying quickshell overview config..." 2>&1 | tee -a "$LOG"
-  cp -r "$DOTFILES_DIR/config/quickshell/overview" "$DIRPATH_QS/" 2>&1 | tee -a "$LOG"
-  echo "${OK} - Quickshell overview config copied successfully" 2>&1 | tee -a "$LOG"
-fi
-DIRPATH_QS_HYPRVIEW="$DIRPATH_QS/qs-hyprview"
-if [ ! -d "$DIRPATH_QS_HYPRVIEW" ] && [ -d "$DOTFILES_DIR/config/quickshell/qs-hyprview" ]; then
-  echo "${INFO} - Copying quickshell qs-hyprview config..." 2>&1 | tee -a "$LOG"
-  cp -r "$DOTFILES_DIR/config/quickshell/qs-hyprview" "$DIRPATH_QS/" 2>&1 | tee -a "$LOG"
-  echo "${OK} - Quickshell qs-hyprview config copied successfully" 2>&1 | tee -a "$LOG"
+  echo "${INFO} - Copying quickshell config..." 2>&1 | tee -a "$LOG"
+  if [ -d "$DOTFILES_DIR/config/quickshell" ]; then
+    if cp -r "$DOTFILES_DIR/config/quickshell/" "$DIRPATH_QS" 2>&1 | tee -a "$LOG"; then
+      echo "${OK} - ${YELLOW}quickshell${RESET} copied successfully." 2>&1 | tee -a "$LOG"
+      # Remove default shell.qml from copy to enable overview detection
+      rm -f "$DIRPATH_QS/shell.qml" 2>&1 | tee -a "$LOG"
+    else
+      echo "${ERROR} - Failed to copy ${YELLOW}quickshell${RESET} config." 2>&1 | tee -a "$LOG"
+      exit 1
+    fi
+  fi
+
+  # Ensure overview and qs-hyprview subdirectories exist
+  DIRPATH_OVERVIEW="$DIRPATH_QS/overview"
+  if [ ! -d "$DIRPATH_OVERVIEW" ] && [ -d "$DOTFILES_DIR/config/quickshell/overview" ]; then
+    echo "${INFO} - Copying quickshell overview config..." 2>&1 | tee -a "$LOG"
+    cp -r "$DOTFILES_DIR/config/quickshell/overview" "$DIRPATH_QS/" 2>&1 | tee -a "$LOG"
+    echo "${OK} - Quickshell overview config copied successfully" 2>&1 | tee -a "$LOG"
+  fi
+  DIRPATH_QS_HYPRVIEW="$DIRPATH_QS/qs-hyprview"
+  if [ ! -d "$DIRPATH_QS_HYPRVIEW" ] && [ -d "$DOTFILES_DIR/config/quickshell/qs-hyprview" ]; then
+    echo "${INFO} - Copying quickshell qs-hyprview config..." 2>&1 | tee -a "$LOG"
+    cp -r "$DOTFILES_DIR/config/quickshell/qs-hyprview" "$DIRPATH_QS/" 2>&1 | tee -a "$LOG"
+    echo "${OK} - Quickshell qs-hyprview config copied successfully" 2>&1 | tee -a "$LOG"
+  fi
+else
+  # Upgrade/express: sync repo quickshell files in place so user-created
+  # quickshell apps are preserved instead of being moved to a backup.
+  echo "${INFO} - Syncing quickshell config (preserving user custom apps)..." 2>&1 | tee -a "$LOG"
+  if ! sync_quickshell_config "$LOG"; then
+    echo "${ERROR} - Failed to sync ${YELLOW}quickshell${RESET} config." 2>&1 | tee -a "$LOG"
+  fi
 fi
 
 printf "\n%.0s" {1..1}
@@ -1069,6 +1090,7 @@ restore_user_scripts "$LOG" "$EXPRESS_MODE"
 printf "\n%.0s" {1..1}
 
 restore_hypr_files "$LOG" "$EXPRESS_MODE"
+apply_user_patches "$LOG"
 restore_runtime_personal_state "$LOG"
 # After restores, migrate restored Hyprlang customizations to Lua when approved.
 if [ "$RUN_MODE" = "upgrade" ] || [ "$RUN_MODE" = "express" ]; then

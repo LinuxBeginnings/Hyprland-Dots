@@ -9,7 +9,7 @@ KooL's Hyprland-Dots
 
 1.) Suggest not to rename any files in this directory. As this is connected and being loaded from hyprland.lua in ~/.config/hypr
 
-2.) This directory, along with UserScripts directory will NOT be touch when running upgrade.sh
+2.) This directory, along with UserScripts directory, is preserved when running copy.sh (install/upgrade/express) - your edits are NOT overwritten. However, selected non-destructive fixes may be applied automatically via the scripts in the repo's patches/ directory. Those patches only add/adjust a specific setting and never replace your files. See docs/Patching-UserConfigs.md.
 
 3.) However, if hyprland has a big change in settings, i.e., blur section is moved into another group, you should managed the change yourself.
 
