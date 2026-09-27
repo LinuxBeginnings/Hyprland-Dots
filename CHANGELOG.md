@@ -17,7 +17,17 @@
 - Waybar service not restarting with `Refresh.sh`
 - Hyprland-Dock wasn't reliably toggleing on/off
 - Improved version detection in `copy.sh`
-- Duplicate waybars at startup
+- Duplicate waybars at startup (still reproducible on Ubuntu and Gentoo)
+  - Root cause: a laptop login fires several `monitor.added`/`monitor.removed` events at once
+  - Each event ran `LidSwitch.sh refresh`, which fell back to `Refresh.sh` when Waybar was not yet up
+  - Those concurrent `Refresh.sh` runs each killed/relaunched Waybar with no shared lock, so both bars survived
+  - `WaybarStartup.sh` now owns the Waybar lifecycle and serializes every start/restart on one lock, and gains a `--restart` mode plus a duplicate-instance cleanup
+  - `Refresh.sh` delegates to `WaybarStartup.sh --restart` instead of its own unlocked kill+launch
+  - `LidSwitch.sh refresh` now coalesces event bursts and only signals a running bar (`SIGUSR2`), starting it via the locked startup script when missing
+  - `user_laptops.lua` throttles post-layout refreshes so a login burst collapses into one
+- `LidSwitch.sh` used the legacy `hyprctl dispatch dpms on` form
+  - The Lua parser rejects it, so DPMS never actually turned on during lid/refresh handling
+  - Switched to the `hl.dsp.dpms` dispatcher
 - `find` process in `copy.sh` would consume disk and cpu
   - Process now finishes in 0.1ms
 - Animations weren't actually changing
