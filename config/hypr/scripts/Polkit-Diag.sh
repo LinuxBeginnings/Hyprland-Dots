@@ -107,8 +107,10 @@ apply_override() {
                 fi
                 echo -e "$msg" >&3; echo -e "$msg"
 
-                # Capture file write
-                if out=$(echo "$OVERRIDE_CONTENT" > "$OVERRIDE_FILE" 2>&1); then
+                # Capture file write. The `> file` redirect stays inside the
+                # group so the captured stdout isn't swallowed, and the
+                # group-level 2>&1 surfaces any write error into $out.
+                if out=$({ printf '%s\n' "$OVERRIDE_CONTENT" > "$OVERRIDE_FILE"; } 2>&1); then
                     msg="  [OK] Successfully wrote override file."
                 else
                     msg="  [ERROR] Failed to write override file.\n  Details: $out"

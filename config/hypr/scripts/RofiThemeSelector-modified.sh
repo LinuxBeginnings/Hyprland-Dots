@@ -139,13 +139,10 @@ create_config_copy()
 ##
 create_theme_list()
 {
-    OLDIFS=${IFS}
-    IFS='|'
-    for themen in ${theme_names[@]}
-    do
-        echo "${themen}"
-    done
-    IFS=${OLDIFS}
+    # One theme name per line. The previous IFS='|' dance was vestigial
+    # (nothing in the list contains '|') and the unquoted expansion
+    # re-split on IFS, breaking names containing spaces.
+    printf '%s\n' "${theme_names[@]}"
 }
 
 ##
@@ -169,12 +166,15 @@ select_theme()
 Current theme: <b>${CUR}</b>
 <span weight=\"bold\" size=\"xx-small\">When setting a new theme this will override previous theme settings.
 Please update your config file if you have local modifications.</span>"""
-        THEME_FLAG=
+        # Build the theme flag as an array so a path containing whitespace
+        # (or glob chars) is passed as a single argument instead of being
+        # re-split by the shell.
+        local THEME_ARGS=()
         if [ -n "${SELECTED}" ]
         then
-            THEME_FLAG="-theme ${themes[${SELECTED}]}"
+            THEME_ARGS=(-theme "${themes[${SELECTED}]}")
         fi
-        RES=$( create_theme_list | ${ROFI} ${THEME_FLAG} ${MORE_FLAGS[@]} -cycle -selected-row "${SELECTED}" -mesg "${MESG}")
+        RES=$( create_theme_list | "${ROFI}" "${THEME_ARGS[@]}" "${MORE_FLAGS[@]}" -cycle -selected-row "${SELECTED}" -mesg "${MESG}")
         RTR=$?
         if [ "${RTR}" = 10 ]
         then
