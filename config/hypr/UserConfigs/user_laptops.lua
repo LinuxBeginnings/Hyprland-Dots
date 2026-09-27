@@ -8,8 +8,10 @@
 --
 -- Dynamically manages internal laptop panel and external monitors:
 -- * Auto-detects internal panel (eDP, LVDS, DSI) and all connected external displays.
--- * Respects ~/.config/hypr/UserConfigs/monitors.lua as the single source of truth for
---   monitor modes, positions, and scales (no duplicate configuration needed).
+-- * Respects ~/.config/hypr/UserConfigs/monitors.lua as the primary source of truth for
+--   monitor modes, positions, and scales, then falls back to explicit per-output rules
+--   from ~/.config/hypr/lua/monitors.lua. Wildcard rules in the system file are ignored
+--   here because Hyprland already applies them as its own fallback chain.
 -- * Docked/Clamshell mode: disables the internal panel when the lid is closed AND
 --   at least one external display is connected.
 -- * Automatically restores the internal panel when external displays are disconnected,
@@ -119,27 +121,16 @@ local function detect_internal_monitor(connected)
   return FALLBACK_INTERNAL
 end
 
--- Read user monitor rules from UserConfigs/monitors.lua
-local function load_user_monitor_configs()
-  local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")
-  local userMonitorsPath = configHome .. "/hypr/UserConfigs/monitors.lua"
+-- Read hl.monitor() rules from a Lua config file without applying them.
+local function capture_monitor_configs(path)
+  local configs = {}
 
-  local handle = io.open(userMonitorsPath, "r")
+  local handle = io.open(path, "r")
   if not handle then
-    local source = (debug.getinfo(1, "S") or {}).source or ""
-    local source_dir = source:match("^@?(.*)/[^/]+$")
-    if source_dir and io.open(source_dir .. "/monitors.lua", "r") then
-      userMonitorsPath = source_dir .. "/monitors.lua"
-      handle = io.open(userMonitorsPath, "r")
-    end
-  end
-
-  if not handle then
-    return {}
+    return configs
   end
   handle:close()
 
-  local configs = {}
   local orig_monitor = hl and hl.monitor
   if hl then
     hl.monitor = function(cfg)
@@ -149,13 +140,50 @@ local function load_user_monitor_configs()
     end
   end
 
-  pcall(dofile, userMonitorsPath)
+  pcall(dofile, path)
 
   if hl then
     hl.monitor = orig_monitor
   end
 
   return configs
+end
+
+-- Path to the user-editable monitor overrides, with the legacy co-located
+-- monitors.lua next to this file as a fallback.
+local function user_monitors_path()
+  local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")
+  local path = configHome .. "/hypr/UserConfigs/monitors.lua"
+  if io.open(path, "r") then
+    return path
+  end
+
+  local source = (debug.getinfo(1, "S") or {}).source or ""
+  local source_dir = source:match("^@?(.*)/[^/]+$")
+  if source_dir and io.open(source_dir .. "/monitors.lua", "r") then
+    return source_dir .. "/monitors.lua"
+  end
+
+  return path
+end
+
+-- Monitor rules are resolved from the user overrides first, then from explicit
+-- per-output rules in the system file (hypr/lua/monitors.lua). Without the system
+-- lookup, a specific rule such as "Virtual-1 = 1920x1080@60" would be silently
+-- replaced by the generic fallback below on every hotplug/login event.
+local function load_monitor_configs()
+  local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")
+  local hyprDir = configHome .. "/hypr"
+
+  local system_configs = capture_monitor_configs(hyprDir .. "/lua/monitors.lua")
+  local user_configs = capture_monitor_configs(user_monitors_path())
+
+  return {
+    user = user_configs,
+    get = function(name)
+      return user_configs[name] or system_configs[name]
+    end,
+  }
 end
 
 local function post_layout_refresh()
@@ -197,7 +225,11 @@ local function apply_laptop_monitor_layout(trigger_refresh)
     end
   end
 
-  local user_configs = load_user_monitor_configs()
+  local monitor_configs = load_monitor_configs()
+  -- Wildcards are intentionally taken from the user file only: the system file's
+  -- wildcard rules are Hyprland's own fallback chain, not per-output defaults.
+  local user_configs = monitor_configs.user
+  local get_monitor_config = monitor_configs.get
   local default_fallback = user_configs[""] or user_configs["*"] or { mode = "preferred", position = "auto", scale = "auto" }
 
   if #externals > 0 then
@@ -207,7 +239,7 @@ local function apply_laptop_monitor_layout(trigger_refresh)
       hl.monitor({ output = internal, disabled = true })
     else
       -- Lid is open: apply internal display configuration from monitors.lua
-      local int_cfg = user_configs[internal]
+      local int_cfg = get_monitor_config(internal)
       if int_cfg then
         hl.monitor(int_cfg)
       else
@@ -223,7 +255,7 @@ local function apply_laptop_monitor_layout(trigger_refresh)
 
     -- Apply configurations for external displays from monitors.lua
     for _, ext_name in ipairs(externals) do
-      local cfg = user_configs[ext_name]
+      local cfg = get_monitor_config(ext_name)
       if cfg then
         hl.monitor(cfg)
       else
@@ -239,7 +271,7 @@ local function apply_laptop_monitor_layout(trigger_refresh)
     end
   else
     -- No external displays connected: internal panel must be enabled (unless lid is closed)
-    local int_cfg = user_configs[internal]
+    local int_cfg = get_monitor_config(internal)
     if lid_closed then
       hl.monitor({ output = internal, disabled = true })
     elseif int_cfg then
