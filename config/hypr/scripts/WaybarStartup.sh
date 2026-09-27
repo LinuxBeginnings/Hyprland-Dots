@@ -68,22 +68,67 @@ ensure_wallust_waybar_colors() {
     fi
 }
 
-# Use systemd to start waybar only when waybar.service is explicitly enabled.
-# Returns 1 on Debian/systems with no enabled service so the caller falls
-# through to start_waybar_direct.
-start_waybar_via_systemd() {
+# True when waybar.service exists and is enabled/static/active, i.e. systemd
+# owns the bar. Debian/Ubuntu and Gentoo commonly ship the unit disabled or
+# masked, in which case we must manage waybar ourselves.
+waybar_service_enabled() {
     command -v systemctl >/dev/null 2>&1 || return 1
-    # Service must exist
     systemctl --user cat waybar.service >/dev/null 2>&1 || return 1
-    # Service must be enabled (not just installed)
     local enabled_state
     enabled_state="$(systemctl --user is-enabled waybar.service 2>/dev/null || true)"
     case "$enabled_state" in
-        enabled|static) ;;
-        *) return 1 ;;
+        enabled|static) return 0 ;;
     esac
+    systemctl --user is-active --quiet waybar.service 2>/dev/null && return 0
+    return 1
+}
+
+# Use systemd to start waybar only when waybar.service is explicitly enabled.
+# Returns 1 when no enabled service exists so the caller falls through to
+# start_waybar_direct.
+start_waybar_via_systemd() {
+    waybar_service_enabled || return 1
     systemctl --user start waybar.service >/dev/null 2>&1 || return 1
     wait_for_waybar
+}
+
+# Terminate every waybar instance (and Gentoo's .waybar-wrapped shim) so a
+# restart cannot leave a stale bar behind. SIGINT goes first because Waybar
+# handles it for a clean shutdown, whereas SIGTERM can be blocked in processes
+# that inherited Hyprland's signal mask.
+stop_waybar_instances() {
+    pkill -INT -x waybar >/dev/null 2>&1 || true
+    pkill -INT -x '.waybar-wrapped' >/dev/null 2>&1 || true
+    pkill -x waybar >/dev/null 2>&1 || true
+    pkill -x '.waybar-wrapped' >/dev/null 2>&1 || true
+    sleep 0.2
+    if is_waybar_running; then
+        pkill -9 -x waybar >/dev/null 2>&1 || true
+        pkill -9 -x '.waybar-wrapped' >/dev/null 2>&1 || true
+        sleep 0.1
+    fi
+}
+
+# Safety net: if more than one Waybar is already alive (the historical bug),
+# keep the newest instance and terminate the rest.
+dedupe_waybar_instances() {
+    local pids keep count pid
+    pids="$(pgrep -x waybar 2>/dev/null || true)"
+    [ -n "$pids" ] || return 0
+    count="$(printf '%s\n' "$pids" | wc -l | tr -d ' ')"
+    [ "$count" -gt 1 ] || return 0
+    keep="$(printf '%s\n' "$pids" | sort -n | tail -n1)"
+    for pid in $pids; do
+        [ "$pid" = "$keep" ] && continue
+        kill -INT "$pid" >/dev/null 2>&1 || true
+    done
+    sleep 0.3
+    for pid in $pids; do
+        [ "$pid" = "$keep" ] && continue
+        if kill -0 "$pid" >/dev/null 2>&1; then
+            kill -9 "$pid" >/dev/null 2>&1 || true
+        fi
+    done
 }
 
 start_waybar_direct() {
@@ -104,9 +149,19 @@ start_waybar_direct() {
 }
 
 main() {
+    # --restart forces a clean single-instance restart; the default is
+    # start-if-missing so concurrent startup callers stay idempotent.
+    local mode="start"
+    case "${1:-}" in
+        --restart|-r) mode="restart" ;;
+    esac
+
     local lock_file="${runtime_dir}/waybar-startup-${UID:-$(id -u)}.lock"
 
-    # Use a non-blocking lock to guarantee mutual exclusion without deadlocking
+    # Non-blocking lock: every Waybar start/restart funnels through here so two
+    # concurrent callers can never both launch a bar. The winner holds the lock
+    # until Waybar is confirmed running; losers exit and leave the winner to own
+    # the lifecycle.
     exec 9>"$lock_file"
     if command -v flock >/dev/null 2>&1; then
         if ! flock -n 9; then
@@ -115,8 +170,20 @@ main() {
         fi
     fi
 
-    # If already running, nothing to do
-    if is_waybar_running; then
+    if [ "$mode" = "restart" ]; then
+        if waybar_service_enabled; then
+            systemctl --user reset-failed waybar.service >/dev/null 2>&1 || true
+            systemctl --user restart waybar.service >/dev/null 2>&1 || true
+            if wait_for_waybar; then
+                dedupe_waybar_instances
+                exec 9>&-
+                exit 0
+            fi
+        fi
+        stop_waybar_instances
+    elif is_waybar_running; then
+        # Already up (possibly duplicated by an older release): keep one bar.
+        dedupe_waybar_instances
         exec 9>&-
         exit 0
     fi
@@ -127,11 +194,13 @@ main() {
 
     # Try systemd first if enabled, otherwise launch directly
     if start_waybar_via_systemd; then
+        dedupe_waybar_instances
         exec 9>&-
         exit 0
     fi
 
     if start_waybar_direct; then
+        dedupe_waybar_instances
         exec 9>&-
         exit 0
     fi
@@ -139,4 +208,4 @@ main() {
     exit 1
 }
 
-main
+main "$@"

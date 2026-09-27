@@ -47,26 +47,7 @@ for pid in $(pidof rofi ags swaybg); do
   sleep 0.1
 done
 
-# Does a waybar.service user unit exist and should it be managed via systemd?
-# Check enabled/static or active state so distros where waybar.service is installed
-# but disabled/unmanaged default to direct execution.
-is_waybar_systemd() {
-  command -v systemctl >/dev/null 2>&1 || return 1
-  if ! systemctl --user is-active --quiet graphical-session.target 2>/dev/null && \
-     ! systemctl --user is-active --quiet wayland-session@*.target 2>/dev/null; then
-    return 1
-  fi
-  systemctl --user cat waybar.service >/dev/null 2>&1 || return 1
-  local enabled_state
-  enabled_state="$(systemctl --user is-enabled waybar.service 2>/dev/null || true)"
-  case "$enabled_state" in
-    enabled|static) return 0 ;;
-  esac
-  systemctl --user is-active --quiet waybar.service 2>/dev/null && return 0
-  return 1
-}
-
-# Same idea as is_waybar_systemd, for swaync.
+# Same idea as the waybar systemd check, for swaync.
 is_swaync_systemd() {
   command -v systemctl >/dev/null 2>&1 || return 1
   systemctl --user cat swaync.service >/dev/null 2>&1 || return 1
@@ -109,15 +90,19 @@ ensure_wayland_env() {
 # systemd unit puts it outside that cgroup, where it survives the teardown.
 restart_waybar() {
   ensure_wayland_env
+  local scripts_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
   local waybar_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar"
-  local waybar_config="$waybar_dir/config"
-  local waybar_style="$waybar_dir/style.css"
   local restart_cmd
 
-  if is_waybar_systemd; then
-    restart_cmd="systemctl --user stop waybar.service >/dev/null 2>&1 || true; pkill -INT -x waybar >/dev/null 2>&1 || true; pkill -INT -x .waybar-wrapped >/dev/null 2>&1 || true; pkill -x waybar >/dev/null 2>&1 || true; pkill -x .waybar-wrapped >/dev/null 2>&1 || true; sleep 0.2; if pgrep -x waybar >/dev/null 2>&1 || pgrep -x .waybar-wrapped >/dev/null 2>&1; then pkill -9 -x waybar >/dev/null 2>&1 || true; pkill -9 -x .waybar-wrapped >/dev/null 2>&1 || true; fi; sleep 0.1; systemctl --user reset-failed waybar.service >/dev/null 2>&1 || true; systemctl --user restart waybar.service"
+  # WaybarStartup.sh owns the Waybar lifecycle and serializes every start and
+  # restart on a shared flock (and also decides systemd-service vs direct
+  # launch). Delegating here means concurrent Refresh.sh runs - for example the
+  # burst of monitor.added events fired at login on laptops - can no longer
+  # each launch their own bar.
+  if [ -x "$scripts_dir/WaybarStartup.sh" ]; then
+    restart_cmd="\"$scripts_dir/WaybarStartup.sh\" --restart"
   else
-    restart_cmd="systemctl --user stop waybar.service >/dev/null 2>&1 || true; pkill -INT -x waybar >/dev/null 2>&1 || true; pkill -INT -x .waybar-wrapped >/dev/null 2>&1 || true; pkill -x waybar >/dev/null 2>&1 || true; pkill -x .waybar-wrapped >/dev/null 2>&1 || true; sleep 0.2; if pgrep -x waybar >/dev/null 2>&1 || pgrep -x .waybar-wrapped >/dev/null 2>&1; then pkill -9 -x waybar >/dev/null 2>&1 || true; pkill -9 -x .waybar-wrapped >/dev/null 2>&1 || true; fi; sleep 0.1; if ! pgrep -x waybar >/dev/null 2>&1 && ! pgrep -x .waybar-wrapped >/dev/null 2>&1; then if command -v .waybar-wrapped >/dev/null 2>&1; then .waybar-wrapped -c \"$waybar_config\" -s \"$waybar_style\" >/dev/null 2>&1 & else waybar -c \"$waybar_config\" -s \"$waybar_style\" >/dev/null 2>&1 & fi; fi"
+    restart_cmd="if command -v .waybar-wrapped >/dev/null 2>&1; then .waybar-wrapped -c \"$waybar_dir/config\" -s \"$waybar_dir/style.css\" >/dev/null 2>&1 & else waybar -c \"$waybar_dir/config\" -s \"$waybar_dir/style.css\" >/dev/null 2>&1 & fi"
   fi
 
   local unit_name="waybar-restart-$$-$RANDOM"

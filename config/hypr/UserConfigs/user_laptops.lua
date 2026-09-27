@@ -159,6 +159,22 @@ local function load_user_monitor_configs()
 end
 
 local function post_layout_refresh()
+  -- A single login or hotplug fires monitor.added/removed several times in a
+  -- row. Throttle so the burst collapses into one refresh instead of spawning
+  -- a refresh (and therefore a Waybar start attempt) per event.
+  local runtimeDir = os.getenv("XDG_RUNTIME_DIR") or "/tmp"
+  local stampPath = runtimeDir .. "/hypr-lua-layout-refresh.stamp"
+  local last = tonumber(read_file(stampPath) or "") or 0
+  local now = os.time()
+  if now - last < 2 then
+    return
+  end
+  local stamp = io.open(stampPath, "w")
+  if stamp then
+    stamp:write(tostring(now))
+    stamp:close()
+  end
+
   local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")
   local script = configHome .. "/hypr/scripts/LidSwitch.sh refresh"
   if hl and hl.exec_cmd then

@@ -100,8 +100,9 @@ handle_open() {
             hyprctl -r eval "hl.monitor({ output = [[$mon]], disabled = false })" >> "$LOGFILE" 2>&1 || true
         fi
 
-        # 2. Ensure DPMS is powered on
-        hyprctl dispatch dpms on "$mon" >> "$LOGFILE" 2>&1 || true
+        # 2. Ensure DPMS is powered on. The Lua parser rejects the legacy
+        #    `dispatch dpms on` form, so use the hl.dsp dispatcher.
+        hyprctl dispatch hl.dsp.dpms "{ action = \"on\", monitor = \"$mon\" }" >> "$LOGFILE" 2>&1 || true
 
         # Check if active
         if command -v jq >/dev/null 2>&1; then
@@ -119,37 +120,53 @@ handle_open() {
     fi
 
     sleep 0.3
-    if pgrep -x waybar >/dev/null 2>&1; then
+    if pgrep -x waybar >/dev/null 2>&1 || pgrep -x '.waybar-wrapped' >/dev/null 2>&1; then
         pkill -SIGUSR2 -x waybar >> "$LOGFILE" 2>&1 || true
+    elif [ -x "$SCRIPTSDIR/WaybarStartup.sh" ]; then
+        "$SCRIPTSDIR/WaybarStartup.sh" >> "$LOGFILE" 2>&1 || true
     fi
 }
 
 handle_refresh() {
+    # A single monitor hotplug or lid toggle fires several events in a row
+    # (monitor.added for each output, lid switch, DPMS). Coalesce them into one
+    # refresh with a non-blocking lock so we never run the work concurrently.
+    local lock_file="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hypr-lid-refresh.lock"
+    exec 9>"$lock_file"
+    if command -v flock >/dev/null 2>&1; then
+        if ! flock -n 9; then
+            exec 9>&-
+            return 0
+        fi
+    fi
+
     log "Handling post-layout refresh (wallpaper and waybar)"
 
     # Settle time for Hyprland DRM modesetting and Wayland output registration
     sleep 0.3
 
-    # Ensure DPMS is turned on for active displays
-    hyprctl dispatch dpms on >> "$LOGFILE" 2>&1 || true
+    # Ensure DPMS is turned on for active displays. The Lua parser rejects the
+    # legacy `dispatch dpms on` form, so use the hl.dsp dispatcher.
+    hyprctl dispatch hl.dsp.dpms '{ action = "on" }' >> "$LOGFILE" 2>&1 || true
 
     # Restore wallpaper on all active displays
     if [ -x "$SCRIPTSDIR/WallpaperDaemon.sh" ]; then
         "$SCRIPTSDIR/WallpaperDaemon.sh" >> "$LOGFILE" 2>&1 || true
     fi
 
-    # Refresh Waybar so its layer surfaces match the updated monitor positions
-    if pgrep -x waybar >/dev/null 2>&1; then
+    # Refresh Waybar so its layer surfaces match the updated monitor positions.
+    # We only signal a running bar; a missing bar is (re)started through
+    # WaybarStartup.sh, which serializes on the shared Waybar lock. Never call
+    # Refresh.sh here: its kill+respawn path raced with concurrent monitor
+    # events and produced duplicate bars.
+    if pgrep -x waybar >/dev/null 2>&1 || pgrep -x '.waybar-wrapped' >/dev/null 2>&1; then
         pkill -SIGUSR2 -x waybar >> "$LOGFILE" 2>&1 || true
         sleep 0.2
+    elif [ -x "$SCRIPTSDIR/WaybarStartup.sh" ]; then
+        "$SCRIPTSDIR/WaybarStartup.sh" >> "$LOGFILE" 2>&1 || true
     fi
 
-    # If Waybar is not running or crashed, restart it cleanly
-    if ! pgrep -x waybar >/dev/null 2>&1; then
-        if [ -x "$SCRIPTSDIR/Refresh.sh" ]; then
-            "$SCRIPTSDIR/Refresh.sh" >> "$LOGFILE" 2>&1 &
-        fi
-    fi
+    exec 9>&-
 }
 
 case "$ACTION" in
