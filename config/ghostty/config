@@ -62,7 +62,9 @@ window-theme = dark
 window-height = 32
 window-width = 110
 background-opacity = 0.85
-background-blur-radius = 60
+# Ghostty 1.3+: `background-blur-radius` was replaced by `background-blur`
+# (integer intensity, or true/false). 60 matches the previous radius.
+background-blur = 60
 selection-background = #2d3f76
 selection-foreground = #c8d3f5
 cursor-style = bar

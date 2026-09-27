@@ -93,6 +93,25 @@ install_terminal_configs() {
     if [ -f "$GHOSTTY_DIR/wallust.conf" ]; then
       sed -i -E 's/^(\\s*palette\\s*=\\s*)([0-9]{1,2}):/\\1\\2=/' "$GHOSTTY_DIR/wallust.conf" 2>&1 | tee -a "$log" || true
     fi
+
+    # Bundled themes: some distros ship Ghostty without its built-in theme
+    # collection (share/ghostty/themes), which makes `theme = <name>` fail at
+    # launch. Install ours into the user themes dir so the shipped default
+    # resolves everywhere. Existing user themes are never overwritten.
+    local GHOSTTY_THEMES_SRC="$base/config/ghostty/themes"
+    if [ -d "$GHOSTTY_THEMES_SRC" ]; then
+      mkdir -p "$GHOSTTY_DIR/themes"
+      local theme_file theme_name
+      for theme_file in "$GHOSTTY_THEMES_SRC"/*; do
+        [ -f "$theme_file" ] || continue
+        theme_name="$(basename "$theme_file")"
+        if [ -e "$GHOSTTY_DIR/themes/$theme_name" ]; then
+          continue
+        fi
+        cp -f "$theme_file" "$GHOSTTY_DIR/themes/$theme_name" 2>&1 | tee -a "$log" || true
+        echo "${OK:-[OK]} - Installed Ghostty theme: ${MAGENTA:-}$theme_name${RESET:-}" 2>&1 | tee -a "$log"
+      done
+    fi
   else
     echo "${ERROR:-[ERROR]} - $GHOSTTY_SRC not found; skipping Ghostty config install." 2>&1 | tee -a "$log"
   fi

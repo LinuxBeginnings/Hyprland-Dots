@@ -4,6 +4,26 @@
 
 ## Fixed:
 
+- Fixed `ghostty` config error at startup
+  - Also fixed missing themes
+  - Add change to blur setting to patches/
+  - Root cause: the shipped default `theme = "Catppuccin Mocha"` is resolved against `~/.config/ghostty/themes` and `share/ghostty/themes`; distros that ship Ghostty without its built-in theme collection (Gentoo, some minimal/Flatpak builds) install neither, so the theme could never resolve
+  - Bundled `Catppuccin Mocha` under `config/ghostty/themes/` and install bundled themes into `~/.config/ghostty/themes` on `copy.sh` (user themes are never overwritten)
+  - Added `GhosttyThemeGuard.sh`: validates the active theme and falls back to the wallpaper (wallust) colors, or plain defaults, when it cannot resolve, then signals Ghostty to reload. Runs at login from `startup.lua` and is idempotent
+  - `Ghostty_themes.sh` now only offers themes that actually resolve on the system
+  - Replaced the deprecated `background-blur-radius` with `background-blur` in the shipped configs (Ghostty 1.3 renamed it; the previous intensity is preserved)
+  - `patches/20-ghostty-background-blur.sh` migrates existing installs in place, only when the old key is present
+- Duplicate waybars at startup (still reproducible on Ubuntu and Gentoo)
+  - Root cause: a laptop login fires several `monitor.added`/`monitor.removed` events at once
+  - Each event ran `LidSwitch.sh refresh`, which fell back to `Refresh.sh` when Waybar was not yet up
+  - Those concurrent `Refresh.sh` runs each killed/relaunched Waybar with no shared lock, so both bars survived
+  - `WaybarStartup.sh` now owns the Waybar lifecycle and serializes every start/restart on one lock, and gains a `--restart` mode plus a duplicate-instance cleanup
+  - `Refresh.sh` delegates to `WaybarStartup.sh --restart` instead of its own unlocked kill+launch
+  - `LidSwitch.sh refresh` now coalesces event bursts and only signals a running bar (`SIGUSR2`), starting it via the locked startup script when missing
+  - `user_laptops.lua` throttles post-layout refreshes so a login burst collapses into one
+- `LidSwitch.sh` used the legacy `hyprctl dispatch dpms on` form
+  - The Lua parser rejects it, so DPMS never actually turned on during lid/refresh handling
+  - Switched to the `hl.dsp.dpms` dispatcher
 - Replaced `io.open` calls with LUA API
   - This prevents hyprland stall when code active
 - Mouse zoom guesture causing hyprland to stall
