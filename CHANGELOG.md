@@ -6,6 +6,13 @@
 
 - swaync path wasn't corrected on updates
   - Added patch to copy.sh to fix on updates
+- Waybar kept the old wallpaper's colors after a wallpaper change
+  - Root cause: Waybar only re-reads its stylesheet when it is reloaded, and `WallustSwww.sh` never signalled it - the script rewrote `colors-waybar.css` and applied the Hyprland borders in-process, so borders followed the wallpaper while the bar stayed on the previous palette
+  - Most visible on the automatic wallpaper rotation (`WallpaperAutoChange.sh` -> `RefreshNoWaybar.sh`, which deliberately does not touch Waybar) and on `WallpaperEffects.sh` / `WallpaperDaemon.sh`, which ran no refresh at all
+  - `WallustSwww.sh` now reloads a running bar once the palette is written (`waybar-msg cmd reload`, falling back to `SIGUSR2`); a missing bar is still left to `WaybarStartup.sh`, and the reload is a signal, not a restart
+- Stale Wallust imports in installed Waybar styles could survive updates
+  - `copy.sh` refreshes `~/.config/hypr/waybar` (with a stale-path auto-repair), but the menu's update action only pulls the repo and runs patches
+  - Added `patches/40-waybar-wallust-import.sh`, which repairs legacy/doubly-nested Wallust `@import` paths in the installed Waybar styles - the same class of breakage swaync had
 
 ---
 

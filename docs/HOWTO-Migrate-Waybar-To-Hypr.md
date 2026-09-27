@@ -50,6 +50,37 @@ line such as:
 
 That path does not exist any more, so `colors-waybar.css` is never loaded.
 
+## Waybar keeps the old wallpaper colors
+
+This one looks similar but has a different cause: the import is fine and the
+palette file is regenerated on every wallpaper change, yet the bar still shows
+the previous theme while the window borders change.
+
+Waybar does not watch its stylesheet - it only re-reads `style.css` when it is
+reloaded. The borders, by contrast, are pushed into Hyprland in-process by
+`WallustSwww.sh` (`hl.config` via `hyprctl eval`), so they update immediately.
+Anything that regenerates the palette without reloading Waybar therefore leaves
+the bar behind:
+
+- the automatic wallpaper rotation (`WallpaperAutoChange.sh` -
+  `RefreshNoWaybar.sh`), which deliberately keeps Waybar untouched; and
+- `WallpaperEffects.sh` and `WallpaperDaemon.sh`, which run no refresh at all.
+
+`WallustSwww.sh` now reloads a running bar itself once the palette is written
+(`waybar-msg cmd reload`, falling back to `SIGUSR2`), so the bar follows the
+wallpaper on every path. A missing bar is still left to `WaybarStartup.sh`,
+which serializes on its own lock, and the reload is a signal rather than a
+restart - the bar is never torn down.
+
+To reload the bar yourself:
+
+```sh
+waybar-msg cmd reload || pkill -SIGUSR2 -x waybar
+```
+
+`~/.config/hypr/scripts/Refresh.sh` (full reload, restarts the bar) and
+`ThemeChanger.sh` do the same thing for their own flows.
+
 ## Automatic migration
 
 Run the normal upgrade and reboot:
@@ -70,8 +101,12 @@ Two things happen for you:
   references found in the installed Waybar directory.
 - `patches/30-swaync-wallust-import.sh` rewrites the Wallust `@import` in
   `~/.config/swaync/style.css` to the canonical path (and adds the missing `;`).
-  Patches run on install, upgrade, express upgrade, and from the menu's update
-  action, so this also reaches installs that get updated in place.
+- `patches/40-waybar-wallust-import.sh` does the same for the installed Waybar
+  styles under `~/.config/hypr/waybar/style/`. `copy.sh` refreshes that directory
+  already, but the menu's update action does not, so this closes the gap there.
+
+Patches run on install, upgrade, express upgrade, and from the menu's update
+action, so both fixes also reach installs that get updated in place.
 
 ## Manual migration
 
@@ -134,8 +169,14 @@ when you just want to verify an upgrade did the right thing.
    works.
 
 6. Apply the same checks to the other consumers only if you hand-edited them -
-   `copy.sh` refreshes `wlogout` and the Waybar styles for you. Use the table
-   above for the correct number of `../` per file.
+   `copy.sh` refreshes `wlogout` and the Waybar styles for you, and
+   `patches/40-waybar-wallust-import.sh` repairs them on in-place updates. Use
+   the table above for the correct number of `../` per file.
+
+7. If the bar shows the previous wallpaper's colors, the palette file is being
+   written but the bar was never reloaded - see "Waybar keeps the old wallpaper
+   colors" above and reload it with `waybar-msg cmd reload` (or
+   `pkill -SIGUSR2 -x waybar`).
 
 ## Related
 

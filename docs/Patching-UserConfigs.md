@@ -22,9 +22,10 @@ the `NN-` prefix to control sequencing). It must:
 
 - be **content-idempotent**: check whether its fix is already present and leave
   the file unchanged if so;
-- target files under `$KOOLDOTS_CONFIG_HOME/hypr` (default
-  `${XDG_CONFIG_HOME:-$HOME/.config}/hypr`), i.e. `UserConfigs/` and
-  `UserScripts/`;
+- target files under `$KOOLDOTS_CONFIG_HOME` (default
+  `${XDG_CONFIG_HOME:-$HOME/.config}`) - mainly `hypr/UserConfigs/` and
+  `hypr/UserScripts/`, but any user-owned config file is fair game (for example
+  `swaync/style.css` and the Waybar styles under `hypr/waybar/style/`);
 - skip cleanly (exit `0`) when a target file does not exist;
 - never rewrite a whole file - only add/adjust the specific setting, so a user's
   own edits are preserved; and
@@ -57,6 +58,12 @@ Source `patches/lib.sh` for the common primitives:
 sets `remember_window_size no` (required for kitty 0.49+ window-split
 behavior), inserting it beneath the existing comment and doing nothing if the
 key is already present.
+
+`patches/30-swaync-wallust-import.sh` and
+`patches/40-waybar-wallust-import.sh` rewrite only the Wallust colors `@import`
+line in `swaync/style.css` and in the Waybar styles after Waybar moved to
+`~/.config/hypr/waybar`, repairing the legacy path (and the missing `;`) while
+leaving every other line - and both already-correct import forms - untouched.
 
 ## Adding a patch
 
