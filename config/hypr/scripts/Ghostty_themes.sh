@@ -104,9 +104,42 @@ mapfile -t available_theme_names < <(
   }' "$config_file"
 )
 
+original_theme_count=${#available_theme_names[@]}
+
+# Only offer themes Ghostty can actually resolve. Distros that ship Ghostty
+# without the bundled theme collection (Gentoo/minimal builds) would otherwise
+# let a user pick a theme that fails with a configuration error at launch.
+ghostty_themes_dir="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/themes"
+ghostty_theme_list=""
+if command -v ghostty >/dev/null 2>&1; then
+  ghostty_theme_list="$(ghostty +list-themes 2>/dev/null | sed -E 's/[[:space:]]+\((user|builtin)\)[[:space:]]*$//')"
+fi
+theme_is_available() {
+  local name="$1"
+  [[ -n "$name" ]] || return 1
+  [[ -f "$ghostty_themes_dir/$name" ]] && return 0
+  if [[ -n "${GHOSTTY_RESOURCES_DIR:-}" && -f "$GHOSTTY_RESOURCES_DIR/themes/$name" ]]; then
+    return 0
+  fi
+  if [[ -n "$ghostty_theme_list" ]] && printf '%s\n' "$ghostty_theme_list" | grep -Fxq -- "$name"; then
+    return 0
+  fi
+  return 1
+}
+filtered_theme_names=()
+for _theme in "${available_theme_names[@]}"; do
+  if theme_is_available "$_theme"; then
+    filtered_theme_names+=("$_theme")
+  fi
+done
+available_theme_names=("${filtered_theme_names[@]}")
+
 if [[ ${#available_theme_names[@]} -eq 0 ]]; then
-  notify_user "$iDIR/error.png" "Ghostty Theme" "No commented themes found in $config_file"
-  exit 1
+  if [[ $original_theme_count -eq 0 ]]; then
+    notify_user "$iDIR/error.png" "Ghostty Theme" "No commented themes found in $config_file"
+    exit 1
+  fi
+  notify_user "$iDIR/error.png" "Ghostty Theme" "None of the listed themes are installed on this system; use 'Set by wallpaper' instead"
 fi
 menu_entries=("$wallust_option_label" "$default_option_label")
 for t in "${available_theme_names[@]}"; do

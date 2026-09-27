@@ -14,6 +14,15 @@
 - Another cause of duplicate waybars
 - NixOS installed wrong fastfetch config file
 - Kitty background color was bright red
+- Ghostty showed a "theme not found" configuration error at launch on distros that ship Ghostty without its built-in theme collection
+  - Root cause: the shipped default `theme = "Catppuccin Mocha"` is resolved against `~/.config/ghostty/themes` and `share/ghostty/themes`; Gentoo (and some minimal builds) install neither, so the theme could never resolve
+  - Bundled `Catppuccin Mocha` under `config/ghostty/themes/` and install bundled themes into `~/.config/ghostty/themes` on `copy.sh` (user themes are never overwritten)
+  - Added `GhosttyThemeGuard.sh`, which validates the configured theme and falls back to the wallpaper (wallust) colors or plain defaults when it cannot be resolved, then signals Ghostty to reload
+  - The guard runs at login from `startup.lua` and is idempotent, so a missing theme can no longer produce a config error dialog
+  - `Ghostty_themes.sh` now only offers themes that actually resolve on the system
+- Ghostty logged a deprecation error for `background-blur-radius` on every launch
+  - Ghostty 1.3 replaced the key with `background-blur` (integer intensity, or true/false); the shipped configs now use the new key
+  - Added `patches/20-ghostty-background-blur.sh`, which migrates existing installs while preserving the configured intensity and is idempotent
 - Waybar service not restarting with `Refresh.sh`
 - Hyprland-Dock wasn't reliably toggleing on/off
 - Improved version detection in `copy.sh`
