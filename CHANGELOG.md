@@ -14,6 +14,12 @@
   - `copy.sh` refreshes `~/.config/hypr/waybar` (with a stale-path auto-repair), but the menu's update action only pulls the repo and runs patches
   - Added `patches/40-waybar-wallust-import.sh`, which repairs legacy/doubly-nested Wallust `@import` paths in the installed Waybar styles - the same class of breakage swaync had
 
+## Updated:
+
+- Docs for the Waybar -> `~/.config/hypr/waybar` move and its fallout
+  - `docs/HOWTO-Migrate-Waybar-To-Hypr.md` (+ Spanish): correct `@import` depth per file, automatic and manual migration, and why the bar needs a reload to pick up new colors
+  - `docs/Patching-UserConfigs.md` now documents that patches may target any user-owned config file, not just `hypr/UserConfigs` / `hypr/UserScripts`
+
 ---
 
 ## v2.3.27
