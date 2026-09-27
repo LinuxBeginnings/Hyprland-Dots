@@ -80,6 +80,20 @@
 - `copy.sh` tries to update `~/.zprofile`
   - NixOS systems using Home Manager use RO hard links
   - Updated `copy.sh` to handle those and not exit with error
+- Shell script lint cleanup — all `*.sh` now pass `shellcheck --severity=error`
+- `Polkit.sh` used `local` outside a function
+  - Bash rejected it, so the Kvantum QML fallback never ran
+  - Now a plain assignment so `QT_STYLE_OVERRIDE=Fusion` is applied when needed
+- `Polkit-Diag.sh` never reported override write errors
+  - The redirect swallowed the command output, so `Details:` was always empty
+- `RofiEmoji.sh` emoji list made the script unparseable
+  - `bash -n`, shellcheck and shfmt all failed on it
+  - List moved into a quoted here-doc; contents unchanged
+- `RofiThemeSelector-modified.sh` re-split theme paths containing spaces
+  - Theme flag is now passed as an array instead of a re-split string
+- `KeyboardLayout.sh` exit message mixed `$@` inside a quoted string
+- GIF previews in `HyprlockWallpaperSelect.sh` and `WallpaperSelect.sh`
+  - `"$pic_path[0]"` is now `${pic_path}[0]` so the ImageMagick frame selector is unambiguous
 
 ## Updated:
 
