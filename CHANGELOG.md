@@ -1,10 +1,19 @@
 # Changelog — KoolDots
 
+## v2.3.27.1
+
+## Fixed:
+
+- swaync path wasn't corrected on updates
+  - Added patch to copy.sh to fix on updates
+
+---
+
 ## v2.3.27
 
 ## Fixed:
 
-- Fixed `ghostty` config error at startup
+- `ghostty` config error at startup
   - Also fixed missing themes
   - Add change to blur setting to patches/
   - Root cause: the shipped default `theme = "Catppuccin Mocha"` is resolved against `~/.config/ghostty/themes` and `share/ghostty/themes`; distros that ship Ghostty without its built-in theme collection (Gentoo, some minimal/Flatpak builds) install neither, so the theme could never resolve
