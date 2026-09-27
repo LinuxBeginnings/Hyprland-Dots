@@ -461,6 +461,18 @@ bind(
   { description = "Ghostty theme selector" }
 )
 bind(
+  "SUPER CTRL",
+  "W",
+  exec_cmd("$HOME/.config/hypr/scripts/RofiWlogoutTheme.sh"),
+  { description = "wlogout theme selector" }
+)
+bind(
+  "SUPER CTRL SHIFT",
+  "W",
+  exec_cmd("$HOME/.config/hypr/scripts/RofiWlogoutWallust.sh"),
+  { description = "wlogout dynamic wallpaper selector" }
+)
+bind(
   "SUPER SHIFT",
   "B",
   exec_cmd("$HOME/.config/hypr/UserScripts/RainbowBorders-low-cpu.sh  --run-once"),
@@ -502,13 +514,28 @@ bind(
 bind(
   "SUPER ALT",
   "mouse_down",
-  exec_cmd("$HOME/.config/hypr/scripts/Zoom.sh in"),
+  function()
+    local factor = (hl and hl.get_config and (hl.get_config("cursor.zoom_factor") or hl.get_config("cursor:zoom_factor"))) or 1.0
+    if factor < 1.0 then factor = 1.0 end
+    local new_factor = factor * 1.5
+    if new_factor > 16.0 then new_factor = 16.0 end
+    if hl and hl.config then
+      hl.config({ cursor = { zoom_factor = new_factor } })
+    end
+  end,
   { description = "zoom in" }
 )
 bind(
   "SUPER ALT",
   "mouse_up",
-  exec_cmd("$HOME/.config/hypr/scripts/Zoom.sh out"),
+  function()
+    local factor = (hl and hl.get_config and (hl.get_config("cursor.zoom_factor") or hl.get_config("cursor:zoom_factor"))) or 1.0
+    local new_factor = factor / 1.5
+    if new_factor < 1.0 then new_factor = 1.0 end
+    if hl and hl.config then
+      hl.config({ cursor = { zoom_factor = new_factor } })
+    end
+  end,
   { description = "zoom out" }
 )
 bind("SUPER CTRL ALT", "B", exec_cmd("pkill -SIGUSR1 waybar"), { description = "toggle waybar on/off" })
@@ -660,16 +687,33 @@ bind(
 bind(
   "SUPER ALT",
   "H",
-  exec_cmd("hyprctl keyword scrolling:direction right"),
+  function()
+    if hl and hl.config then
+      hl.config({ scrolling = { direction = "right" } })
+    end
+  end,
   { description = "Horizonal scroll right" }
 )
-bind("SUPER CTRL", "V", exec_cmd("hyprctl keyword scrolling:direction down"), { description = "Vertical Scroll down" })
+bind(
+  "SUPER CTRL",
+  "V",
+  function()
+    if hl and hl.config then
+      hl.config({ scrolling = { direction = "down" } })
+    end
+  end,
+  { description = "Vertical Scroll down" }
+)
 bind(
   "SUPER ALT",
   "S",
-  exec_cmd(
-    'bash -c \'[[ $(hyprctl getoption scrolling:direction -j | jq -r ".str") == "right" ]] && hyprctl keyword scrolling:direction down || hyprctl keyword scrolling:direction right\''
-  ),
+  function()
+    if hl and hl.config then
+      local cur = (hl.get_config and (hl.get_config("scrolling.direction") or hl.get_config("scrolling:direction"))) or "right"
+      local next_dir = (cur == "right") and "down" or "right"
+      hl.config({ scrolling = { direction = next_dir } })
+    end
+  end,
   { description = "toggle scrolling V/H" }
 )
 -- Hyprview: SUPER CTRL+Tab (bound later after workspace/group Tab binds)
@@ -722,37 +766,31 @@ bind(
 )
 bind(
   "",
-  "xf86AudioPlayPause",
+  "XF86AudioPlay",
   exec_cmd("$HOME/.config/hypr/scripts/MediaCtrl.sh --pause"),
   { description = "play/pause", locked = true }
 )
 bind(
   "",
-  "xf86AudioPause",
+  "XF86AudioPause",
   exec_cmd("$HOME/.config/hypr/scripts/MediaCtrl.sh --pause"),
   { description = "pause", locked = true }
 )
 bind(
   "",
-  "xf86AudioPlay",
-  exec_cmd("$HOME/.config/hypr/scripts/MediaCtrl.sh --pause"),
-  { description = "play", locked = true }
-)
-bind(
-  "",
-  "xf86AudioNext",
+  "XF86AudioNext",
   exec_cmd("$HOME/.config/hypr/scripts/MediaCtrl.sh --nxt"),
   { description = "next track", locked = true }
 )
 bind(
   "",
-  "xf86AudioPrev",
+  "XF86AudioPrev",
   exec_cmd("$HOME/.config/hypr/scripts/MediaCtrl.sh --prv"),
   { description = "previous track", locked = true }
 )
 bind(
   "",
-  "xf86audiostop",
+  "XF86AudioStop",
   exec_cmd("$HOME/.config/hypr/scripts/MediaCtrl.sh --stop"),
   { description = "stop", locked = true }
 )
@@ -1005,3 +1043,12 @@ bind("SUPER", "period", dispatch("workspace", "e+1"), { description = "next work
 bind("SUPER", "comma", dispatch("workspace", "e-1"), { description = "previous workspace" })
 bind("SUPER", "mouse:272", dispatch("movewindow", ""), { description = "move window" })
 bind("SUPER", "mouse:273", dispatch("resizewindow", ""), { description = "resize window" })
+
+-- KB passthrough submap: SUPER SHIFT P enters a submap that lets the keyboard
+-- pass through to the focused window. The only key bound inside the submap is
+-- SUPER ALT P, which resets back to the normal submap. Waybar's hyprland/submap
+-- module shows "submap: Bind KB" only while it is active.
+bind("SUPER SHIFT", "P", hl.dsp.submap("Bind KB"), { description = "Enter KB passthrough submap" })
+hl.define_submap("Bind KB", function()
+  bind("SUPER ALT", "P", hl.dsp.submap("reset"), { description = "Exit KB passthrough submap" })
+end)

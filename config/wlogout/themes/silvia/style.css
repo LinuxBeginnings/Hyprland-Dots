@@ -1,0 +1,81 @@
+/* ----------- 🌸 Silvia Sakura Pink Dock Theme 🌸 -------- */
+
+window {
+    font-family: "Noto Sans", "Cantarell", "Fira Code", sans-serif;
+    color: #f9c5af;
+    background-image: image(url("./bg.png"));
+    background-size: cover;
+    background-position: center;
+}
+
+button {
+    background-repeat: no-repeat;
+    background-position: center 36%;
+    background-size: 38px;
+    background-color: rgba(22, 18, 24, 0.86);
+    border: none;
+    box-shadow: none;
+    border-radius: 0px;
+    
+    margin: 28px 0px;
+    padding-top: 80px;
+    
+    color: #f9c5af;
+    font-size: 11pt;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    outline-style: none;
+}
+
+/* Leftmost button rounded on left side */
+#lock {
+    border-top-left-radius: 28px;
+    border-bottom-left-radius: 28px;
+}
+
+/* Rightmost button rounded on right side */
+#reboot, #restart {
+    border-top-right-radius: 28px;
+    border-bottom-right-radius: 28px;
+}
+
+/* Active / Focus styling */
+button:focus {
+    background-color: rgba(180, 110, 135, 0.35);
+    color: #ffffff;
+    outline-style: none;
+}
+
+/* Hover effect: Expands taller above and below the bar with glowing pink pill card */
+button:hover {
+    background-color: rgba(225, 145, 175, 0.35);
+    color: #ffffff;
+    font-weight: 600;
+    border: 1.5px solid rgba(255, 185, 210, 0.85);
+    border-radius: 24px;
+    margin: 0px 0px;
+    padding-top: 96px;
+    background-size: 44px;
+    background-position: center 34%;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 24px rgba(235, 155, 185, 0.45), inset 0 0 16px rgba(255, 255, 255, 0.30);
+    outline-style: none;
+}
+
+#lock { background-image: image(url("./icons/lock.png")); }
+#lock:hover { background-image: image(url("./icons/lock-hover.png")); }
+
+#logout { background-image: image(url("./icons/logout.png")); }
+#logout:hover { background-image: image(url("./icons/logout-hover.png")); }
+
+#suspend, #sleep { background-image: image(url("./icons/sleep.png")); }
+#suspend:hover, #sleep:hover { background-image: image(url("./icons/sleep-hover.png")); }
+
+#shutdown, #power { background-image: image(url("./icons/power.png")); }
+#shutdown:hover, #power:hover { background-image: image(url("./icons/power-hover.png")); }
+
+#hibernate { background-image: image(url("./icons/hibernate.png")); }
+#hibernate:hover { background-image: image(url("./icons/hibernate-hover.png")); }
+
+#reboot, #restart { background-image: image(url("./icons/reboot.png")); }
+#reboot:hover, #restart:hover { background-image: image(url("./icons/reboot-hover.png")); }

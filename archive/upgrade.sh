@@ -86,7 +86,6 @@ target_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
 # Specify the update source directories, their corresponding target directories, and their exclusions
 declare -A directories=(
     ["config/hypr/"]="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/"
-    ["config/kitty/"]="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/"
     ["config/Kvantum/"]="${XDG_CONFIG_HOME:-$HOME/.config}/Kvantum/"
     ["config/nvim/"]="${XDG_CONFIG_HOME:-$HOME/.config}/nvim/"
     ["config/qt5ct/"]="${XDG_CONFIG_HOME:-$HOME/.config}/qt5ct"

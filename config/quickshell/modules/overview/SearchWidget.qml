@@ -303,7 +303,9 @@ Item { // Wrapper
                                     clickActionName: "",
                                     type: `#${entry.match(/^\s*(\S+)/)?.[1] || ""}`,
                                     execute: () => {
-                                        Hyprland.dispatch(`exec echo '${StringUtils.shellSingleQuoteEscape(entry)}' | cliphist decode | wl-copy`);
+                                        Hyprland.dispatch(Hyprland.usingLua
+                                            ? `hl.dsp.exec_raw("exec echo '${StringUtils.shellSingleQuoteEscape(entry)}' | cliphist decode | wl-copy")`
+                                            : `exec echo '${StringUtils.shellSingleQuoteEscape(entry)}' | cliphist decode | wl-copy`);
                                     }
                                 };
                             }).filter(Boolean);
@@ -318,7 +320,9 @@ Item { // Wrapper
                                     clickActionName: "",
                                     type: "Emoji",
                                     execute: () => {
-                                        Hyprland.dispatch(`exec wl-copy '${StringUtils.shellSingleQuoteEscape(entry.match(/^\s*(\S+)/)?.[1])}'`);
+                                        Hyprland.dispatch(Hyprland.usingLua
+                                            ? `hl.dsp.exec_raw("exec wl-copy '${StringUtils.shellSingleQuoteEscape(entry.match(/^\\s*(\\S+)/)?.[1])}'")`
+                                            : `exec wl-copy '${StringUtils.shellSingleQuoteEscape(entry.match(/^\\s*(\\S+)/)?.[1])}'`);
                                     }
                                 };
                             }).filter(Boolean);
@@ -334,7 +338,9 @@ Item { // Wrapper
                             fontType: "monospace",
                             materialSymbol: 'calculate',
                             execute: () => {
-                                Hyprland.dispatch(`exec wl-copy '${StringUtils.shellSingleQuoteEscape(root.mathResult)}'`)
+                                Hyprland.dispatch(Hyprland.usingLua
+                                    ? `hl.dsp.exec_raw("exec wl-copy '${StringUtils.shellSingleQuoteEscape(root.mathResult)}'")`
+                                    : `exec wl-copy '${StringUtils.shellSingleQuoteEscape(root.mathResult)}'`)
                             }
                         }
                         const commandResultObject = {

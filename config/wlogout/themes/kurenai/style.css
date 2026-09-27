@@ -1,0 +1,112 @@
+/* ==============================================================================
+   🍁 Kurenai (Crimson Sakura / 紅) Wlogout Theme
+   Radial Dark Obsidian Glass Spheres with Glowing Crimson Squircle & Neon Auras
+   ============================================================================== */
+
+window {
+    font-family: "Noto Sans", "Cantarell", "Fira Code", sans-serif;
+    color: #ffffff;
+    background-image: image(url("./bg.png"));
+    background-size: cover;
+    background-position: center;
+}
+
+/* 6 Radial Glass Orb Buttons */
+button {
+    background-repeat: no-repeat;
+    background-position: center 30%;
+    background-size: 38px;
+    background-color: rgba(18, 14, 20, 0.88);
+    border: 1.5px solid rgba(255, 60, 80, 0.28);
+    border-radius: 9999px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65), inset 0 2px 4px rgba(255, 255, 255, 0.12), inset 0 -4px 10px rgba(255, 40, 60, 0.20);
+    
+    color: #ffffff;
+    font-size: 11pt;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    padding-top: 68px;
+    outline-style: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Center Shutdown Squircle */
+#shutdown, #power {
+    background-repeat: no-repeat;
+    background-position: center 30%;
+    background-size: 52px;
+    background-color: rgba(28, 16, 22, 0.92);
+    border: 2.5px solid rgba(240, 45, 65, 0.90);
+    border-radius: 44px;
+    box-shadow: 0 0 35px rgba(220, 35, 55, 0.70), 0 12px 28px rgba(0, 0, 0, 0.75), inset 0 0 20px rgba(220, 35, 55, 0.35);
+    
+    color: #ffffff;
+    font-size: 12pt;
+    font-weight: 600;
+    padding-top: 88px;
+}
+
+/* Button Focus State */
+button:focus {
+    background-color: rgba(200, 30, 50, 0.30);
+    border-color: rgba(255, 75, 95, 0.90);
+    outline-style: none;
+}
+
+/* Hover State for Radial Spheres */
+button:hover {
+    background-color: rgba(225, 35, 55, 0.35);
+    border: 2px solid rgba(255, 80, 100, 0.95);
+    box-shadow: 0 0 36px rgba(255, 45, 65, 0.85), 0 14px 32px rgba(0, 0, 0, 0.75), inset 0 0 18px rgba(255, 60, 80, 0.50);
+    color: #ffffff;
+    font-weight: 600;
+    background-size: 44px;
+    background-position: center 28%;
+    outline-style: none;
+}
+
+/* Hover State for Center Shutdown Squircle */
+#shutdown:hover, #power:hover {
+    background-color: rgba(245, 40, 60, 0.45);
+    border: 3px solid rgba(255, 95, 115, 1.0);
+    box-shadow: 0 0 55px rgba(255, 45, 65, 1.0), 0 16px 36px rgba(0, 0, 0, 0.85), inset 0 0 30px rgba(255, 70, 90, 0.65);
+    background-size: 58px;
+    background-position: center 28%;
+}
+
+/* Click / Active State */
+button:active {
+    background-color: rgba(255, 75, 95, 0.55);
+    box-shadow: 0 0 45px rgba(255, 80, 100, 1.0), inset 0 0 24px rgba(255, 90, 110, 0.85);
+}
+
+/* Spacers are strictly invisible, non-interactive layout stabilizers */
+#s0, #s1, #s2, #s3, #s4, #s5, #s6, #s7 {
+    opacity: 0;
+    border: none;
+    background: transparent;
+    background-color: transparent;
+    box-shadow: none;
+}
+
+/* Button Icon Bindings */
+#lock { background-image: image(url("./icons/lock.png")); }
+#lock:hover { background-image: image(url("./icons/lock-hover.png")); }
+
+#reboot, #restart { background-image: image(url("./icons/reboot.png")); }
+#reboot:hover, #restart:hover { background-image: image(url("./icons/reboot-hover.png")); }
+
+#logout { background-image: image(url("./icons/logout.png")); }
+#logout:hover { background-image: image(url("./icons/logout-hover.png")); }
+
+#hibernate { background-image: image(url("./icons/hibernate.png")); }
+#hibernate:hover { background-image: image(url("./icons/hibernate-hover.png")); }
+
+#suspend { background-image: image(url("./icons/suspend.png")); }
+#suspend:hover { background-image: image(url("./icons/suspend-hover.png")); }
+
+#sleep { background-image: image(url("./icons/sleep.png")); }
+#sleep:hover { background-image: image(url("./icons/sleep-hover.png")); }
+
+#shutdown, #power { background-image: image(url("./icons/shutdown.png")); }
+#shutdown:hover, #power:hover { background-image: image(url("./icons/shutdown-hover.png")); }

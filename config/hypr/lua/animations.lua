@@ -7,6 +7,31 @@
 
 -- Converted from config/hypr/UserConfigs/UserAnimations.conf.
 
+local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")
+local user_anim = configHome .. "/hypr/UserConfigs/user_animations.lua"
+
+local function has_active_lua_content(path)
+  local handle = io.open(path, "r")
+  if not handle then
+    return false
+  end
+  for line in handle:lines() do
+    local trimmed = line:match("^%s*(.-)%s*$")
+    if trimmed ~= "" and not trimmed:match("^%-%-") then
+      handle:close()
+      return true
+    end
+  end
+  handle:close()
+  return false
+end
+
+-- If user_animations.lua contains active animation configuration (e.g. preset chosen from Animations.sh),
+-- skip default animations so preset definitions (like windows or workspaces) are not overridden by default child leaves.
+if has_active_lua_content(user_anim) then
+  return
+end
+
 hl.config({
     animations = {
         enabled = true,

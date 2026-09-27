@@ -12,6 +12,13 @@ if pgrep -u "$UID" -f 'xfce-polkit|polkit-gnome-authentication-agent-1|polkit-kd
   exit 0
 fi
 
+# On NixOS, delegate to Polkit-NixOS.sh which locates agents in the /nix/store
+if grep -qi '^ID=nixos' /etc/os-release 2>/dev/null; then
+  if [ -x "$(dirname "$0")/Polkit-NixOS.sh" ]; then
+    exec "$(dirname "$0")/Polkit-NixOS.sh"
+  fi
+fi
+
 # If hyprpolkitagent is managed as a user service, defer to systemd.
 # This avoids race conditions where both this script and systemd start an
 # agent at the same time, which can trigger "authentication agent already exists"
@@ -36,7 +43,15 @@ fi
 # Check if kvantum is specified globally but the QML module is missing
 if [[ "${QT_STYLE_OVERRIDE:-}" == "kvantum" ]] || [[ "${QT_STYLE_OVERRIDE:-}" == "kvantum-dark" ]]; then
   # Check common Qt5/Qt6 QML directories for the Kvantum module
-  if ! find /usr/lib /usr/lib64 /usr/share -type d -path "*/qml/*/kvantum" -print -quit 2>/dev/null | grep -q .; then
+  local has_kvantum=0
+  for d in /usr/lib*/qt*/qml /usr/lib*/*-linux-gnu/qt*/qml /usr/lib*/qml /usr/share/qt*/qml /usr/share/qml; do
+    [ -d "$d" ] || continue
+    if [ -d "$d/kvantum" ] || [ -d "$d/org/kde/kvantum" ]; then
+      has_kvantum=1
+      break
+    fi
+  done
+  if [ "$has_kvantum" -eq 0 ]; then
     echo "Kvantum QML module not found. Overriding QT_STYLE_OVERRIDE for Polkit to prevent crash."
     export QT_STYLE_OVERRIDE=Fusion
   fi

@@ -16,6 +16,9 @@ build/
 eggs/
 pip-wheel-metadata/
 
+# NFS Mount lock files 
+.nfs*
+
 # Virtual environments
 .venv/
 venv/

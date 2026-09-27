@@ -8,9 +8,8 @@
 # Kitty Themes Source https://github.com/dexpota/kitty-themes #
 
 # Define directories and variables
-kitty_themes_DiR="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty-themes" # Kitty Themes Directory
+kitty_themes_DiR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/kitty-themes" # Kitty Themes Directory
 user_kitty_config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/kitty.conf"
-fallback_kitty_config="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty.conf"
 kitty_config="$user_kitty_config"
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images" # For notifications
 rofi_theme_for_this_script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-kitty-theme.rasi"
@@ -22,24 +21,10 @@ ensure_managed_kitty_config() {
     kitty_config="$user_kitty_config"
     return 0
   fi
-
-  if [ -r "$fallback_kitty_config" ]; then
-    mkdir -p "$(dirname "$user_kitty_config")" 2>/dev/null || true
-    cp -f "$fallback_kitty_config" "$user_kitty_config" 2>/dev/null || true
-    if [ -f "$user_kitty_config" ] && [ -r "$user_kitty_config" ]; then
-      kitty_config="$user_kitty_config"
-      return 0
-    fi
-  fi
-
-  kitty_config="$fallback_kitty_config"
 }
 
 sync_runtime_kitty_config() {
-  if [ "$kitty_config" != "$fallback_kitty_config" ] && [ -r "$kitty_config" ]; then
-    mkdir -p "$(dirname "$fallback_kitty_config")" 2>/dev/null || true
-    cp -f "$kitty_config" "$fallback_kitty_config" 2>/dev/null || true
-  fi
+  :
 }
 
 # --- Helper Functions ---
@@ -105,7 +90,7 @@ apply_kitty_theme_to_config() {
   cp "$kitty_config" "$temp_kitty_config_file"
 
   local include_target
-  include_target="include ${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty-themes/$(basename "$theme_file_path_to_apply")"
+  include_target="include ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/kitty-themes/$(basename "$theme_file_path_to_apply")"
 
   sed -i -E '/^[[:space:]]*include[[:space:]]+.*kitty-themes\/.*\.conf[[:space:]]*$/d' "$temp_kitty_config_file"
   if [ -s "$temp_kitty_config_file" ] && [ "$(tail -c1 "$temp_kitty_config_file")" != "" ]; then

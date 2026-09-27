@@ -1,0 +1,60 @@
+/* ============================================================================== */
+/*  Wlogout Theme: hadi493                                                       */
+/*  Author: hadi493                                                               */
+/*  Source: https://github.com/Hadi493/wlogout/tree/master                       */
+/*  Adapted for: KoolDots (Hyprland-Dots)                                         */
+/* ============================================================================== */
+
+window {
+    font-family: "JetBrains Mono Nerd Font", "Fira Code", sans-serif;
+    font-size: 12pt;
+    color: #cdd6f4;
+    background-image: image(url("./bg.png"));
+    background-size: cover;
+    background-position: center;
+}
+
+button {
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 25%;
+    border-style: solid;
+    border-width: 3px;
+    background-color: rgba(12, 12, 12, 0.3);
+    border-color: #313244;
+    margin: 5px;
+    border-radius: 20px;
+    transition: all 0.3s ease-in-out;
+    color: #cdd6f4;
+    outline-style: none;
+}
+
+button:focus, button:active, button:hover {
+    /* 20% Overlay 2, 80% mantle */
+    background-color: rgb(48, 50, 66);
+    outline-style: none;
+}
+
+#lock {
+    background-image: image(url("./icons/lock.svg"));
+}
+
+#logout {
+    background-image: image(url("./icons/logout.svg"));
+}
+
+#suspend {
+    background-image: image(url("./icons/suspend.svg"));
+}
+
+#hibernate {
+    background-image: image(url("./icons/hibernate.svg"));
+}
+
+#shutdown {
+    background-image: image(url("./icons/shutdown.svg"));
+}
+
+#reboot {
+    background-image: image(url("./icons/reboot.svg"));
+}

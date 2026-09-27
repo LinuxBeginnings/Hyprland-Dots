@@ -12,22 +12,9 @@
 set -euo pipefail
 
 notif="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images/ja.png"
-laptops_conf="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/Laptops.conf"
 user_laptops_lua="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/user_laptops.lua"
 
 touchpad_device="${TOUCHPAD_DEVICE:-}"
-
-# Check Laptops.conf for legacy override
-if [[ -z "$touchpad_device" && -f "$laptops_conf" ]]; then
-    touchpad_device="$(
-        awk -F= '/^[[:space:]]*\$Touchpad_Device/ {
-            gsub(/[[:space:]]*/, "", $1);
-            gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2);
-            print $2;
-            exit
-        }' "$laptops_conf"
-    )"
-fi
 
 # Check user_laptops.lua for Lua override
 if [[ -z "$touchpad_device" && -f "$user_laptops_lua" ]]; then
@@ -55,17 +42,8 @@ status_file="$runtime_dir/touchpad.status"
 set_touchpad_state() {
     local state="$1"
 
-    # Hyprland 0.55+ Lua eval path
-    if hyprctl -r eval "hl.device({ name = [[$touchpad_device]], enabled = $state })" >/dev/null 2>&1; then
-        return 0
-    fi
-
-    # Legacy Hyprlang keyword fallback
-    if hyprctl -r -- keyword "device:${touchpad_device}:enabled" "$state" >/dev/null 2>&1; then
-        return 0
-    fi
-
-    hyprctl keyword "device:${touchpad_device}:enabled" "$state" >/dev/null 2>&1 || true
+    # Hyprland native Lua eval path
+    hyprctl -r eval "hl.device({ name = [[$touchpad_device]], enabled = $state })" >/dev/null 2>&1 || true
 }
 
 enable_touchpad() {

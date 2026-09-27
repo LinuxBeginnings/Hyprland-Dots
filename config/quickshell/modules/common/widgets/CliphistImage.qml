@@ -71,7 +71,9 @@ Rectangle {
     }
 
     Component.onDestruction: {
-        Hyprland.dispatch(`exec bash -c "[ -f '${imageDecodeFilePath}' ] && rm -f '${imageDecodeFilePath}'"`)
+        Hyprland.dispatch(Hyprland.usingLua
+            ? `hl.dsp.exec_raw("exec bash -c \\"[ -f '${imageDecodeFilePath}' ] && rm -f '${imageDecodeFilePath}'\\"")`
+            : `exec bash -c "[ -f '${imageDecodeFilePath}' ] && rm -f '${imageDecodeFilePath}'"`)
     }
 
     Image {

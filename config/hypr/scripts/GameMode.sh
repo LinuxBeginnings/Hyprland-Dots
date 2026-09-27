@@ -12,18 +12,6 @@ SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 # shellcheck source=/dev/null
 . "$SCRIPTSDIR/WallpaperCmd.sh"
 
-# Detect active Hyprland config mode (Lua entrypoint vs legacy .conf includes)
-config_home="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
-hypr_dir="$config_home/hypr"
-lua_entry="$hypr_dir/hyprland.lua"
-legacy_lua_entry="$config_home/hyprland.lua"
-
-if [[ -f "$lua_entry" || -f "$legacy_lua_entry" ]]; then
-    hypr_config_mode="lua"
-else
-    hypr_config_mode="conf"
-fi
-
 # Check if animations are currently enabled
 HYPRGAMEMODE=$(hyprctl getoption animations:enabled -j | jq -r '.bool' 2>/dev/null)
 if [[ "$HYPRGAMEMODE" == "null" || -z "$HYPRGAMEMODE" ]]; then
@@ -31,25 +19,13 @@ if [[ "$HYPRGAMEMODE" == "null" || -z "$HYPRGAMEMODE" ]]; then
 fi
 
 if [ "$HYPRGAMEMODE" = "true" ] || [ "$HYPRGAMEMODE" = "1" ] ; then
-    # ENABLE Game Mode (Disable animations/decorations)
-    if [[ "$hypr_config_mode" == "lua" ]]; then
-        hyprctl eval "hl.config({ 
-            animations = { enabled = false },
-            decoration = { shadow = { enabled = false }, blur = { enabled = false }, rounding = 0 },
-            general = { gaps_in = 0, gaps_out = 0, border_size = 1 }
-        })"
-        hyprctl eval "hl.window_rule({ name = 'gamemode-opacity', match = { class = '.*' }, opacity = 1.0 })"
-    else
-        hyprctl --batch "\
-            keyword animations:enabled 0;\
-            keyword decoration:shadow:enabled 0;\
-            keyword decoration:blur:enabled 0;\
-            keyword general:gaps_in 0;\
-            keyword general:gaps_out 0;\
-            keyword general:border_size 1;\
-            keyword decoration:rounding 0"
-        hyprctl keyword "windowrule opacity 1 override 1 override 1 override, ^(.*)$"
-    fi
+    # ENABLE Game Mode (Disable animations/decorations via native Lua)
+    hyprctl eval "hl.config({ 
+        animations = { enabled = false },
+        decoration = { shadow = { enabled = false }, blur = { enabled = false }, rounding = 0 },
+        general = { gaps_in = 0, gaps_out = 0, border_size = 1 }
+    })"
+    hyprctl eval "hl.window_rule({ name = 'gamemode-opacity', match = { class = '.*' }, opacity = 1.0 })"
     
     "$WWW_CMD" kill 
     notify-send -e -u low -i "$notif" " Gamemode:" " enabled"

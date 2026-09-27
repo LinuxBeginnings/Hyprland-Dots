@@ -42,7 +42,7 @@ copy_phase1() {
   local log="$1"
   local run_mode="${2:-${RUN_MODE:-}}"
   local base="${DOTFILES_DIR:-.}"
-  local dirs="fastfetch kitty swaync"
+  local dirs="fastfetch swaync"
   for DIR2 in $dirs; do
     local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/$DIR2"
     if [ -d "$DIRPATH" ]; then
@@ -111,15 +111,203 @@ copy_phase1() {
   fi
 }
 
+# Restore symlink targets and custom user-added configs/styles from a waybar
+# backup directory into the freshly-copied waybar dir. Shared by both the
+# normal in-place upgrade path and the legacy ~/.config/waybar migration path.
+_restore_waybar_customizations() {
+  local new_dir="$1"
+  local backup_dir="$2"
+  local file dir symlink symlink_target target_name target_file target_dir BACKUP_FILEw
+
+  for file in "config" "style.css"; do
+    symlink="$backup_dir/$file"
+    target_file="$new_dir/$file"
+    if [ -L "$symlink" ]; then
+      symlink_target=$(readlink "$symlink")
+      target_name=$(basename "$symlink_target")
+      # Normalize legacy names if needed
+      case "$target_name" in
+        "[TOP] Default"|"[TOP] Default Laptop"|"[TOP] Default (old v"*)
+          target_name="${target_name//\[TOP\] /TOP-}"
+          target_name="${target_name// Laptop/-Laptop}"
+          target_name="${target_name// (old v/-old-v}"
+          target_name="${target_name//)/}"
+          ;;
+        "[BOT] Default"|"[BOT] Default Laptop")
+          target_name="${target_name//\[BOT\] /BOT-}"
+          target_name="${target_name// Laptop/-Laptop}"
+          ;;
+      esac
+      if [ "$file" = "config" ] && [ -f "$new_dir/configs/$target_name" ]; then
+        rm -f "$target_file" && ln -sf "$new_dir/configs/$target_name" "$target_file"
+      elif [ "$file" = "style.css" ] && [ -f "$new_dir/style/$target_name" ]; then
+        rm -f "$target_file" && ln -sf "$new_dir/style/$target_name" "$target_file"
+      fi
+    elif [ -f "$symlink" ]; then
+      # If backup was a regular file with stale includes, patch them in-place
+      rm -f "$target_file" && cp -f "$symlink" "$target_file"
+      if [ "$file" = "config" ]; then
+        sed -i 's#\$HOME/\.config/waybar/#$HOME/.config/hypr/waybar/#g; s#~/\.config/waybar/#~/.config/hypr/waybar/#g' "$target_file" 2>/dev/null || true
+      elif [ "$file" = "style.css" ]; then
+        sed -i -E 's#(@import[[:space:]]*["'"'"'])\.\./\.\./\.config/waybar/wallust/colors-waybar\.css(["'"'"'])#\1../../../.config/hypr/waybar/wallust/colors-waybar.css\2#g; s#\.config/waybar/#.config/hypr/waybar/#g' "$target_file" 2>/dev/null || true
+      fi
+    fi
+  done
+  for dir in "$backup_dir/configs"/*; do
+    [ -e "$dir" ] || continue
+    if [ -d "$dir" ]; then
+      target_dir="$new_dir/configs/$(basename "$dir")"
+      [ -d "$target_dir" ] || cp -r "$dir" "$new_dir/configs/"
+    fi
+  done
+  for file in "$backup_dir/configs"/*; do
+    [ -e "$file" ] || continue
+    target_file="$new_dir/configs/$(basename "$file")"
+    if [ ! -e "$target_file" ]; then
+      cp "$file" "$new_dir/configs/"
+      sed -i 's#\$HOME/\.config/waybar/#$HOME/.config/hypr/waybar/#g; s#~/\.config/waybar/#~/.config/hypr/waybar/#g' "$target_file" 2>/dev/null || true
+    fi
+  done || true
+  for file in "$backup_dir/style"/*; do
+    [ -e "$file" ] || continue
+    if [ -d "$file" ]; then
+      target_dir="$new_dir/style/$(basename "$file")"
+      [ -d "$target_dir" ] || cp -r "$file" "$new_dir/style/"
+    else
+      target_file="$new_dir/style/$(basename "$file")"
+      if [ ! -e "$target_file" ]; then
+        cp "$file" "$new_dir/style/"
+        sed -i -E 's#(@import[[:space:]]*["'"'"'])\.\./\.\./\.config/waybar/wallust/colors-waybar\.css(["'"'"'])#\1../../../.config/hypr/waybar/wallust/colors-waybar.css\2#g; s#\.config/waybar/#.config/hypr/waybar/#g' "$target_file" 2>/dev/null || true
+      fi
+    fi
+  done || true
+  BACKUP_FILEw="$backup_dir/UserModules"
+  [ -f "$BACKUP_FILEw" ] && cp -f "$BACKUP_FILEw" "$new_dir/UserModules"
+
+  # Ensure config and style.css exist and are valid symlinks; if broken or missing, point to defaults
+  if [ ! -e "$new_dir/config" ]; then
+    local chassis
+    chassis="$(detect_waybar_config 2>/dev/null || echo "desktop")"
+    local d_cfg="$new_dir/configs/TOP-Default"
+    [ "$chassis" = "laptop" ] && d_cfg="$new_dir/configs/TOP-Default-Laptop"
+    [ -f "$d_cfg" ] && rm -f "$new_dir/config" && ln -sf "$d_cfg" "$new_dir/config"
+  fi
+  if [ ! -e "$new_dir/style.css" ]; then
+    local d_stl="$new_dir/style/Extra-Prismatic-Glow.css"
+    [ -f "$d_stl" ] && rm -f "$new_dir/style.css" && ln -sf "$d_stl" "$new_dir/style.css"
+  fi
+}
+
+# Detect a waybar directory whose configs/modules/styles still reference the
+# pre-migration "$HOME/.config/waybar/" path, or whose config/style.css links
+# are broken, missing, or pointing to stale locations.
+_waybar_dir_has_stale_paths() {
+  local dir="$1"
+  [ -d "$dir" ] || return 1
+
+  # 1. Check if config or style.css symlinks point to legacy path or are broken
+  for link in "$dir/config" "$dir/style.css"; do
+    if [ -L "$link" ]; then
+      local tgt
+      tgt="$(readlink "$link" 2>/dev/null || true)"
+      if [[ "$tgt" == *".config/waybar"* ]] || [ ! -e "$link" ]; then
+        return 0
+      fi
+    elif [ -f "$link" ]; then
+      # Regular file with stale includes is stale
+      if grep -rq '\.config/waybar/' "$link" 2>/dev/null; then
+        return 0
+      fi
+    elif [ ! -e "$link" ]; then
+      return 0
+    fi
+  done
+
+  # 2. Check if any file content inside directory has stale .config/waybar references
+  if grep -rq '\.config/waybar/' "$dir" 2>/dev/null; then
+    return 0
+  fi
+
+  return 1
+}
+
+# Sync repo-managed Waybar files into an already-installed waybar directory
+# without clobbering user-created files. Files shipped by the repo (Modules,
+# Modules*, configs/, style/) are refreshed, but anything that only exists in
+# the user's install is left in place because rsync runs without --delete.
+# User-owned and runtime-generated content is excluded so it is never
+# overwritten: UserModules, generated wallust colors, and the top-level
+# config/style.css symlinks (the user's active layout/style selection).
+_rsync_waybar_system_files() {
+  local target_dir="$1"
+  local source_dir="$2"
+  local log="${3:-/dev/null}"
+
+  [ -d "$source_dir" ] || return 1
+  [ -d "$target_dir" ] || return 1
+
+  rsync -a \
+    --exclude='/UserModules' \
+    --exclude='/wallust/' \
+    --exclude='/config' \
+    --exclude='/style.css' \
+    "$source_dir/" "$target_dir/" >>"$log" 2>&1
+}
+
 copy_waybar() {
   local log="$1"
   local run_mode="${2:-${RUN_MODE:-}}"
   local base="${DOTFILES_DIR:-.}"
   local DIRW="waybar"
-  local DIRPATHw="${XDG_CONFIG_HOME:-$HOME/.config}/$DIRW"
+  local OLD_DIRPATHw="${XDG_CONFIG_HOME:-$HOME/.config}/$DIRW"
+  local DIRPATHw="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/$DIRW"
+
+  mkdir -p "$(dirname "$DIRPATHw")"
+
+  # One-time migration: a pre-migration install has waybar at the legacy
+  # top-level path (~/.config/waybar), but the new hypr-owned path
+  # (~/.config/hypr/waybar) does not exist yet. Its configs/modules/styles
+  # always reference the old "$HOME/.config/waybar/" path (correct for where
+  # they used to live), which breaks the moment they're relocated to a new
+  # parent directory -- so always back up, install a fresh repo copy, and
+  # restore customizations on top. A bare relocate is never safe here.
+  if [ -d "$OLD_DIRPATHw" ] && [ ! -d "$DIRPATHw" ]; then
+    echo -e "${NOTE:-[NOTE]} - Detected legacy ${YELLOW:-}$OLD_DIRPATHw${RESET:-}; migrating it to ${YELLOW:-}$DIRPATHw${RESET:-}." 2>&1 | tee -a "$log"
+    BACKUP_DIR=$(get_backup_dirname)
+    cp -r "$OLD_DIRPATHw" "$OLD_DIRPATHw-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
+    echo -e "${NOTE:-[NOTE]} - Backed up $DIRW to $OLD_DIRPATHw-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
+    rm -rf "$OLD_DIRPATHw"
+    cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
+    _restore_waybar_customizations "$DIRPATHw" "$OLD_DIRPATHw-backup-$BACKUP_DIR"
+    echo -e "${OK:-[OK]} - Migrated ${YELLOW:-}$DIRW${RESET:-} config to ${YELLOW:-}$DIRPATHw${RESET:-}." 2>&1 | tee -a "$log"
+    return 0
+  fi
+
   if [ -d "$DIRPATHw" ]; then
+    # Stale check runs first and bypasses both the express "keep existing"
+    # shortcut and the interactive y/n prompt below: a directory with broken
+    # path references (e.g. left behind by an earlier/interrupted copy of
+    # this dotfiles version) is not something either mode should preserve.
+    if _waybar_dir_has_stale_paths "$DIRPATHw"; then
+      echo -e "${WARN:-[WARN]} - ${YELLOW:-}$DIRPATHw${RESET:-} still contains pre-migration path references (\$HOME/.config/waybar/...) from an earlier/interrupted copy; module includes and CSS imports are broken as a result. Repairing automatically." 2>&1 | tee -a "$log"
+      BACKUP_DIR=$(get_backup_dirname)
+      cp -r "$DIRPATHw" "$DIRPATHw-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
+      echo -e "${NOTE:-[NOTE]} - Backed up $DIRW to $DIRPATHw-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
+      rm -rf "$DIRPATHw" && cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
+      _restore_waybar_customizations "$DIRPATHw" "$DIRPATHw-backup-$BACKUP_DIR"
+      echo -e "${OK:-[OK]} - Repaired stale ${YELLOW:-}$DIRW${RESET:-} config at ${YELLOW:-}$DIRPATHw${RESET:-} (runs regardless of express/upgrade mode since the old content was broken, not a preference)." 2>&1 | tee -a "$log"
+      return 0
+    fi
+
     if [ "$run_mode" = "express" ]; then
-      echo -e "${NOTE:-[NOTE]} - Express mode: keeping existing ${YELLOW:-}$DIRW${RESET:-} config." 2>&1 | tee -a "$log"
+      # Express keeps the user's layout/style choice, but still refreshes the
+      # repo-managed Waybar files so dotfiles updates (e.g. new modules) apply.
+      echo -e "${NOTE:-[NOTE]} - Express mode: syncing system ${YELLOW:-}$DIRW${RESET:-} files (user-created files preserved)." 2>&1 | tee -a "$log"
+      if _rsync_waybar_system_files "$DIRPATHw" "$base/config/hypr/$DIRW" "$log"; then
+        echo -e "${OK:-[OK]} - Synced system ${YELLOW:-}$DIRW${RESET:-} files into ${YELLOW:-}$DIRPATHw${RESET:-}." 2>&1 | tee -a "$log"
+      else
+        echo -e "${WARN:-[WARN]} - ${YELLOW:-}$DIRW${RESET:-} system sync skipped (missing source or target)." 2>&1 | tee -a "$log"
+      fi
       return 0
     fi
     while true; do
@@ -130,48 +318,8 @@ copy_waybar() {
         BACKUP_DIR=$(get_backup_dirname)
         cp -r "$DIRPATHw" "$DIRPATHw-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
         echo -e "${NOTE:-[NOTE]} - Backed up $DIRW to $DIRPATHw-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
-        rm -rf "$DIRPATHw" && cp -r "$base/config/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
-        for file in "config" "style.css"; do
-          symlink="$DIRPATHw-backup-$BACKUP_DIR/$file"
-          target_file="$DIRPATHw/$file"
-          if [ -L "$symlink" ]; then
-            symlink_target=$(readlink "$symlink")
-            target_name=$(basename "$symlink_target")
-            if [ "$file" = "config" ] && [ -f "$DIRPATHw/configs/$target_name" ]; then
-              rm -f "$target_file" && ln -sf "$DIRPATHw/configs/$target_name" "$target_file"
-            elif [ "$file" = "style.css" ] && [ -f "$DIRPATHw/style/$target_name" ]; then
-              rm -f "$target_file" && ln -sf "$DIRPATHw/style/$target_name" "$target_file"
-            elif [ -f "$symlink_target" ]; then
-              rm -f "$target_file" && ln -sf "$symlink_target" "$target_file"
-            fi
-          elif [ -f "$symlink" ]; then
-            rm -f "$target_file" && cp -f "$symlink" "$target_file"
-          fi
-        done
-        for dir in "$DIRPATHw-backup-$BACKUP_DIR/configs"/*; do
-          [ -e "$dir" ] || continue
-          if [ -d "$dir" ]; then
-            target_dir="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/$(basename "$dir")"
-            [ -d "$target_dir" ] || cp -r "$dir" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/"
-          fi
-        done
-        for file in "$DIRPATHw-backup-$BACKUP_DIR/configs"/*; do
-          [ -e "$file" ] || continue
-          target_file="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/$(basename "$file")"
-          [ -e "$target_file" ] || cp "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/configs/"
-        done || true
-        for file in "$DIRPATHw-backup-$BACKUP_DIR/style"/*; do
-          [ -e "$file" ] || continue
-          if [ -d "$file" ]; then
-            target_dir="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/$(basename "$file")"
-            [ -d "$target_dir" ] || cp -r "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/"
-          else
-            target_file="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/$(basename "$file")"
-            [ -e "$target_file" ] || cp "$file" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/"
-          fi
-        done || true
-        BACKUP_FILEw="$DIRPATHw-backup-$BACKUP_DIR/UserModules"
-        [ -f "$BACKUP_FILEw" ] && cp -f "$BACKUP_FILEw" "$DIRPATHw/UserModules"
+        rm -rf "$DIRPATHw" && cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
+        _restore_waybar_customizations "$DIRPATHw" "$DIRPATHw-backup-$BACKUP_DIR"
         break
         ;;
       [Nn]*)
@@ -182,7 +330,7 @@ copy_waybar() {
       esac
     done
   else
-    cp -r "$base/config/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
+    cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
     echo -e "${OK:-[OK]} - Copy completed for ${YELLOW:-}$DIRW${RESET:-}" 2>&1 | tee -a "$log"
   fi
 }
@@ -191,6 +339,20 @@ copy_phase2() {
   local log="$1"
   local base="${DOTFILES_DIR:-.}"
   local DIR="btop cava hypr Kvantum nwg-dock-hyprland qt5ct qt6ct starship swappy wlogout yazi"
+
+  # copy_waybar() (called before copy_phase2) already placed the final
+  # waybar content at ~/.config/hypr/waybar (fresh copy, or backed-up and
+  # restored from an existing/legacy install). Since waybar now lives
+  # underneath hypr/, the blanket "hypr" backup+recopy below would otherwise
+  # discard that work and replace it with an untouched repo copy. Stash it
+  # aside and put it back once the hypr copy is done.
+  local hypr_waybar_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar"
+  local hypr_waybar_stash=""
+  if [ -d "$hypr_waybar_dir" ]; then
+    hypr_waybar_stash="$(mktemp -d "${TMPDIR:-/tmp}/kooldots-waybar-stash.XXXXXX")"
+    mv "$hypr_waybar_dir" "$hypr_waybar_stash/waybar" 2>&1 | tee -a "$log"
+  fi
+
   for DIR_NAME in $DIR; do
     local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/$DIR_NAME"
     if [ -d "$DIRPATH" ]; then
@@ -200,11 +362,21 @@ copy_phase2() {
     fi
     if [ -d "$base/config/$DIR_NAME" ]; then
       cp -r "$base/config/$DIR_NAME/" "${XDG_CONFIG_HOME:-$HOME/.config}/$DIR_NAME" 2>&1 | tee -a "$log"
+      if [ "$DIR_NAME" = "gtk-3.0" ] && [ -n "$BACKUP_DIR" ] && [ -f "$DIRPATH-backup-$BACKUP_DIR/settings.ini" ]; then
+        cp -n "$DIRPATH-backup-$BACKUP_DIR/settings.ini" "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/settings.ini" 2>/dev/null || true
+      fi
       echo "${OK:-[OK]} - Copy of config for ${YELLOW:-}$DIR_NAME${RESET:-} completed!" 2>&1 | tee -a "$log"
     else
       echo "${ERROR:-[ERROR]} - Directory config/$DIR_NAME does not exist to copy." 2>&1 | tee -a "$log"
     fi
   done
+
+  if [ -n "$hypr_waybar_stash" ] && [ -d "$hypr_waybar_stash/waybar" ]; then
+    rm -rf "$hypr_waybar_dir"
+    mv "$hypr_waybar_stash/waybar" "$hypr_waybar_dir" 2>&1 | tee -a "$log"
+    rmdir "$hypr_waybar_stash" 2>/dev/null || true
+    echo -e "${NOTE:-[NOTE]} - Restored ${YELLOW:-}waybar${RESET:-} configuration (managed separately by copy_waybar())." 2>&1 | tee -a "$log"
+  fi
 
   # Handle ~/.config/wallust like rofi migration:
   # keep wallust data under ~/.config/hypr/wallust and leave ~/.config/wallust empty
@@ -223,7 +395,79 @@ copy_phase2() {
   else
     mkdir -p "$wallust_dir"
   fi
+  # Clean up stale GTK-3 Wallust css overrides if present from older versions
+  local gtk3_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0"
+  if [ -f "$gtk3_dir/colors-wallust.css" ]; then
+    rm -f "$gtk3_dir/colors-wallust.css"
+    if [ -f "$gtk3_dir/gtk.css" ]; then
+      if ! grep -Ev '^[[:space:]]*(/\*.*\*/|@import[[:space:]]+[\x27"]colors-wallust\.css[\x27"];|[[:space:]]*)$' "$gtk3_dir/gtk.css" >/dev/null 2>&1; then
+        rm -f "$gtk3_dir/gtk.css"
+      else
+        sed -i "/@import[[:space:]]*['\"]colors-wallust\.css['\"];/d" "$gtk3_dir/gtk.css" 2>/dev/null || true
+      fi
+    fi
+  fi
+
   install_terminal_configs "$log"
+}
+
+# Sync repo-managed quickshell files into an already-installed quickshell
+# directory without clobbering user-created content. Because rsync runs
+# without --delete, repo files are refreshed while user-only files and
+# directories (e.g. custom quickshell apps) are left untouched. The
+# user-tunable/runtime files config.json and qml_color.json are preserved when
+# present so a user's shell settings and generated theme colors are not reset
+# on upgrade. A non-destructive safety copy is taken first.
+sync_quickshell_config() {
+  local log="${1:-/dev/null}"
+  local base="${DOTFILES_DIR:-.}"
+  local src_dir="$base/config/quickshell"
+  local dest_dir="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
+
+  [ -d "$src_dir" ] || return 1
+  mkdir -p "$dest_dir"
+
+  # Non-destructive safety copy so nothing is ever unrecoverable.
+  local BACKUP_DIR
+  BACKUP_DIR=$(get_backup_dirname)
+  if [ -n "$(ls -A "$dest_dir" 2>/dev/null)" ] && [ ! -d "${dest_dir}-backup-$BACKUP_DIR" ]; then
+    cp -r "$dest_dir" "${dest_dir}-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
+    echo "${NOTE:-[NOTE]} - Backed up quickshell to ${dest_dir}-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
+  fi
+
+  # Refresh repo-managed files; exclude user-tunable/runtime files that exist.
+  local rsync_args=(-a)
+  local f
+  for f in config.json qml_color.json; do
+    if [ -f "$dest_dir/$f" ]; then
+      rsync_args+=(--exclude="/$f")
+    fi
+  done
+
+  if rsync "${rsync_args[@]}" "$src_dir/" "$dest_dir/" 2>&1 | tee -a "$log"; then
+    echo "${OK:-[OK]} - Synced ${YELLOW:-}quickshell${RESET:-} files (user custom apps preserved)." 2>&1 | tee -a "$log"
+  else
+    echo "${ERROR:-[ERROR]} - Failed to sync ${YELLOW:-}quickshell${RESET:-} config." 2>&1 | tee -a "$log"
+    return 1
+  fi
+
+  # Install defaults for preserved files only when they are missing.
+  for f in config.json qml_color.json; do
+    if [ ! -f "$dest_dir/$f" ] && [ -f "$src_dir/$f" ]; then
+      cp -f "$src_dir/$f" "$dest_dir/$f" 2>&1 | tee -a "$log"
+    fi
+  done
+
+  # Ensure overview and qs-hyprview subdirectories exist if missing.
+  local sub
+  for sub in overview qs-hyprview; do
+    if [ ! -d "$dest_dir/$sub" ] && [ -d "$src_dir/$sub" ]; then
+      echo "${INFO:-[INFO]} - Copying quickshell $sub config..." 2>&1 | tee -a "$log"
+      cp -r "$src_dir/$sub" "$dest_dir/" 2>&1 | tee -a "$log"
+    fi
+  done
+
+  return 0
 }
 
 # Fresh install default: enable Hyprland Lua entrypoint (next release is Lua-only).
@@ -233,7 +477,10 @@ enable_fresh_install_lua_config() {
   local src_entry
   local base="${DOTFILES_DIR:-.}"
   hypr_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
-  src_entry="$base/config/hypr/hyprland.lua.disable"
+  src_entry="$base/config/hypr/hyprland.lua"
+  if [ ! -f "$src_entry" ] && [ -f "$base/config/hypr/hyprland.lua.disable" ]; then
+    src_entry="$base/config/hypr/hyprland.lua.disable"
+  fi
 
   mkdir -p "$hypr_dir"
 
@@ -447,6 +694,40 @@ restore_hypr_assets() {
       done
     fi
 
+    # Restore custom Rofi themes and configurations from backup
+    local BACKUP_ROFI_DIR="$BACKUP_HYPR_PATH/rofi"
+    if [ ! -d "$BACKUP_ROFI_DIR" ] && [ -d "${HYPR_DIR}-${BACKUP_DIR}/rofi" ]; then
+      BACKUP_ROFI_DIR="${HYPR_DIR}-${BACKUP_DIR}/rofi"
+    fi
+
+    if [ -d "$BACKUP_ROFI_DIR" ]; then
+      # 1. Restore custom themes in rofi/themes/
+      if [ -d "$BACKUP_ROFI_DIR/themes" ]; then
+        mkdir -p "$HYPR_DIR/rofi/themes"
+        for theme_file in "$BACKUP_ROFI_DIR/themes"/*; do
+          [ -e "$theme_file" ] || continue
+          local theme_name
+          theme_name="$(basename "$theme_file")"
+          if [ ! -e "$HYPR_DIR/rofi/themes/$theme_name" ]; then
+            cp -r "$theme_file" "$HYPR_DIR/rofi/themes/$theme_name" 2>&1 | tee -a "$log" || true
+            echo "${OK:-[OK]} - Restored custom rofi theme: ${MAGENTA:-}$theme_name${RESET:-}" 2>&1 | tee -a "$log"
+          fi
+        done
+      fi
+
+      # 2. Restore any custom/extra files in rofi/ root
+      for rofi_file in "$BACKUP_ROFI_DIR"/*; do
+        [ -e "$rofi_file" ] || continue
+        [ -d "$rofi_file" ] && continue
+        local rname
+        rname="$(basename "$rofi_file")"
+        if [ ! -e "$HYPR_DIR/rofi/$rname" ]; then
+          cp -r "$rofi_file" "$HYPR_DIR/rofi/$rname" 2>&1 | tee -a "$log" || true
+          echo "${OK:-[OK]} - Restored custom rofi file: ${MAGENTA:-}$rname${RESET:-}" 2>&1 | tee -a "$log"
+        fi
+      done
+    fi
+
     # Keep monitor/workspace state across upgrades, including express mode.
     if [ "${RUN_MODE:-}" != "install" ]; then
       local LUA_USER_DIR="$HYPR_DIR/UserConfigs"
@@ -473,182 +754,10 @@ restore_hypr_assets() {
         cp -f "$BACKUP_LUA_WORKSPACES" "$LUA_USER_DIR/workspaces.lua" 2>&1 | tee -a "$log"
         echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}UserConfigs/workspaces.lua${RESET:-}" 2>&1 | tee -a "$log"
       fi
-
-      if [ "$backup_mode" != "lua" ]; then
-        local FILE_B=("monitors.conf" "workspaces.conf")
-        for FILE_RESTORE in "${FILE_B[@]}"; do
-          local BACKUP_FILE="$BACKUP_HYPR_PATH/$FILE_RESTORE"
-          if [ -f "$BACKUP_FILE" ]; then
-            cp "$BACKUP_FILE" "$HYPR_DIR/$FILE_RESTORE" 2>&1 | tee -a "$log"
-            echo "${OK:-[OK]} - Restored file: ${MAGENTA:-}$FILE_RESTORE${RESET:-}" 2>&1 | tee -a "$log"
-          fi
-        done
-      fi
     fi
   fi
 }
 
-# Helper to extract overlay additions/disables from previous user file vs base
-compose_overlay_from_backup() {
-  local type="$1" # startup|windowrules
-  local base_file="$2"
-  local old_user_file="$3"
-  local new_user_file="$4"
-  local disable_file="$5"
-
-  mkdir -p "$(dirname "$new_user_file")"
-  : >"$new_user_file"
-  : >"$disable_file"
-
-  if [ "$type" = "startup" ]; then
-    grep -E '^\s*exec-once\s*=' "$old_user_file" | sed -E 's/^\s+//;s/\s+$//' | sort -u >"$old_user_file.tmp.exec"
-    grep -E '^\s*exec-once\s*=' "$base_file" | sed -E 's/^\s+//;s/\s+$//' | sort -u >"$base_file.tmp.exec"
-    comm -23 "$old_user_file.tmp.exec" "$base_file.tmp.exec" >"$new_user_file"
-    grep -E '^\s*#\s*exec-once\s*=' "$old_user_file" |
-      sed -E 's/^\s*#\s*exec-once\s*=\s*//' |
-      sed -E 's/^\s+//;s/\s+$//' |
-      grep -Ev '^\$scriptsDir/KeybindsLayoutInit\.sh$' |
-      sort -u >"$disable_file"
-    rm -f "$old_user_file.tmp.exec" "$base_file.tmp.exec"
-  elif [ "$type" = "windowrules" ]; then
-    grep -E '^(windowrule|layerrule)\s*=' "$old_user_file" | sed -E 's/^\s+//;s/\s+$//' | sort -u >"$old_user_file.tmp.rules"
-    grep -E '^(windowrule|layerrule)\s*=' "$base_file" | sed -E 's/^\s+//;s/\s+$//' | sort -u >"$base_file.tmp.rules"
-    comm -23 "$old_user_file.tmp.rules" "$base_file.tmp.rules" >"$new_user_file"
-    grep -E '^\s*#\s*(windowrule|layerrule)\s*=' "$old_user_file" | sed -E 's/^\s*#\s*//' | sed -E 's/^\s+//;s/\s+$//' | sort -u >"$disable_file"
-    rm -f "$old_user_file.tmp.rules" "$base_file.tmp.rules"
-  fi
-}
-
-cleanup_duplicate_userconfigs() {
-  local current_version="$1"
-  local log="$2"
-
-  if [ -z "$current_version" ]; then
-    return
-  fi
-
-  # Run de-dupe only for existing installs up to and including v2.3.18.
-  # For v2.3.19 and newer, UserConfigs should be left as-is to avoid
-  # removing user modifications.
-  if version_gte "$current_version" "2.3.19"; then
-    echo "${INFO:-[INFO]} Skipping UserConfigs duplicate cleanup for detected version v$current_version (>= 2.3.19)." 2>&1 | tee -a "$log"
-    return
-  fi
-
-  echo "${INFO:-[INFO]} Running UserConfigs duplicate cleanup for detected version v$current_version (<= 2.3.18)." 2>&1 | tee -a "$log"
-
-  local HYPR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
-  local BASE_DIR="$HYPR_DIR/configs"
-  local USER_DIR="$HYPR_DIR/UserConfigs"
-
-  local STARTUP_BASE="$BASE_DIR/Startup_Apps.conf"
-  local STARTUP_USER="$USER_DIR/Startup_Apps.conf"
-  local WINDOW_BASE="$BASE_DIR/WindowRules.conf"
-  local WINDOW_USER="$USER_DIR/WindowRules.conf"
-  local KEYBINDS_BASE="$BASE_DIR/Keybinds.conf"
-  local KEYBINDS_USER="$USER_DIR/UserKeybinds.conf"
-
-  # Startup_Apps: strip exec-once lines from UserConfigs that are exact
-  # duplicates of the base Startup_Apps.conf.
-  if [ -f "$STARTUP_BASE" ] && [ -f "$STARTUP_USER" ]; then
-    local tmp_startup
-    local backup_startup
-    backup_startup="$STARTUP_USER.backup-dupfix-$(date +%Y%m%d-%H%M%S)"
-    tmp_startup=$(mktemp)
-    awk '
-      function trim(s){ gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
-      FNR==NR {
-        if ($0 ~ /^[ \t]*exec-once[ \t]*=/) {
-          line=trim($0)
-          base[line]=1
-        }
-        next
-      }
-      {
-        if ($0 ~ /^[ \t]*exec-once[ \t]*=/) {
-          line=trim($0)
-          if (line in base) next
-        }
-        print
-      }
-    ' "$STARTUP_BASE" "$STARTUP_USER" >"$tmp_startup"
-    if ! cmp -s "$STARTUP_USER" "$tmp_startup"; then
-      cp "$STARTUP_USER" "$backup_startup"
-      mv "$tmp_startup" "$STARTUP_USER"
-      echo "${NOTE:-[NOTE]} - Removed duplicate Startup_Apps entries matching base config." 2>&1 | tee -a "$log"
-    else
-      rm -f "$tmp_startup"
-    fi
-  fi
-
-  # WindowRules: strip windowrule/layerrule lines from UserConfigs that
-  # are exact duplicates of the base WindowRules.conf.
-  if [ -f "$WINDOW_BASE" ] && [ -f "$WINDOW_USER" ]; then
-    local tmp_window
-    local backup_window
-    backup_window="$WINDOW_USER.backup-dupfix-$(date +%Y%m%d-%H%M%S)"
-    tmp_window=$(mktemp)
-    awk '
-      function trim(s){ gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
-      FNR==NR {
-        if ($0 ~ /^[ \t]*(windowrule|layerrule)[ \t]*=/) {
-          line=trim($0)
-          base[line]=1
-        }
-        next
-      }
-      {
-        if ($0 ~ /^[ \t]*(windowrule|layerrule)[ \t]*=/) {
-          line=trim($0)
-          if (line in base) next
-        }
-        print
-      }
-    ' "$WINDOW_BASE" "$WINDOW_USER" >"$tmp_window"
-    if ! cmp -s "$WINDOW_USER" "$tmp_window"; then
-      cp "$WINDOW_USER" "$backup_window"
-      mv "$tmp_window" "$WINDOW_USER"
-      echo "${NOTE:-[NOTE]} - Removed duplicate WindowRules entries matching base config." 2>&1 | tee -a "$log"
-    else
-      rm -f "$tmp_window"
-    fi
-  fi
-
-  # Keybinds: strip bind* lines from UserKeybinds.conf that are exact
-  # duplicates of the base Keybinds.conf. Comments and unbinds are kept.
-  if [ -f "$KEYBINDS_BASE" ] && [ -f "$KEYBINDS_USER" ]; then
-    local tmp_keybinds
-    local backup_keybinds
-    backup_keybinds="$KEYBINDS_USER.backup-dupfix-$(date +%Y%m%d-%H%M%S)"
-    tmp_keybinds=$(mktemp)
-    awk '
-      function trim(s){ gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
-      FNR==NR {
-        # Match any Hyprland bind variant: bindd, bindmd, bindld, binded,
-        # bindlnd, bindeld, etc.
-        if ($0 ~ /^[ \t]*bind[a-z]*[ \t]*=/) {
-          line=trim($0)
-          base[line]=1
-        }
-        next
-      }
-      {
-        if ($0 ~ /^[ \t]*bind[a-z]*[ \t]*=/) {
-          line=trim($0)
-          if (line in base) next
-        }
-        print
-      }
-    ' "$KEYBINDS_BASE" "$KEYBINDS_USER" >"$tmp_keybinds"
-    if ! cmp -s "$KEYBINDS_USER" "$tmp_keybinds"; then
-      cp "$KEYBINDS_USER" "$backup_keybinds"
-      mv "$tmp_keybinds" "$KEYBINDS_USER"
-      echo "${NOTE:-[NOTE]} - Removed duplicate UserKeybinds entries matching base Keybinds.conf." 2>&1 | tee -a "$log"
-    else
-      rm -f "$tmp_keybinds"
-    fi
-  fi
-}
 restore_user_configs() {
   local log="$1"
   local express_mode="$2"
@@ -678,126 +787,21 @@ restore_user_configs() {
   fi
 
   if [ -d "$BACKUP_DIR_PATH" ]; then
-    local VERSION_FILE
-    VERSION_FILE=$(find "$DIRPATH" -maxdepth 1 -name "v*.*.*" | head -n 1)
-    local CURRENT_VERSION="999.9.9"
-    if [ -n "$old_version" ]; then
-      CURRENT_VERSION="$old_version"
-    fi
-
-    local TARGET_VERSION="2.3.19"
-    local AUTO_RESTORE=0
-    if version_gte "$CURRENT_VERSION" "2.3.18"; then
-      AUTO_RESTORE=1
-    fi
-
     echo -e "${NOTE:-[NOTE]} Restoring previous ${MAGENTA:-}User-Configs${RESET:-}... " 2>&1 | tee -a "$log"
-    printf "${WARNING:-}\\
-    █▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█\\n\\
-            NOTES for RESTORING PREVIOUS CONFIGS\\n\\
-    █▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█\\n\\n\\
-    The 'UserConfigs' directory is for all your personal settings.\\n\\
-    Files in this directory will override the default configurations,\\n\\
-    so your customizations are not lost when you update.\\n\\
-" >&2
-
-    if version_gte "$CURRENT_VERSION" "$TARGET_VERSION"; then
-      if [ "$express_mode" -eq 1 ] || [ "$AUTO_RESTORE" -eq 1 ]; then
-        echo "${NOTE:-[NOTE]} Restoring UserConfigs directory automatically." 2>&1 | tee -a "$log"
+    if [ "$express_mode" -eq 1 ]; then
+      echo "${NOTE:-[NOTE]} Express mode: restoring UserConfigs directory automatically." 2>&1 | tee -a "$log"
+      rsync -a "$BACKUP_DIR_PATH/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
+      echo "${OK:-[OK]} - UserConfigs directory restored." 2>&1 | tee -a "$log"
+    else
+      read -r -p "${CAT:-[ACTION]} Do you want to restore your previous UserConfigs directory? (Y/n): " restore_userconfigs_dir
+      if [[ "$restore_userconfigs_dir" != [Nn]* ]]; then
+        echo "${NOTE:-[NOTE]} Restoring UserConfigs directory..." 2>&1 | tee -a "$log"
         rsync -a "$BACKUP_DIR_PATH/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
         echo "${OK:-[OK]} - UserConfigs directory restored." 2>&1 | tee -a "$log"
       else
-        read -r -p "${CAT:-[ACTION]} Do you want to restore your previous UserConfigs directory? (Y/n): " restore_userconfigs_dir
-        if [[ "$restore_userconfigs_dir" != [Nn]* ]]; then
-          echo "${NOTE:-[NOTE]} Restoring UserConfigs directory..." 2>&1 | tee -a "$log"
-          rsync -a "$BACKUP_DIR_PATH/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
-          echo "${OK:-[OK]} - UserConfigs directory restored." 2>&1 | tee -a "$log"
-        else
-          echo "${NOTE:-[NOTE]} - Skipped restoring UserConfigs." 2>&1 | tee -a "$log"
-        fi
+        echo "${NOTE:-[NOTE]} - Skipped restoring UserConfigs." 2>&1 | tee -a "$log"
       fi
-    else
-      echo -e "${NOTE:-[NOTE]} Detected version ${YELLOW:-}v$CURRENT_VERSION${RESET:-} (older than v$TARGET_VERSION). Using legacy restoration mode." 2>&1 | tee -a "$log"
-
-      local FILES_TO_RESTORE=(
-        "01-UserDefaults.conf"
-        "ENVariables.conf"
-        "LaptopDisplay.conf"
-        "Laptops.conf"
-        "LayerRules.conf"
-        "ghostty.conf"
-        "kitty.conf"
-        "hyprview-layout.conf"
-        "WorkSpaceRules.conf"
-        "monitors.lua"
-        "Startup_Apps.conf"
-        "UserDecorations.conf"
-        "UserAnimations.conf"
-        "UserKeybinds.conf"
-        "UserSettings.conf"
-        "workspaces.lua"
-        "WindowRules.conf"
-        "user_animations.lua"
-        "user_decorations.lua"
-        "user_defaults.lua"
-        "user_env.lua"
-        "user_keybinds.lua"
-        "user_laptops.lua"
-        "user_layer_rules.lua"
-        "user_settings.lua"
-        "user_startup.lua"
-        "user_window_rules.lua"
-      )
-
-      for FILE_NAME in "${FILES_TO_RESTORE[@]}"; do
-        local BACKUP_FILE="$BACKUP_DIR_PATH/$FILE_NAME"
-        if [ -f "$BACKUP_FILE" ]; then
-          if [ "$FILE_NAME" = "Startup_Apps.conf" ]; then
-            compose_overlay_from_backup "startup" "$DIRPATH/configs/Startup_Apps.conf" "$BACKUP_FILE" "$DIRPATH/UserConfigs/Startup_Apps.conf" "$DIRPATH/UserConfigs/Startup_Apps.disable"
-            echo "${OK:-[OK]} - Migrated overlay for ${YELLOW:-}$FILE_NAME${RESET:-}" 2>&1 | tee -a "$log"
-            continue
-          fi
-          if [ "$FILE_NAME" = "WindowRules.conf" ]; then
-            compose_overlay_from_backup "windowrules" "$DIRPATH/configs/WindowRules.conf" "$BACKUP_FILE" "$DIRPATH/UserConfigs/WindowRules.conf" "$DIRPATH/UserConfigs/WindowRules.disable"
-            echo "${OK:-[OK]} - Migrated overlay for ${YELLOW:-}$FILE_NAME${RESET:-}" 2>&1 | tee -a "$log"
-            continue
-          fi
-          if [ "$express_mode" -eq 1 ] || [ "$AUTO_RESTORE" -eq 1 ]; then
-            if cp "$BACKUP_FILE" "$DIRPATH/UserConfigs/$FILE_NAME"; then
-              echo "${OK:-[OK]} - $FILE_NAME restored!" 2>&1 | tee -a "$log"
-            else
-              echo "${ERROR:-[ERROR]} - Failed to restore $FILE_NAME!" 2>&1 | tee -a "$log"
-            fi
-          else
-            printf "\n${INFO:-[INFO]} Found ${YELLOW:-}$FILE_NAME${RESET:-} in hypr backup...\n"
-            read -r -p "${CAT:-[ACTION]} Do you want to restore ${YELLOW:-}$FILE_NAME${RESET:-} from backup? (Y/n): " file_restore
-
-            if [[ "$file_restore" != [Nn]* ]]; then
-              if cp "$BACKUP_FILE" "$DIRPATH/UserConfigs/$FILE_NAME"; then
-                echo "${OK:-[OK]} - $FILE_NAME restored!" 2>&1 | tee -a "$log"
-              else
-                echo "${ERROR:-[ERROR]} - Failed to restore $FILE_NAME!" 2>&1 | tee -a "$log"
-              fi
-            else
-              echo "${NOTE:-[NOTE]} - Skipped restoring $FILE_NAME." 2>&1 | tee -a "$log"
-            fi
-          fi
-        fi
-      done
     fi
-  fi
-
-  # Always run de-dupe based on the installed dotfiles version so that
-  # express mode and standard mode behave consistently. Prefer the
-  # pre-upgrade version (old_version) if provided so we still clean up
-  # legacy duplicates when upgrading to a newer release that no longer
-  # needs the fix.
-  local detected_version="$old_version"
-  if [ -z "$detected_version" ]; then
-    detected_version=$(get_installed_dotfiles_version)
-  fi
-  if [ -n "$detected_version" ]; then
-    cleanup_duplicate_userconfigs "$detected_version" "$log"
   fi
 }
 
@@ -809,34 +813,46 @@ restore_user_scripts() {
   local BACKUP_DIR
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_DIR_PATH_S="$DIRSHPATH-backup-$BACKUP_DIR/UserScripts"
-  local SCRIPTS_TO_RESTORE=("RofiBeats.sh" "Weather.py" "Weather.sh")
 
-  if [ -d "$BACKUP_DIR_PATH_S" ] && [ "$express_mode" -eq 1 ]; then
-    echo "${NOTE:-[NOTE]} Express mode: skipping UserScripts restoration prompts." 2>&1 | tee -a "$log"
-    return
+  if [ -z "$BACKUP_DIR" ]; then
+    return 0
   fi
 
-  if [ -d "$BACKUP_DIR_PATH_S" ] && [ "$express_mode" -eq 0 ]; then
-    echo -e "${NOTE:-[NOTE]} Restoring previous ${MAGENTA:-}User-Scripts${RESET:-}..." 2>&1 | tee -a "$log"
-
-    for SCRIPT_NAME in "${SCRIPTS_TO_RESTORE[@]}"; do
-      local BACKUP_SCRIPT="$BACKUP_DIR_PATH_S/$SCRIPT_NAME"
-      if [ -f "$BACKUP_SCRIPT" ]; then
-        printf "\n${INFO:-[INFO]} Found ${YELLOW:-}$SCRIPT_NAME${RESET:-} in hypr backup...\n"
-        read -r -p "${CAT:-[ACTION]} Do you want to restore ${YELLOW:-}$SCRIPT_NAME${RESET:-} from backup? (y/N): " script_restore
-
-        if [[ "$script_restore" == [Yy]* ]]; then
-          if cp "$BACKUP_SCRIPT" "$DIRSHPATH/UserScripts/$SCRIPT_NAME"; then
-            echo "${OK:-[OK]} - $SCRIPT_NAME restored!" 2>&1 | tee -a "$log"
-          else
-            echo "${ERROR:-[ERROR]} - Failed to restore $SCRIPT_NAME!" 2>&1 | tee -a "$log"
-          fi
-        else
-          echo "${NOTE:-[NOTE]} - Skipped restoring $SCRIPT_NAME." 2>&1 | tee -a "$log"
-        fi
-      fi
-    done
+  # Check alternate backup path used by prepare_fresh_install_hypr
+  if [ ! -d "$BACKUP_DIR_PATH_S" ] && [ -d "${DIRSHPATH}-${BACKUP_DIR}/UserScripts" ]; then
+    BACKUP_DIR_PATH_S="${DIRSHPATH}-${BACKUP_DIR}/UserScripts"
   fi
+
+  if [ ! -d "$BACKUP_DIR_PATH_S" ]; then
+    return 0
+  fi
+
+  if [ "${RUN_MODE:-}" = "install" ]; then
+    echo "${NOTE:-[NOTE]} Preserving existing UserScripts directory during install." 2>&1 | tee -a "$log"
+    rsync -a "$BACKUP_DIR_PATH_S/" "$DIRSHPATH/UserScripts/" 2>&1 | tee -a "$log"
+    echo "${OK:-[OK]} - UserScripts directory preserved." 2>&1 | tee -a "$log"
+    chmod +x "$DIRSHPATH/UserScripts/"* 2>/dev/null || true
+    return 0
+  fi
+
+  echo -e "${NOTE:-[NOTE]} Restoring previous ${MAGENTA:-}User-Scripts${RESET:-}... " 2>&1 | tee -a "$log"
+
+  if [ "$express_mode" -eq 1 ]; then
+    echo "${NOTE:-[NOTE]} Restoring UserScripts directory automatically." 2>&1 | tee -a "$log"
+    rsync -a "$BACKUP_DIR_PATH_S/" "$DIRSHPATH/UserScripts/" 2>&1 | tee -a "$log"
+    echo "${OK:-[OK]} - UserScripts directory restored." 2>&1 | tee -a "$log"
+  else
+    read -r -p "${CAT:-[ACTION]} Do you want to restore your previous UserScripts directory? (Y/n): " restore_userscripts_dir
+    if [[ "$restore_userscripts_dir" != [Nn]* ]]; then
+      echo "${NOTE:-[NOTE]} Restoring UserScripts directory..." 2>&1 | tee -a "$log"
+      rsync -a "$BACKUP_DIR_PATH_S/" "$DIRSHPATH/UserScripts/" 2>&1 | tee -a "$log"
+      echo "${OK:-[OK]} - UserScripts directory restored." 2>&1 | tee -a "$log"
+    else
+      echo "${NOTE:-[NOTE]} - Skipped restoring UserScripts." 2>&1 | tee -a "$log"
+    fi
+  fi
+
+  chmod +x "$DIRSHPATH/UserScripts/"* 2>/dev/null || true
 }
 
 restore_terminal_configs() {
@@ -848,12 +864,14 @@ restore_terminal_configs() {
   BACKUP_DIR=$(get_backup_dirname)
   local GHOSTTY_BACKUP="$GHOSTTY_DIR-backup-$BACKUP_DIR"
 
-  if [ -d "$GHOSTTY_BACKUP" ] && [ "$express_mode" -eq 1 ]; then
-    echo "${NOTE:-[NOTE]} Express mode: skipping Ghostty restore prompt." 2>&1 | tee -a "$log"
-    return
-  fi
+  if [ -d "$GHOSTTY_BACKUP" ]; then
+    if [ "$express_mode" -eq 1 ]; then
+      echo "${NOTE:-[NOTE]} Express mode: automatically preserving Ghostty config from backup." 2>&1 | tee -a "$log"
+      rm -rf "$GHOSTTY_DIR"
+      cp -a "$GHOSTTY_BACKUP" "$GHOSTTY_DIR" 2>&1 | tee -a "$log"
+      return
+    fi
 
-  if [ -d "$GHOSTTY_BACKUP" ] && [ "$express_mode" -eq 0 ]; then
     echo -e "${NOTE:-[NOTE]} Restore previous ${MAGENTA:-}Ghostty${RESET:-} config?" 2>&1 | tee -a "$log"
     read -r -p "${CAT:-[ACTION]} Do you want to restore Ghostty config from backup? (y/N): " restore_ghostty
     if [[ "$restore_ghostty" == [Yy]* ]]; then
@@ -875,32 +893,31 @@ restore_hypr_files() {
   local BACKUP_DIR_PATH_F="$DIRPATH-backup-$BACKUP_DIR"
   local FILES_2_RESTORE=("hyprlock.conf" "hypridle.conf")
 
-  if [ -d "$BACKUP_DIR_PATH_F" ] && [ "$express_mode" -eq 1 ]; then
-    echo "${NOTE:-[NOTE]} Express mode: skipping individual hypr file restoration prompts." 2>&1 | tee -a "$log"
-    return
-  fi
-
-  if [ -d "$BACKUP_DIR_PATH_F" ] && [ "$express_mode" -eq 0 ]; then
-    echo -e "${NOTE:-[NOTE]} Restoring some files in ${MAGENTA:-}${XDG_CONFIG_HOME:-$HOME/.config}/hypr directory${RESET:-}..." 2>&1 | tee -a "$log"
-
-    for FILE_RESTORE in "${FILES_2_RESTORE[@]}"; do
-      local BACKUP_FILE="$BACKUP_DIR_PATH_F/$FILE_RESTORE"
-      if [ -f "$BACKUP_FILE" ]; then
-        echo -e "\n${INFO:-[INFO]} Found ${YELLOW:-}$FILE_RESTORE${RESET:-} in hypr backup..."
-        read -r -p "${CAT:-[ACTION]} Do you want to restore ${YELLOW:-}$FILE_RESTORE${RESET:-} from backup? (y/N): " file2restore
-
-        if [[ "$file2restore" == [Yy]* ]]; then
-          if cp "$BACKUP_FILE" "$DIRPATH/$FILE_RESTORE"; then
-            echo "${OK:-[OK]} - $FILE_RESTORE restored!" 2>&1 | tee -a "$log"
-          else
-            echo "${ERROR:-[ERROR]} - Failed to restore $FILE_RESTORE!" 2>&1 | tee -a "$log"
-          fi
-        else
-          echo "${NOTE:-[NOTE]} - Skipped restoring $FILE_RESTORE." 2>&1 | tee -a "$log"
+  if [ -d "$BACKUP_DIR_PATH_F" ]; then
+    if [ "$express_mode" -eq 1 ]; then
+      echo "${NOTE:-[NOTE]} Express mode: automatically preserving hyprlock.conf and hypridle.conf from backup." 2>&1 | tee -a "$log"
+      for FILE_RESTORE in "${FILES_2_RESTORE[@]}"; do
+        local BACKUP_FILE="$BACKUP_DIR_PATH_F/$FILE_RESTORE"
+        if [ -f "$BACKUP_FILE" ]; then
+          cp -f "$BACKUP_FILE" "$DIRPATH/$FILE_RESTORE" 2>&1 | tee -a "$log"
         fi
-      else
-        echo "${NOTE:-[NOTE]} - Backup file $BACKUP_FILE does not exist. Skipping." 2>&1 | tee -a "$log"
-      fi
+      done
+      return
+    fi
+
+    local has_any=0
+    for FILE_RESTORE in "${FILES_2_RESTORE[@]}"; do
+      [ -f "$BACKUP_DIR_PATH_F/$FILE_RESTORE" ] && has_any=1
     done
+    if [ "$has_any" -eq 1 ]; then
+      echo -e "\n${NOTE:-[NOTE]} Preserving customized hyprlock.conf / hypridle.conf from backup..." 2>&1 | tee -a "$log"
+      for FILE_RESTORE in "${FILES_2_RESTORE[@]}"; do
+        local BACKUP_FILE="$BACKUP_DIR_PATH_F/$FILE_RESTORE"
+        if [ -f "$BACKUP_FILE" ]; then
+          cp -f "$BACKUP_FILE" "$DIRPATH/$FILE_RESTORE" 2>&1 | tee -a "$log"
+          echo "${OK:-[OK]} - Preserved previous $FILE_RESTORE from backup." 2>&1 | tee -a "$log"
+        fi
+      done
+    fi
   fi
 }

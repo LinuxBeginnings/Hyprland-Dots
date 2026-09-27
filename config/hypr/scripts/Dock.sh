@@ -20,11 +20,13 @@ if ! command -v nwg-dock-hyprland >/dev/null 2>&1; then
 fi
 
 is_dock_running() {
-  pgrep -x "nwg-dock-hyprla" >/dev/null 2>&1
+  # Match by cmdline: Linux comm is 15 chars and may be truncated or
+  # Nix-wrapped (e.g. ".nwg-dock-hyprl"), so -x on the short name is unreliable.
+  pgrep -f "nwg-dock-hyprland" >/dev/null 2>&1
 }
 
 kill_dock() {
-  pkill -x "nwg-dock-hyprla" 2>/dev/null || true
+  pkill -f "nwg-dock-hyprland" 2>/dev/null || true
 }
 
 start_dock() {

@@ -26,8 +26,5 @@ else
   fi
 fi
 
-# Try eval first for Lua parser mode, fallback to keyword for legacy parser
-output="$(hyprctl eval "hl.config({ cursor = { zoom_factor = ${new_factor} } })" 2>&1 || true)"
-if [[ "$output" != "ok" ]]; then
-  hyprctl keyword cursor:zoom_factor "$new_factor" >/dev/null 2>&1 || true
-fi
+# Set cursor zoom factor via native Lua eval
+hyprctl eval "hl.config({ cursor = { zoom_factor = ${new_factor} } })" >/dev/null 2>&1 || true

@@ -22,7 +22,22 @@ TARGET_TEMP="${HYPRSUNSET_TEMP:-4500}"
 ICON_MODE="${HYPRSUNSET_ICON_MODE:-sunset}"
 
 ensure_state() {
+  mkdir -p "$(dirname "$STATE_FILE")"
   [[ -f "$STATE_FILE" ]] || echo "off" > "$STATE_FILE"
+}
+
+stop_hyprsunset() {
+  if pgrep -x hyprsunset >/dev/null 2>&1; then
+    pkill -x hyprsunset 2>/dev/null || true
+    for _ in {1..5}; do
+      pgrep -x hyprsunset >/dev/null 2>&1 || return 0
+      sleep 0.1
+    done
+    if pgrep -x hyprsunset >/dev/null 2>&1; then
+      pkill -9 -x hyprsunset 2>/dev/null || true
+      sleep 0.1
+    fi
+  fi
 }
 
 # Render icons using pango markup to allow colorization
@@ -47,43 +62,67 @@ icon_on() {
   esac
 }
 
-cmd_toggle() {
+cmd_on() {
   ensure_state
-  state="$(cat "$STATE_FILE" || echo off)"
-
-  # Always stop any running hyprsunset first to avoid CTM manager conflicts
-  if pgrep -x hyprsunset >/dev/null 2>&1; then
-    pkill -x hyprsunset || true
-    # give it a moment to release the CTM manager
-    sleep 0.2
-  fi
-
-if [[ "$state" == "on" ]]; then
-    # Turning OFF: set identity and exit
-    if command -v hyprsunset >/dev/null 2>&1; then
-      nohup hyprsunset -i >/dev/null 2>&1 &
-      # if hyprsunset persists, stop it shortly after applying identity
-      sleep 0.3 && pkill -x hyprsunset || true
-    fi
-    echo off > "$STATE_FILE"
-    notify-send -u low "Hyprsunset: Disabled" || true
-  else
-    # Turning ON: start hyprsunset at target temp in background
-    if command -v hyprsunset >/dev/null 2>&1; then
+  if command -v hyprsunset >/dev/null 2>&1; then
+    # If already running, use IPC to set temperature without restart/flicker
+    if pgrep -x hyprsunset >/dev/null 2>&1 && hyprctl hyprsunset temperature "$TARGET_TEMP" >/dev/null 2>&1; then
+      :
+    else
+      # Otherwise ensure any stale process is cleaned up and start fresh
+      stop_hyprsunset
       nohup hyprsunset -t "$TARGET_TEMP" >/dev/null 2>&1 &
     fi
-    echo on > "$STATE_FILE"
-    notify-send -u low "Hyprsunset: Enabled" "${TARGET_TEMP}K" || true
+  fi
+  echo on > "$STATE_FILE"
+  notify-send -u low "Hyprsunset: Enabled" "${TARGET_TEMP}K" || true
+}
+
+cmd_off() {
+  ensure_state
+  if command -v hyprsunset >/dev/null 2>&1; then
+    if pgrep -x hyprsunset >/dev/null 2>&1; then
+      # Reset CTM to identity via IPC so Hyprland restores normal screen colors
+      if hyprctl hyprsunset identity >/dev/null 2>&1; then
+        sleep 0.1
+      else
+        # Fallback if IPC failed: terminate and briefly run hyprsunset -i to apply identity
+        stop_hyprsunset
+        nohup hyprsunset -i >/dev/null 2>&1 &
+        sleep 0.3
+      fi
+      stop_hyprsunset
+    fi
+  fi
+  echo off > "$STATE_FILE"
+  notify-send -u low "Hyprsunset: Disabled" || true
+}
+
+cmd_toggle() {
+  ensure_state
+  state="$(cat "$STATE_FILE" 2>/dev/null || echo off)"
+
+  if [[ "$state" == "on" ]]; then
+    cmd_off
+  else
+    # If state file says off but process is running, turn it off
+    if pgrep -x hyprsunset >/dev/null 2>&1; then
+      cmd_off
+    else
+      cmd_on
+    fi
   fi
 }
 
 cmd_status() {
   ensure_state
-  # Prefer live process detection; fall back to state file
-  if pgrep -x hyprsunset >/dev/null 2>&1; then
+  state="$(cat "$STATE_FILE" 2>/dev/null || echo off)"
+
+  # Active only when state file is on AND process is running
+  if [[ "$state" == "on" ]] && pgrep -x hyprsunset >/dev/null 2>&1; then
     onoff="on"
   else
-    onoff="$(cat "$STATE_FILE" || echo off)"
+    onoff="off"
   fi
 
   if [[ "$onoff" == "on" ]]; then
@@ -100,11 +139,23 @@ cmd_status() {
 
 cmd_init() {
   ensure_state
-  state="$(cat "$STATE_FILE" || echo off)"
+  state="$(cat "$STATE_FILE" 2>/dev/null || echo off)"
 
   if [[ "$state" == "on" ]]; then
     if command -v hyprsunset >/dev/null 2>&1; then
-      nohup hyprsunset -t "$TARGET_TEMP" >/dev/null 2>&1 &
+      if pgrep -x hyprsunset >/dev/null 2>&1 && hyprctl hyprsunset temperature "$TARGET_TEMP" >/dev/null 2>&1; then
+        :
+      else
+        stop_hyprsunset
+        nohup hyprsunset -t "$TARGET_TEMP" >/dev/null 2>&1 &
+      fi
+    fi
+  else
+    # State is off; ensure no lingering hyprsunset process from a previous session
+    if pgrep -x hyprsunset >/dev/null 2>&1; then
+      hyprctl hyprsunset identity >/dev/null 2>&1 || true
+      sleep 0.1
+      stop_hyprsunset
     fi
   fi
 }
@@ -113,5 +164,7 @@ case "${1:-}" in
   toggle) cmd_toggle ;;
   status) cmd_status ;;
   init) cmd_init ;;
-  *) echo "usage: $0 [toggle|status|init]" >&2; exit 2 ;;
- esac
+  on) cmd_on ;;
+  off) cmd_off ;;
+  *) echo "usage: $0 [toggle|status|init|on|off]" >&2; exit 2 ;;
+esac

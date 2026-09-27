@@ -6,8 +6,17 @@
 -- ==================================================
 
 -- Converted from config/hypr/UserConfigs/UserDecorations.conf.
--- NOTE: wallust-hyprland.conf is hyprlang-sourced in the original config.
--- Lua parity for importing that file is still evolving; using static color fallbacks here.
+-- Dynamically loads Wallust generated colors from wallust-hyprland.conf.
+
+local home = os.getenv("HOME") or ""
+local helper_path = home .. "/.config/hypr/lua/user_decorations_helper.lua"
+local ok, helper = pcall(dofile, helper_path)
+local wallust = (ok and helper and helper.load_wallust_colors)
+  and helper.load_wallust_colors(home .. "/.config/hypr/wallust/wallust-hyprland.conf")
+  or {}
+
+local active_col = wallust.color12 or "rgba(8db4ffff)"
+local inactive_col = wallust.color10 or "rgba(5f6578ff)"
 
 hl.config({
   general = {
@@ -15,8 +24,8 @@ hl.config({
     gaps_in = 4,
     gaps_out = 6,
     col = {
-      active_border = "rgba(8db4ffff)",
-      inactive_border = "rgba(5f6578ff)",
+      active_border = active_col,
+      inactive_border = inactive_col,
     },
   },
 })
@@ -34,8 +43,8 @@ hl.config({
       enabled = true,
       range = 3,
       render_power = 1,
-      color = "rgba(8db4ffff)",
-      color_inactive = "rgba(5f6578ff)",
+      color = active_col,
+      color_inactive = inactive_col,
     },
     blur = {
       enabled = true,
@@ -53,11 +62,11 @@ hl.config({
 hl.config({
   group = {
     col = {
-      border_active = "rgba(ffffffff)",
+      border_active = wallust.color15 or active_col,
     },
     groupbar = {
       col = {
-        active = "rgba(0f111aff)",
+        active = wallust.color0 or "rgba(0f111aff)",
       },
     },
   },

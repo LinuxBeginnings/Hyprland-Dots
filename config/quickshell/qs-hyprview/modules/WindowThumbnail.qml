@@ -142,27 +142,40 @@ Item {
         var targetIsSpecial = (hWin?.workspace ?? 0) < 0 || (hWin?.workspace?.name ?? "").startsWith("special")
 
         if (root.specialActive && !targetIsSpecial) {
-            Hyprland.dispatch("togglespecialworkspace")
+            Hyprland.dispatch(Hyprland.usingLua
+                ? "hl.dsp.workspace.toggle_special()"
+                : "togglespecialworkspace")
         }
 
         if (hWin.workspace) {
-            hWin.workspace.activate()
+            if (Hyprland.usingLua && hWin.workspace.id > 0) {
+                Hyprland.dispatch(`hl.dsp.focus({ workspace = ${hWin.workspace.id} })`)
+            } else {
+                hWin.workspace.activate()
+            }
         }
 
         root.toggleExpose()
-        Hyprland.dispatch("focuswindow address:0x" + hWin.address)
-        Hyprland.dispatch("alterzorder top")
+        Hyprland.dispatch(Hyprland.usingLua
+            ? `hl.dsp.focus({ window = "address:0x${hWin.address}" })`
+            : "focuswindow address:0x" + hWin.address)
+        Hyprland.dispatch(Hyprland.usingLua
+            ? "hl.dsp.window.alter_zorder({ mode = 'top' })"
+            : "alterzorder top")
         if (thumbContainer.moveCursorToActiveWindow) {
-          var cx = clientInfo.at[0] + (clientInfo.size[0]/2)
-          var cy = clientInfo.at[1] + (clientInfo.size[1]/2)
-        Hyprland.dispatch("movecursor " + cx + " " + cy)
-
+            var cx = clientInfo.at[0] + (clientInfo.size[0]/2)
+            var cy = clientInfo.at[1] + (clientInfo.size[1]/2)
+            Hyprland.dispatch(Hyprland.usingLua
+                ? `hl.dsp.cursor.move({ x = ${cx}, y = ${cy} })`
+                : "movecursor " + cx + " " + cy)
         }
     }
 
     function closeWindow() {
         if (!hWin) return
-        Hyprland.dispatch("closewindow address:0x" + hWin.address)
+        Hyprland.dispatch(Hyprland.usingLua
+            ? `hl.dsp.window.close({ window = "address:0x${hWin.address}" })`
+            : "closewindow address:0x" + hWin.address)
     }
 
     function refreshThumb() {

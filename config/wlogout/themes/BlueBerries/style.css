@@ -1,0 +1,62 @@
+/* ============================================================================== */
+/*  Wlogout Theme: BlueBerries                                                    */
+/*  Theme Structure & Styling: hadi493                                            */
+/*  Theme Source: https://github.com/Hadi493/wlogout/tree/master                  */
+/*  Icons: LordWorm1996 (Wildberries-Ports)                                       */
+/*  Icons Source: https://github.com/LordWorm1996/Wildberries-Ports/tree/main/Source/wlogout */
+/*  Adapted for: KoolDots (Hyprland-Dots)                                         */
+/* ============================================================================== */
+
+window {
+    font-family: "JetBrains Mono Nerd Font", "Fira Code", sans-serif;
+    font-size: 12pt;
+    color: #cdd6f4;
+    background-image: image(url("./bg.png"));
+    background-size: cover;
+    background-position: center;
+}
+
+button {
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 30%;
+    border-style: solid;
+    border-width: 3px;
+    background-color: rgba(12, 12, 12, 0.3);
+    border-color: #313244;
+    margin: 5px;
+    border-radius: 20px;
+    transition: all 0.3s ease-in-out;
+    color: #cdd6f4;
+    outline-style: none;
+}
+
+button:focus, button:active, button:hover {
+    /* 20% Overlay 2, 80% mantle */
+    background-color: rgb(48, 50, 66);
+    outline-style: none;
+}
+
+#lock {
+    background-image: image(url("./icons/lock.png"));
+}
+
+#logout {
+    background-image: image(url("./icons/logout.png"));
+}
+
+#suspend {
+    background-image: image(url("./icons/suspend.png"));
+}
+
+#hibernate {
+    background-image: image(url("./icons/hibernate.png"));
+}
+
+#shutdown {
+    background-image: image(url("./icons/shutdown.png"));
+}
+
+#reboot {
+    background-image: image(url("./icons/reboot.png"));
+}

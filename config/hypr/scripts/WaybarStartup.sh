@@ -11,6 +11,12 @@
 runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 export XDG_RUNTIME_DIR="$runtime_dir"
 SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
+# Waybar itself only auto-discovers ~/.config/waybar by default; it has no
+# knowledge of the hypr/-owned location, so every direct launch must pass
+# explicit -c/-s flags.
+WAYBAR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar"
+WAYBAR_CONFIG_ARG="$WAYBAR_DIR/config"
+WAYBAR_STYLE_ARG="$WAYBAR_DIR/style.css"
 
 is_waybar_running() {
     pgrep -x "waybar" >/dev/null 2>&1 || pgrep -x '\.waybar-wrapped' >/dev/null 2>&1
@@ -54,7 +60,7 @@ sync_portal_env() {
 }
 
 ensure_wallust_waybar_colors() {
-    local colors_file="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/wallust/colors-waybar.css"
+    local colors_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/wallust/colors-waybar.css"
     mkdir -p "$(dirname "$colors_file")" 2>/dev/null || true
     [ -f "$colors_file" ] || touch "$colors_file" 2>/dev/null || true
     if [ ! -s "$colors_file" ] && [ -x "$SCRIPTSDIR/WallustSwww.sh" ]; then
@@ -85,11 +91,13 @@ start_waybar_direct() {
         return 0
     fi
     if command -v waybar >/dev/null 2>&1; then
-        waybar >/dev/null 2>&1 &
+        waybar -c "$WAYBAR_CONFIG_ARG" -s "$WAYBAR_STYLE_ARG" 9>&- >/dev/null 2>&1 &
+        wait_for_waybar
         return 0
     fi
     if command -v .waybar-wrapped >/dev/null 2>&1; then
-        .waybar-wrapped >/dev/null 2>&1 &
+        .waybar-wrapped -c "$WAYBAR_CONFIG_ARG" -s "$WAYBAR_STYLE_ARG" 9>&- >/dev/null 2>&1 &
+        wait_for_waybar
         return 0
     fi
     return 1
@@ -98,28 +106,37 @@ start_waybar_direct() {
 main() {
     local lock_file="${runtime_dir}/waybar-startup-${UID:-$(id -u)}.lock"
 
-    {
-        if command -v flock >/dev/null 2>&1; then
-            flock 9 || exit 1
-        fi
-
-        # If already running, nothing to do
-        is_waybar_running && exit 0
-
-        wait_for_wayland || true
-        sync_portal_env || true
-        ensure_wallust_waybar_colors
-
-        # Try systemd first if enabled, otherwise launch directly
-        if start_waybar_via_systemd; then
+    # Use a non-blocking lock to guarantee mutual exclusion without deadlocking
+    exec 9>"$lock_file"
+    if command -v flock >/dev/null 2>&1; then
+        if ! flock -n 9; then
+            exec 9>&-
             exit 0
         fi
+    fi
 
-        if start_waybar_direct; then
-            exit 0
-        fi
-        exit 1
-    } 9>"$lock_file"
+    # If already running, nothing to do
+    if is_waybar_running; then
+        exec 9>&-
+        exit 0
+    fi
+
+    wait_for_wayland || true
+    sync_portal_env || true
+    ensure_wallust_waybar_colors
+
+    # Try systemd first if enabled, otherwise launch directly
+    if start_waybar_via_systemd; then
+        exec 9>&-
+        exit 0
+    fi
+
+    if start_waybar_direct; then
+        exec 9>&-
+        exit 0
+    fi
+    exec 9>&-
+    exit 1
 }
 
 main

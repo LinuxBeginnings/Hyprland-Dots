@@ -184,31 +184,6 @@ if window_count == 0 then
   os.exit(0)
 end
 
--- Helper to detect Hyprland config mode (Lua entrypoint vs legacy .conf includes)
-local function get_hypr_config_mode()
-  local config_home = os.getenv("XDG_CONFIG_HOME")
-  if not config_home or config_home == "" then
-    config_home = (os.getenv("HOME") or "") .. "/.config"
-  end
-  local hypr_dir = config_home .. "/hypr"
-  local lua_entry = hypr_dir .. "/hyprland.lua"
-  local legacy_lua_entry = config_home .. "/hyprland.lua"
-
-  local f = io.open(lua_entry, "r")
-  if f then
-    f:close()
-    return "lua"
-  end
-  f = io.open(legacy_lua_entry, "r")
-  if f then
-    f:close()
-    return "lua"
-  end
-  return "conf"
-end
-
-local mode = get_hypr_config_mode()
-
 -- 3b. Toggle: if every window on the workspace is already floating (i.e. this
 -- script was already run), untile them back into the active layout instead
 -- of re-floating/resizing them.
@@ -224,16 +199,10 @@ if all_floating then
   local untile_commands = {}
   for _, client in ipairs(ws_clients) do
     local address = "address:" .. client.address
-    if mode == "lua" then
-      table.insert(
-        untile_commands,
-        string.format('dispatch hl.dsp.window.float({ window = "%s", action = "toggle" })', address)
-      )
-    else
-      -- Vanilla Hyprland has no dedicated "untile" dispatcher; togglefloating
-      -- is safe here since every window in this set is confirmed floating.
-      table.insert(untile_commands, string.format("dispatch togglefloating %s", address))
-    end
+    table.insert(
+      untile_commands,
+      string.format('dispatch hl.dsp.window.float({ window = "%s", action = "toggle" })', address)
+    )
   end
 
   if #untile_commands > 0 then
@@ -338,29 +307,16 @@ for idx, client in ipairs(ws_clients) do
   local pos = positions[idx] or positions[#positions]
   local address = "address:" .. client.address
 
-  if mode == "lua" then
-    -- In Lua mode, use native Hyprland Lua dispatcher syntax with double quotes for Lua strings
-    table.insert(batch_commands, string.format('dispatch hl.dsp.window.float({ window = "%s", action = "on" })', address))
-    table.insert(
-      batch_commands,
-      string.format('dispatch hl.dsp.window.resize({ window = "%s", x = %d, y = %d, exact = true })', address, pos.w, pos.h)
-    )
-    table.insert(
-      batch_commands,
-      string.format('dispatch hl.dsp.window.move({ window = "%s", x = %d, y = %d, exact = true })', address, pos.x, pos.y)
-    )
-  else
-    -- Legacy Hyprlang mode
-    table.insert(batch_commands, string.format("dispatch setfloating %s", address))
-    table.insert(
-      batch_commands,
-      string.format("dispatch resizewindowpixel exact %d %d,%s", pos.w, pos.h, address)
-    )
-    table.insert(
-      batch_commands,
-      string.format("dispatch movewindowpixel exact %d %d,%s", pos.x, pos.y, address)
-    )
-  end
+  -- Native Hyprland Lua dispatcher syntax with double quotes for Lua strings
+  table.insert(batch_commands, string.format('dispatch hl.dsp.window.float({ window = "%s", action = "on" })', address))
+  table.insert(
+    batch_commands,
+    string.format('dispatch hl.dsp.window.resize({ window = "%s", x = %d, y = %d, exact = true })', address, pos.w, pos.h)
+  )
+  table.insert(
+    batch_commands,
+    string.format('dispatch hl.dsp.window.move({ window = "%s", x = %d, y = %d, exact = true })', address, pos.x, pos.y)
+  )
 end
 
 if #batch_commands > 0 then

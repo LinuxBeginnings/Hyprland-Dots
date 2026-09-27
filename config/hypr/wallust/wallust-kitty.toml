@@ -8,4 +8,4 @@ threshold = 11
 
 [templates]
 kitty.template = 'colors-kitty.conf'
-kitty.target = '~/.config/kitty/kitty-themes/01-Wallust.conf'
+kitty.target = '~/.config/hypr/UserConfigs/kitty-themes/01-Wallust.conf'

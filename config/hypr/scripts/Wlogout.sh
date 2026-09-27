@@ -26,6 +26,17 @@ if pgrep -x "wlogout" > /dev/null; then
     exit 0
 fi
 
+cd "${XDG_CONFIG_HOME:-$HOME/.config}/wlogout" 2>/dev/null || true
+
+FLAGS_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/wlogout/.theme_flags"
+if [[ -f "$FLAGS_FILE" ]]; then
+    THEME_FLAGS=$(cat "$FLAGS_FILE")
+    if [[ -n "$THEME_FLAGS" ]]; then
+        eval wlogout "$THEME_FLAGS" &
+        exit 0
+    fi
+fi
+
 # Detect monitor resolution and scaling factor
 resolution=$(hyprctl -j monitors | jq -r '.[] | select(.focused==true) | .height / .scale' | awk -F'.' '{print $1}')
 hypr_scale=$(hyprctl -j monitors | jq -r '.[] | select(.focused==true) | .scale')

@@ -10,8 +10,8 @@
 IFS=$'\n\t'
 
 # Define directories
-waybar_styles="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style"
-waybar_style="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
+waybar_styles="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/style"
+waybar_style="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/style.css"
 SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 rofi_config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-waybar-style.rasi"
 msg=' 🎌 NOTE: Some waybar STYLES NOT fully compatible with some LAYOUTS'

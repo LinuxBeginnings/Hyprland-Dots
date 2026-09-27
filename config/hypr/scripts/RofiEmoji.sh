@@ -6,9 +6,13 @@
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
 
+# Dependencies: bash, coreutils (mkdir/mktemp/mv/touch/sort/cut), sed, awk,
+#   procps (pidof/pkill), util-linux (flock), rofi, wl-clipboard (wl-copy)
+
 # Variables
 rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-emoji.rasi"
 msg='** note ** 👀 Click or Return to choose || Ctrl V to Paste'
+usage_file="${XDG_STATE_HOME:-$HOME/.local/state}/rofi-emoji/usage"
 
 # Check if rofi is already running
 if pidof rofi > /dev/null; then
@@ -16,12 +20,73 @@ if pidof rofi > /dev/null; then
 fi
 
 "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
-sed '1,/^# # DATA # #$/d' "$0" | \
-rofi -i -dmenu -mesg "$msg" -config $rofi_theme | \
-awk '{print $1}' | \
-head -n 1 | \
-tr -d '\n' | \
-wl-copy
+
+# Emoji list embedded below this script's marker
+data="$(sed '1,/^# # DATA # #$/d' "$0")"
+
+# Order list by usage count (descending). Sorting is stable, so emojis
+# that were never picked keep their original order at the bottom.
+sorted="$(printf '%s\n' "$data" | awk -v uf="$usage_file" '
+  BEGIN {
+    # Usage file is "emoji<TAB>count"; the emoji list is space-separated
+    while ((getline line < uf) > 0) {
+      split(line, a, "\t")
+      count[a[1]] = a[2]
+    }
+    close(uf)
+  }
+  NF { print (count[$1] + 0) "\t" $0 }
+' | LC_ALL=C sort -s -k1,1nr | cut -f2-)"
+
+# Increment the counter for a picked emoji. flock serializes the whole
+# read -> increment -> rename sequence so two concurrent picks can't both
+# read the same count and lose an update (the atomic rename alone only
+# prevents a torn file, not a lost update). The lock is released by the
+# kernel when the fd closes, even if the script dies.
+bump_usage() {
+  local emoji="$1" tmp
+  mkdir -p "${usage_file%/*}"
+  touch "$usage_file"
+  {
+    flock -x 9
+    # Temp file next to the destination so mv is an atomic rename(2)
+    # even when /tmp lives on a different filesystem (e.g. tmpfs)
+    tmp="$(mktemp "${usage_file}.XXXXXX")"
+    awk -v e="$emoji" '
+      BEGIN { FS = "\t" }
+      $1 == e { print $1 "\t" ($2 + 1); found = 1; next }
+      { print }
+      END { if (!found) print e "\t1" }
+    ' "$usage_file" > "$tmp"
+    mv "$tmp" "$usage_file"
+  } 9>"${usage_file}.lock"
+}
+
+# Ask rofi for "<0-based row index><TAB><typed filter>". A real row is
+# reported with index 0..N-1; a hand-typed custom entry with index -1
+# (rofi passes UINT32_MAX through an int). Esc/cancel returns nothing.
+output="$(printf '%s\n' "$sorted" | rofi -i -dmenu -format $'i\tf' -mesg "$msg" -config "$rofi_theme")"
+
+if [ -n "$output" ]; then
+  idx="${output%%$'\t'*}"
+  filter="${output#*$'\t'}"
+  line=""
+  case "$idx" in
+    ''|*[!0-9]*) ;; # -1 or malformed: custom entry, not a row
+    *) line="$(printf '%s\n' "$sorted" | sed -n "$((idx + 1))p")" ;;
+  esac
+
+  if [ -n "$line" ]; then
+    # Real row from the list: count the pick, then copy its emoji
+    emoji="$(awk '{print $1}' <<< "$line")"
+    bump_usage "$emoji"
+    printf '%s' "$emoji" | wl-copy
+  elif [ -n "$filter" ]; then
+    # Hand-typed custom text: copy it (first word, as before) but
+    # never track it, so the history only holds real list rows
+    printf '%s' "$(awk '{print $1}' <<< "$filter")" | wl-copy
+  fi
+fi
 
 exit
 

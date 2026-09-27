@@ -1,34 +1,68 @@
 # Changelog — KoolDots
 
-## v2.3.26.5
-
-- Fixed:
-  - Keyboard layout switcher `ALT + SHIFT`
-
-## v2.3.26.4
-
-- Fixed:
-  - Legacy WindowRules weren't getting migrated
-  - Missing or incorrect Keybinds
-    - Kitty
-    - Group/Ungroup
-  - Broken keybinds
-    - SUPER-R (Column presets scrolling layout)
-    - SUPER-G (Group/Ungroup)
-    - SUPER-ALT-Mouse Wheel (zoon)
-
-- Added:
-
-- Docs for overriding GTK and Icon themes
-  - In English and Spanish
-
----
-
-## v2.3.26.3
+## v2.3.27
 
 ## Fixed:
 
-- Missing keybinds
+- Replaced `io.open` calls with LUA API
+  - This prevents hyprland stall when code active
+- Mouse zoom guesture causing hyprland to stall
+  - Thank you Angel Spano `@jasueh`
+- Quickshell `overview` mouse functions restored
+  - Thank you to `@nettucui` for the code to fix it
+- Wlogout menu too short to display all options
+- Another cause of duplicate waybars
+- NixOS installed wrong fastfetch config file
+- Kitty background color was bright red
+- Waybar service not restarting with `Refresh.sh`
+- Hyprland-Dock wasn't reliably toggleing on/off
+- Improved version detection in `copy.sh`
+- Duplicate waybars at startup
+- `find` process in `copy.sh` would consume disk and cpu
+  - Process now finishes in 0.1ms
+- Animations weren't actually changing
+- Terminal variable `$term` not properly quoted causing failed starts
+- Moved `kitty` config fully to `.config/hypr/UserConfigs`
+- Potential issue with `lockscreen.sh` not logging out
+  - If hypridle dies status is updated but no lock is enabled
+  - Updating weather info is impromved as well
+  - No longer killing/restarting hypridle using wayland inhibit instead
+    - Keeps hypridle service active
+  - Thanks to `Jitendra dara @jitendradara12` for finding this and proposing fix
+- New wlogout themes weren't logging out correctly
+- Fixed wlogout theme sending notifications at login
+- Fixed Hyprsunset staying enabled after reboot and failing to toggle off
+  - Switched toggle handling to use `hyprctl hyprsunset` IPC for seamless, flicker-free adjustments
+  - Added robust termination helper with `SIGKILL` fallback to prevent stuck processes
+  - Fixed Waybar status detection to respect the state file rather than forcing 'on' whenever the daemon is running
+  - Added cleanup on startup to ensure lingering processes from previous sessions are reset when disabled
+- `ALT + SHIFT` not working to change keyboard layout
+  - Updated modifier normalization and keybinds to use canonical modifiers and keys
+- Media Key `stop/pause/play` not working
+  - Updated `system_keybinds.lua` to fix this
+- Fixed black wallpaper on resume or lid open
+  - Added post-layout refresh in `user_laptops.lua` and `LidSwitch.sh refresh`
+- Fixed Waybar not displaying on external monitor on lid close/open ("space reserved but no bar")
+  - Reloads Waybar via `SIGUSR2` after layout shifts to update layer surface coordinates and recreate bars
+- Fixed monitor scale fallback in `user_laptops.lua`
+  - Uses `default_fallback.scale` / `auto` instead of hardcoding scale 1 so HiDPI/4K laptop displays retain proper scaling
+- Fixed `copy.sh` recreating deleted `Startup_Apps.conf`
+  - Updated `scripts/lib_apps.sh` to target `user_startup.lua` for `asusctl`, `blueman`, and `ags`
+  - Removed obsolete `Startup_Apps.conf` cursor edit from `scripts/lib_detect.sh`
+  - Guarded `WallpaperSelect.sh` when `Startup_Apps.conf` is absent
+  - Retired obsolete `ensure_keybinds_init` hook for dynamic Lua keybind workflow
+- Fixed `awww` to actualy randomize transistions
+- Huge delay and HL IPC stall when changing themes
+  - Removed hyprlang code and replaced with LUA
+- Huge delay and HL IPC stall when changing themes
+  - Removed hyprlang code and replaced with LUA
+  - Thank you Angel Spano @jasueh
+- Custom scripts weren't preserved on updates
+- WindowRules weren't being migrated
+- Support for `nwg-look` to set theme / icons
+  - REMOVED `DarkLight.sh` and `ApplyThemeMode.sh`
+  - Working to greatly simplify theming
+  - These two features have added many issues / complexities
 - Global Theme now persistent
   - Option added to return to wallpaper theme
 - Fixed default apps source order
@@ -49,6 +83,32 @@
 
 ## Updated:
 
+- `copy.sh` properly syncs quickshell apps w/o overwritting user apps/widgets
+- `copy.sh` express upgrade copies waybar files now
+- Improved `Cliphistory.sh`
+  - Fixed quoting issues
+  - Improved error and image handling
+- Rofi Emoji menu shows most recently used first
+  - Thank you `@BenedettiLucca` for the PR
+- `kitty.conf` added `remember_window_size no`
+  - Kitty v0.49+ split window opens terminal w/o this setting
+  - Thanks to `@卄乇尺ㄩ'ㄩ尺` for posting it
+- HOWTO doc on changing icons and themes
+  - Hard incorrect info on using env variables
+- Added check if `wallpaper-bank` already installed and current
+  - Thanks to JoshuaRVLS for the fix
+- Express upgrade removed redundant questions
+  - Text and Visual editors
+  - Waybar 12/24hr setting
+- Full upgrade removed redundnat questions
+  - Restoring hyprlang based configs
+- Removed hyprlang code from `hypr/scripts`
+- Began removal of hyprlang based config files
+- Kitty has a remote exploit current when `enable_remote_acces = yes`
+  - It's now disabled by default
+- Moved `$HOME/.config/waybar` to `$HOME/.config/hypr/waybar`
+  - Updated scripts, and theming
+  - `copy.sh` now has check for stale links and updates them
 - Keyboard brightness improved across different HW
 - TouchPad auto detection of HW
 - Waybar backlight detection improved
@@ -63,12 +123,102 @@
 
 ## Added:
 
+- A `UserConfig`, `UserScripts` patch system
+  - Will allow important updates w/o overwritting user changes
+- `submap` helper to make creating and managing submaps easier
+  - Thank you `@Treinator` for the code
+- `submap` active indicator in Waybar
+  - Hidden when not in use
+  - Shows name of the active submap
+- Script `Fix-Fedora-45-overview.sh`
+  - The QT libs require `quickshell-git` to resolve errors
+    - `qs: symbol lookup error: qs: undefined symbol: _ZN23QUntypedPropertyBindingC1EP23QPropertyBindingPrivate, version Qt_6.11_PRIVATE_API`
+- Wlogout theme - `hadi493` adapted from `hadi493/wlogout` repo
+  - Fully acreditied in source files
+- Wlogout theme from `hadi493` but icons from `LordWorm1996`
+- `Hyprland - OEM Default animation`
+  - A simple low overhead animation from the default LUA file
+- `wlogout` themese
+  - Thanks to `@Mr-Hasan-Hamid `
+    - For the code and examples
+    - There is a menu to select a theme `SUPER+CTRL+W`
+- Manage User Defaults Menu
+  - From Quick Settings menu
+    - Set default:
+      - Text editor
+      - GUI editor
+      - File manager (thunar, etc)
+      - Default search engine for search keybind
+        - Has list of commont search engines pulldown
+        - Not all use same search format in URL
+    - Validates apps are installed
 - Docs:
   - Bindings
   - Window Rules
   - Adding Apps at startup
   - HowTo Install and Upgrade KoolDots
     - In English and Spanish
+
+---
+
+## v2.3.26.5
+
+- Fixed:
+  - Keyboard layout switcher ALT + SHIFT
+
+---
+
+## v2.3.6.4
+
+- Fixed:
+  - Missing or incorrect Keybinds
+    - Kitty
+    - Group/Ungroup
+  - Broken keybinds
+    - SUPER-R (Column presets scrolling layout)
+    - SUPER-G (Group/Ungroup)
+    - SUPER-ALT-Mouse Wheel (zoon)
+- Added:
+  - Docs for overriding GTK and Icon themes
+    - In English and Spanish
+
+---
+
+## v2.3.6.3
+
+## Fixed:
+
+- Global Theme now persistent
+  - Option added to return to wallpaper theme
+- Fixed default apps source order
+  - user variables now properly sourced
+- Wallust directory move to `~/.config/hypr`
+- `swaync` restarted with `SIG1`
+  - `swaync` doesn't have a handler for that
+  - Added `systemd --user` service instead
+  - Also prevents potential race condition
+  - Thanks to @hyperion-ak for finding and fixing this
+- Hardcoded `eDP-1` caused restore from sleep to fail and lose custom settings
+- Hardcoded entries in backlight scripts
+- TouchPad, keypad, slidepad detection
+  - Thanks to @goldyfruit for the fixes
+- `copy.sh` tries to update `~/.zprofile`
+  - NixOS systems using Home Manager use RO hard links
+  - Updated `copy.sh` to handle those and not exit with error
+
+## Updated:
+
+- Keyboard brightness improved across different HW
+- TouchPad auto detection of HW
+- Waybar backlight detection improved
+- Laptop lid switch detection improved with multi-monitor detection
+- Made global theme persistent
+  - Menu option to disable and go back to theme by wallpaper
+- `WindowRules.conf` isn't used in LUA mode
+  - Updated file to point to the .lua file
+  - Also added WindowRules.conf to the migraiton process properly
+- Moved `~/.config/wallust` to `!/.config/hypr/wallust`
+  - Phase 2 of moving out common config dirs for HL
 
 ---
 

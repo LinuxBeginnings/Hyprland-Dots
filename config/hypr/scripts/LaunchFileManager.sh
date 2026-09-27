@@ -87,6 +87,13 @@ terminal_launcher="$script_dir/LaunchTerminal.sh"
 preferred_files="$(trim "${1:-${FILE_MANAGER:-}}")"
 preferred_term="$(trim "${2:-${TERMINAL:-kitty}}")"
 
+if [[ "$preferred_files" == '$files' || "$preferred_files" == '${files}' || "$preferred_files" == '$FILE_MANAGER' || "$preferred_files" == '${FILE_MANAGER}' ]]; then
+  preferred_files="${files:-${FILE_MANAGER:-thunar}}"
+fi
+if [[ "$preferred_term" == '$term' || "$preferred_term" == '${term}' || "$preferred_term" == '$TERMINAL' || "$preferred_term" == '${TERMINAL}' ]]; then
+  preferred_term="${term:-${TERMINAL:-kitty}}"
+fi
+
 declare -a CANDIDATES=()
 append_unique_candidate "$preferred_files"
 append_unique_candidate "thunar"

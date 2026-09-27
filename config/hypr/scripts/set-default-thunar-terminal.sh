@@ -64,6 +64,7 @@ setup_default_terminal() {
 #
 # Shim to redirect xterm calls to kitty 
 # Resolves Open with (vim/neovim/etc) opening in xterm 
+export KITTY_CONFIG_DIRECTORY="\${KITTY_CONFIG_DIRECTORY:-\${XDG_CONFIG_HOME:-\$HOME/.config}/hypr/UserConfigs}"
 args=()
 pass_through=()
 while [ \$# -gt 0 ]; do

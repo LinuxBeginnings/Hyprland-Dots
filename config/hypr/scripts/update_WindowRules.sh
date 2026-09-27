@@ -8,7 +8,7 @@
 # Script to update WindowRules config if Hyprland version is >= 0.53
 
 CONFIGS_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/configs"
-TARGET_FILE="$CONFIGS_DIR/WindowRules.conf"
+TARGET_FILE="$CONFIGS_DIR/system_window_rules.lua"
 
 get_hyprland_version() {
   local ver="0.0.0"
@@ -41,9 +41,9 @@ SMALLEST=$(printf '%s\n' "$REQUIRED_VER" "$VERSION" | sort -V | head -n1)
 
 if [ "$SMALLEST" = "$REQUIRED_VER" ]; then
   if [ -f "$TARGET_FILE" ]; then
-    echo "Version $VERSION >= $REQUIRED_VER. Using WindowRules.conf directly (no -config-v3 migration file)."
+    echo "Version $VERSION >= $REQUIRED_VER. Using system_window_rules.lua."
   else
-    echo "Warning: WindowRules.conf not found at $TARGET_FILE"
+    echo "Warning: system_window_rules.lua not found at $TARGET_FILE"
   fi
 
   if command -v hyprctl &>/dev/null; then

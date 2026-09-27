@@ -11,25 +11,38 @@ local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") ..
 local hyprDir = configHome .. "/hypr"
 local systemDir = hyprDir .. "/configs"
 local userDir = configHome .. "/hypr/UserConfigs"
-local function has_kvantum_qml_module()
-  local cmd = "find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/kvantum' -print -quit 2>/dev/null"
-  local pipe = io.popen(cmd, "r")
-  if not pipe then
-    return false
+local function qml_module_exists(subpath)
+  local candidate_roots = {
+    "/usr/lib/qt6/qml",
+    "/usr/lib64/qt6/qml",
+    "/usr/lib/x86_64-linux-gnu/qt6/qml",
+    "/usr/lib/aarch64-linux-gnu/qt6/qml",
+    "/usr/lib/qt5/qml",
+    "/usr/lib64/qt5/qml",
+    "/usr/lib/x86_64-linux-gnu/qt5/qml",
+    "/usr/lib/aarch64-linux-gnu/qt5/qml",
+    "/usr/lib/qt/qml",
+    "/usr/lib64/qt/qml",
+    "/usr/share/qt6/qml",
+    "/usr/share/qt5/qml",
+    "/usr/share/qml",
+  }
+  for _, root in ipairs(candidate_roots) do
+    local f = io.open(root .. "/" .. subpath, "r")
+    if f then
+      f:close()
+      return true
+    end
   end
-  local output = pipe:read("*a") or ""
-  pipe:close()
-  return output:match("%S") ~= nil
+  return false
 end
+
+local function has_kvantum_qml_module()
+  return qml_module_exists("kvantum") or qml_module_exists("org/kde/kvantum")
+end
+
 local function has_hyprland_qml_style_module()
-  local cmd = "find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/org/hyprland/style' -print -quit 2>/dev/null"
-  local pipe = io.popen(cmd, "r")
-  if not pipe then
-    return false
-  end
-  local output = pipe:read("*a") or ""
-  pipe:close()
-  return output:match("%S") ~= nil
+  return qml_module_exists("org/hyprland/style")
 end
 
 local function apply_qt_style_fallbacks()
