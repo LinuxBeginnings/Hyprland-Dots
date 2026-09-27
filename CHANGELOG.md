@@ -12,7 +12,9 @@
   - Added `GhosttyThemeGuard.sh`: validates the active theme and falls back to the wallpaper (wallust) colors, or plain defaults, when it cannot resolve, then signals Ghostty to reload. Runs at login from `startup.lua` and is idempotent
   - `Ghostty_themes.sh` now only offers themes that actually resolve on the system
   - Replaced the deprecated `background-blur-radius` with `background-blur` in the shipped configs (Ghostty 1.3 renamed it; the previous intensity is preserved)
+  - Set default Ghostty font to `JetBrainsMono Nerd Font Mono` with `Symbols Nerd Font Mono` fallback
   - `patches/20-ghostty-background-blur.sh` migrates existing installs in place, only when the old key is present
+  - `patches/21-ghostty-font.sh` updates existing Ghostty configs to use JetBrainsMono Nerd Font Mono and migrates non-standard font references
 - Duplicate waybars at startup (still reproducible on Ubuntu and Gentoo)
   - Root cause: a laptop login fires several `monitor.added`/`monitor.removed` events at once
   - Each event ran `LidSwitch.sh refresh`, which fell back to `Refresh.sh` when Waybar was not yet up
