@@ -13,6 +13,10 @@
 - Stale Wallust imports in installed Waybar styles could survive updates
   - `copy.sh` refreshes `~/.config/hypr/waybar` (with a stale-path auto-repair), but the menu's update action only pulls the repo and runs patches
   - Added `patches/40-waybar-wallust-import.sh`, which repairs legacy/doubly-nested Wallust `@import` paths in the installed Waybar styles - the same class of breakage swaync had
+- Explicit per-output monitor rules were overridden at login and on hotplug
+  - `UserConfigs/user_laptops.lua` applied a synthetic "preferred" fallback to every display that was not listed in `UserConfigs/monitors.lua`, and that pass runs last on `hyprland.start` / `monitor.added` / `monitor.removed`, so it silently replaced explicit rules such as `Virtual-1 = 1920x1080@60`
+  - `user_laptops.lua` now resolves the user overrides first and falls back to explicit per-output rules from `hypr/lua/monitors.lua`; the system file's wildcards are left to Hyprland's own fallback chain
+  - Added `patches/50-monitor-layout-override.sh`, which applies the same change to installed copies (`copy.sh` protects existing `UserConfigs` files) and leaves the file untouched if it does not match the expected layout
 
 ## Updated:
 
