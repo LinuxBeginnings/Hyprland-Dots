@@ -90,6 +90,29 @@ reload_running_cava_colors() {
     pkill -USR2 -x cava >/dev/null 2>&1 || true
   fi
 }
+# Waybar does not watch its stylesheet - it only re-reads style.css when it is
+# reloaded. Wallust has just rewritten the Waybar palette above and the borders
+# are applied in-process by apply_hypr_border_fallback, so without a reload
+# signal the bar alone keeps the previous wallpaper's colors while the borders
+# change. This is most visible for callers that intentionally do not restart
+# Waybar, e.g. WallpaperAutoChange.sh -> RefreshNoWaybar.sh,
+# WallpaperEffects.sh and WallpaperDaemon.sh. Only a running bar is signalled:
+# a missing bar is left to WaybarStartup.sh, which serializes on its own lock.
+# Mirrors the reload idiom already used by Refresh.sh and ThemeChanger.sh.
+reload_running_waybar_colors() {
+  if ! pgrep -x waybar >/dev/null 2>&1 && ! pgrep -x '.waybar-wrapped' >/dev/null 2>&1; then
+    return 0
+  fi
+
+  # Prefer the IPC command; fall back to the reload signal when waybar-msg is
+  # absent or IPC is disabled.
+  if command -v waybar-msg >/dev/null 2>&1 && waybar-msg cmd reload >/dev/null 2>&1; then
+    return 0
+  fi
+  pkill -SIGUSR2 -x waybar >/dev/null 2>&1 || true
+  pkill -SIGUSR2 -x '.waybar-wrapped' >/dev/null 2>&1 || true
+  return 0
+}
 
 # Inputs and paths
 passed_path="${1:-}"
@@ -267,6 +290,7 @@ if ! wait_for_templates "$start_ts" "${wallust_targets[@]}"; then
 fi
 ensure_wallust_waybar_style
 reload_running_cava_colors
+reload_running_waybar_colors
 
 # Normalize Rofi selection colors to a brighter accent and readable foreground
 rofi_colors="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"

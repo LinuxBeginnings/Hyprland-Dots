@@ -1,10 +1,32 @@
 # Changelog — KoolDots
 
+## v2.3.27.1
+
+## Fixed:
+
+- swaync path wasn't corrected on updates
+  - Added patch to copy.sh to fix on updates
+- Waybar kept the old wallpaper's colors after a wallpaper change
+  - Root cause: Waybar only re-reads its stylesheet when it is reloaded, and `WallustSwww.sh` never signalled it - the script rewrote `colors-waybar.css` and applied the Hyprland borders in-process, so borders followed the wallpaper while the bar stayed on the previous palette
+  - Most visible on the automatic wallpaper rotation (`WallpaperAutoChange.sh` -> `RefreshNoWaybar.sh`, which deliberately does not touch Waybar) and on `WallpaperEffects.sh` / `WallpaperDaemon.sh`, which ran no refresh at all
+  - `WallustSwww.sh` now reloads a running bar once the palette is written (`waybar-msg cmd reload`, falling back to `SIGUSR2`); a missing bar is still left to `WaybarStartup.sh`, and the reload is a signal, not a restart
+- Stale Wallust imports in installed Waybar styles could survive updates
+  - `copy.sh` refreshes `~/.config/hypr/waybar` (with a stale-path auto-repair), but the menu's update action only pulls the repo and runs patches
+  - Added `patches/40-waybar-wallust-import.sh`, which repairs legacy/doubly-nested Wallust `@import` paths in the installed Waybar styles - the same class of breakage swaync had
+
+## Updated:
+
+- Docs for the Waybar -> `~/.config/hypr/waybar` move and its fallout
+  - `docs/HOWTO-Migrate-Waybar-To-Hypr.md` (+ Spanish): correct `@import` depth per file, automatic and manual migration, and why the bar needs a reload to pick up new colors
+  - `docs/Patching-UserConfigs.md` now documents that patches may target any user-owned config file, not just `hypr/UserConfigs` / `hypr/UserScripts`
+
+---
+
 ## v2.3.27
 
 ## Fixed:
 
-- Fixed `ghostty` config error at startup
+- `ghostty` config error at startup
   - Also fixed missing themes
   - Add change to blur setting to patches/
   - Root cause: the shipped default `theme = "Catppuccin Mocha"` is resolved against `~/.config/ghostty/themes` and `share/ghostty/themes`; distros that ship Ghostty without its built-in theme collection (Gentoo, some minimal/Flatpak builds) install neither, so the theme could never resolve

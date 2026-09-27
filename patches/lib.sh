@@ -11,8 +11,9 @@
 #   * Executed by scripts/lib_patches.sh (apply_user_patches), in sorted order.
 #   * Must be content-idempotent: detect whether its fix is already present
 #     and leave the file unchanged if so.
-#   * Targets live under $KOOLDOTS_CONFIG_HOME/hypr - i.e. UserConfigs/ and
-#     UserScripts/. Skip cleanly (exit 0) when a target file is absent.
+#   * Targets live under $KOOLDOTS_CONFIG_HOME (mainly hypr/UserConfigs and
+#     hypr/UserScripts, but any user-owned config file is fair game - e.g.
+#     swaync/style.css). Skip cleanly (exit 0) when a target file is absent.
 #   * Never rewrite a whole file: only add/adjust the specific setting, so a
 #     user's own edits are preserved.
 #   * Exit 0 for both "applied" and "already present/skipped".
