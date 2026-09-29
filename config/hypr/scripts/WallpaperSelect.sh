@@ -164,35 +164,6 @@ menu() {
   done
 }
 
-
-modify_startup_config() {
-  local selected_file="$1"
-  local startup_config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/Startup_Apps.conf"
-  [ -f "$startup_config" ] || return 0
-
-  # Check if it's a live wallpaper (video)
-  if [[ "$selected_file" =~ \.(mp4|mkv|mov|webm)$ ]]; then
-    # For video wallpapers:
-    sed -i '/^\s*exec-once\s*=\s*\$scriptsDir\/WallpaperDaemon\.sh\s*$/s/^/\#/' "$startup_config"
-    sed -i '/^\s*exec-once\s*=\s*swww-daemon\s*--format\s*xrgb\s*$/s/^/\#/' "$startup_config"
-    sed -i '/^\s*#\s*exec-once\s*=\s*mpvpaper\s*.*$/s/^#\s*//;' "$startup_config"
-
-    # Update the livewallpaper variable with the selected video path (using $HOME)
-    selected_file="${selected_file/#$HOME/\$HOME}" # Replace /home/user with $HOME
-    sed -i "s|^\$livewallpaper=.*|\$livewallpaper=\"$selected_file\"|" "$startup_config"
-
-    echo "Configured for live wallpaper (video)."
-  else
-    # For image wallpapers:
-    sed -i '/^\s*#\s*exec-once\s*=\s*\$scriptsDir\/WallpaperDaemon\.sh\s*$/s/^\s*#\s*//;' "$startup_config"
-    sed -i '/^\s*#\s*exec-once\s*=\s*swww-daemon\s*--format\s*xrgb\s*$/s/^\s*#\s*//;' "$startup_config"
-
-    sed -i '/^\s*exec-once\s*=\s*mpvpaper\s*.*$/s/^/\#/' "$startup_config"
-
-    echo "Configured for static wallpaper (image)."
-  fi
-}
-
 # Apply Image Wallpaper
 apply_image_wallpaper() {
   local image_path="$1"
@@ -282,9 +253,6 @@ main() {
     echo "File not found. Selected choice: $choice"
     exit 1
   fi
-
-  # Modify the Startup_Apps.conf file based on wallpaper type
-  modify_startup_config "$selected_file"
 
   # **CHECK FIRST** if it's a video or an image **before calling any function**
   if [[ "$selected_file" =~ \.(mp4|mkv|mov|webm|MP4|MKV|MOV|WEBM)$ ]]; then

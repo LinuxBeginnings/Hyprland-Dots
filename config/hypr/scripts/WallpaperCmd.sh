@@ -126,7 +126,7 @@ wallpaper_resize_mode() {
 # panics with "There is an awww-daemon instance already running on this
 # socket!" and aborts (SIGABRT), leaving a core dump behind.
 #
-# This happens on a regular login, where Startup_Apps.conf runs
+# This happens on a regular login, where lua/startup.lua runs
 # WallpaperDaemon.sh concurrently with other session services.
 wallpaper_ensure_daemon() {
   local lock_file="${XDG_RUNTIME_DIR:-/tmp}/wallpaper-daemon-${UID:-$(id -u)}.lock"

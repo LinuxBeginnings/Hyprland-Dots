@@ -6,7 +6,7 @@
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
 # Toggle the detected or configured touchpad device.
-# Set TOUCHPAD_DEVICE or define Touchpad_Device in UserConfigs (Laptops.conf or user_laptops.lua) to override auto-detection.
+# Set TOUCHPAD_DEVICE or define Touchpad_Device in UserConfigs/user_laptops.lua to override auto-detection.
 # source https://github.com/hyprwm/Hyprland/discussions/4283?sort=new#discussioncomment-8648109
 
 set -euo pipefail

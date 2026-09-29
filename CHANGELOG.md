@@ -4,6 +4,12 @@
 
 ## Fixed:
 
+- Pruned the leftover Hyprlang `.conf` plumbing that no longer had a file to act on
+  - `WallpaperSelect.sh` dropped `modify_startup_config()`, which rewrote `UserConfigs/Startup_Apps.conf`; live wallpapers are configured in `lua/startup.lua`, where the `mpvpaper` entry is documented
+  - `lib_detect.sh` now writes only the Lua targets for the NVIDIA/VM tweaks (`lua/env.lua`, `lua/settings.lua`); the `configs/ENVariables.conf`, `configs/SystemSettings.conf` and `hypr/monitors.conf` seds were dead, and the `Virtual-1` rule they uncommented already ships enabled in `lua/monitors.lua`
+  - `lib_prompts.sh` writes the keyboard layout to `UserConfigs/user_settings.lua` and `lua/settings.lua` only; the `UserSettings.conf` and `SystemSettings.conf` steps were no-ops
+  - Removed `scripts/fix-systemsettings-lua.sh`, an uncalled one-shot that regenerated `configs/system_settings.lua` from the removed `SystemSettings.conf` (its output is byte-identical to the shipped file)
+  - Refreshed stale comments in `TouchPad.sh`, `WallpaperCmd.sh`, `update_WindowRules.sh` and `keybinds_parser.py` that still pointed at removed `.conf` files
 - Waybar's terminal / file-manager / btop / nvtop / nmtui clicks did nothing
   - `WaybarScripts.sh` still required `UserConfigs/01-UserDefaults.conf`, which was removed with the other Hyprlang files, so it exited 1 with "Configuration file not found!" and every Waybar action calling it was dead
   - It now resolves `term` and `files` the way the rest of the repo does: `UserConfigs/user_defaults.lua` override, then `lua/user_defaults.lua`, then `$TERMINAL` / `$FILE_MANAGER`

@@ -26,12 +26,6 @@ detect_nvidia_adjust() {
   fi
   if [ "$has_nvidia" -eq 1 ]; then
     echo "${INFO:-[INFO]} Nvidia GPU detected. Setting up proper env's and configs" 2>&1 | tee -a "$log" || true
-    if [ -f config/hypr/configs/ENVariables.conf ]; then
-      sed -i '/env = LIBVA_DRIVER_NAME,nvidia/s/^#//' config/hypr/configs/ENVariables.conf
-      sed -i '/env = __GLX_VENDOR_LIBRARY_NAME,nvidia/s/^#//' config/hypr/configs/ENVariables.conf
-      sed -i '/env = NVD_BACKEND,direct/s/^#//' config/hypr/configs/ENVariables.conf
-      sed -i '/env = GSK_RENDERER,ngl/s/^#//' config/hypr/configs/ENVariables.conf
-    fi
     if [ -f config/hypr/lua/env.lua ]; then
       sed -i 's/^--[[:space:]]*hl\.env("LIBVA_DRIVER_NAME"/hl.env("LIBVA_DRIVER_NAME"/' config/hypr/lua/env.lua
       sed -i 's/^--[[:space:]]*hl\.env("__GLX_VENDOR_LIBRARY_NAME"/hl.env("__GLX_VENDOR_LIBRARY_NAME"/' config/hypr/lua/env.lua
@@ -40,10 +34,8 @@ detect_nvidia_adjust() {
     fi
     if [ "$has_intel" -eq 1 ] || [ "$has_amd" -eq 1 ]; then
       echo "${INFO:-[INFO]} Hybrid GPU detected (Intel/NVIDIA or AMD/NVIDIA). Applying cursor handoff fixes." 2>&1 | tee -a "$log" || true
-      [ -f config/hypr/configs/SystemSettings.conf ] && sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 0/' config/hypr/configs/SystemSettings.conf
       [ -f config/hypr/lua/settings.lua ] && sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 0/' config/hypr/lua/settings.lua
     else
-      [ -f config/hypr/configs/SystemSettings.conf ] && sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/configs/SystemSettings.conf
       [ -f config/hypr/lua/settings.lua ] && sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/lua/settings.lua
     fi
   fi
@@ -54,10 +46,7 @@ detect_vm_adjust() {
   local log="$1"
   if hostnamectl | grep -q 'Chassis: vm'; then
     echo "${INFO:-[INFO]} System is running in a virtual machine. Setting up proper env's and configs" 2>&1 | tee -a "$log" || true
-    [ -f config/hypr/configs/SystemSettings.conf ] && sed -i 's/^\([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*\)2/\1 1/' config/hypr/configs/SystemSettings.conf
-    [ -f config/hypr/configs/ENVariables.conf ] && sed -i '/env = WLR_RENDERER_ALLOW_SOFTWARE,1/s/^#//' config/hypr/configs/ENVariables.conf
     [ -f config/hypr/lua/env.lua ] && sed -i 's/^--[[:space:]]*hl\.env("WLR_RENDERER_ALLOW_SOFTWARE"/hl.env("WLR_RENDERER_ALLOW_SOFTWARE"/' config/hypr/lua/env.lua
-    [ -f config/hypr/monitors.conf ] && sed -i '/monitor = Virtual-1, 1920x1080@60,auto,1/s/^#//' config/hypr/monitors.conf
   fi
 }
 
@@ -76,25 +65,7 @@ adjust_qt_quick_controls_style() {
   local style="Basic"
   local qt_style_override="Fusion"
   local has_kvantum_qml=0
-  local set_env_conf_vars
   local set_env_lua_vars
-
-  set_env_conf_vars() {
-    local file="$1"
-    [ -f "$file" ] || return 0
-
-    if grep -q '^env = QT_QUICK_CONTROLS_STYLE,' "$file"; then
-      sed -i -E "s|^env = QT_QUICK_CONTROLS_STYLE,.*$|env = QT_QUICK_CONTROLS_STYLE,${style}|" "$file"
-    else
-      printf '\nenv = QT_QUICK_CONTROLS_STYLE,%s\n' "$style" >>"$file"
-    fi
-
-    if grep -q '^env = QT_STYLE_OVERRIDE,' "$file"; then
-      sed -i -E "s|^env = QT_STYLE_OVERRIDE,.*$|env = QT_STYLE_OVERRIDE,${qt_style_override}|" "$file"
-    else
-      printf 'env = QT_STYLE_OVERRIDE,%s\n' "$qt_style_override" >>"$file"
-    fi
-  }
 
   set_env_lua_vars() {
     local file="$1"
@@ -146,11 +117,9 @@ adjust_qt_quick_controls_style() {
     fi
   done
 
-  set_env_conf_vars "$source_hypr_dir/configs/ENVariables.conf"
   set_env_lua_vars "$source_hypr_dir/lua/env.lua"
   set_env_lua_vars "$source_hypr_dir/configs/system_env.lua"
 
-  set_env_conf_vars "$target_hypr_dir/configs/ENVariables.conf"
   set_env_lua_vars "$target_hypr_dir/lua/env.lua"
   set_env_lua_vars "$target_hypr_dir/configs/system_env.lua"
 

@@ -5,7 +5,7 @@
 #  License: GNU GPLv3
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
-# Script to update WindowRules config if Hyprland version is >= 0.53
+# Script to refresh the WindowRules Lua config if Hyprland version is >= 0.53
 
 CONFIGS_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/configs"
 TARGET_FILE="$CONFIGS_DIR/system_window_rules.lua"
