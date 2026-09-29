@@ -1,7 +1,20 @@
 # Changelog — KoolDots
 
+## v2.3.27.3
+
+## Fixed:
+
+- Waybar's terminal / file-manager / btop / nvtop / nmtui clicks did nothing
+  - `WaybarScripts.sh` still required `UserConfigs/01-UserDefaults.conf`, which was removed with the other Hyprlang files, so it exited 1 with "Configuration file not found!" and every Waybar action calling it was dead
+  - It now resolves `term` and `files` the way the rest of the repo does: `UserConfigs/user_defaults.lua` override, then `lua/user_defaults.lua`, then `$TERMINAL` / `$FILE_MANAGER`
+  - `--term` (and the `btop` / `nvtop` / `nmtui` payloads) delegates to `LaunchTerminal.sh`, and `--files` to `LaunchFileManager.sh`, so both get the existing installed-terminal / file-manager fallback chains
+  - Also dropped the dead `01-UserDefaults.conf` branch from `apply_editor_selection_to_userconfigs()` in `scripts/lib_apps.sh`; the editor default is written to `user_defaults.lua` only
+
+---
 
 ## v2.3.27.2
+
+## Fixed:
 
 - Suspend was delayed by ~30s on every suspend, caused by `hypridle`
   - `systemd-logind` logged `Delay lock is active (UID 1000/... PID .../hypridle) but inhibitor timeout is reached`, so logind waited out the whole `InhibitDelayMaxSec` (30s on Ubuntu, 5s upstream) before suspending
@@ -10,18 +23,13 @@
   - Duplicate `hypridle` daemons were also possible: each instance registers its own sleep delay inhibitor, so two doubled the suspend path's inhibitor handling
   - `startup.lua` now calls `HypridleStartup.sh`, which starts hypridle once (preferring the systemd user unit) and terminates any stray duplicate daemon, keeping the unit-owned instance
   - `patches/25-hypridle-suspend-delay.sh` installs that helper and runs it once, so an already-running session is de-duplicated without a re-login
-- Waybar's terminal / file-manager / btop / nvtop / nmtui clicks did nothing
-  - `WaybarScripts.sh` still required `UserConfigs/01-UserDefaults.conf`, which was removed with the other Hyprlang files, so it exited 1 with "Configuration file not found!" and every Waybar action calling it was dead
-  - It now resolves `term` and `files` the way the rest of the repo does: `UserConfigs/user_defaults.lua` override, then `lua/user_defaults.lua`, then `$TERMINAL` / `$FILE_MANAGER`
-  - `--term` (and the `btop` / `nvtop` / `nmtui` payloads) delegates to `LaunchTerminal.sh`, and `--files` to `LaunchFileManager.sh`, so both get the existing installed-terminal / file-manager fallback chains
-  - Also dropped the dead `01-UserDefaults.conf` branch from `apply_editor_selection_to_userconfigs()` in `scripts/lib_apps.sh`; the editor default is written to `user_defaults.lua` only
 
----- 
-
+---
 
 ## v2.3.27.1
 
 ## Fixed:
+
 - swaync path wasn't corrected on updates
   - Added patch to copy.sh to fix on updates
 - Waybar kept the old wallpaper's colors after a wallpaper change
