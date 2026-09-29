@@ -137,27 +137,8 @@ apply_editor_selection_to_userconfigs() {
 
   [ -z "$editor" ] && [ -z "$visual" ] && return 0
 
-  local defaults_files=()
-  [ -f "$base/config/hypr/UserConfigs/01-UserDefaults.conf" ] && defaults_files+=("$base/config/hypr/UserConfigs/01-UserDefaults.conf")
-  [ -f "$cfg_home/hypr/UserConfigs/01-UserDefaults.conf" ] && defaults_files+=("$cfg_home/hypr/UserConfigs/01-UserDefaults.conf")
-
-  for df in "${defaults_files[@]}"; do
-    if [ -n "$editor" ]; then
-      if grep -q '^[[:space:]#]*env[[:space:]]*=[[:space:]]*EDITOR,' "$df"; then
-        sed -i "s/^[[:space:]#]*env[[:space:]]*=[[:space:]]*EDITOR,.*/env = EDITOR,$editor #default editor/" "$df"
-      else
-        echo "env = EDITOR,$editor #default editor" >> "$df"
-      fi
-    fi
-    if [ -n "$visual" ]; then
-      if grep -q '^[[:space:]#]*env[[:space:]]*=[[:space:]]*VISUAL,' "$df"; then
-        sed -i "s/^[[:space:]#]*env[[:space:]]*=[[:space:]]*VISUAL,.*/env = VISUAL,$visual #default visual editor for quick settings (optional)/" "$df"
-      else
-        echo "env = VISUAL,$visual #default visual editor for quick settings (optional)" >> "$df"
-      fi
-    fi
-  done
-
+  # The Hyprlang 01-UserDefaults.conf no longer ships (removed with the other
+  # .conf files), so the editor/visual default is written to the Lua file only.
   local lua_defaults_files=()
   [ -f "$base/config/hypr/UserConfigs/user_defaults.lua" ] && lua_defaults_files+=("$base/config/hypr/UserConfigs/user_defaults.lua")
   [ -f "$cfg_home/hypr/UserConfigs/user_defaults.lua" ] && lua_defaults_files+=("$cfg_home/hypr/UserConfigs/user_defaults.lua")
