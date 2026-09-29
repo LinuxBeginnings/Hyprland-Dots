@@ -1,9 +1,22 @@
 # Changelog — KoolDots
 
+
+## v2.3.27.2
+
+- Suspend was delayed by ~30s on every suspend, caused by `hypridle`
+  - `systemd-logind` logged `Delay lock is active (UID 1000/... PID .../hypridle) but inhibitor timeout is reached`, so logind waited out the whole `InhibitDelayMaxSec` (30s on Ubuntu, 5s upstream) before suspending
+  - Root cause: hypridle releases its logind sleep "delay" inhibitor only once `before_sleep_cmd` returns, and `before_sleep_cmd = loginctl lock-session` blocks when the session lock is never acknowledged (a stale `hyprlock` instance had been running for 42 hours)
+  - `before_sleep_cmd` now runs the lock in the background so the inhibitor is released immediately; `patches/25-hypridle-suspend-delay.sh` migrates existing installs and leaves a custom command untouched
+  - Duplicate `hypridle` daemons were also possible: each instance registers its own sleep delay inhibitor, so two doubled the suspend path's inhibitor handling
+  - `startup.lua` now calls `HypridleStartup.sh`, which starts hypridle once (preferring the systemd user unit) and terminates any stray duplicate daemon, keeping the unit-owned instance
+  - `patches/25-hypridle-suspend-delay.sh` installs that helper and runs it once, so an already-running session is de-duplicated without a re-login
+
+---- 
+
+
 ## v2.3.27.1
 
 ## Fixed:
-
 - swaync path wasn't corrected on updates
   - Added patch to copy.sh to fix on updates
 - Waybar kept the old wallpaper's colors after a wallpaper change
