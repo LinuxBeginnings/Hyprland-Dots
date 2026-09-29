@@ -56,7 +56,9 @@ local startup_commands = {
   scriptsDir .. "/PortalHyprland.sh",
   'qs --log-rules "qt.qpa.wayland.textinput.warning=false" -c overview',
   'qs --log-rules "qt.qpa.wayland.textinput.warning=false" -p $HOME/.config/quickshell/qs-hyprview',
-  "hypridle",
+  -- Prefer the systemd user service so a second daemon (and a second sleep
+  -- delay inhibitor) is never started alongside it.
+  "systemctl --user start hypridle.service 2>/dev/null || hypridle",
   scriptsDir .. "/LuaAutoReload.sh",
   scriptsDir .. "/Hyprsunset.sh init",
   -- NOTE: Dropterminal is currently certified only with kitty. Not all terminals behave correctly as a dropdown.
