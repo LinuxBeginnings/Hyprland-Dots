@@ -47,6 +47,13 @@ if [[ "${QT_STYLE_OVERRIDE:-}" == "kvantum" ]] || [[ "${QT_STYLE_OVERRIDE:-}" ==
   # Using `local` here fails with "local: can only be used in a function",
   # leaving has_kvantum empty and skipping the Fusion fallback below.
   has_kvantum=0
+  # These paths are optional, so an unmatched glob must expand to nothing
+  # rather than abort the script (zsh `nomatch`, bash `failglob`).
+  if [ -n "${ZSH_VERSION:-}" ]; then
+    setopt null_glob 2>/dev/null || true
+  else
+    shopt -s nullglob 2>/dev/null || true
+  fi
   for d in /usr/lib*/qt*/qml /usr/lib*/*-linux-gnu/qt*/qml /usr/lib*/qml /usr/share/qt*/qml /usr/share/qml; do
     [ -d "$d" ] || continue
     if [ -d "$d/kvantum" ] || [ -d "$d/org/kde/kvantum" ]; then

@@ -34,6 +34,19 @@
 #     consolidation or tests.
 #   - Consider modularizing remaining app-specific tweaks/prompts.
 
+# This script is bash-only (BASH_SOURCE, shopt, [[ ]], arrays).
+# If it is launched with another shell - e.g. `zsh copy.sh --express-upgrade`
+# or `sh copy.sh` - re-exec it under bash. zsh in particular aborts the whole
+# script on an unmatched glob (`nomatch`), which the optional Qt QML probes in
+# scripts/lib_detect.sh can trigger on systems without those paths.
+if [ -z "${BASH_VERSION:-}" ]; then
+  if [ -f "$0" ] && command -v bash >/dev/null 2>&1; then
+    exec bash "$0" "$@"
+  fi
+  printf '%s\n' "[ERROR] copy.sh must be run with bash (e.g. 'bash ./copy.sh --express-upgrade')." >&2
+  exit 1
+fi
+
 clear
 wallpaper=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current
 # Defaults updated to normalized names

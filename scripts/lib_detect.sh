@@ -66,6 +66,17 @@ adjust_qt_quick_controls_style() {
   local qt_style_override="Fusion"
   local has_kvantum_qml=0
   local set_env_lua_vars
+  local _restore_nullglob=0
+
+  # The Qt QML probe patterns below are all optional paths, so an unmatched
+  # glob must expand to nothing instead of aborting the script. zsh aborts by
+  # default (`nomatch`); bash can be configured to as well (`failglob`).
+  if [ -n "${ZSH_VERSION:-}" ]; then
+    setopt local_options null_glob 2>/dev/null || true
+  elif [ -n "${BASH_VERSION:-}" ] && ! shopt -q nullglob 2>/dev/null; then
+    shopt -s nullglob 2>/dev/null || true
+    _restore_nullglob=1
+  fi
 
   set_env_lua_vars() {
     local file="$1"
@@ -132,6 +143,10 @@ adjust_qt_quick_controls_style() {
     echo "${INFO:-[INFO]} Kvantum QML module detected. Using QT_STYLE_OVERRIDE=kvantum" 2>&1 | tee -a "$log" || true
   else
     echo "${WARN:-[WARN]} Kvantum QML module not found. Using QT_STYLE_OVERRIDE=Fusion as fallback." 2>&1 | tee -a "$log" || true
+  fi
+
+  if [ "$_restore_nullglob" -eq 1 ]; then
+    shopt -u nullglob 2>/dev/null || true
   fi
 }
 
