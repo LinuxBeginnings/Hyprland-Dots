@@ -48,7 +48,15 @@ local function exec_once(cmd, opts)
   local log = log_prefix .. key .. ".log"
 
   local inner = READINESS .. "; " .. cmd
-  local wrapper = "[ -e " .. shell_quote(marker) .. " ] || { touch " .. shell_quote(marker)
+
+  -- Use `test -e`, never `[ -e ... ]`, for the marker check.
+  --
+  -- hl.exec_cmd() hands the command to Hyprland's exec path, which glob-expands
+  -- the string. An unquoted `[` is a character-class glob, so `[ -e <marker> ]`
+  -- does not evaluate as a test: it collapses to something that reports success,
+  -- the `||` branch is never taken, and the entry is silently skipped (no marker,
+  -- no log, no command). `test` is the same test without the glob metacharacter.
+  local wrapper = "test -e " .. shell_quote(marker) .. " || { touch " .. shell_quote(marker)
     .. " && sh -c " .. shell_quote(inner) .. " >>" .. shell_quote(log) .. " 2>&1 & }"
 
   -- Spawn through the compositor whenever the runtime offers it.

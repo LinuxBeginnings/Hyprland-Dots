@@ -15,6 +15,8 @@
   - `exec_once` waited only for the Wayland socket and for a Hyprland socket file to exist, but the socket appears before Hyprland has finished coming up, so clients could initialise against a compositor with no outputs yet
   - The readiness gate now also waits for `hyprctl -j monitors` to report at least one output (bounded), replacing the ad-hoc `sleep N` that startup commands needed to work around this
   - Commands are now spawned through `hl.exec_cmd` - the same path the native `exec-once` used - instead of `os.execute`, so GUI clients, tray applets and D-Bus services get the session environment, a clean signal mask and their own session; `&` / `disown` are no longer needed, and the wrapper no longer relies on a login shell (`sh -lc` -> `sh -c`)
+  - The per-session marker check uses `test -e`, not `[ -e ... ]`: `hl.exec_cmd` hands the command to Hyprland's exec path, which glob-expands the string, and an unquoted `[` is a character-class glob - so `[ -e <marker> ]` never evaluated as a test and every entry was silently skipped (no marker, no log, no command)
+    - Symptom: adding an entry to `UserConfigs/user_startup.lua` appeared to do nothing, and none of the system startup entries (`nm-applet`, `quickshell`, `hypridle`, clipboard watcher, ...) came up either
   - `lua/startup.lua` no longer keeps its own copy of `exec_once`; both startup lists call the shared `lua/user_startup_helper.lua`, so the system and user lists cannot drift apart again
 
 ## Updated:
