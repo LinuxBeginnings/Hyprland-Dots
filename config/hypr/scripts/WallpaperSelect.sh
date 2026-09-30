@@ -361,7 +361,7 @@ apply_wpengine_wallpaper() {
       done
     fi
 
-    # Render selected wallpaper on headless Virtual-1 to capture a still
+    # Render selected wallpaper on headless WPE-Capture to capture a still
     local unique_stamp=$(date +%s%N)
     local target_still="$trans_dir/target_${unique_stamp}.png"
     local final_target="$trans_dir/target.png"
@@ -370,24 +370,24 @@ apply_wpengine_wallpaper() {
     # Clean up old target files
     rm -f "$trans_dir"/target_*.png "$HOME/.cache/Rofi-Wallpaper-Engine/WE_Fullres/${item_id}_snapshot.png" 2>/dev/null || true
 
-    # Ensure Virtual-1 monitor exists, matching the focused monitor's resolution and refresh rate
-    if ! hyprctl monitors -j | jq -e '.[] | select(.name == "Virtual-1")' >/dev/null 2>&1; then
+    # Ensure WPE-Capture monitor exists, matching the focused monitor's resolution and refresh rate
+    if ! hyprctl monitors -j | jq -e '.[] | select(.name == "WPE-Capture")' >/dev/null 2>&1; then
       local mon_info
       mon_info=$(hyprctl monitors -j | jq -r --arg mon "$mon" '.[] | select(.name == $mon) | "\(.width)x\(.height)@\(.refresh)"')
       
-      hyprctl output create headless Virtual-1 >/dev/null 2>&1 || hyprctl output create headless >/dev/null 2>&1
-      hyprctl keyword monitor "Virtual-1, ${mon_info:-1920x1080@60}, auto, 1" >/dev/null 2>&1
+      hyprctl output create headless WPE-Capture --quiet >/dev/null 2>&1 || hyprctl output create headless --quiet >/dev/null 2>&1
+      hyprctl keyword monitor "WPE-Capture, ${mon_info:-1920x1080@60}, auto, 1" >/dev/null 2>&1
       sleep 0.4
     fi
 
-    linux-wallpaperengine --silent --no-automute --assets-dir "$assets" --screen-root "Virtual-1" "$target_ref" >/dev/null 2>&1 &
+    linux-wallpaperengine --silent --no-automute --assets-dir "$assets" --screen-root "WPE-Capture" "$target_ref" >/dev/null 2>&1 &
     pkill -x waybar >/dev/null 2>&1 || true
     local new_wpe_pid=$!
     # Give WPE enough time to frame-render on the headless output
     sleep 0.8
 
     if command -v grim &>/dev/null; then
-      grim -o "Virtual-1" -t png "$target_still" >/dev/null 2>&1 || true
+      grim -o "WPE-Capture" -t png "$target_still" >/dev/null 2>&1 || true
     fi
 
     # Fallback if grim didn't capture properly
@@ -442,7 +442,7 @@ apply_wpengine_wallpaper() {
       sleep 0.28
     fi
 
-    hyprctl output remove Virtual-1 >/dev/null 2>&1 || true
+    hyprctl output remove WPE-Capture >/dev/null 2>&1 || true
 
     # Save target as the new current.png for the next use.
     cp -f "$target_still" "$current_still"

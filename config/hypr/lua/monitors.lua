@@ -35,6 +35,13 @@ hl.monitor({
     scale = "1",
 })
 
+hl.monitor({
+    output = "WPE-Capture",
+    mode = "1920x1080@60",
+    position = "auto",
+    scale = "1",
+})
+
 -- Load user monitor overrides from UserConfigs when present.
 do
     local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")

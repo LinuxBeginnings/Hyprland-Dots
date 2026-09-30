@@ -7,6 +7,11 @@
 
 -- Base workspace configuration for Lua mode.
 -- User/persisted workspace rules are loaded from UserConfigs/workspaces.lua.
+hl.workspace_rule({
+    workspace = "99",
+    default = true,
+    monitor = "WPE-Capture"
+})
 
 -- Load user workspace rules from UserConfigs when present.
 do
