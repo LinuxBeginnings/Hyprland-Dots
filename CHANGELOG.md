@@ -1,5 +1,28 @@
 # Changelog — KoolDots
 
+## v2.3.27.5
+
+## Fixed:
+
+- The Rainbow Borders mode was lost on logout
+  - The mode is stored in `~/.config/hypr/UserScripts/rainbow-borders.mode`, but nothing applied it at login, and `RainbowBorders.sh` is a one-shot
+  - `scripts/WallustSwww.sh` is the last writer of `general:col.active_border` on every wallpaper/theme change, so it replaced the rainbow border with the Wallust palette and the choice survived only until the next wallpaper change
+  - Added `config/hypr/scripts/RainbowBordersStartup.sh`, which reads the mode file and applies the matching script: `rainbow` / `wallust_random` / `gradient_flow` -> one-shot `RainbowBorders.sh`, `low_cpu` -> animated `RainbowBorders-low-cpu.sh` (stopping any previous instance first), `disabled` -> leaves the Wallust border alone
+  - It resolves a usable `WAYLAND_DISPLAY` / `HYPRLAND_INSTANCE_SIGNATURE` before calling `hyprctl` and detaches with `setsid`, so it works both from the login hook and from the wallpaper pass
+  - `WallustSwww.sh` calls it immediately after its own border write, `Refresh.sh` and `RefreshNoWaybar.sh` delegate to it instead of their own inline Rainbow Borders blocks, and `startup.lua` calls it once for a login where no wallpaper resolves
+  - One implementation, so the callers cannot drift apart; with no mode file a present `RainbowBorders.sh` still enables rainbow borders, matching the Quick Settings detection
+- Startup commands could run before the session was usable
+  - `exec_once` waited only for the Wayland socket and for a Hyprland socket file to exist, but the socket appears before Hyprland has finished coming up, so clients could initialise against a compositor with no outputs yet
+  - The readiness gate now also waits for `hyprctl -j monitors` to report at least one output (bounded), replacing the ad-hoc `sleep N` that startup commands needed to work around this
+  - Commands are now spawned through `hl.exec_cmd` - the same path the native `exec-once` used - instead of `os.execute`, so GUI clients, tray applets and D-Bus services get the session environment, a clean signal mask and their own session; `&` / `disown` are no longer needed, and the wrapper no longer relies on a login shell (`sh -lc` -> `sh -c`)
+  - `lua/startup.lua` no longer keeps its own copy of `exec_once`; both startup lists call the shared `lua/user_startup_helper.lua`, so the system and user lists cannot drift apart again
+
+## Updated:
+
+- `docs/HOWTO-Add-Apps-To-user_startup.lua` (English and Spanish): documents the readiness gate, the `hl.exec_cmd` spawn path, that `&` / `disown` are unnecessary, and that Rainbow Borders is a Quick Settings mode rather than a startup entry
+
+---
+
 ## v2.3.27.4
 
 ## Fixed:

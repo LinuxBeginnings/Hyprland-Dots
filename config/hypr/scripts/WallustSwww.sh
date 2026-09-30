@@ -358,6 +358,15 @@ apply_hypr_border_fallback() {
 # Skips full config reload to eliminate compositor IPC stalls and avoid layout resets (#68, #126).
 apply_hypr_border_fallback
 
+# Rainbow Borders owns general:col.active_border whenever a mode is selected,
+# and the call above has just rewritten that option from the Wallust palette.
+# Re-apply the user's mode here - this is the last border write on every
+# wallpaper/theme change, so without it a selected mode is silently reverted.
+rainbow_startup="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RainbowBordersStartup.sh"
+if [ -x "$rainbow_startup" ]; then
+  "$rainbow_startup" >/dev/null 2>&1 || true
+fi
+
 if [ "${HYPR_FULL_RELOAD_ON_WALLPAPER:-0}" = "1" ] || [ "${KOOLDOTS_FULL_RELOAD_ON_WALLPAPER:-0}" = "1" ]; then
   reload_hypr_preserve_layout
 fi

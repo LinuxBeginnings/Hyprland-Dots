@@ -24,8 +24,11 @@ This guide explains how `user_startup.lua` works, how it differs from system sta
 Under the hood, `user_startup.lua` uses a managed `exec_once(command)` helper that:
 
 1. **Ensures Single Execution**: Prevents applications from launching multiple times when reloading Hyprland configuration.
-2. **Waits for Wayland & Hyprland Sockets**: Prevents startup race conditions where apps crash because the compositor or display socket is not ready yet.
-3. **Writes Per-Command Logs**: Outputs stderr/stdout to `/tmp/hypr-lua-user-startup-<cmd>.log` to make troubleshooting trivial.
+2. **Waits for a usable session**: Every command waits for the Wayland socket *and* for Hyprland's IPC to report at least one output. The compositor creates its socket long before it has finished starting, so a command that runs at the earliest opportunity can initialise against a compositor with no outputs yet — the same reason the system startup scripts poll for monitors before doing anything.
+3. **Spawns through the compositor**: Commands are launched with Hyprland's own `hl.exec_cmd`, the same spawn path the old `exec-once` used. The process gets the session environment, a clean signal mask and its own session, which is what tray applets, D-Bus services and GUI clients need. `&` and `disown` are therefore unnecessary — the command is already detached.
+4. **Writes Per-Command Logs**: Outputs stderr/stdout to `/tmp/hypr-lua-user-startup-<cmd>.log` to make troubleshooting trivial.
+
+The system startup list (`lua/startup.lua`) uses this same helper, so both lists behave identically.
 
 ---
 
@@ -129,15 +132,38 @@ Use `$HOME` or standard shell chaining (`sleep`, `&&`, `;`):
 
 ```lua
 local startup_commands = {
-  "$HOME/.config/hypr/UserScripts/RainbowBorders.sh",
   "$HOME/.config/hypr/UserScripts/WallpaperAutoChange.sh $HOME/Pictures/wallpapers",
   "sleep 3; notify-send 'Welcome' 'Hyprland session started successfully!'",
 }
 ```
 
+**Note:** Rainbow borders are not a `user_startup.lua` entry. Pick a mode from Quick Settings → **Rainbow Borders Mode** (`SUPER SHIFT + E`). The choice is stored in `~/.config/hypr/UserScripts/rainbow-borders.mode` and is re-applied automatically at login and after every wallpaper/theme change — see section 4.
+
+**Note:** Do not add `& disown` to commands. `exec_once` already detaches the process through the compositor, and `disown` is not a builtin in the POSIX shell (`sh`) the command runs under, so it only adds a "not found" line to the log.
+
 ---
 
-## 4. Advanced: Direct `exec_once` Calls
+## 4. Startup ordering and the `sleep` workaround
+
+Your commands run **at the same time as** the system startup list, not after it. That list contains the wallpaper pass:
+
+```lua
+"sleep 1; $HOME/.config/hypr/scripts/WallpaperDaemon.sh && $HOME/.config/hypr/scripts/WaybarStartup.sh"
+```
+
+That pass rewrites Hyprland state from the Wallust palette, including `general:col.active_border`, `decoration.shadow.color` and the group border colours. Anything you start that writes the same options gets **overwritten about a second later**, which looks exactly like "my command had no effect".
+
+This is why a `sleep` appears to fix some entries. It is a workaround, not a fix:
+
+- It is a race, not a delay. A slower machine, a different wallpaper pass, or a theme change later in the session brings the problem back.
+- A one-shot script that sets a border only wins until the next wallpaper change. Use the persistent modes instead: a Rainbow Borders Mode selected from Quick Settings is re-applied after every wallpaper/theme pass and now survives login.
+- Adding `sleep` also changes the command string, which changes the marker file name under `/tmp`, so the entry runs again once even if it had been skipped.
+
+If something genuinely has to run after the wallpaper pass, chain it behind the script that owns that state (for example `WallpaperDaemon.sh && your-command`) instead of guessing a delay.
+
+---
+
+## 5. Advanced: Direct `exec_once` Calls
 
 While putting commands in the `startup_commands` table is the cleanest approach, you can also directly call `exec_once()` anywhere in `user_startup.lua`:
 
@@ -149,7 +175,7 @@ exec_once("openrgb --startminimized --profile 'Default'")
 
 ---
 
-## 5. Troubleshooting & Debugging
+## 6. Troubleshooting & Debugging
 
 If an application does not appear after logging in:
 
@@ -178,10 +204,17 @@ If an application does not appear after logging in:
    ```bash
    rm -f /tmp/hypr-lua-user-exec-once-*
    ```
+   A command is marked as done *before* it runs, so an entry that failed once is not retried in the same session.
+
+5. **The app starts but the effect disappears**:
+   Another startup step owns the same Hyprland option. See section 4.
+
+6. **An entry that only works with `sleep` in front of it**:
+   Also section 4 — the delay is masking an ordering race, not fixing one.
 
 ---
 
-## 6. Related Configuration Files
+## 7. Related Configuration Files
 
 - **`~/.config/hypr/UserConfigs/user_keybinds.lua`**: Manage custom keybindings, unbinds, and app launcher shortcuts.
 - **`~/.config/hypr/UserConfigs/user_window_rules.lua`**: Set window rules (e.g. float, pin, workspace assignments for autostarted apps).

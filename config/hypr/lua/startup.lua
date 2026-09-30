@@ -12,33 +12,26 @@
 local scriptsDir = "$HOME/.config/hypr/scripts"
 local userScripts = "$HOME/.config/hypr/UserScripts"
 local wallDir = "$HOME/Pictures/wallpapers"
-local session = os.getenv("HYPRLAND_INSTANCE_SIGNATURE") or "default"
-local function shell_quote(value)
-  return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
-end
-local function exec_once(cmd)
-  -- Why this wrapper exists:
-  -- 1) Enforce once-per-Hypr-session startup behavior using marker files.
-  -- 2) Avoid startup race conditions by waiting for Wayland/Hypr sockets.
-  -- 3) Capture per-command logs to simplify troubleshooting in user setups.
 
-  local key = cmd:gsub("[^%w_.-]", "_"):sub(1, 80)
-  local marker = "/tmp/hypr-lua-exec-once-" .. session .. "-" .. key
-  local log = "/tmp/hypr-lua-startup-" .. key .. ".log"
-  local readiness =
-    'runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; export XDG_RUNTIME_DIR=\"$runtime\"; for _ in $(seq 1 30); do if [ -n \"$WAYLAND_DISPLAY\" ] && [ -S \"$runtime/$WAYLAND_DISPLAY\" ]; then break; fi; for sock in \"$runtime\"/wayland-[0-9]*; do [ -S \"$sock\" ] || continue; case \"$(basename \"$sock\")\" in *awww*) continue ;; esac; export WAYLAND_DISPLAY=\"$(basename \"$sock\")\"; break; done; sleep 0.1; done; if [ -n \"$HYPRLAND_INSTANCE_SIGNATURE\" ]; then for hypr_sock in \"$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock\" \"$runtime/hypr/.socket.sock\"; do [ -S \"$hypr_sock\" ] && break; done; sleep 0.1; fi'
-  local inner = readiness .. "; " .. cmd
-  local script = "[ -e "
-    .. shell_quote(marker)
-    .. " ] || { touch "
-    .. shell_quote(marker)
-    .. " && sh -lc "
-    .. shell_quote(inner)
-    .. " >>"
-    .. shell_quote(log)
-    .. " 2>&1 & }"
-  os.execute("sh -lc " .. shell_quote(script))
+-- exec_once (once-per-session marker + session readiness gate + per-command log)
+-- lives in lua/user_startup_helper.lua and is shared with
+-- UserConfigs/user_startup.lua, so the system and user startup lists cannot
+-- drift apart again. Only the marker/log prefixes differ here, which keeps the
+-- two lists separately debuggable.
+local configHome = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")
+local helperPath = configHome .. "/hypr/lua/user_startup_helper.lua"
+local helperOk, startupHelper = pcall(dofile, helperPath)
+if not (helperOk and type(startupHelper) == "table" and startupHelper.exec_once) then
+  error("system_startup: failed to load " .. helperPath .. ": " .. tostring(startupHelper))
 end
+
+local function exec_once(cmd)
+  return startupHelper.exec_once(cmd, {
+    marker_prefix = "/tmp/hypr-lua-exec-once-",
+    log_prefix = "/tmp/hypr-lua-startup-",
+  })
+end
+
 -- Prefer lifecycle-hook orchestration for clarity while keeping exec_once
 -- reliability semantics for real-world startup behavior.
 local startup_commands = {
@@ -67,6 +60,11 @@ local startup_commands = {
   -- Clipboard history: one supervised watcher handles every offered type
   -- (text, images, uri-lists) and is restarted if wl-paste dies.
   scriptsDir .. "/ClipboardWatcher.sh",
+  -- Re-apply the selected Rainbow Borders mode. The wallpaper pass
+  -- (WallustSwww.sh) re-applies it too, right after it rewrites
+  -- general:col.active_border, so this entry only matters for a login where no
+  -- wallpaper resolves and the wallpaper pass never runs.
+  scriptsDir .. "/RainbowBordersStartup.sh",
 }
 
 local function run_startup_commands()

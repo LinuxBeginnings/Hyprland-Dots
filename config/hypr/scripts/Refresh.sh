@@ -8,17 +8,7 @@
 # Scripts for refreshing ags, waybar, rofi, swaync, wallust
 
 SCRIPTSDIR=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts
-UserScripts=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserScripts
 QS_TEXTINPUT_LOG_RULE="qt.qpa.wayland.textinput.warning=false"
-
-# Define file_exists function
-file_exists() {
-  if [ -e "$1" ]; then
-    return 0 # File exists
-  else
-    return 1 # File does not exist
-  fi
-}
 
 # Kill already running processes (exclude waybar and swaync to avoid double reloads)
 _ps=(rofi ags)
@@ -141,21 +131,12 @@ if pgrep -x "nwg-dock-hyprla" >/dev/null 2>&1 || pgrep -x "nwg-dock-hyprland" >/
   "${SCRIPTSDIR}/Dock.sh" --restart >/dev/null 2>&1 &
 fi
 
-# Relaunching rainbow borders based on selected mode
+# Re-apply the selected Rainbow Borders mode. The single implementation lives
+# in RainbowBordersStartup.sh so this script, RefreshNoWaybar.sh and the
+# wallpaper pass cannot drift apart.
 sleep 1
-rainbow_mode_file="${UserScripts}/rainbow-borders.mode"
-rainbow_mode=""
-if [[ -f "$rainbow_mode_file" ]]; then
-  rainbow_mode="$(tr -d '[:space:]' <"$rainbow_mode_file")"
-fi
-if [[ "$rainbow_mode" == "low_cpu" ]]; then
-  pkill -f 'RainbowBorders-low-cpu\.sh' >/dev/null 2>&1 || true
-  rm -f /tmp/hypr-rainbowborders.lock >/dev/null 2>&1 || true
-  if file_exists "${UserScripts}/RainbowBorders-low-cpu.sh"; then
-    "${UserScripts}/RainbowBorders-low-cpu.sh" >/dev/null 2>&1 &
-  fi
-elif file_exists "${UserScripts}/RainbowBorders.sh"; then
-  "${UserScripts}/RainbowBorders.sh" &
+if [ -x "${SCRIPTSDIR}/RainbowBordersStartup.sh" ]; then
+  "${SCRIPTSDIR}/RainbowBordersStartup.sh" >/dev/null 2>&1 || true
 fi
 
 exit 0
