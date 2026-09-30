@@ -86,6 +86,18 @@ do
 end
 
 local exec_once = user_startup_helper.exec_once
+local function check_wallpaper_state()
+  local home = os.getenv("HOME") or ""
+  local current_mode = home .. "/.cache/Rofi-Wallpaper-Engine/Wallpaper-mode.txt"
+  local f = io.open(current_mode, "r")
+  if f then
+    local mode = f:read("*all")
+    f:close()
+    mode = mode:gsub("^%s*(.-)%s*$", "%1")
+    return mode
+  end
+  return "static"
+end
 
 -- Add custom startup commands:
 local startup_commands = {
@@ -93,6 +105,15 @@ local startup_commands = {
   -- "blueman-applet",
   -- "$HOME/.config/hypr/UserScripts/RainbowBorders.sh",
 }
+
+-- Uncomment to add wallpaper engine to startup apps
+-- local wallpaper_state = check_wallpaper_state()
+-- if wallpaper_state == "live" then
+--   table.insert(startup_commands, "lua ~/.config/hypr/scripts/WpEngine-start-stop.lua")
+--   table.insert(startup_commands, "linux-wallpaperengine --silent --screen-root DP-1 $(cat /home/tre/.cache/Rofi-Wallpaper-Engine/current_wallpaper_DP-1)")
+-- else
+--   table.insert(startup_commands, "swww-daemon --format xrgb")
+-- end
 
 local function run_startup_commands()
   for _, cmd in ipairs(startup_commands) do
