@@ -1,5 +1,30 @@
 # Changelog — KoolDots
 
+## v2.3.27.4
+
+## Fixed:
+
+- `copy.sh` aborted an express/upgrade run when it was started with a shell other than bash
+  - Symptom: `adjust_qt_quick_controls_style:27: no matches found: /usr/lib/*-linux-gnu/qt*/qml`, after which the script exited before copying anything
+  - Root cause: `copy.sh` is bash-only (`BASH_SOURCE`, `shopt`, `[[ ]]`, arrays), but it can be launched as `zsh copy.sh --express-upgrade` (or `sh copy.sh` where `sh` is zsh), and zsh treats an unmatched glob as a fatal error (`nomatch`); the Qt QML probes in `adjust_qt_quick_controls_style()` only match on systems that ship those paths
+  - `copy.sh` now re-execs itself under bash whenever `BASH_VERSION` is unset, and exits with a clear message if bash is not on `PATH`
+  - The Qt QML probes in `scripts/lib_detect.sh` now expand to nothing when they match no path (`null_glob` under zsh, `nullglob` under bash, restored afterwards), so the optional directories are skipped instead of ending the run
+  - `config/hypr/scripts/Polkit.sh` carried the same unmatched-glob loop in its Kvantum fallback and was given the same treatment
+
+## Added:
+
+- Bluetooth icon for Blueman windows in the Waybar workspaces module
+  - `config/hypr/waybar/ModulesWorkspaces` now maps `blueman-manager` and `blueman-applet` to the Bluetooth icon; both previously fell through to `window-rewrite-default`
+  - The `blueman-manager` pattern is `[Bb]lueman-manager` so `blueman-manager` and `Blueman-manager` window classes both match, following the file's convention for other GTK apps such as `[Pp]avucontrol` and `[Ss]potify`
+
+## Removed:
+
+- Dead Hyprlang compatibility code left over from the Lua migration
+  - `config/hypr/lua/user_overrides.lua` no longer scans `UserConfigs/*.conf` (`WindowRules.conf`, `LayerRules.conf`) for active rules just to print a "not loaded in Lua mode" warning, and the now-unused `has_active_hyprlang_content()` helper went with it
+  - The legacy `UserConfigs/UserKeybinds.conf` importer - which replayed `bind`/`unbind` lines through `hyprctl keyword` when `user_keybinds.lua` was missing - is gone from both `config/hypr/lua/user_overrides.lua` and the shim that `scripts/migrate-hypr-to-lua.sh` generates
+
+---
+
 ## v2.3.27.3
 
 ## Fixed:
