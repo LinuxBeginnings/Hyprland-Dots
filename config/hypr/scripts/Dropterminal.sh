@@ -448,6 +448,22 @@ find_terminal_by_class() {
     '.[] | select((.class == $CLASS) or (.initialClass == $CLASS)) | .address' | head -1
 }
 
+# Class the terminal window we are about to spawn is expected to report.
+#
+# Dropterminal forces kitty to $DROPDOWN_KITTY_CLASS (see the argument handling
+# near the top of the script), so for kitty the class is known exactly. Other
+# terminals keep their own class, which we cannot know for certain; fall back to
+# the binary name and compare case-insensitively.
+dropdown_expected_class() {
+  local cmd="$1"
+  if [[ "$cmd" == kitty* ]]; then
+    printf '%s\n' "$DROPDOWN_KITTY_CLASS"
+    return 0
+  fi
+  local bin="${cmd%% *}"
+  printf '%s\n' "${bin##*/}"
+}
+
 # Function to get stored monitor name
 get_terminal_monitor() {
   if [ -f "$ADDR_FILE" ] && [ -s "$ADDR_FILE" ]; then
@@ -717,9 +733,12 @@ spawn_terminal() {
 
   debug_echo "Target position: ${target_x},${target_y}, size: ${width}x${height}"
 
-  # Get window count before spawning
+  # Snapshot existing windows, and the class our own window is expected to report
   local windows_before=$(hyprctl clients -j)
-  local count_before=$(echo "$windows_before" | jq 'length')
+  local expected_class
+  expected_class=$(dropdown_expected_class "$TERMINAL_CMD")
+  local before_addrs
+  before_addrs=$(echo "$windows_before" | jq -c '[.[].address]')
 
   # Launch terminal with pre-applied workspace/geometry hints to avoid visible zigzag.
   local launch_cmd="[workspace $SPECIAL_WS silent;float;size $width $height;move $target_x $target_y] $TERMINAL_CMD"
@@ -728,25 +747,37 @@ spawn_terminal() {
 
   local new_addr=""
   for _ in $(seq 1 20); do
-    local windows_after=$(hyprctl clients -j)
-    local recovered
-    recovered=$(echo "$windows_after" | jq -r --arg CLASS "$DROPDOWN_KITTY_CLASS" \
-      '.[] | select((.class == $CLASS) or (.initialClass == $CLASS)) | .address' | head -1)
-    if [ -n "$recovered" ] && [ "$recovered" != "null" ]; then
-      new_addr="$recovered"
+    local windows_after
+    windows_after=$(hyprctl clients -j 2>/dev/null)
+
+    # 1) Any window of the expected class.
+    new_addr=$(echo "$windows_after" | jq -r --arg CLASS "$expected_class" \
+      '.[] | select((((.class // "") | ascii_downcase) == ($CLASS | ascii_downcase))
+                  or (((.initialClass // "") | ascii_downcase) == ($CLASS | ascii_downcase)))
+            | .address' | head -1)
+
+    # 2) A window that is new since launch AND of the expected class.
+    #
+    # Only a window of the expected class may be adopted. Anything else that
+    # appeared at the same moment - most commonly a plain `kitty` autostarted by
+    # user_startup.lua while `--startup kitty` is running - must be left alone,
+    # otherwise it is recorded as the dropdown terminal and hidden on the
+    # special workspace.
+    if [ -z "$new_addr" ] || [ "$new_addr" = "null" ]; then
+      new_addr=$(echo "$windows_after" | jq -r \
+        --argjson BEFORE "$before_addrs" \
+        --arg CLASS "$expected_class" \
+        '.[] | select(.address as $a | ($BEFORE | index($a)) == null)
+              | select((((.class // "") | ascii_downcase) == ($CLASS | ascii_downcase))
+                       or (((.initialClass // "") | ascii_downcase) == ($CLASS | ascii_downcase)))
+              | .address' | head -1)
+    fi
+
+    if [ -n "$new_addr" ] && [ "$new_addr" != "null" ]; then
       break
     fi
 
-    local count_after=$(echo "$windows_after" | jq 'length')
-    if [ "$count_after" -gt "$count_before" ]; then
-      new_addr=$(comm -13 \
-        <(echo "$windows_before" | jq -r '.[].address' | sort) \
-        <(echo "$windows_after" | jq -r '.[].address' | sort) |
-        head -1)
-      if [ -n "$new_addr" ] && [ "$new_addr" != "null" ]; then
-        break
-      fi
-    fi
+    new_addr=""
     sleep 0.1
   done
 

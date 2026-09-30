@@ -1,5 +1,34 @@
 # Changelog — KoolDots
 
+## v2.3.27.5
+
+## Fixed:
+
+- The Rainbow Borders mode was lost on logout
+  - The mode is stored in `~/.config/hypr/UserScripts/rainbow-borders.mode`, but nothing applied it at login, and `RainbowBorders.sh` is a one-shot
+  - `scripts/WallustSwww.sh` is the last writer of `general:col.active_border` on every wallpaper/theme change, so it replaced the rainbow border with the Wallust palette and the choice survived only until the next wallpaper change
+  - Added `config/hypr/scripts/RainbowBordersStartup.sh`, which reads the mode file and applies the matching script: `rainbow` / `wallust_random` / `gradient_flow` -> one-shot `RainbowBorders.sh`, `low_cpu` -> animated `RainbowBorders-low-cpu.sh` (stopping any previous instance first), `disabled` -> leaves the Wallust border alone
+  - It resolves a usable `WAYLAND_DISPLAY` / `HYPRLAND_INSTANCE_SIGNATURE` before calling `hyprctl` and detaches with `setsid`, so it works both from the login hook and from the wallpaper pass
+  - `WallustSwww.sh` calls it immediately after its own border write, `Refresh.sh` and `RefreshNoWaybar.sh` delegate to it instead of their own inline Rainbow Borders blocks, and `startup.lua` calls it once for a login where no wallpaper resolves
+  - One implementation, so the callers cannot drift apart; with no mode file a present `RainbowBorders.sh` still enables rainbow borders, matching the Quick Settings detection
+- Startup commands could run before the session was usable
+  - `exec_once` waited only for the Wayland socket and for a Hyprland socket file to exist, but the socket appears before Hyprland has finished coming up, so clients could initialise against a compositor with no outputs yet
+  - The readiness gate now also waits for `hyprctl -j monitors` to report at least one output (bounded), replacing the ad-hoc `sleep N` that startup commands needed to work around this
+  - Commands are now spawned through `hl.exec_cmd` - the same path the native `exec-once` used - instead of `os.execute`, so GUI clients, tray applets and D-Bus services get the session environment, a clean signal mask and their own session; `&` / `disown` are no longer needed, and the wrapper no longer relies on a login shell (`sh -lc` -> `sh -c`)
+  - The per-session marker check uses `test -e`, not `[ -e ... ]`: `hl.exec_cmd` hands the command to Hyprland's exec path, which glob-expands the string, and an unquoted `[` is a character-class glob - so `[ -e <marker> ]` never evaluated as a test and every entry was silently skipped (no marker, no log, no command)
+    - Symptom: adding an entry to `UserConfigs/user_startup.lua` appeared to do nothing, and none of the system startup entries (`nm-applet`, `quickshell`, `hypridle`, clipboard watcher, ...) came up either
+  - `lua/startup.lua` no longer keeps its own copy of `exec_once`; both startup lists call the shared `lua/user_startup_helper.lua`, so the system and user lists cannot drift apart again
+- A terminal autostarted from `UserConfigs/user_startup.lua` could be hidden on the special workspace at login
+  - `scripts/Dropterminal.sh --startup kitty` spawns its dropdown and then polls for the window to adopt; when no `kitty-dropterm` window had mapped yet it fell back to "whichever window appeared since launch" - an address set-difference with no class filter
+  - At login that fallback ran while the user's own `kitty` entry was starting, so it adopted the plain kitty window, recorded it as the dropdown terminal and moved it to `special:scratchpad`, which looked exactly like the entry never ran
+  - The fallback now only accepts a window whose class (or initial class) matches the terminal that was launched - `kitty-dropterm` for kitty, the binary name for anything else - so the plain `kitty` window is left where it opened
+
+## Updated:
+
+- `docs/HOWTO-Add-Apps-To-user_startup.lua` (English and Spanish): documents the readiness gate, the `hl.exec_cmd` spawn path, that `&` / `disown` are unnecessary, and that Rainbow Borders is a Quick Settings mode rather than a startup entry
+
+---
+
 ## v2.3.27.4
 
 ## Fixed:
