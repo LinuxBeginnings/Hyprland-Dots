@@ -1,5 +1,20 @@
 # Changelog — KoolDots
 
+## v2.3.27.6
+
+## Fixed:
+
+- `cursor:no_hardware_cursors` was never enabled, even on NVIDIA-only systems
+  - `scripts/lib_detect.sh` classifies GPUs from `lspci -k` output, and the AMD vendor match was `amd|advanced micro devices|ati`; the bare `ati` alternative matched the "ati" inside "compatible", and lspci describes every VGA device as "VGA compatible controller"
+  - So `has_amd` was 1 on any machine with a VGA device, the "Hybrid GPU detected" branch always won, and `no_hardware_cursors` was forced to 0 - it was never set to 1, so NVIDIA users never got the software-cursor workaround
+  - The vendor matches are now word-bounded (`\bintel\b`, `\b(amd|ati)\b|advanced micro devices`), so NVIDIA-only systems take the `no_hardware_cursors = 1` branch while genuine Intel/AMD + NVIDIA hybrids still get 0
+- Virtual machines lost the `no_hardware_cursors = 1` tweak
+  - `detect_vm_adjust()` only uncommented `WLR_RENDERER_ALLOW_SOFTWARE`; the Hyprlang version also forced `no_hardware_cursors` to 1 for VMs, and that step was dropped when the `.conf` targets were pruned
+  - Virtual GPUs (virtio, VMware, VirtualBox) mis-render hardware cursors, so the VM branch now sets `no_hardware_cursors = 1` like the NVIDIA path
+  - It runs after `detect_nvidia_adjust`, so a VM with a passed-through NVIDIA GPU ends up enabled as well
+
+---
+
 ## v2.3.27.5
 
 ## Fixed:

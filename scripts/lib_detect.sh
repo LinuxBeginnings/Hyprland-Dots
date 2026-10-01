@@ -18,10 +18,15 @@ detect_nvidia_adjust() {
   if echo "$pci_info" | grep -iq nvidia; then
     has_nvidia=1
   fi
-  if echo "$pci_info" | grep -iq intel; then
+  # Word boundaries matter here: lspci calls VGA devices "VGA compatible
+  # controller", and a bare `ati` alternative matches the "ati" inside
+  # "compatible". That made has_amd=1 on every machine with a VGA device, so the
+  # "hybrid GPU" branch below always ran and no_hardware_cursors was forced to 0
+  # even on NVIDIA-only systems - it was never set to 1.
+  if echo "$pci_info" | grep -Eiq '\bintel\b'; then
     has_intel=1
   fi
-  if echo "$pci_info" | grep -Eiq 'amd|advanced micro devices|ati'; then
+  if echo "$pci_info" | grep -Eiq '\b(amd|ati)\b|advanced micro devices'; then
     has_amd=1
   fi
   if [ "$has_nvidia" -eq 1 ]; then
@@ -47,6 +52,11 @@ detect_vm_adjust() {
   if hostnamectl | grep -q 'Chassis: vm'; then
     echo "${INFO:-[INFO]} System is running in a virtual machine. Setting up proper env's and configs" 2>&1 | tee -a "$log" || true
     [ -f config/hypr/lua/env.lua ] && sed -i 's/^--[[:space:]]*hl\.env("WLR_RENDERER_ALLOW_SOFTWARE"/hl.env("WLR_RENDERER_ALLOW_SOFTWARE"/' config/hypr/lua/env.lua
+    # Software cursors, like the NVIDIA path: virtual GPUs (virtio, VMware,
+    # VirtualBox) mis-render hardware cursors, so enable no_hardware_cursors.
+    # Runs after detect_nvidia_adjust, so a passed-through NVIDIA GPU in a VM
+    # ends up enabled here too.
+    [ -f config/hypr/lua/settings.lua ] && sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/lua/settings.lua
   fi
 }
 
