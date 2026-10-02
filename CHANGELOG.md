@@ -5,24 +5,14 @@
 ## Fixed:
 
 - Hyprview layout menu was almost twice as wide as it needed to be
-  - `select-hyprview-layout.sh` reuses `config-edit.rasi`, whose `window { width: 70%; }` is sized for the Quick Settings menu
-  - The layout menu now overrides it per invocation with `-theme-str 'window { width: 32%; }'`
-  - Only the width changes. Height and the 2x6 grid are unchanged
-  - The Quick Settings menu keeps its 70% width
-- The description updates below only reached the `lua/keybinds.lua` template, so the keybind menu kept showing the old text
-  - `config/hypr/configs/system_keybinds.lua` is the file Hyprland actually loads, and `KeyBinds.sh` parses it after `lua/keybinds.lua`; `keybinds_parser.py` keys entries by combo and lets the later file win, so the template's new text was overwritten by the live file's old text
-  - `configs/system_keybinds.lua` now carries the same descriptions and is reformatted to match the template, so the two copies cannot drift apart again
-- `cursor:no_hardware_cursors` shipped as 0 and hybrids were set to 0, so hardware cursors stayed on where they misbehave
-  - The value in `config/hypr/lua/settings.lua` was 0, which forces hardware cursors on every machine that never reaches the NVIDIA or VM branch (AMD-only, Intel-only). It now ships as 2 - auto, disable when tearing - the upstream default and the only value that defers to Hyprland
-  - Intel/AMD + NVIDIA hybrids were written 0 by `scripts/lib_detect.sh`; 2 does not reliably keep hardware cursors off on those systems, so hybrids now take 1 like NVIDIA-only machines. 0 - use hardware cursors if possible, 1 - don't use hardware cursors, 2 - auto
-  - Every NVIDIA path now writes 1, so the NVIDIA-only/hybrid split in `detect_nvidia_adjust()` only decides which log line prints. The word-bounded vendor matches from v2.3.27.6 stay for that reason - they no longer change the value
-  - No patch is needed: `copy_phase2` backs up and replaces `~/.config/hypr` on update and then restores `UserConfigs`, so the new default reaches existing installs; a value set in `UserConfigs/user_settings.lua` still wins
+  - Width override added in `select-hyprview-layout.sh`
+- `configs/system_keybinds.lua` was out of sync with the `lua/` template
+- `cursor:no_hardware_cursors` now defaults to 2 (auto) in `lua/settings.lua`
+  - NVIDIA and hybrid systems set 1, VMs set 1 in `lib_detect.sh`
 
 ## Added:
 
-- `AGENTS.md`: project rules for AI agents working in the repo
-  - Covers the repository layout, the Lua workflow (`lua/*.lua` templates vs the loaded `configs/system_*.lua` and `UserConfigs/user_*.lua`), and the copy.sh / patches flow
-  - `CONTRIBUTING.md` links to it
+- `AGENTS.md` project rules for AI agents
 
 ## Update: 
   - To make easier to find I updated descriptions for: 

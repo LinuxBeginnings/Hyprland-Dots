@@ -18,6 +18,7 @@ Project rules for AI agents working in this repository.
 - One top-level bullet per change: one short line, no trailing period.
 - Details are nested bullets (`  - `). One short sentence per line. One idea per line.
 - Never wrap a sentence across two lines. Every bullet is a single line.
+- Keep every line under ~80 characters so it does not wrap when pasted.
 - Backtick code, paths, settings and keys.
 - Keep `development` current: add the entry as the change lands, under the next version heading at the top of the file.
 - Create that heading if it is missing. Never edit a section for a version that is already released.
@@ -34,6 +35,13 @@ Shape:
 - `<second fix>` `<one line summary>`
   - `<detail>`
 ```
+
+## Commit messages
+
+- Short subject line, then an optional short body. Do not narrate the root cause.
+- Reference files by basename, not full paths: `settings.lua`, `lib_detect.sh`.
+- One line per change, no paragraphs re-explaining the changelog entry.
+- Example: `v2.3.27.7: no_hardware_cursors defaults to 2, NVIDIA/hybrid/VM set 1`
 
 ## Version bump
 
