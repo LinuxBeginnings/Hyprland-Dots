@@ -78,7 +78,7 @@ local app_binds = {
   { "SUPER", "C", "$HOME/.config/hypr/scripts/rofi-ssh-menu.sh", "SSH session manager" },
   { "SUPER", "T", "$HOME/.config/hypr/scripts/ThemeChanger.sh", "Global theme switcher using Wallust" },
   { "SUPER", "H", "$HOME/.config/hypr/scripts/KeyHints.sh", "help / cheat sheet" },
-  { "SUPER ALT", "R", "$HOME/.config/hypr/scripts/Refresh.sh", "refresh bar and menus" },
+  { "SUPER ALT", "R", "$HOME/.config/hypr/scripts/Refresh.sh", "refresh waybar and menus" },
   { "SUPER ALT", "E", "$HOME/.config/hypr/scripts/RofiEmoji.sh", "emoji menu" },
   { "SUPER", "S", "$HOME/.config/hypr/scripts/RofiSearch.sh", "web search" },
   {
@@ -129,10 +129,18 @@ local app_binds = {
     "SUPER ALT",
     "mouse_down",
     function()
-      local factor = (hl and hl.get_config and (hl.get_config("cursor.zoom_factor") or hl.get_config("cursor:zoom_factor"))) or 1.0
-      if factor < 1.0 then factor = 1.0 end
+      local factor = (
+        hl
+        and hl.get_config
+        and (hl.get_config("cursor.zoom_factor") or hl.get_config("cursor:zoom_factor"))
+      ) or 1.0
+      if factor < 1.0 then
+        factor = 1.0
+      end
       local new_factor = factor * 1.5
-      if new_factor > 16.0 then new_factor = 16.0 end
+      if new_factor > 16.0 then
+        new_factor = 16.0
+      end
       if hl and hl.config then
         hl.config({ cursor = { zoom_factor = new_factor } })
       end
@@ -143,9 +151,15 @@ local app_binds = {
     "SUPER ALT",
     "mouse_up",
     function()
-      local factor = (hl and hl.get_config and (hl.get_config("cursor.zoom_factor") or hl.get_config("cursor:zoom_factor"))) or 1.0
+      local factor = (
+        hl
+        and hl.get_config
+        and (hl.get_config("cursor.zoom_factor") or hl.get_config("cursor:zoom_factor"))
+      ) or 1.0
       local new_factor = factor / 1.5
-      if new_factor < 1.0 then new_factor = 1.0 end
+      if new_factor < 1.0 then
+        new_factor = 1.0
+      end
       if hl and hl.config then
         hl.config({ cursor = { zoom_factor = new_factor } })
       end
@@ -342,38 +356,24 @@ bind("SUPER SHIFT", "period", dispatch("layoutmsg", "move +col"), { description 
 bind("SUPER SHIFT", "comma", dispatch("layoutmsg", "move -col"), { description = "move to left column" })
 bind("SUPER ALT", "comma", dispatch("layoutmsg", "swapcol l"), { description = "swap columns left" })
 bind("SUPER ALT", "period", dispatch("layoutmsg", "swapcol r"), { description = "swap columns right" })
-bind(
-  "SUPER ALT",
-  "H",
-  function()
-    if hl and hl.config then
-      hl.config({ scrolling = { direction = "right" } })
-    end
-  end,
-  { description = "Horizonal scroll right" }
-)
-bind(
-  "SUPER CTRL",
-  "V",
-  function()
-    if hl and hl.config then
-      hl.config({ scrolling = { direction = "down" } })
-    end
-  end,
-  { description = "Vertical Scroll down" }
-)
-bind(
-  "SUPER ALT",
-  "S",
-  function()
-    if hl and hl.config then
-      local cur = (hl.get_config and (hl.get_config("scrolling.direction") or hl.get_config("scrolling:direction"))) or "right"
-      local next_dir = (cur == "right") and "down" or "right"
-      hl.config({ scrolling = { direction = next_dir } })
-    end
-  end,
-  { description = "toggle scrolling V/H" }
-)
+bind("SUPER ALT", "H", function()
+  if hl and hl.config then
+    hl.config({ scrolling = { direction = "right" } })
+  end
+end, { description = "Horizonal scroll right" })
+bind("SUPER CTRL", "V", function()
+  if hl and hl.config then
+    hl.config({ scrolling = { direction = "down" } })
+  end
+end, { description = "Vertical Scroll down" })
+bind("SUPER ALT", "S", function()
+  if hl and hl.config then
+    local cur = (hl.get_config and (hl.get_config("scrolling.direction") or hl.get_config("scrolling:direction")))
+      or "right"
+    local next_dir = (cur == "right") and "down" or "right"
+    hl.config({ scrolling = { direction = next_dir } })
+  end
+end, { description = "toggle scrolling V/H" })
 -- Section: Hyprview expose controls
 -- "smartgrid", "justified", "masonry", "bands", "hero", "spiral"
 -- "satellite", "staggered", "columnar", "vortex", "random"
@@ -424,7 +424,12 @@ local function _monitor_width(win)
   end
   return nil
 end
-bind("SUPER", "R", exec_cmd("bash $HOME/.config/hypr/scripts/ScrollCycleColumnWidth.sh"), { description = "cycle column width preset (scrolling)" })
+bind(
+  "SUPER",
+  "R",
+  exec_cmd("bash $HOME/.config/hypr/scripts/ScrollCycleColumnWidth.sh"),
+  { description = "cycle column width preset (scrolling)" }
+)
 bind("ALT", "Tab", exec_cmd("$HOME/.config/hypr/scripts/LuaCycleWindow.sh next"), { description = "cycle next window" })
 
 -- Section: Audio, media, and hardware keys
@@ -555,30 +560,10 @@ bind(
   exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --cycle"),
   { description = "cycle keyboard brightness", locked = true }
 )
-bind(
-  "",
-  "xf86TouchpadToggle",
-  exec_cmd("$HOME/.config/hypr/scripts/TouchPad.sh"),
-  { description = "disable touchpad" }
-)
-bind(
-  "",
-  "xf86Launch1",
-  exec_cmd("rog-control-center"),
-  { description = "ASUS Armory crate button" }
-)
-bind(
-  "",
-  "xf86Launch3",
-  exec_cmd("asusctl led-mode -n"),
-  { description = "FN+F4 Switch keyboard RGB profile" }
-)
-bind(
-  "",
-  "xf86Launch4",
-  exec_cmd("asusctl profile -n"),
-  { description = "FN+F5 change of fan profiles" }
-)
+bind("", "xf86TouchpadToggle", exec_cmd("$HOME/.config/hypr/scripts/TouchPad.sh"), { description = "disable touchpad" })
+bind("", "xf86Launch1", exec_cmd("rog-control-center"), { description = "ASUS Armory crate button" })
+bind("", "xf86Launch3", exec_cmd("asusctl led-mode -n"), { description = "FN+F4 Switch keyboard RGB profile" })
+bind("", "xf86Launch4", exec_cmd("asusctl profile -n"), { description = "FN+F5 change of fan profiles" })
 
 -- Section: Screenshot bindings
 bind("SUPER", "Print", exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --now"), { description = "screenshot now" })
@@ -761,7 +746,7 @@ bind(
   "SUPER CTRL",
   "tab",
   exec_cmd("$HOME/.config/hypr/scripts/toggle-qs-hyprview.sh " .. qs_hyprview_layout),
-  { description = "Hyprview Toggle" }
+  { description = "Hyprview overview Toggle" }
 )
 bind("SUPER SHIFT", "U", dispatch("movetoworkspace", "special"), { description = "move to special workspace" })
 bind("SUPER", "U", dispatch("togglespecialworkspace", ""), { description = "toggle special workspace" })

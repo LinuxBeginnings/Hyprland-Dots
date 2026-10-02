@@ -10,6 +10,11 @@
   - Only the width changes. Height and the 2x6 grid are unchanged
   - The Quick Settings menu keeps its 70% width
 
+## Update: 
+  - To make easier to find I updated descriptions for: 
+     - waybar restart `SUPER ALT R`
+     - Hyprview `SUPER CTRL TAB`
+
 ---
 
 ## v2.3.27.6
