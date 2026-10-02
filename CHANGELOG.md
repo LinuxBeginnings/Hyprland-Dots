@@ -1,5 +1,17 @@
 # Changelog — KoolDots
 
+## v2.3.27.7
+
+## Fixed:
+
+- Hyprview layout menu was almost twice as wide as it needed to be
+  - `select-hyprview-layout.sh` reuses `config-edit.rasi`, whose `window { width: 70%; }` is sized for the Quick Settings menu
+  - The layout menu now overrides it per invocation with `-theme-str 'window { width: 32%; }'`
+  - Only the width changes. Height and the 2x6 grid are unchanged
+  - The Quick Settings menu keeps its 70% width
+
+---
+
 ## v2.3.27.6
 
 ## Fixed:
