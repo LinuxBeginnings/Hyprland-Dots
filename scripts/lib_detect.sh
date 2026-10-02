@@ -20,9 +20,9 @@ detect_nvidia_adjust() {
   fi
   # Word boundaries matter here: lspci calls VGA devices "VGA compatible
   # controller", and a bare `ati` alternative matches the "ati" inside
-  # "compatible". That made has_amd=1 on every machine with a VGA device, so the
-  # "hybrid GPU" branch below always ran and no_hardware_cursors was forced to 0
-  # even on NVIDIA-only systems - it was never set to 1.
+  # "compatible", which made has_amd=1 on every machine with a VGA device. It no
+  # longer changes the value written below - every NVIDIA path writes 1 - but it
+  # still picks the wrong log line, so the bounds stay.
   if echo "$pci_info" | grep -Eiq '\bintel\b'; then
     has_intel=1
   fi
@@ -39,10 +39,11 @@ detect_nvidia_adjust() {
     fi
     if [ "$has_intel" -eq 1 ] || [ "$has_amd" -eq 1 ]; then
       echo "${INFO:-[INFO]} Hybrid GPU detected (Intel/NVIDIA or AMD/NVIDIA). Applying cursor handoff fixes." 2>&1 | tee -a "$log" || true
-      [ -f config/hypr/lua/settings.lua ] && sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 0/' config/hypr/lua/settings.lua
-    else
-      [ -f config/hypr/lua/settings.lua ] && sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/lua/settings.lua
     fi
+    # 1 = don't use hardware cursors. NVIDIA needs software cursors, hybrids
+    # included: the cursor plane has to be handed between the iGPU and the dGPU,
+    # and that handoff is what users see as a stuck or corrupt cursor.
+    [ -f config/hypr/lua/settings.lua ] && sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/lua/settings.lua
   fi
 }
 

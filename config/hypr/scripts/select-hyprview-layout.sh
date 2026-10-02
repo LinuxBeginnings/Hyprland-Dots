@@ -54,6 +54,7 @@ choice="$(
   printf '%s\n' "${layouts[@]}" | rofi -i -dmenu -config "$rofi_theme" \
     -p "Hyprview Layout" \
     -mesg "Current layout: $current_layout" \
+    -theme-str 'window { width: 32%; }' \
     -selected-row "$default_row"
 )"
 

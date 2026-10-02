@@ -1,5 +1,26 @@
 # Changelog — KoolDots
 
+## v2.3.27.7
+
+## Fixed:
+
+- Hyprview layout menu was almost twice as wide as it needed to be
+  - Width override added in `select-hyprview-layout.sh`
+- `configs/system_keybinds.lua` was out of sync with the `lua/` template
+- `cursor:no_hardware_cursors` now defaults to 2 (auto) in `lua/settings.lua`
+  - NVIDIA and hybrid systems set 1, VMs set 1 in `lib_detect.sh`
+
+## Added:
+
+- `AGENTS.md` project rules for AI agents
+
+## Update: 
+  - To make easier to find I updated descriptions for: 
+     - waybar restart `SUPER ALT R`
+     - Hyprview `SUPER CTRL TAB`
+
+---
+
 ## v2.3.27.6
 
 ## Fixed:

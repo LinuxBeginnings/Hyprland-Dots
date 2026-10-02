@@ -61,8 +61,17 @@ Thank you for your interest in contributing to KooL Hyprland Projects! We welcom
   - [PULL_REQUEST_TEMPLATE.md](https://github.com/LinuxBeginnings/Hyprland-Dots/blob/main/.github/PULL_REQUEST_TEMPLATE.md) - Use this template to submit a pull request.
   - [COMMIT_MESSAGE_GUIDELINES.md](https://github.com/LinuxBeginnings/Hyprland-Dots/blob/main/COMMIT_MESSAGE_GUIDELINES.md) - Read this file to learn about the commit message guidelines.
   - [CONTRIBUTING.md](https://github.com/LinuxBeginnings/Hyprland-Dots/blob/main/CONTRIBUTING.md) - Read this file to learn about the contributing guidelines.
+  - [AGENTS.md](https://github.com/LinuxBeginnings/Hyprland-Dots/blob/main/AGENTS.md) - Read this file for the changelog, versioning and branch rules.
   - [LICENSE](https://github.com/LinuxBeginnings/Hyprland-Dots/blob/main/LICENSE.md) - Read this file to learn about the license.
   - [README.md](https://github.com/LinuxBeginnings/Hyprland-Dots/blob/main/README.md) - Read this file to learn about the project.
+
+## Changelog and release notes
+
+- `development` keeps `CHANGELOG.md` current. Add entries under the next version heading as changes land.
+- Keep entries short: one summary line per change, with details as nested one-line bullets.
+- Do not bump `DOTS_VERSION` for a normal change. The version is bumped when a release is cut.
+- The wiki (`Changelogs.md`, `Changelogs.es.md`) documents released versions only, and is updated after the release lands on `main`.
+- The full rules live in [AGENTS.md](https://github.com/LinuxBeginnings/Hyprland-Dots/blob/main/AGENTS.md).
 
 ## Contact
 
