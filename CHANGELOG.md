@@ -27,7 +27,7 @@
   - `HyprLayoutModule.sh` reads the layout over the socket, not `hyprctl`
 - Gesture zoom no longer freezes the compositor
   - The 3-finger swipe ran `io.popen("hyprctl ...")` on the compositor thread
-  - `io.popen` waits for the child, so the whole session stalled for the round trip
+  - `io.popen` waits for the child, so the session stalled for the round trip
   - It also wrote through `hyprctl keyword`, the legacy hyprlang form
   - Now one in-process `hl.get_config` / `hl.config` pair, clamped to 1.0-16.0
 - Laptop monitor layout no longer shells out from the compositor

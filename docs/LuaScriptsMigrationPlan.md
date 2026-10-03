@@ -6,7 +6,9 @@ Status: **queue complete** — every item in the [work queue](#6-work-queue) is 
 Gentoo host.
 
 Owner: any agent picking up the Lua migration for KoolDots / Hyprland-Dots.
-Scope: `config/hypr/scripts/*` and the Lua config tree under `config/hypr/`.
+Scope: `config/hypr/scripts/*`, the Lua config tree under `config/hypr/`, and the Waybar status
+modules under `config/hypr/waybar/`. D6/LUA-012 is IPC work rather than Lua, but it is the same
+"in-process instead of out-of-process" rule, so it is tracked here.
 
 ---
 
