@@ -29,16 +29,12 @@ local function exec_cmd(cmd)
   return function() hl.exec_cmd(resolved) end
 end
 
-local function shell_quote(value)
-  return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
-end
-
+-- Legacy dispatcher strings have no Lua equivalent, so they have to go out to
+-- hyprctl. Do NOT use hl.dsp.exec_raw here: exec_raw spawns a process, it does
+-- not parse a dispatcher, so "resizeactive -50 0" would try to exec a binary
+-- named resizeactive and silently do nothing.
 local function raw_dispatch_cmd(command)
-  if dsp and dsp.exec_raw then
-    return dsp.exec_raw(tostring(command))
-  end
-  local expression = "hl.dsp.exec_raw(" .. string.format("%q", tostring(command)) .. ")"
-  return exec_cmd("hyprctl dispatch " .. shell_quote(expression))
+  return exec_cmd("hyprctl dispatch " .. tostring(command))
 end
 
 local function trim(value)
@@ -254,8 +250,38 @@ local function dispatch(name, args)
       hl.dispatch(window_api.resize())
     end
   end
-  if name == "resizeactive" then
-    return raw_dispatch_cmd("resizeactive " .. args)
+  if name == "resizeactive" and window_api.resize then
+    local x, y = args:match("^(%-?%d+)%s+(%-?%d+)$")
+    if x and y then
+      -- relative = true is the supported form for deltas. Do not read the
+      -- window size and compute an absolute value.
+      return window_api.resize({ x = tonumber(x) or 0, y = tonumber(y) or 0, relative = true })
+    end
+  end
+  if name == "swapwindow" and window_api.swap then
+    local swap_direction = trim(args)
+    if swap_direction == "" then
+      return nil
+    end
+    return window_api.swap({ direction = direction(swap_direction) })
+  end
+  if name == "bringactivetotop" and window_api.bring_to_top then
+    return window_api.bring_to_top()
+  end
+  if name == "moveintogroup" and window_api.move then
+    return window_api.move({ into_group = direction(args) })
+  end
+  if name == "moveoutofgroup" and window_api.move then
+    if args == "" then
+      return window_api.move({ out_of_group = true })
+    end
+    return window_api.move({ out_of_group = direction(args) })
+  end
+  if name == "movecurrentworkspacetomonitor" then
+    local workspace_api = (dsp and dsp.workspace) or {}
+    if workspace_api.move then
+      return workspace_api.move({ monitor = direction(args) })
+    end
   end
   if args ~= "" then
     return raw_dispatch_cmd(name .. " " .. args)

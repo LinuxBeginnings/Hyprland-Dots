@@ -9,10 +9,30 @@
 - `configs/system_keybinds.lua` was out of sync with the `lua/` template
 - `cursor:no_hardware_cursors` now defaults to 2 (auto) in `lua/settings.lua`
   - NVIDIA and hybrid systems set 1, VMs set 1 in `lib_detect.sh`
+- Keybinds that used legacy dispatcher names silently did nothing
+  - Since 0.55 the old hyprlang dispatcher names are not Lua globals, so `hyprctl dispatch resizeactive -50 0` evaluates to `hl.dispatch(resizeactive -50 0)` and errors, while the `hl.dsp.exec_raw("resizeactive -50 0")` path spawned a process named `resizeactive`, which does not exist - both were silent failures
+  - Affected `SUPER SHIFT + arrow` (resize), `SUPER ALT + arrow` (swap), `SUPER CTRL + F9..F12` (move workspace to monitor), `ALT + Tab` (bring to top), `SUPER CTRL + J/L/H` (group move) and `SUPER + M` (`splitratio`)
+  - Resize and swap now bind native dispatcher objects directly (`hl.dsp.window.resize({ ..., relative = true })` and `hl.dsp.window.swap({ direction })`), the rest get explicit `hl.dsp.*` handlers, and `raw_dispatch_cmd` falls back to `hyprctl dispatch` instead of `hl.dsp.exec_raw` in both `configs/system_keybinds.lua` and `lua/user_keybinds_helper.lua`
+- Hold-to-repeat keybinds never repeated
+  - The Lua bind option is `repeating`; `["repeat"] = true` is silently ignored, so volume, brightness and the resize binds fired once however long the key was held
+- Quick Settings could open a keybind file that Hyprland never loads
+  - `resolve_system_keybinds_file()` in `Kool_Quick_Settings.sh` preferred `lua/keybinds.lua`, an orphaned template that `hyprland.lua` does not load, so "Edit System Default Keybinds" edited a file with no effect; `KeyBinds.sh` also passed it to `keybinds_parser.py` first
+  - Both now resolve `configs/system_keybinds.lua` first, with `UserConfigs/system_keybinds.lua` and then the old template as last-resort fallbacks
 
 ## Added:
 
 - `AGENTS.md` project rules for AI agents
+- `config/hypr/lua/window_actions.lua` - in-process replacements for the `float.all.samesize.lua` and `ScrollCycleColumnWidth.sh` helper scripts, with no `hyprctl` calls and no JSON parsing
+- `docs/LuaScriptsMigrationPlan.md` - the bash-to-Lua migration plan, verified API notes, work queue and agent handoff completion log
+
+## Removed:
+
+- Dead keybind helper scripts and the orphaned keybind template
+  - `scripts/ResizeActive.sh`, `scripts/LuaMoveWindowDirectional.sh`, `scripts/LuaFocusWorkspaceRelative.sh`, `scripts/LuaMoveWindowWorkspaceRelative.sh` and `scripts/LuaFullscreenMaximized.sh` had no live callers
+  - `scripts/LuaSwapWindow.sh` (bash + 2 `hyprctl` + a 25-line `jq` overlap test) is replaced by `hl.dsp.window.swap`, which is already a no-op when there is no window in that direction
+  - `scripts/float.all.samesize.lua` shelled out to `hyprctl` four times and carried a hand-rolled JSON decoder; it is now `lua/window_actions.lua` running inside Hyprland's Lua VM
+  - `scripts/LuaAutoReload.sh` is redundant: Hyprland reloads the Lua config automatically when a file is saved
+  - `lua/keybinds.lua` and `lua/keybind_helpers.lua` were never loaded by `hyprland.lua`; they duplicated `configs/system_keybinds.lua` and carried the same legacy-dispatcher bug
 
 ## Update: 
   - To make easier to find I updated descriptions for: 

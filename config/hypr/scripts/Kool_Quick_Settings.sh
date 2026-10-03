@@ -145,12 +145,18 @@ resolve_system_lua_file() {
 }
 
 resolve_system_keybinds_file() {
-  local lua_keybinds="$hypr_dir/lua/keybinds.lua"
-  local legacy_system_lua="$configs/system_keybinds.lua"
-  if [[ -f "$lua_keybinds" || ! -f "$legacy_system_lua" ]]; then
-    printf '%s' "$lua_keybinds"
-  else
+  # configs/system_keybinds.lua is the file Hyprland loads. The old
+  # lua/keybinds.lua template is NOT loaded, so it must never be offered for
+  # editing unless it is genuinely all that exists on an older install.
+  local canonical_system_lua="$configs/system_keybinds.lua"
+  local legacy_system_lua="$UserConfigs/system_keybinds.lua"
+  local old_template_lua="$hypr_dir/lua/keybinds.lua"
+  if [[ -f "$canonical_system_lua" ]]; then
+    printf '%s' "$canonical_system_lua"
+  elif [[ -f "$legacy_system_lua" ]]; then
     printf '%s' "$legacy_system_lua"
+  else
+    printf '%s' "$old_template_lua"
   fi
 }
 rainbow_mode_file() {

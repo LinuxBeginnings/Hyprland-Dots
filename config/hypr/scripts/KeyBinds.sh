@@ -27,11 +27,17 @@ rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-keybinds.rasi"
 msg='☣️ NOTE ☣️: Clicking with Mouse or Pressing ENTER will have NO function'
 
 # collect raw bind lines from available Lua files
-files=("$lua_keybinds_conf")
+# configs/system_keybinds.lua is the canonical file Hyprland actually loads.
+# The old lua/keybinds.lua template is no longer loaded, so it is only used as a
+# last resort for installs that still ship it. Order still ends with the user
+# file so the parser's override logic keeps working.
+files=()
 if [[ -f "$lua_system_keybinds" ]]; then
   files+=("$lua_system_keybinds")
 elif [[ -f "$lua_legacy_system_keybinds" ]]; then
   files+=("$lua_legacy_system_keybinds")
+elif [[ -f "$lua_keybinds_conf" ]]; then
+  files+=("$lua_keybinds_conf")
 fi
 [[ -f "$lua_overrides" ]] && files+=("$lua_overrides")
 [[ -f "$lua_user_keybinds" ]] && files+=("$lua_user_keybinds")

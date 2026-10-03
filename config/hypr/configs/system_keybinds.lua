@@ -39,12 +39,12 @@ local function shell_quote(value)
   return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
 end
 
+-- Legacy dispatcher strings have no Lua equivalent, so they have to go out to
+-- hyprctl. Do NOT use hl.dsp.exec_raw here: exec_raw spawns a process, it does
+-- not parse a dispatcher, so "resizeactive -50 0" would try to exec a binary
+-- named resizeactive and silently do nothing. Prefer adding an hl.dsp.* handler
+-- below over relying on this fallback at all.
 local function raw_dispatch_cmd(command)
-  if dsp and dsp.exec_raw then
-    return function()
-      hl.dispatch(dsp.exec_raw(tostring(command)))
-    end
-  end
   return exec_cmd("hyprctl dispatch " .. tostring(command))
 end
 
@@ -200,10 +200,12 @@ local function dispatch(name, args)
   end
   if name == "swapwindow" then
     local swap_direction = trim(args)
-    if swap_direction == "" then
+    if swap_direction == "" or not window_api.swap then
       return nil
     end
-    return exec_cmd("$HOME/.config/hypr/scripts/LuaSwapWindow.sh " .. swap_direction)
+    -- Native dispatcher: a no-op when there is no window in that direction,
+    -- which is why the old LuaSwapWindow.sh guard script is gone.
+    return window_api.swap({ direction = direction(swap_direction) })
   end
   if name == "workspace" and dsp and dsp.focus then
     return function()
@@ -345,6 +347,24 @@ local function dispatch(name, args)
       return raw_dispatch_cmd("movewindow " .. args)
     end
     return raw_dispatch_cmd("movewindow")
+  end
+  if name == "bringactivetotop" and window_api.bring_to_top then
+    return window_api.bring_to_top()
+  end
+  if name == "moveintogroup" and window_api.move then
+    return window_api.move({ into_group = direction(args) })
+  end
+  if name == "moveoutofgroup" and window_api.move then
+    if args == "" then
+      return window_api.move({ out_of_group = true })
+    end
+    return window_api.move({ out_of_group = direction(args) })
+  end
+  if name == "movecurrentworkspacetomonitor" then
+    local workspace_api = (dsp and dsp.workspace) or {}
+    if workspace_api.move then
+      return workspace_api.move({ monitor = direction(args) })
+    end
   end
   if args ~= "" then
     return raw_dispatch_cmd(name .. " " .. args)
@@ -498,12 +518,14 @@ bind(
   exec_cmd("$HOME/.config/hypr/scripts/Float-all-Windows.sh"),
   { description = "Float all windows" }
 )
-bind(
-  "SUPER CTRL",
-  "SPACE",
-  exec_cmd("$HOME/.config/hypr/scripts/float.all.samesize.lua"),
-  { description = "Float all windows same size" }
-)
+-- In-process replacement for scripts/float.all.samesize.lua: no hyprctl, no
+-- JSON parsing, no interpreter startup. See lua/window_actions.lua.
+bind("SUPER CTRL", "SPACE", function()
+  local actions = rawget(_G, "KOOLDOTS_WINDOW_ACTIONS")
+  if actions and actions.same_size_floating then
+    actions.same_size_floating()
+  end
+end, { description = "Float all windows same size" })
 bind(
   "SUPER SHIFT",
   "Return",
@@ -656,7 +678,7 @@ bind(
 bind("SUPER CTRL", "Return", dispatch("layoutmsg", "swapwithmaster"), { description = "swap with master" })
 bind("SUPER SHIFT", "I", dispatch("layoutmsg", "togglesplit"), { description = "toggle split (dwindle)" })
 bind("SUPER", "P", dispatch("pseudo", ""), { description = "toggle pseudo (dwindle)" })
-bind("SUPER", "M", exec_cmd("hyprctl dispatch splitratio 0.3"), { description = "set split ratio 0.3" })
+bind("SUPER", "M", hl.dsp.layout("splitratio 0.3"), { description = "set split ratio 0.3" })
 bind(
   "SUPER ALT",
   "1",
@@ -680,12 +702,13 @@ bind("SUPER SHIFT", "period", dispatch("layoutmsg", "move +col"), { description 
 bind("SUPER SHIFT", "comma", dispatch("layoutmsg", "move -col"), { description = "move to left column" })
 bind("SUPER ALT", "comma", dispatch("layoutmsg", "swapcol l"), { description = "swap columns left" })
 bind("SUPER ALT", "period", dispatch("layoutmsg", "swapcol r"), { description = "swap columns right" })
-bind(
-  "SUPER",
-  "R",
-  exec_cmd("bash $HOME/.config/hypr/scripts/ScrollCycleColumnWidth.sh"),
-  { description = "Cycle column width preset (scrolling)" }
-)
+-- In-process replacement for scripts/ScrollCycleColumnWidth.sh.
+bind("SUPER", "R", function()
+  local actions = rawget(_G, "KOOLDOTS_WINDOW_ACTIONS")
+  if actions and actions.cycle_column_width then
+    actions.cycle_column_width()
+  end
+end, { description = "Cycle column width preset (scrolling)" })
 bind("SUPER ALT", "H", function()
   if hl and hl.config then
     hl.config({ scrolling = { direction = "right" } })
@@ -713,25 +736,25 @@ bind(
   "",
   "xf86audioraisevolume",
   exec_cmd("$HOME/.config/hypr/scripts/Volume.sh --inc"),
-  { description = "volume up", locked = true, ["repeat"] = true }
+  { description = "volume up", locked = true, repeating = true }
 )
 bind(
   "",
   "xf86audiolowervolume",
   exec_cmd("$HOME/.config/hypr/scripts/Volume.sh --dec"),
-  { description = "volume down", locked = true, ["repeat"] = true }
+  { description = "volume down", locked = true, repeating = true }
 )
 bind(
   "ALT",
   "xf86audioraisevolume",
   exec_cmd("$HOME/.config/hypr/scripts/Volume.sh --inc-precise"),
-  { description = "volume up precise", locked = true, ["repeat"] = true }
+  { description = "volume up precise", locked = true, repeating = true }
 )
 bind(
   "ALT",
   "xf86audiolowervolume",
   exec_cmd("$HOME/.config/hypr/scripts/Volume.sh --dec-precise"),
-  { description = "volume down precise", locked = true, ["repeat"] = true }
+  { description = "volume down precise", locked = true, repeating = true }
 )
 bind(
   "",
@@ -786,49 +809,49 @@ bind(
   "",
   "xf86MonBrightnessDown",
   exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --dec"),
-  { description = "decrease monitor brightness", locked = true, ["repeat"] = true }
+  { description = "decrease monitor brightness", locked = true, repeating = true }
 )
 bind(
   "",
   "xf86MonBrightnessUp",
   exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --inc"),
-  { description = "increase monitor brightness", locked = true, ["repeat"] = true }
+  { description = "increase monitor brightness", locked = true, repeating = true }
 )
 bind(
   "CTRL ALT",
   "equal",
   exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --inc"),
-  { description = "increase brightness", locked = true, ["repeat"] = true }
+  { description = "increase brightness", locked = true, repeating = true }
 )
 bind(
   "CTRL ALT",
   "minus",
   exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --dec"),
-  { description = "decrease brightness", locked = true, ["repeat"] = true }
+  { description = "decrease brightness", locked = true, repeating = true }
 )
 bind(
   "CTRL ALT",
   "KP_Add",
   exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --inc"),
-  { description = "increase brightness (numpad)", locked = true, ["repeat"] = true }
+  { description = "increase brightness (numpad)", locked = true, repeating = true }
 )
 bind(
   "CTRL ALT",
   "KP_Subtract",
   exec_cmd("$HOME/.config/hypr/scripts/Brightness.sh --dec"),
-  { description = "decrease brightness (numpad)", locked = true, ["repeat"] = true }
+  { description = "decrease brightness (numpad)", locked = true, repeating = true }
 )
 bind(
   "",
   "xf86KbdBrightnessDown",
   exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --dec"),
-  { description = "decrease keyboard brightness", locked = true, ["repeat"] = true }
+  { description = "decrease keyboard brightness", locked = true, repeating = true }
 )
 bind(
   "",
   "xf86KbdBrightnessUp",
   exec_cmd("$HOME/.config/hypr/scripts/BrightnessKbd.sh --inc"),
-  { description = "increase keyboard brightness", locked = true, ["repeat"] = true }
+  { description = "increase keyboard brightness", locked = true, repeating = true }
 )
 bind(
   "",
@@ -897,23 +920,23 @@ bind(
   exec_cmd("$HOME/.config/hypr/scripts/ScreenShot.sh --active"),
   { description = "screenshot (active window only)" }
 )
-bind("SUPER SHIFT", "left", dispatch("resizeactive", "-50 0"), { description = "resize left (-50)", ["repeat"] = true })
-bind(
-  "SUPER SHIFT",
-  "right",
-  dispatch("resizeactive", "50 0"),
-  { description = "resize right (+50)", ["repeat"] = true }
-)
-bind("SUPER SHIFT", "up", dispatch("resizeactive", "0 -50"), { description = "resize up (-50)", ["repeat"] = true })
-bind("SUPER SHIFT", "down", dispatch("resizeactive", "0 50"), { description = "resize down (+50)", ["repeat"] = true })
+-- Bind the resize dispatcher objects directly (tier 1): no Lua closure runs at
+-- keypress, no size query, no process. relative = true does the delta maths in
+-- C++ and respects Hyprland's minimum window size.
+bind("SUPER SHIFT", "left", hl.dsp.window.resize({ x = -50, y = 0, relative = true }), { description = "resize left (-50)", repeating = true })
+bind("SUPER SHIFT", "right", hl.dsp.window.resize({ x = 50, y = 0, relative = true }), { description = "resize right (+50)", repeating = true })
+bind("SUPER SHIFT", "up", hl.dsp.window.resize({ x = 0, y = -50, relative = true }), { description = "resize up (-50)", repeating = true })
+bind("SUPER SHIFT", "down", hl.dsp.window.resize({ x = 0, y = 50, relative = true }), { description = "resize down (+50)", repeating = true })
 bind("SUPER CTRL", "left", dispatch("movewindow", "l"), { description = "move window left" })
 bind("SUPER CTRL", "right", dispatch("movewindow", "r"), { description = "move window right" })
 bind("SUPER CTRL", "up", dispatch("movewindow", "u"), { description = "move window up" })
 bind("SUPER CTRL", "down", dispatch("movewindow", "d"), { description = "move window down" })
-bind("SUPER ALT", "left", dispatch("swapwindow", "l"), { description = "swap window left" })
-bind("SUPER ALT", "right", dispatch("swapwindow", "r"), { description = "swap window right" })
-bind("SUPER ALT", "up", dispatch("swapwindow", "u"), { description = "swap window up" })
-bind("SUPER ALT", "down", dispatch("swapwindow", "d"), { description = "swap window down" })
+-- Native swap dispatchers. These are a no-op when there is no window in that
+-- direction, so the old LuaSwapWindow.sh overlap-detection guard is gone.
+bind("SUPER ALT", "left", hl.dsp.window.swap({ direction = "left" }), { description = "swap window left" })
+bind("SUPER ALT", "right", hl.dsp.window.swap({ direction = "right" }), { description = "swap window right" })
+bind("SUPER ALT", "up", hl.dsp.window.swap({ direction = "up" }), { description = "swap window up" })
+bind("SUPER ALT", "down", hl.dsp.window.swap({ direction = "down" }), { description = "swap window down" })
 bind("SUPER", "G", dispatch("togglegroup", ""), { description = "toggle group" })
 bind("SUPER", "Tab", dispatch("changegroupactive", "f"), { description = "Change Group Forward" })
 -- SUPER CTRL+Tab is Hyprview Toggle (not change active in group)

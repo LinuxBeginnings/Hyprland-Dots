@@ -21,6 +21,9 @@ end
 -- not also be loaded directly here, or bindings/settings can be duplicated.
 load_module("user_defaults")
 load_module("animations")
+-- window_actions must load before user_overrides so configs/system_keybinds.lua
+-- can reach the in-process window actions through KOOLDOTS_WINDOW_ACTIONS.
+load_module("window_actions")
 load_module("user_overrides")
 load_module("monitors")
 load_module("workspaces")
