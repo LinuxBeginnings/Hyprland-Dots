@@ -11,8 +11,24 @@ IFS=$'\n\t'
 
 SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 rofi_config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-layout.rasi"
-change_layout="${SCRIPTSDIR}/ChangeLayout.sh"
 layouts=(dwindle master scrolling monocle)
+
+# The status read goes straight to the Hyprland IPC socket. It used to shell
+# out to ChangeLayout.sh, which added two more bash processes plus a hyprctl
+# and a jq to every Waybar refresh.
+# shellcheck source=HyprIPC.sh
+. "$SCRIPTSDIR/HyprIPC.sh"
+
+normalize_layout() {
+	case "$1" in
+	master | dwindle | scrolling | monocle)
+		printf '%s\n' "$1"
+		;;
+	*)
+		printf '\n'
+		;;
+	esac
+}
 
 layout_icon() {
 	case "$1" in
@@ -122,17 +138,20 @@ layout_shortcut() {
 }
 
 get_layout() {
-	local layout
+	local layout ws_json
 
-	if [[ -x "$change_layout" ]]; then
-		layout="$("$change_layout" --quiet current 2>/dev/null || true)"
-		if [[ -n "$layout" ]]; then
-			printf '%s\n' "$layout"
-			return
-		fi
+	ws_json="$(hypr_request 'j/activeworkspace' || true)"
+	layout="$(jq -r '.tiledLayout // .tiled_layout // .layout // empty' <<<"$ws_json" 2>/dev/null || true)"
+	layout="$(normalize_layout "$layout")"
+
+	if [[ -z "$layout" ]]; then
+		ws_json="$(hypr_request 'j/getoption general:layout' || true)"
+		layout="$(jq -r '.str // empty' <<<"$ws_json" 2>/dev/null || true)"
+		layout="$(normalize_layout "$layout")"
 	fi
 
-	hyprctl -j activeworkspace 2>/dev/null | jq -r '.tiledLayout // .tiled_layout // "unknown"' 2>/dev/null
+	[[ -n "$layout" ]] || layout="dwindle"
+	printf '%s\n' "$layout"
 }
 
 next_layout() {

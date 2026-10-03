@@ -210,6 +210,27 @@ Code written against `hyprctl -j` JSON assumptions (array indices, `reserved[1..
 rather than the real Lua API shapes in section 3.3. Fails silently because most of these paths are
 wrapped in `pcall` or `|| true`.
 
+### D6 — Waybar `interval` polling of `hyprctl`
+
+A Waybar `custom` module with `interval` re-runs its `exec` on a timer forever, whether or not
+anything changed. Two status modules did that to read state Hyprland already pushes over
+`.socket2.sock`:
+
+- `custom/hypr_layout` (`interval: 2`) ran `HyprLayoutModule.sh status`, which shelled out to
+  `ChangeLayout.sh` and then `hyprctl -j activeworkspace | jq` — two bash processes, one `hyprctl`
+  and one `jq` every two seconds.
+- `custom/keyboard` (`interval: 1`) ran `KeyboardLayout.sh status`, which resolves the layout with
+  **four** `hyprctl devices -j | jq` pairs on every invocation — about four `hyprctl` and four `jq`
+  forks per second.
+
+That is D4 in a different place: work that could be one socket read is paid for with process forks,
+on a timer, for the life of the session. It is not covered by the tier table in section 2 because it
+is not a keybind at all — the cost is paid continuously rather than per keypress.
+
+**Fix:** drive the module from the event socket. `HyprEventWatch.sh` subscribes to `.socket2.sock`,
+re-renders only when a relevant event arrives, and reads current state with one socket request.
+`HyprIPC.sh` holds the socket plumbing. Neither script calls `hyprctl`.
+
 ---
 
 ## 6. Work queue
@@ -445,14 +466,32 @@ suspect.
 
 Acceptance: each listed bind performs its action on the Gentoo host.
 
+### LUA-012 — Stop Waybar polling `hyprctl` (D6)
+
+Depends on: none. Status: **done.**
+
+Not a Lua item, but the same out-of-process defect as D4, so it is tracked here rather than in a
+separate document. Waybar's `custom/hypr_layout` and `custom/keyboard` modules polled `hyprctl` on
+an `interval` for the life of the session. Both are now event-driven through `HyprEventWatch.sh` +
+`HyprIPC.sh`, with no `interval` and no `hyprctl` anywhere in the render path.
+
+Acceptance: `ps` shows no `hyprctl` or `jq` while the session is idle; the layout and keyboard
+labels still update on a workspace switch, a monitor change, a layout switch and a keyboard layout
+switch.
+
 ---
 
 ## 7. Verification playbook
 
 ### Local (this machine)
 
-Syntax only. The live session here runs a different, home-manager-managed config, so this machine
-cannot validate runtime behaviour of the repo's config tree.
+Syntax only for the Lua config tree. The live session here runs a different, home-manager-managed
+config, so this machine cannot validate runtime behaviour of the repo's config tree.
+
+Standalone status scripts *can* be validated here: copy the file into `~/.config/hypr/scripts/` and
+run it directly. To exercise `HyprEventWatch.sh`, either use a real event (`hyprctl reload` emits
+`configreloaded>>`) or a synthetic one (`hyprctl dispatch 'hl.dsp.event("configreloaded>>")'`,
+which arrives on socket2 as `custom>>configreloaded>>`).
 
 ```sh
 # Lua syntax check on every changed file
@@ -574,6 +613,19 @@ Deleting or porting a script invalidates prose elsewhere. Check and update:
   `dispatch("pin", ...)` in its examples, but the helper has no `pin` branch, so it reaches
   `raw_dispatch_cmd("pin")` and `hyprctl dispatch pin` fails like the other legacy names. Same defect
   class as D1/D3. Add `hl.dsp.window.pin({ action })` next time the user-facing examples are touched.
+- **Waybar `custom/nightlight` still polls.** `Hyprsunset.sh status` runs on `interval: 3` and forks
+  bash + `pgrep` each time. It never called `hyprctl`, and Hyprland has no event for hyprsunset
+  state, so LUA-012 left it alone. Converting it means either an `hl.timer`-driven writer or
+  accepting the `pgrep` fork.
+- **`hyprland/language` is the zero-process alternative for the keyboard label.** Waybar's native
+  module reads the same `activelayout` event with no script at all, and the repo already ships a
+  `hyprland/language` block in `Modules`. It was not used because it selects the keyboard by a fixed
+  `keyboard-name` (or the first one) and has no equivalent of `KeyboardLayout.sh`'s ignore list for
+  AVRCP/Bluetooth pseudo-keyboards.
+- **Event coverage for the layout label is not exhaustive.** `HyprEventWatch.sh layout` refreshes on
+  workspace, monitor and config-reload events, and `ChangeLayout.sh` pushes its own RTMIN+8 signal.
+  A layout change made some other way (a workspace rule applied by something that neither switches
+  workspace nor signals Waybar) would not redraw until the next event.
 
 ---
 
@@ -771,3 +823,25 @@ files changed, verification evidence, follow-ups.
     `jq` process spawned.
   - Follow-ups: `docs/Keybinds.md:11,110` updated. The generator's embedded fallback still names the
     deleted script — see [open questions](#9-open-questions-and-known-risks).
+
+### LUA-012 — Stop Waybar polling `hyprctl`
+
+- 2026-10-03 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
+  - Added: `config/hypr/scripts/HyprIPC.sh` (socket resolution + request helper) and
+    `config/hypr/scripts/HyprEventWatch.sh` (socket2 event listener serving both status modules).
+  - Changed: `config/hypr/scripts/HyprLayoutModule.sh` (`get_layout()` now reads `j/activeworkspace`
+    over the socket instead of shelling out to `ChangeLayout.sh` + `hyprctl`) and
+    `config/hypr/waybar/ModulesCustom` (both modules drop `interval`, run
+    `HyprEventWatch.sh layout|keyboard`, and gain `restart-interval`).
+  - Evidence: a PATH shim around `hyprctl` showed `HyprLayoutModule.sh status` made 1 `hyprctl` call
+    and `KeyboardLayout.sh status` made 4 per invocation, at `interval: 2` and `interval: 1`. That is
+    the `hyprctl` + `jq` process pair seen while watching `ps`.
+  - Evidence: `printf 'j/activeworkspace' | socat - UNIX-CONNECT:$SOCK` returns the same JSON as
+    `hyprctl -j activeworkspace`; `j/getoption general:layout` likewise matches.
+  - Verification (Hyprland 0.56.2, Waybar v0.15.0, this host): the layout render makes 0 `hyprctl`
+    calls; the keyboard listener's output matches `KeyboardLayout.sh status` exactly (`us`); the
+    layout listener re-renders on a real `configreloaded>>` (1 -> 2 lines); SIGTERM exits both
+    listeners cleanly with no leftover `socat`; after a Waybar config reload both listeners are
+    running and `ps` reports **0** `hyprctl`/`jq` hits over a 20 s sample, against ~4.5/s before.
+  - Follow-ups: `custom/nightlight` still polls with `pgrep` — see
+    [open questions](#9-open-questions-and-known-risks).

@@ -108,18 +108,23 @@
 	"on-click": "$HOME/.config/hypr/scripts/Hypridle.sh toggle",
 	"on-click-right": "$HOME/.config/hypr/scripts/LockScreen.sh"
 },
-
+// Event-driven: HyprEventWatch.sh subscribes to the Hyprland event socket and
+// prints a new line only when what it shows actually changed. There is no
+// `interval`, so an idle session forks nothing at all. `restart-interval`
+// re-arms the listener if it ever exits.
 "custom/keyboard": {
-	"exec": "$HOME/.config/hypr/scripts/KeyboardLayout.sh status",
-	"interval": 1,
-	"format": " {}",
+	"exec": "$HOME/.config/hypr/scripts/HyprEventWatch.sh keyboard",
+	"restart-interval": 10,
+	"format": " {} ",
 	"on-click": "$HOME/.config/hypr/scripts/KeyboardLayout.sh switch",
 },
 "custom/hypr_layout": {
-	"exec": "$HOME/.config/hypr/scripts/HyprLayoutModule.sh status",
+	"exec": "$HOME/.config/hypr/scripts/HyprEventWatch.sh layout",
 	"return-type": "json",
-	"interval": 2,
+	// ChangeLayout.sh pushes RTMIN+8 after a layout switch; workspace and
+	// monitor switches arrive as socket events instead.
 	"signal": 8,
+	"restart-interval": 10,
 	"format": "{}",
 	"on-click": "$HOME/.config/hypr/scripts/HyprLayoutModule.sh menu",
 	"on-click-right": "$HOME/.config/hypr/scripts/HyprLayoutModule.sh next",

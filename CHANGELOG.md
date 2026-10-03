@@ -16,6 +16,28 @@
   - Ported to `lua/window_actions.lua` as `cycle_window`, address-sorted order
   - `dispatch("cyclenext")` in user configs fell through to a dead legacy name
   - `lua/user_keybinds_helper.lua` now maps it to the in-process action
+- Waybar no longer polls `hyprctl` on a timer
+  - `custom/hypr_layout` ran `HyprLayoutModule.sh` every 2s
+  - That reached `ChangeLayout.sh` and then `hyprctl -j activeworkspace | jq`
+  - `custom/keyboard` ran `KeyboardLayout.sh status` every 1s
+  - It makes four `hyprctl devices -j | jq` calls per run
+  - About 4.5 `hyprctl` + 4.5 `jq` forks per second, for the whole session
+  - Both now subscribe to the Hyprland event socket in `HyprEventWatch.sh`
+  - They re-render only when the state they show actually changes
+  - `HyprLayoutModule.sh` reads the layout over the socket, not `hyprctl`
+
+## Added:
+
+- `scripts/HyprIPC.sh` and `scripts/HyprEventWatch.sh`
+  - Socket helpers, plus the event listener the two status modules use
+
+## Updated:
+
+- `docs/HOWTO-Change-Keybindgs.md` now covers `dispatch(...)` resolution
+  - Documents the in-process helper mapping and the native `hl.dsp.*` form
+  - Corrects the `["repeat"]` and `dispatch("pin")` examples
+  - Notes that `LayoutKeybindDispatch.sh` and `LuaCycleWindow.sh` are gone
+  - The `.es.md` translation is kept in sync
 
 ## Removed:
 

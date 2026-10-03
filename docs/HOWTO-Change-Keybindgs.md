@@ -41,13 +41,25 @@ Modifiers are specified as uppercase strings, separated by spaces:
 1. **`exec_cmd("command")`**  
    Executes a shell command, terminal application, or custom script. Supports predefined placeholders such as `'$term'` (default terminal) and `'$files'` (default file manager).
 2. **`dispatch("dispatcher", [arg])`**  
-   Triggers a built-in Hyprland compositor action (e.g., `killactive`, `togglefloating`, `fullscreen`, `workspace`, `movetoworkspace`).
+   Triggers a built-in Hyprland compositor action (e.g., `killactive`, `togglefloating`, `fullscreen`, `workspace`, `movetoworkspace`). See the next section for how the names are resolved.
+3. **Native dispatcher objects**  
+   Any `hl.dsp.*` object can be bound directly, e.g. `hl.dsp.window.pin()` or `hl.dsp.window.swap({ direction = "left" })`. Use this form for anything the helper does not map.
+
+### How `dispatch(...)` Names Are Resolved
+
+`dispatch("name", arg)` does not shell out. It is translated by `~/.config/hypr/lua/user_keybinds_helper.lua` into the native Hyprland Lua API and run inside the compositor, so a keybind costs no process forks and no `hyprctl` round trip.
+
+The helper maps the names the shipped configs use: `killactive`, `fullscreen`, `movefocus`, `cyclenext`, `movewindow`, `workspace`, `movetoworkspace`, `movetoworkspacesilent`, `togglefloating`, `togglespecialworkspace`, `togglegroup`, `changegroupactive`, `pseudo`, `layoutmsg`, `togglesplit`, `resizewindow`, `resizeactive`, `swapwindow`, `bringactivetotop`, `moveintogroup`, `moveoutofgroup` and `movecurrentworkspacetomonitor`.
+
+- **Legacy hyprlang names are not Lua globals.** Since Hyprland 0.55 a bare name such as `resizeactive` or `cyclenext` no longer resolves, so the helper maps each one to its `hl.dsp.*` equivalent.
+- **Anything unmapped is sent to `hyprctl dispatch`.** If you use a name the helper does not know, it goes out to `hyprctl` as-is. A legacy name does nothing there, so prefer the native `hl.dsp.*` form.
+- **Focus and window cycling are in-process too.** The old helper scripts `LayoutKeybindDispatch.sh` (layout-aware focus) and `LuaCycleWindow.sh` (address-sorted window cycling) have been removed. Their behaviour now lives in `~/.config/hypr/lua/window_actions.lua` and is reached through `dispatch("cyclenext", ...)` and the shipped `SUPER + j`/`k` and `SUPER + arrow` binds. You do not need to call those scripts, and they no longer exist.
 
 ### Keybinding Options Table (`[options]`)
 You can pass an optional Lua table to customize keybind behavior:
 - `description = "Text"`: Provides a human-readable title shown in the Key Hints cheat sheet (`SUPER + H`) and Search Keybinds menu (`SUPER + SHIFT + K`).
 - `locked = true`: Allows the keybind to trigger even when the screen is locked by Hyprlock (e.g. media controls, volume keys, sleep).
-- `repeating = true` (or `["repeat"] = true`): Continuously triggers the action when the key is held down (e.g. volume adjustment, brightness, window resizing).
+- `repeating = true`: Continuously triggers the action when the key is held down (e.g. volume adjustment, brightness, window resizing). This is the only correct spelling — `["repeat"] = true` is silently ignored by `hl.bind`, so a bind written that way fires once however long you hold the key.
 
 ---
 
@@ -180,7 +192,8 @@ unbind("SUPER", "SPACE")
 bind("SUPER", "V", dispatch("togglefloating"), { description = "Toggle Floating Window" })
 
 -- Pin a floating window to remain visible across all workspaces
-bind("SUPER SHIFT", "P", dispatch("pin"), { description = "Pin Window Across Workspaces" })
+-- `pin` is not mapped by the helper, so bind the native dispatcher object instead
+bind("SUPER SHIFT", "P", hl.dsp.window.pin(), { description = "Pin Window Across Workspaces" })
 
 -- Toggle pseudo-tiling (preserve original window dimensions in tile)
 unbind("SUPER", "P")
