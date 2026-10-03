@@ -913,8 +913,11 @@ files changed, verification evidence, follow-ups.
   - Verification: `bash -n` clean; the deployed listener re-rendered on the emitted event (1 -> 2
     lines) while socket2 showed `custom>>kool:layout`; Waybar reloaded with both listeners and their
     `socat` children alive.
-  - Follow-ups: pressing `SUPER + ALT + 1..4` and the layout menu's set action still need a by-hand
-    confirmation that the label changes without a workspace switch.
+  - Verified by hand on the local VM (2026-10-03): `SUPER + ALT + 1..4` updates the layout label with
+    no workspace switch in between, so the socket refresh reaches the module. `SUPER + ALT + mouse
+    wheel` zoom works.
+  - Follow-ups: the layout menu's set action has not been pressed by hand yet. The 3-finger gesture
+    zoom cannot be tested on this VM (no trackpad) - confirm on hardware.
 
 - 2026-10-03 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
   - Added: `config/hypr/scripts/HyprIPC.sh` (socket resolution + request helper) and
@@ -955,8 +958,11 @@ files changed, verification evidence, follow-ups.
     on real sysfs, so both `is_lid_closed()` and `connected_drm_connectors()` ran without error.
   - Follow-ups: the DRM name-list trade-off is recorded in
     [open questions](#9-open-questions-and-known-risks). The `os.execute` fallbacks in
-    `lua/user_startup_helper.lua:82` and `UserConfigs/user_laptops.lua:211` are guarded by
-    `hl.exec_cmd` and unreachable on a Lua build, so they were left in place.
+    `lua/user_startup_helper.lua:82` and `UserConfigs/user_laptops.lua` are guarded by `hl.exec_cmd`
+    and unreachable on a Lua build, so they were left in place.
+  - Runtime verification: the mouse-wheel zoom works (`SUPER + ALT + mouse wheel`). The gesture zoom
+    that this item actually changed is the 3-finger swipe, which cannot be exercised on the local VM
+    because it has no trackpad - confirm on hardware that the swipe zooms and does not stall.
 
 ### LUA-014 — Refresh the night-light module on change
 
