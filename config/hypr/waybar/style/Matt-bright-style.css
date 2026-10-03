@@ -1,0 +1,324 @@
+/* Gruvbox hard dark, inlined from the source config's colors.css so this style
+   is self-contained. The other styles in this directory @import a palette
+   instead; inlining keeps it to one file. */
+@define-color fg             #EBDBB2;
+@define-color bg-dark        #1D2021;
+@define-color accent-blue    #83A598;
+@define-color fg-alt         #D5C4A1;
+@define-color accent-purple  #D3869B;
+@define-color red            #FB4934;
+@define-color bg-black       #1D2021;
+@define-color accent-yellow  #FABD2F;
+@define-color accent-green   #B8BB26;
+@define-color accent-cyan    #8EC07C;
+@define-color accent-orange  #FE8019;
+
+
+* {  
+  font-family:
+    "Cantarell",
+    "Noto Sans CJK JP",
+    "JetBrainsMono Nerd Font Mono",
+    "Nerd Font",
+    sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  }
+
+#waybar {
+/*#background-color: #11151a;*/
+background: transparent;
+color: @fg;
+border-radius: 50px 50px 50px 50px;
+background-color: rgba(0, 0, 0, 0.3);
+}
+
+tooltip {
+    background-color: @bg-dark;
+    border: 1px solid @accent-blue;
+    border-radius: 8px;
+}
+
+tooltip label {
+    color: @fg;
+}
+
+button {
+border: none;
+border-radius: 0;
+padding: 0 5px;
+transition: all 0.2s ease;
+}
+
+#workspaces {
+background-color: @bg-dark;
+border-radius: 10px;
+margin: 5px;
+padding: 2px;
+}
+
+
+#workspaces button {
+background-color: transparent;
+color: @fg-alt;
+border-radius: 6px;
+margin: 0 2px;
+padding: 0 8px;
+transition: all 0.2s ease;
+}
+
+#workspaces button:hover {
+color: @accent-purple;
+background-color: rgba(187, 154, 247, 0.1);
+}
+
+#workspaces button.active {
+color: @accent-blue;
+background-color: rgba(122, 162, 247, 0.1);
+font-weight: bold;
+}
+
+#workspaces button.urgent {
+background-color: @red;
+color: @bg-black;
+}
+
+#custom-separator {
+margin-right: 10px;
+margin-left: 10px;
+}
+
+#custom-opensuse {
+background-color: @accent-green;
+color: @bg-black;
+padding: 0px 12px;
+border-radius: 10px;
+margin: 5px;
+font-size: 20px;
+}
+
+#custom-swaync.icon {
+background-color: @accent-yellow;
+color: @bg-black;
+padding: 0 10px;
+border-radius: 10px 0 0 10px;
+margin: 5px 0 5px 5px;
+font-size: 20px;
+}
+
+#custom-swaync.text {
+background-color: @bg-dark;
+color: @accent-yellow;
+padding: 0 12px;
+border-radius: 0 10px 10px 0;
+margin: 5px 5px 5px 0;
+}
+
+#window {
+background-color: @bg-dark;
+color: @accent-green;
+padding: 0 12px;
+border-radius: 10px;
+margin: 5px;
+}
+
+#custom-updates.icon {
+background-color: @accent-yellow;
+color: @bg-black;
+padding: 0 10px;
+border-radius: 10px 0 0 10px;
+margin: 5px 0 5px 5px;
+font-size: 20px;
+}
+
+#custom-updates.text {
+background-color: @bg-dark;
+color: @accent-yellow;
+padding: 0 12px;
+border-radius: 0 10px 10px 0;
+margin: 5px 5px 5px 0;
+}
+
+#idle_inhibitor {
+background-color: @bg-dark;
+color: @fg;
+border-radius: 10px;
+margin: 5px;
+padding: 0 10px;
+font-size: 20px;
+}
+
+#idle_inhibitor.activated {
+color: @accent-green;
+}
+
+#network.icon {
+background-color: @accent-purple;
+color: @bg-black;
+padding: 0 12px;
+border-radius: 10px 0 0 10px;
+margin: 5px 0 5px 5px;
+}
+
+#network.text {
+background-color: @bg-dark;
+color: @accent-purple;
+padding: 0 12px;
+border-radius: 0 10px 10px 0;
+margin: 5px 5px 5px 0;
+}
+
+#bluetooth.icon {
+background-color: @accent-cyan;
+color: @bg-black;
+padding: 0 12px;
+border-radius: 10px;
+margin: 5px;
+}
+
+#cpu.icon {
+background-color: @accent-blue;
+color: @bg-black;
+padding: 0 10px;
+border-radius: 10px 0 0 10px;
+margin: 5px ;
+font-size: 15px;
+}
+
+#cpu.text {
+background-color: @bg-dark;
+color: @accent-green;
+padding: 0 12px;
+border-radius: 0 10px 10px 0;
+margin: 5px 5px 5px 0;
+}
+
+#memory.icon {
+background-color: @accent-cyan;
+color: @bg-black;
+padding: 0 10px;
+border-radius: 10px 0 0 10px;
+margin: 5px 0 5px 5px;
+font-size: 20px;
+}
+
+#memory {
+background-color: @bg-dark;
+color: @accent-cyan;
+padding: 0 12px;
+border-radius: 0 10px 10px 0;
+margin: 5px 5px 5px 0;
+}
+
+#battery.icon {
+background-color: @accent-orange;
+color: @bg-black;
+padding: 0 12px;
+border-radius: 10px 0 0 10px;
+margin: 5px 0 5px 5px;
+}
+
+#battery.text {
+background-color: @bg-dark;
+color: @accent-orange;
+padding: 0 12px;
+border-radius: 0 10px 10px 0;
+margin: 5px 5px 5px 0;
+}
+
+#battery.critical:not(.charging) {
+animation: blink 0.7s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite alternate;
+}
+
+#pulseaudio.icon {
+background-color: @accent-blue;
+color: @bg-black;
+padding: 0 12px;
+border-radius: 10px 0 0 10px;
+margin: 5px;
+font-size: 20px;
+}
+
+#pulseaudio.text {
+background-color: @bg-dark;
+color: @accent-blue;
+padding: 0 12px;
+border-radius: 0 10px 10px 0;
+margin: 5px 5px 5px 0;
+}
+
+#clock.icon {
+background-color: @red;
+color: @bg-black;
+padding: 0 12px;
+border-radius: 10px 0 0 10px;
+margin: 5px;
+font-size: 20px;
+}
+
+#clock.text {
+background-color: @bg-dark;
+color: @red;
+padding: 0 12px;
+border-radius: 0 10px 10px 0;
+margin: 5px 5px 5px 0;
+}
+
+#tray {
+background-color: @bg-dark;
+padding: 0 10px;
+border-radius: 10px;
+margin: 5px;
+}
+
+#tray > .passive {
+-gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+-gtk-icon-effect: highlight;
+background-color: @red;
+}
+
+/* Modules this config pulls in from the project files, styled to match. */
+#custom-menu {
+background-color: @accent-purple;
+color: @bg-black;
+padding: 0 12px;
+border-radius: 10px;
+margin: 5px;
+font-size: 20px;
+}
+
+#custom-hint {
+background-color: @bg-dark;
+color: @accent-yellow;
+padding: 0 12px;
+border-radius: 10px;
+margin: 5px;
+font-size: 20px;
+}
+
+#custom-power {
+background-color: @red;
+color: @bg-black;
+padding: 0 12px;
+border-radius: 10px;
+margin: 5px;
+font-size: 20px;
+}
+
+@keyframes blink {
+    to {
+        background-color: @red;
+        color: @bg-black;
+    }
+}
+
+.modules-left > widget\:first-child > #workspaces {
+margin-left: 0;
+}
+
+.modules-right > widget\:last-child > #workspaces {
+margin-right: 0;
+}

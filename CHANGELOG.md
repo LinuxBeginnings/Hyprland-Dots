@@ -52,6 +52,10 @@
 - Existing installs never received the layout-refresh throttle
   - `copy.sh` protects `UserConfigs`, so shipped copies kept the old code
   - `patches/70-user-laptops-refresh-throttle.sh` inserts it in place
+- Two Waybar bars no longer kill each other's status listeners
+  - The guard was keyed by module name only, so a second bar replaced it
+  - Waybar then reported `stopped unexpectedly` and re-ran it every 10s
+  - It is now keyed by the parent bar; a listener exits when its bar does
 
 ## Added:
 
@@ -61,6 +65,11 @@
   - Removes the blocking `io.popen` calls from an installed `user_laptops.lua`
 - `patches/70-user-laptops-refresh-throttle.sh`
   - Adds the layout-refresh throttle to an installed `user_laptops.lua`
+- `waybar/configs/Matt-Legacy-config` and `waybar/style/Matt-bright-style.css`
+  - A top bar layout built on the project module files via `include`
+  - `custom/menu`, `custom/hint`, `custom/power` and `tray` come from there
+  - `custom/swaync` is split into an icon/text pair, matching cpu/memory
+  - The style inlines its gruvbox palette, so it ships as one file
 
 ## Updated:
 

@@ -1,0 +1,254 @@
+/* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
+/* Matt-Legafcy: top bar layout. Pair with style/Matt-bright-style.css.
+ *
+ * custom/menu, idle_inhibitor, custom/hint, tray and custom/power are not
+ * defined here on purpose: they are pulled in from the standard project module
+ * files in "include" so they keep the project's behaviour and are maintained in
+ * one place. A local definition would take precedence over the include, which is
+ * why the original local idle_inhibitor and tray blocks are gone.
+ *
+ * The source config's unused module definitions and its eDP-1 workspace pinning
+ * were dropped too - nothing referenced them, and eDP-1 does not exist here.
+ */
+{
+  "include": [
+    "$HOME/.config/hypr/waybar/Modules",
+    "$HOME/.config/hypr/waybar/ModulesCustom",
+  ],
+  "layer": "top",
+  "position": "top",
+  "height": 36,
+  "spacing": 0,
+  "margin": "5 15 0 15",
+  "modules-left": ["custom/menu", "custom/hypr_layout", "custom/separator", "hyprland/workspaces", "custom/separator", "hyprland/window"],
+  "modules-center": [ "clock#icon", "clock#text", "idle_inhibitor", "custom/weather2", "custom/hint"],
+  "modules-right": [
+    "custom/swaync#icon",
+    "custom/swaync#text",
+    "cpu#icon",
+    "cpu#text",
+    "memory#icon",
+    "memory#text",
+    "pulseaudio#icon",
+    "pulseaudio#text",
+    "custom/keyboard",
+    "tray",
+    "custom/separator",
+    "custom/power"
+  ],
+  
+  "custom/separator": {
+    "format": "  ",
+    "tooltip": false
+  },
+
+  /* The project ships one custom/swaync with format "{} {icon} ", which cannot
+     be given two backgrounds. Split into an icon/text pair so it renders like
+     cpu/memory/pulseaudio: coloured icon segment, dark text segment. */
+  "custom/swaync#icon": {
+    "format": "{icon}",
+    "format-icons": {
+      "notification": "<span foreground='red'><sup></sup></span>",
+      "none": "",
+      "dnd-notification": "<span foreground='red'><sup></sup></span>",
+      "dnd-none": "",
+      "inhibited-notification": "<span foreground='red'><sup></sup></span>",
+      "inhibited-none": "",
+      "dnd-inhibited-notification": "<span foreground='red'><sup></sup></span>",
+      "dnd-inhibited-none": ""
+    },
+    "return-type": "json",
+    "exec-if": "which swaync-client",
+    "exec": "swaync-client -swb",
+    "on-click": "sleep 0.1 && swaync-client -t -sw",
+    "on-click-right": "swaync-client -d -sw",
+    "tooltip": false,
+    "escape": true
+  },
+
+  "custom/swaync#text": {
+    "format": "{text}",
+    "return-type": "json",
+    "exec-if": "which swaync-client",
+    "exec": "swaync-client -swb",
+    "on-click": "sleep 0.1 && swaync-client -t -sw",
+    "on-click-right": "swaync-client -d -sw",
+    "tooltip": true,
+    "tooltip-format": "Left Click: Launch Notification Center\nRight Click: Do Not Disturb",
+    "escape": true
+  },
+
+  "hyprland/workspaces": {
+    "format": "{icon}",
+    "format-icons": {
+    "1": "1",
+    "2": "2",
+    "3": "3",
+    "4": "4",
+    "5": "5",
+    "6": "6",
+    "7": "7",
+    "8": "8",
+    "9": "9",
+    "10": "10"
+  },
+  "on-click": "activate"
+  },
+  
+  "cpu#icon": {
+    "format": "",
+    "tooltip": false
+  },
+
+  "cpu#text": {
+    "interval": 1,
+    "format": "{usage}%",
+    "signal": 1,
+    "on-click": "pkill -SIGRTMIN+1 waybar",
+    "tooltip": true,
+    "tooltip-format": "CPU Usage: {usage}%"
+  },
+
+  "memory#icon": {
+    "interval": 3,
+    "format": "",
+    "tooltip": false
+  },
+
+  "memory#text": {
+    "interval": 3,
+    "format": "{percentage}%",
+    "signal": 2,
+    "on-click": "pkill -SIGRTMIN+2 waybar",
+    "tooltip": true,
+    "tooltip-format": "RAM: {used:0.1f}GB / {total:0.1f}GB"
+  },
+
+  "hyprland/window": {
+    "format": "{class}",
+    "icon": true,
+    "rewrite": {
+    "brave-browser": "Brave Browser",
+    "discord": "Discord",
+    "kitty": "Kitty",
+    "librewolf": "LibreWolf",
+    "thunar": "Thunar",
+    "^$": "~@"
+  },
+    "max-length": 50
+  },
+
+  "pulseaudio#icon": {
+    "format": "{icon}",
+    "format-muted": "󰝟",
+    "format-icons": {
+      "headphone": "󰋋",
+      "hands-free": "󰋎",
+      "headset": "󰋎",
+      "phone": "󰏲",
+      "portable": "󰄝",
+      "car": "󰄋",
+      "default": ["󰕿", "󰖀", "󰕾"]
+    },
+    "on-click": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
+    "tooltip": false
+  },
+
+   "pulseaudio#text": {
+    "format": "{volume}%",
+    "format-muted": "{volume}%",
+    "on-click": "pavucontrol",
+    "on-click-right": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
+    "tooltip": true,
+    "tooltip-format": "Volume: {volume}%\nDevice: {desc}"
+  },
+
+  "clock#icon": {
+    "format": "󰥔",
+    "tooltip": false
+  },
+  
+  
+  
+  
+  "clock#text": {
+    "format": "{:%I:%M %p}",
+    "format-alt": "{:%a, %d %b}",
+    "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
+    "calendar": {
+      "mode"          : "month",
+      "mode-mon-col"  : 3,
+      "weeks-pos"     : "right",
+      "on-scroll"     : 1,
+      "format": {
+        "months":     "<span color='#ffead3'><b>{}</b></span>",
+        "days":       "<span color='#ecc6d9'>{}</span>",
+        "weeks":      "<span color='#99ffdd'><b>W{}</b></span>",
+        "weekdays":   "<span color='#ffcc66'><b>{}</b></span>",
+        "today":      "<span color='#ff6699'><b><u>{}</u></b></span>"
+      }
+    }
+  },
+
+  "battery#icon": {
+    "bat": "BAT0",
+    "interval": 3,
+    "signal": 3,
+    "states": {
+      "good": 90,
+      "warning": 30,
+      "critical": 15
+    },
+    "tooltip": false,
+    "format": "{icon}",
+    "format-charging": "󰂄",
+    "format-plugged": "󰚥",
+    "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
+  },
+
+  "battery#text": {
+    "bat": "BAT0",
+    "interval": 3,
+    "signal": 3,
+    "on-click": "pkill -SIGRTMIN+3 waybar",
+    "states": {
+      "good": 90,
+      "warning": 30,
+      "critical": 15
+    },
+    "format": "{capacity}%",
+    "format-charging": "{capacity}%",
+    "format-plugged": "{capacity}%",
+    "tooltip": true,
+    "tooltip-format": "Battery: {capacity}%\nTime remaining: {time}"
+    },
+
+  "network#icon": {
+    "format": "{icon}",
+    "format-icons": {
+      "wifi": "󰖩",
+      "ethernet": "󰈀",
+      "disconnected": "󰖪"
+    },
+    "tooltip": false,
+    "on-click": "kitty --title 'Network Manager' -e bash -c nmtui"
+  },
+
+  "network#text": {
+    "format": "{essid}",
+    "format-disconnected": "Disconnected",
+    "format-alt": "<span foreground='#99ffdd'> {bandwidthDownBytes}</span> <span foreground='#ffcc66'> {bandwidthUpBytes}</span>",
+    "tooltip": true,
+    "tooltip-format": "Interface: {ifname}\nIP: {ipaddr}/{cidr}"
+  },
+
+  "bluetooth#icon": {
+    "format": "󰂯",
+    "format-disabled": "󰂲",
+    "format-connected": "󰂱",
+    "tooltip-format": "{status}",
+    "tooltip-format-connected": "Connected to {device_alias}",
+    "tooltip-format-disabled": "Bluetooth disabled",
+    "on-click": "blueman-manager"
+  },
+}

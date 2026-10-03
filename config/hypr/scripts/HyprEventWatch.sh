@@ -43,17 +43,25 @@ esac
 # KeyboardLayout.sh, so the two cannot disagree about which keyboard is shown.
 KEYBOARD_IGNORE_RE='--\(avrcp\)|Bluetooth Speaker|Other Device'
 
-# Single-instance guard, per mode. Waybar kills and re-runs a module's exec on
-# a signal, so a leftover instance would otherwise keep a second socket reader
-# alive for the rest of the session.
+# Single-instance guard, per mode *and per bar*.
+#
+# Keying this by mode alone was wrong: two Waybar instances (the repo has a
+# documented history of duplicate bars, and people run a second bar against an
+# alternate config) each run this script, and a global key made them kill each
+# other. Waybar then reported "stopped unexpectedly, is it endless?" and, with
+# restart-interval set, re-ran the module every 10s forever.
+#
+# Scoped to the parent, a duplicate for *this* bar is still replaced, while
+# another bar's listener is left alone.
 RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"
-pidfile="$RUNTIME_DIR/hypr-event-watch-$mode.pid"
-fifo="$RUNTIME_DIR/hypr-event-watch-$mode.fifo"
+parent_pid="$PPID"
+pidfile="$RUNTIME_DIR/hypr-event-watch-$mode.$parent_pid.pid"
+fifo="$RUNTIME_DIR/hypr-event-watch-$mode.$parent_pid.fifo"
 socat_pid=""
 
 if [ -f "$pidfile" ]; then
   oldpid="$(cat "$pidfile" 2>/dev/null || true)"
-  if [ -n "$oldpid" ] && kill -0 "$oldpid" 2>/dev/null; then
+  if [ -n "$oldpid" ] && [ "$oldpid" != "$$" ] && kill -0 "$oldpid" 2>/dev/null; then
     kill "$oldpid" 2>/dev/null || true
     sleep 0.1 || true
   fi
@@ -154,9 +162,22 @@ while :; do
   socat -U - "UNIX-CONNECT:$socket" >"$fifo" 2>/dev/null &
   socat_pid=$!
 
-  while IFS= read -r line; do
-    [[ "$line" =~ $event_re ]] || continue
-    render
+  # Bounded read so the loop wakes up even when no events arrive - that is the
+  # only chance to notice the bar this listener belongs to is gone. Without it
+  # an orphaned listener would outlive its Waybar for the rest of the session,
+  # which is what the old cross-bar guard was (badly) covering for.
+  while :; do
+    if IFS= read -r -t 5 line; then
+      [[ "$line" =~ $event_re ]] || continue
+      render
+      continue
+    fi
+
+    kill -0 "$parent_pid" 2>/dev/null || exit 0
+
+    # `read` also returns non-zero at EOF, which is how a closed socket shows
+    # up; only then is it time to resubscribe.
+    kill -0 "$socat_pid" 2>/dev/null || break
   done <"$fifo"
 
   kill "$socat_pid" 2>/dev/null || true

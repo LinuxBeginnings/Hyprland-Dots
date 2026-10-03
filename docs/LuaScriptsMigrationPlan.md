@@ -540,6 +540,31 @@ is designed for (verified: 1 run at startup, then one run per signal).
 Acceptance: the icon updates immediately on toggle; an idle session no longer re-runs the script
 every 3 seconds.
 
+### LUA-015 — Ship the Matt-Legacy Waybar layout
+
+Depends on: LUA-012. Status: **done.**
+
+A second top-bar layout (`config/hypr/waybar/configs/Matt-Legacy-config` plus
+`config/hypr/waybar/style/Matt-bright-style.css`) ported from an external waybar config. The point of
+this item is the same as D6: build on the project's own module files instead of carrying a parallel
+set of definitions, so behaviour and fixes live in one place.
+
+- `include` pulls `Modules` + `ModulesCustom`, and `custom/menu`, `custom/hint`, `custom/power`,
+  `tray` and `idle_inhibitor` are deliberately not defined locally. A local definition wins over the
+  include, so the source config's own `idle_inhibitor` and `tray` blocks were dropped.
+- `custom/swaync` is split into a `#icon` / `#text` pair. The project ships one module with
+  `"format": "{} {icon} "`, and a single Waybar widget can only have one background, so it could
+  never match the two-part pills cpu/memory/pulseaudio use.
+- The style inlines its gruvbox palette rather than `@import url("colors.css")`, so it ships as one
+  file. The source's unused module definitions were dropped; the hardware ones (battery, network,
+  bluetooth) were kept for hardware testing even though nothing lists them yet.
+- Glyphs matter here: every Nerd Font private-use character was carried over by copying the source
+  file and transforming it with a script. Hand-writing the file silently dropped all of them, which
+  is how the first attempt lost the icons.
+
+Acceptance: the bar starts with no `Unknown module` and no CSS errors, every listed module resolves,
+and two bars can run at once without their listeners fighting (see LUA-012).
+
 ---
 
 ## 7. Verification playbook
@@ -696,6 +721,10 @@ Deleting or porting a script invalidates prose elsewhere. Check and update:
 - **`io.popen` outside the compositor was left alone.** `config/wezterm/wezterm.lua` and
   `config/yazi/plugins/*` are other applications' Lua configs; they never run in Hyprland's VM, so
   D7 does not apply to them.
+- **The status listeners are tied to their bar.** `HyprEventWatch.sh` exits when the Waybar that
+  spawned it goes away, which it checks every 5s. That is deliberate - it replaces a guard that let
+  orphans live for the whole session - but a bar killed with `SIGKILL` leaves its listener up for up
+  to 5s. A stale pidfile is harmless: the guard only signals a PID it can still see.
 
 ---
 
@@ -896,6 +925,16 @@ files changed, verification evidence, follow-ups.
 
 ### LUA-012 — Stop Waybar polling `hyprctl`
 
+- 2026-10-03 — agent `Oz`: second follow-up. The single-instance guard was keyed by module name
+  only, so running a second bar made the two bars' listeners kill each other; Waybar logged
+  `stopped unexpectedly, is it endless?` and re-ran the module every `restart-interval`.
+  - Changed: `config/hypr/scripts/HyprEventWatch.sh` - the pidfile and fifo are keyed by the parent
+    bar (`hypr-event-watch-<mode>.<waybar-pid>.pid`), only a duplicate for the same bar is replaced,
+    and the event loop uses `read -t 5` so it can notice its bar is gone and exit.
+  - Verification: two-bar test on this host. Bar 2 started and **both** of bar 1's listeners stayed
+    alive; zero `stopped unexpectedly` in either log; after killing bar 2 its listener was gone
+    within 7s while bar 1's stayed up. Pidfiles confirmed as `<mode>.<bar-pid>.pid`.
+
 - 2026-10-03 — agent `Oz`: follow-up pass. The layout label could go stale because Waybar's `signal`
   does not re-exec a script that is still running (see D6), so `signal: 8` on `custom/hypr_layout`
   was dead config. Refresh now goes through the socket.
@@ -979,3 +1018,24 @@ files changed, verification evidence, follow-ups.
     `Hyprsunset.sh status` still emits valid Waybar JSON.
   - Follow-ups: clicking the icon should update it immediately; worth a by-hand check that the
     icon also flips when hyprsunset is killed outside the script (within the 60s interval).
+
+### LUA-015 — Ship the Matt-Legacy Waybar layout
+
+- 2026-10-03 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
+  - Added: `config/hypr/waybar/configs/Matt-Legacy-config` and
+    `config/hypr/waybar/style/Matt-bright-style.css`.
+  - Changed: nothing else - the layout is self-contained and reaches installs through the normal
+    `waybar/configs` + `waybar/style` sync.
+  - Module lists: left `custom/menu`, `custom/hypr_layout`, `hyprland/workspaces`,
+    `hyprland/window`; centre `clock#icon/#text`, `idle_inhibitor`, `custom/weather2`,
+    `custom/hint`; right `custom/swaync#icon/#text`, `cpu#`, `memory#`, `pulseaudio#`,
+    `custom/keyboard`, `tray`, `custom/power`.
+  - Evidence: `WaybarLayout.sh` discovers `configs/*` with `find -L ... -maxdepth 1 -type f`, so no
+    registry edit was needed for the layout to appear in the menu.
+  - Verification: started with `-c <config> -s <style>`. Log showed both includes loading, the CSS
+    parsing, no `Unknown module`, no CSS error and no `stopped unexpectedly`; `Bar configured ...
+    for output: Virtual-1`. Two `swaync-client -swb` processes confirmed the `#icon`/`#text` split is
+    live, and `waybar-weather` confirmed the centre weather module.
+  - Follow-ups: the hardware definitions (battery, network, bluetooth) are present but unlisted, so
+    they need adding to `modules-right` on a machine that has them. `backlight` and `temperature`
+    already come from the included project `Modules`.
