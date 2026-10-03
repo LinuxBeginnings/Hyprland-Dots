@@ -10,11 +10,17 @@
 -- Thank you
 --
 -- Lid close: remove laptop panel from layout
+-- hl.exec_cmd spawns and returns; os.execute blocks the compositor until the
+-- script exits.
 hl.bind("switch:on:Lid Switch", function()
-  os.execute("$HOME/.config/hypr/scripts/LidSwitch.sh close")
+  if hl and hl.exec_cmd then
+    hl.exec_cmd("$HOME/.config/hypr/scripts/LidSwitch.sh close")
+  end
 end)
 
 -- Lid open: restore laptop panel
 hl.bind("switch:off:Lid Switch", function()
-  os.execute("$HOME/.config/hypr/scripts/LidSwitch.sh open")
+  if hl and hl.exec_cmd then
+    hl.exec_cmd("$HOME/.config/hypr/scripts/LidSwitch.sh open")
+  end
 end)

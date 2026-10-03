@@ -25,6 +25,18 @@
   - Both now subscribe to the Hyprland event socket in `HyprEventWatch.sh`
   - They re-render only when the state they show actually changes
   - `HyprLayoutModule.sh` reads the layout over the socket, not `hyprctl`
+- Gesture zoom no longer freezes the compositor
+  - The 3-finger swipe ran `io.popen("hyprctl ...")` on the compositor thread
+  - `io.popen` waits for the child, so the whole session stalled for the round trip
+  - It also wrote through `hyprctl keyword`, the legacy hyprlang form
+  - Now one in-process `hl.get_config` / `hl.config` pair, clamped to 1.0-16.0
+- Laptop monitor layout no longer shells out from the compositor
+  - `user_laptops.lua` used `io.popen` for the lid-state fallback
+  - `connected_drm_connectors()` ran one `io.popen("ls ...")` per DRM card
+  - Lid state now reads fixed sysfs paths, connectors use plain file reads
+- `lua/laptop-lid.lua` uses `hl.exec_cmd` instead of `os.execute`
+  - `os.execute` blocks until the script exits; `hl.exec_cmd` spawns and returns
+  - The file is a sample that is not loaded by default, so this was latent
 
 ## Added:
 

@@ -231,6 +231,31 @@ is not a keybind at all — the cost is paid continuously rather than per keypre
 re-renders only when a relevant event arrives, and reads current state with one socket request.
 `HyprIPC.sh` holds the socket plumbing. Neither script calls `hyprctl`.
 
+### D7 — Blocking calls inside the config Lua VM
+
+`io.popen` and `os.execute` run on the compositor's own thread and wait for the child to finish, so
+the whole compositor is frozen for the duration of the round trip. That is worse than the same work
+done from a keybind script, which at least only stalls its own process. The replacements are:
+
+- `hl.exec_cmd(cmd)` — spawns and returns, the same path the native `exec-once` used.
+- `hl.get_config(key)` / `hl.config({ ... })` — read and write config values in-process.
+- `hl.get_monitors()`, `hl.get_windows()`, `hl.get_active_*()` — query state in-process.
+
+`io.open` is a plain file read with no Lua-API equivalent for arbitrary paths, so config-file reads
+stay. `hl.exec_cmd` does not return output, so anything that needs a command's stdout has to be
+rethought as a query or a socket read rather than ported as-is.
+
+Found in this pass:
+
+- `lua/settings.lua` — the 3-finger swipe zoom ran `io.popen("hyprctl getoption ... | awk ...")` and
+then `hl.dsp.exec_cmd("hyprctl keyword cursor:zoom_factor ...")`. Two forks on the compositor
+thread, and `hyprctl keyword` is the legacy hyprlang form.
+- `UserConfigs/user_laptops.lua` — `io.popen` in the lid-state fallback, plus one
+`io.popen("ls /sys/class/drm/cardN-*/status")` per DRM card while enumerating connectors, on a path
+that runs at config load and on `hyprland.start`.
+- `lua/laptop-lid.lua` — `os.execute` on the lid switch binds. Nothing loads this file (it is a
+sample users enable by hand), so the stall was latent rather than active.
+
 ---
 
 ## 6. Work queue
@@ -479,6 +504,16 @@ Acceptance: `ps` shows no `hyprctl` or `jq` while the session is idle; the layou
 labels still update on a workspace switch, a monitor change, a layout switch and a keyboard layout
 switch.
 
+### LUA-013 — Remove blocking calls from the config Lua VM (D7)
+
+Depends on: none. Status: **done.**
+
+Found by scanning the Lua tree for `io.popen`, `os.execute` and `io.open`, not by reading the keybind
+tree: these run on the compositor's own thread and are never reached through a script.
+
+Acceptance: no `io.popen` or `os.execute` left on a live compositor path; the zoom gestures, the
+laptop monitor layout and the lid binds still behave; `luac -p` clean.
+
 ---
 
 ## 7. Verification playbook
@@ -626,6 +661,15 @@ Deleting or porting a script invalidates prose elsewhere. Check and update:
   workspace, monitor and config-reload events, and `ChangeLayout.sh` pushes its own RTMIN+8 signal.
   A layout change made some other way (a workspace rule applied by something that neither switches
   workspace nor signals Waybar) would not redraw until the next event.
+- **The DRM connector scan now uses a fixed name list.** `connected_drm_connectors()` in
+  `user_laptops.lua` used to discover any connector present in sysfs through `ls`; it now probes a
+  known list of names with `io.open` (LUA-013). Anything unusual is still added by the
+  `hl.get_monitors()` union in `get_connected_monitors()`, which is what drives the layout, but a
+  non-standard connector present in sysfs and not yet known to Hyprland would no longer be seen
+  early. Lua has no `readdir`, so the alternatives are a blocking `io.popen` or an async helper.
+- **`io.popen` outside the compositor was left alone.** `config/wezterm/wezterm.lua` and
+  `config/yazi/plugins/*` are other applications' Lua configs; they never run in Hyprland's VM, so
+  D7 does not apply to them.
 
 ---
 
@@ -845,3 +889,25 @@ files changed, verification evidence, follow-ups.
     running and `ps` reports **0** `hyprctl`/`jq` hits over a 20 s sample, against ~4.5/s before.
   - Follow-ups: `custom/nightlight` still polls with `pgrep` — see
     [open questions](#9-open-questions-and-known-risks).
+
+### LUA-013 — Remove blocking calls from the config Lua VM
+
+- 2026-10-03 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
+  - Changed: `config/hypr/lua/settings.lua` (gesture zoom uses `hl.get_config` / `hl.config`,
+    clamped to 1.0-16.0), `config/hypr/UserConfigs/user_laptops.lua` (dropped the `read_command`
+    `io.popen` helper and the `cat /proc/acpi/button/lid/*/state` fallback; `connected_drm_connectors`
+    probes a known connector-name list with `io.open` instead of one `io.popen("ls ...")` per card),
+    `config/hypr/lua/laptop-lid.lua` (`os.execute` -> `hl.exec_cmd`).
+  - Evidence: `075ce3eb` ("Fixed io.open calls with LUA API") is the commit that **introduced** the
+    `user_laptops.lua` `io.popen` calls - it converted shell `hyprctl`/`ls` usage into blocking Lua
+    file and pipe reads. The `settings.lua` gesture `io.popen` came from `1d6ae586`, an ancestor of
+    that cleanup, so the sweep only ever covered `io.open`.
+  - Verification: `luac -p` clean on all three files; no executable `io.popen` remains in
+    `config/hypr/`. Equivalence check for the risky part: the old `ls`-based sysfs glob reports
+    `Virtual-1`, and the refactored scan (with `hl.get_monitors` stubbed empty so only the DRM path
+    can contribute) reports `Virtual-1` as well. The whole file was executed against a stubbed `hl`
+    on real sysfs, so both `is_lid_closed()` and `connected_drm_connectors()` ran without error.
+  - Follow-ups: the DRM name-list trade-off is recorded in
+    [open questions](#9-open-questions-and-known-risks). The `os.execute` fallbacks in
+    `lua/user_startup_helper.lua:82` and `UserConfigs/user_laptops.lua:211` are guarded by
+    `hl.exec_cmd` and unreachable on a Lua build, so they were left in place.
