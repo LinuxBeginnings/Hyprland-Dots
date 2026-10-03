@@ -207,6 +207,18 @@ local function dispatch(name, args)
       end)
     end
   end
+  if name == "cyclenext" then
+    -- In-process replacement for scripts/LuaCycleWindow.sh, which is gone.
+    -- Previously this fell through to `hyprctl dispatch cyclenext`, a legacy
+    -- dispatcher name that no longer resolves, so the bind did nothing.
+    local previous = args == "prev" or args == "b"
+    return function()
+      local actions = rawget(_G, "KOOLDOTS_WINDOW_ACTIONS")
+      if actions and actions.cycle_window then
+        actions.cycle_window(previous and "previous" or "next")
+      end
+    end
+  end
   if name == "movewindow" and window_api.move then
     return function()
       dispatch_factory_safely(function()

@@ -193,10 +193,14 @@ local function dispatch(name, args)
     end
   end
   if name == "cyclenext" then
-    if args == "prev" or args == "b" then
-      return exec_cmd("$HOME/.config/hypr/scripts/LuaCycleWindow.sh previous")
+    -- In-process replacement for scripts/LuaCycleWindow.sh.
+    local previous = args == "prev" or args == "b"
+    return function()
+      local actions = rawget(_G, "KOOLDOTS_WINDOW_ACTIONS")
+      if actions and actions.cycle_window then
+        actions.cycle_window(previous and "previous" or "next")
+      end
     end
-    return exec_cmd("$HOME/.config/hypr/scripts/LuaCycleWindow.sh next")
   end
   if name == "swapwindow" then
     local swap_direction = trim(args)
@@ -370,6 +374,23 @@ local function dispatch(name, args)
     return raw_dispatch_cmd(name .. " " .. args)
   end
   return raw_dispatch_cmd(name)
+end
+
+-- In-process replacements for scripts/LayoutKeybindDispatch.sh and
+-- scripts/LuaCycleWindow.sh. They resolve KOOLDOTS_WINDOW_ACTIONS at keypress
+-- time so load order does not matter. See lua/window_actions.lua.
+local function layout_cycle(direction)
+  local actions = rawget(_G, "KOOLDOTS_WINDOW_ACTIONS")
+  if actions and actions.layout_cycle then
+    actions.layout_cycle(direction)
+  end
+end
+
+local function layout_focus(direction)
+  local actions = rawget(_G, "KOOLDOTS_WINDOW_ACTIONS")
+  if actions and actions.layout_focus then
+    actions.layout_focus(direction)
+  end
 end
 
 local function bind(mods, key, fn, opts)
@@ -663,18 +684,12 @@ bind(
 )
 bind("SUPER CTRL", "D", dispatch("layoutmsg", "removemaster"), { description = "remove master" })
 bind("SUPER", "I", dispatch("layoutmsg", "addmaster"), { description = "add master" })
-bind(
-  "SUPER",
-  "j",
-  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh cycle-next"),
-  { description = "cycle next (layout-aware)" }
-)
-bind(
-  "SUPER",
-  "k",
-  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh cycle-prev"),
-  { description = "cycle previous (layout-aware)" }
-)
+bind("SUPER", "j", function()
+  layout_cycle("next")
+end, { description = "cycle next (layout-aware)" })
+bind("SUPER", "k", function()
+  layout_cycle("previous")
+end, { description = "cycle previous (layout-aware)" })
 bind("SUPER CTRL", "Return", dispatch("layoutmsg", "swapwithmaster"), { description = "swap with master" })
 bind("SUPER SHIFT", "I", dispatch("layoutmsg", "togglesplit"), { description = "toggle split (dwindle)" })
 bind("SUPER", "P", dispatch("pseudo", ""), { description = "toggle pseudo (dwindle)" })
@@ -944,30 +959,18 @@ bind("SUPER SHIFT", "Tab", dispatch("changegroupactive", "b"), { description = "
 bind("SUPER CTRL", "J", dispatch("moveintogroup", "l"), { description = "Move left into group" })
 bind("SUPER CTRL", "L", dispatch("moveintogroup", "r"), { description = "Move Right into group" })
 bind("SUPER CTRL", "H", dispatch("moveoutofgroup", ""), { description = "Move active out of group" })
-bind(
-  "SUPER",
-  "left",
-  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh focus-left"),
-  { description = "focus left (layout-aware)" }
-)
-bind(
-  "SUPER",
-  "right",
-  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh focus-right"),
-  { description = "focus right (layout-aware)" }
-)
-bind(
-  "SUPER",
-  "up",
-  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh focus-up"),
-  { description = "focus up (layout-aware)" }
-)
-bind(
-  "SUPER",
-  "down",
-  exec_cmd("$HOME/.config/hypr/scripts/LayoutKeybindDispatch.sh focus-down"),
-  { description = "focus down (layout-aware)" }
-)
+bind("SUPER", "left", function()
+  layout_focus("left")
+end, { description = "focus left (layout-aware)" })
+bind("SUPER", "right", function()
+  layout_focus("right")
+end, { description = "focus right (layout-aware)" })
+bind("SUPER", "up", function()
+  layout_focus("up")
+end, { description = "focus up (layout-aware)" })
+bind("SUPER", "down", function()
+  layout_focus("down")
+end, { description = "focus down (layout-aware)" })
 bind("SUPER", "tab", dispatch("workspace", "m+1"), { description = "next workspace" })
 bind("SUPER SHIFT", "tab", dispatch("workspace", "m-1"), { description = "previous workspace" })
 local qs_hyprview_layout = "smartgrid"

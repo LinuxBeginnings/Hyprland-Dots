@@ -8,7 +8,7 @@ Source: `config/hypr/configs/system_keybinds.lua`
 
 ## Duplicate / Intentional Stacked Binds Audit
 - `ALT + Tab`
-  - `cyclenext` (cycles window focus via `LuaCycleWindow.sh next`)
+  - `cyclenext` (cycles window focus via the in-process `cycle_window` action)
 - `SUPER + Tab` / `SUPER + SHIFT + Tab`
   - Group active cycle (`changegroupactive f/b`) and workspace cycle (`workspace e+1/e-1`)
 
@@ -104,10 +104,10 @@ Source: `config/hypr/configs/system_keybinds.lua`
 
 ## Focus / Move / Resize / Swap
 ### Focus
-- `SUPER + j` — Cycle next window (layout-aware via `LayoutKeybindDispatch.sh cycle-next`)
-- `SUPER + k` — Cycle previous window (layout-aware via `LayoutKeybindDispatch.sh cycle-prev`)
-- `SUPER + Left/Right/Up/Down` — Focus window by direction (layout-aware via `LayoutKeybindDispatch.sh focus-*`)
-- `ALT + Tab` — Cycle next window (`LuaCycleWindow.sh next`)
+- `SUPER + j` — Cycle next window (layout-aware, in-process `layout_cycle`)
+- `SUPER + k` — Cycle previous window (layout-aware, in-process `layout_cycle`)
+- `SUPER + Left/Right/Up/Down` — Focus window by direction (layout-aware, in-process `layout_focus`)
+- `ALT + Tab` — Cycle next window (in-process `cycle_window`)
 
 ### Move windows
 - `SUPER + CTRL + Left/Right/Up/Down` — Move window by direction (`movewindow l/r/u/d`)

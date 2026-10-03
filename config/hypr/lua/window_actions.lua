@@ -10,8 +10,10 @@
 -- VM, so a keybind costs zero process forks and zero hyprctl IPC round trips.
 --
 -- Replaces:
---   scripts/float.all.samesize.lua     -> M.same_size_floating()
---   scripts/ScrollCycleColumnWidth.sh  -> M.cycle_column_width()
+--   scripts/float.all.samesize.lua      -> M.same_size_floating()
+--   scripts/ScrollCycleColumnWidth.sh   -> M.cycle_column_width()
+--   scripts/LuaCycleWindow.sh           -> M.cycle_window()
+--   scripts/LayoutKeybindDispatch.sh    -> M.layout_cycle(), M.layout_focus()
 --
 -- See docs/LuaScriptsMigrationPlan.md for the rules these follow. In short:
 --   * never call hyprctl from here, the hl.* API is already in-process
@@ -315,6 +317,269 @@ function M.cycle_column_width()
 
   local next_preset = COLUMN_WIDTH_PRESETS[(closest % #COLUMN_WIDTH_PRESETS) + 1]
   dispatch(hl.dsp.layout("colresize " .. tostring(next_preset)))
+end
+
+-- ---------------------------------------------------------------------------
+-- Window cycling and layout-aware focus
+-- ---------------------------------------------------------------------------
+-- Replaces:
+--   scripts/LuaCycleWindow.sh        -> M.cycle_window(direction)
+--   scripts/LayoutKeybindDispatch.sh -> M.layout_cycle(direction), M.layout_focus(direction)
+--
+-- Both scripts forked bash, several hyprctl calls and a jq on every keypress, on
+-- binds users hold down. Everything below runs inside Hyprland's Lua VM.
+--
+-- The layout-aware paths follow LayoutKeybindDispatch.sh: try the layout's own
+-- message first and fall back only when it did not actually move focus. That
+-- keeps the scrolling and monocle quirks working without a "did focus change?"
+-- round trip through hyprctl.
+
+local KNOWN_LAYOUTS = {
+  master = true,
+  dwindle = true,
+  scrolling = true,
+  monocle = true,
+}
+
+-- Scrolling and monocle layout messages take the short direction letters.
+local LAYOUT_LETTER = { left = "l", right = "r", up = "u", down = "d" }
+
+local function normalize_layout(value)
+  if type(value) ~= "string" then
+    return nil
+  end
+  local layout = value:gsub("^%s+", ""):gsub("%s+$", "")
+  if KNOWN_LAYOUTS[layout] then
+    return layout
+  end
+  return nil
+end
+
+--- Active workspace layout, normalised to master/dwindle/scrolling/monocle.
+--- Mirrors LayoutKeybindDispatch.sh: workspace first, then general.layout, then
+--- dwindle.
+local function active_layout()
+  local workspace = hl.get_active_workspace and hl.get_active_workspace()
+  local layout = normalize_layout(workspace and workspace.tiled_layout)
+  if layout then
+    return layout
+  end
+  layout = normalize_layout(hl.get_config and hl.get_config("general.layout"))
+  return layout or "dwindle"
+end
+
+local function active_address()
+  local win = hl.get_active_window and hl.get_active_window()
+  return win and win.address
+end
+
+--- Dispatch `fn` and report whether the focused window changed. In-process
+--- form of LayoutKeybindDispatch.sh's dispatch_changed_focus: it lets a layout
+--- message try first and falls back only when the attempt was a no-op.
+local function dispatch_changed_focus(fn)
+  local before = active_address()
+  if fn then
+    fn()
+  end
+  local after = active_address()
+  return before ~= nil and after ~= nil and before ~= after
+end
+
+local function focus_direction(dir)
+  if hl and hl.dsp and hl.dsp.focus then
+    dispatch(hl.dsp.focus({ direction = dir }))
+  end
+end
+
+local function layout_message(msg)
+  if hl and hl.dsp and hl.dsp.layout then
+    dispatch(hl.dsp.layout(msg))
+  end
+end
+
+--- Native cyclenext. `next = false` is the documented way to cycle backwards;
+--- there is no `prev` field. Monocle ignores this dispatcher, which is why the
+--- layout-aware paths below only reach it for the other layouts.
+local function native_cycle(previous)
+  if not (hl and hl.dsp and hl.dsp.window and hl.dsp.window.cycle_next) then
+    return
+  end
+  if previous then
+    dispatch(hl.dsp.window.cycle_next({ next = false }))
+  else
+    dispatch(hl.dsp.window.cycle_next())
+  end
+end
+
+local function window_position(win)
+  local at = win and win.at
+  if type(at) ~= "table" then
+    return 0, 0
+  end
+  return as_number(at.y or at[2]) or 0, as_number(at.x or at[1]) or 0
+end
+
+--- Focusable windows on a workspace in the order LuaCycleWindow.sh used:
+--- mapped, not hidden, sorted by y then x then address.
+local function cycle_order(workspace_id)
+  local windows = {}
+  local all = (hl.get_windows and hl.get_windows({ workspace = workspace_id })) or {}
+  for _, win in ipairs(all) do
+    if win.mapped and not win.hidden then
+      windows[#windows + 1] = win
+    end
+  end
+  table.sort(windows, function(a, b)
+    local ay, ax = window_position(a)
+    local by, bx = window_position(b)
+    if ay ~= by then
+      return ay < by
+    end
+    if ax ~= bx then
+      return ax < bx
+    end
+    return tostring(a.address) < tostring(b.address)
+  end)
+  return windows
+end
+
+--- Focus the next/previous focusable window on the active workspace, cycling in
+--- address-sorted order. Replaces scripts/LuaCycleWindow.sh.
+function M.cycle_window(direction)
+  if not (hl and hl.dsp and hl.dsp.focus) then
+    return
+  end
+
+  local active = hl.get_active_window and hl.get_active_window()
+  local workspace = active and active.workspace
+  if not workspace or workspace.id == nil then
+    return
+  end
+
+  local windows = cycle_order(workspace.id)
+  if #windows < 2 then
+    return
+  end
+
+  local index
+  for i, win in ipairs(windows) do
+    if win.address == active.address then
+      index = i
+      break
+    end
+  end
+  if not index then
+    return
+  end
+
+  local target
+  if direction == "previous" or direction == "prev" or direction == "back" then
+    target = windows[((index - 2) % #windows) + 1]
+  else
+    target = windows[(index % #windows) + 1]
+  end
+
+  if target then
+    dispatch(hl.dsp.focus({ window = target }))
+  end
+end
+
+local function cycle_forward(layout)
+  if layout == "scrolling" then
+    if not dispatch_changed_focus(function()
+      layout_message("focus r")
+    end) then
+      focus_direction("right")
+    end
+    return
+  end
+  if layout == "monocle" then
+    if not dispatch_changed_focus(function()
+      layout_message("cyclenext")
+    end) then
+      M.cycle_window("next")
+    end
+    return
+  end
+  if not dispatch_changed_focus(function()
+    native_cycle(false)
+  end) then
+    M.cycle_window("next")
+  end
+end
+
+local function cycle_backward(layout)
+  if layout == "scrolling" then
+    if not dispatch_changed_focus(function()
+      layout_message("focus l")
+    end) then
+      focus_direction("left")
+    end
+    return
+  end
+  if layout == "monocle" then
+    if not dispatch_changed_focus(function()
+      layout_message("cycleprev")
+    end) then
+      M.cycle_window("previous")
+    end
+    return
+  end
+  if not dispatch_changed_focus(function()
+    native_cycle(true)
+  end) then
+    M.cycle_window("previous")
+  end
+end
+
+--- Layout-aware window cycle for SUPER+j / SUPER+k. `direction` is "next" or
+--- "previous".
+function M.layout_cycle(direction)
+  if not (hl and hl.dsp) then
+    return
+  end
+  local layout = active_layout()
+  if direction == "previous" or direction == "prev" or direction == "back" then
+    cycle_backward(layout)
+  else
+    cycle_forward(layout)
+  end
+end
+
+--- Layout-aware directional focus for SUPER+arrow. `direction` is one of
+--- "left", "right", "up", "down".
+function M.layout_focus(direction)
+  if not (hl and hl.dsp) then
+    return
+  end
+
+  local dir = direction or "right"
+  local layout = active_layout()
+  local backwards = dir == "left" or dir == "up"
+
+  if layout == "scrolling" then
+    local letter = LAYOUT_LETTER[dir] or "r"
+    if not dispatch_changed_focus(function()
+      layout_message("focus " .. letter)
+    end) then
+      focus_direction(dir)
+    end
+    return
+  end
+
+  if layout == "monocle" or layout == "dwindle" then
+    -- Neither layout has directional focus, so the arrows walk the
+    -- address-sorted cycle like SUPER+j / SUPER+k do.
+    if backwards then
+      cycle_backward(layout)
+    else
+      cycle_forward(layout)
+    end
+    return
+  end
+
+  -- master, and any layout we do not recognise: plain directional focus.
+  focus_direction(dir)
 end
 
 -- Exposed so system_keybinds.lua can reach it regardless of load order.

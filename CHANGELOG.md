@@ -1,5 +1,30 @@
 # Changelog — KoolDots
 
+## v2.3.28
+
+## Fixed:
+
+- Layout-aware focus binds no longer fork a script per keypress
+  - `SUPER + j`/`k` and `SUPER + arrow` ran `LayoutKeybindDispatch.sh`
+  - It spawned bash, 4-8 `hyprctl` and `jq` processes on every press
+  - Ported to `lua/window_actions.lua` as `layout_cycle`/`layout_focus`
+  - Tries the layout message first, falls back only if focus did not move
+  - Scrolling uses `hl.dsp.layout("focus l/r")`, monocle `cyclenext`/`cycleprev`
+  - Everything else uses `hl.dsp.focus` and `hl.dsp.window.cycle_next`
+- `ALT + Tab` and user `cyclenext` binds now cycle in-process
+  - `LuaCycleWindow.sh` spawned bash, 2 `hyprctl` and a `jq` program per press
+  - Ported to `lua/window_actions.lua` as `cycle_window`, address-sorted order
+  - `dispatch("cyclenext")` in user configs fell through to a dead legacy name
+  - `lua/user_keybinds_helper.lua` now maps it to the in-process action
+
+## Removed:
+
+- `scripts/LayoutKeybindDispatch.sh` and `scripts/LuaCycleWindow.sh`
+  - Both are replaced by in-process actions in `lua/window_actions.lua`
+  - `docs/Keybinds.md` names the in-process actions instead of the scripts
+
+---
+
 ## v2.3.27.7
 
 ## Fixed:

@@ -1,6 +1,9 @@
 # Lua Scripts Migration Plan
 
-Status: **in progress** — see [Completion log](#completion-log) at the bottom for what is already done.
+Status: **queue complete** — every item in the [work queue](#6-work-queue) is done. See the
+[Completion log](#completion-log) for evidence, and
+[open questions](#9-open-questions-and-known-risks) for the runtime checks still outstanding on the
+Gentoo host.
 
 Owner: any agent picking up the Lua migration for KoolDots / Hyprland-Dots.
 Scope: `config/hypr/scripts/*` and the Lua config tree under `config/hypr/`.
@@ -397,25 +400,28 @@ Steps:
 Acceptance: edit-and-save still applies live; no `inotifywait` process running; no
 `hyprctl reload` watcher in `ps`.
 
-### LUA-009 — Port `LayoutKeybindDispatch.sh` (deferred)
+### LUA-009 — Port `LayoutKeybindDispatch.sh`
 
-Depends on: LUA-006. Status: **deferred — not in the original scope.**
+Depends on: LUA-006. Status: **done.**
 
-`config/hypr/scripts/LayoutKeybindDispatch.sh` is ~220 lines of bash and spawns 4-8 `hyprctl` + `jq`
-processes per keypress to do layout-aware focus with a "did focus change?" fallback. It is the largest
-remaining bash hot path in the keybind tree. It also depends on `LuaCycleWindow.sh`, so porting it is
-a prerequisite for deleting that script.
+`config/hypr/scripts/LayoutKeybindDispatch.sh` was ~220 lines of bash spawning 4-8 `hyprctl` + `jq`
+processes per keypress to do layout-aware focus with a "did focus change?" fallback. It was the
+largest remaining bash hot path in the keybind tree, and it depended on `LuaCycleWindow.sh`.
 
-Do not start this item until LUA-006 and LUA-007 are verified, because the fallback semantics
-(`dispatch_changed_focus`) need live confirmation per layout.
+Ported to `layout_cycle()` / `layout_focus()` in `config/hypr/lua/window_actions.lua`. The
+attempt-then-fallback shape is preserved: try the layout's own message, and fall back only when the
+focused window did not change. `hl.dsp.window.cycle_next()` is the native candidate for the
+non-scrolling, non-monocle case; the address-sorted ordering stays as the fallback.
 
-### LUA-010 — Port `LuaCycleWindow.sh` (deferred)
+### LUA-010 — Port `LuaCycleWindow.sh`
 
-Depends on: LUA-009. Status: **deferred — not in the original scope.**
+Depends on: LUA-009. Status: **done.**
 
-`LuaCycleWindow.sh` is currently still referenced by `configs/system_keybinds.lua` (the `cyclenext`
-handler) and by `LayoutKeybindDispatch.sh`. Native candidate: `hl.dsp.window.cycle_next()`, with the
-address-sorted ordering implemented in Lua only if the native dispatcher proves insufficient.
+`LuaCycleWindow.sh` was referenced by `configs/system_keybinds.lua` (the `cyclenext` handler) and by
+`LayoutKeybindDispatch.sh`. Ported to `cycle_window()` in `config/hypr/lua/window_actions.lua`,
+keeping the address-sorted ordering (`y`, then `x`, then `address`) that the `jq` program used. A
+`cyclenext` handler was also added to `lua/user_keybinds_helper.lua`, where the name previously fell
+through to a legacy dispatcher that no longer resolves.
 
 ### LUA-011 — Sweep remaining legacy dispatcher names
 
@@ -508,8 +514,8 @@ An in-process bind produces no new lines. A script-based bind produces several.
 Deleting or porting a script invalidates prose elsewhere. Check and update:
 
 - `docs/Keybinds.md` — updated by LUA-002/LUA-005/LUA-006 to name the canonical source file and the
-  ported binds. It still names `LuaCycleWindow.sh` and `LayoutKeybindDispatch.sh`, which stay live
-  until LUA-009/LUA-010.
+  ported binds, and by LUA-009/LUA-010 to name the in-process `layout_cycle` / `layout_focus` /
+  `cycle_window` actions instead of the deleted scripts.
 - `config/hypr/scripts/KeyBinds.sh` and `config/hypr/scripts/Kool_Quick_Settings.sh` — both decide
   which keybind file to read. Update them whenever the canonical keybind file moves.
 - `CHANGELOG.md` — add a user-visible entry for each removal.
@@ -520,12 +526,13 @@ Deleting or porting a script invalidates prose elsewhere. Check and update:
 ## 9. Open questions and known risks
 
 - **Generator drift.** `scripts/migrate-hypr-to-lua.sh` embeds its own copy of the dispatch helper
-  (`:1820-1900`) which still references `LuaSwapWindow.sh` and `LuaCycleWindow.sh`, and still lacks
-  the `resizeactive` mapping. That path only runs when a user's config dir has no
-  `configs/system_keybinds.lua`, and the repo always ships one, so it is effectively unreachable.
-  Confirm this and then either delete the embedded fallback or regenerate it from the canonical file.
-  Do not hand-edit the embedded strings without running the generator end to end in a scratch
-  directory.
+  (the `system_keybind_lines` list, `:1667-1920`) which still references `LuaSwapWindow.sh` and the
+  now-deleted `LuaCycleWindow.sh`, and still lacks the `resizeactive` mapping. **Confirmed
+  unreachable:** the generator copies `configs/system_keybinds.lua` verbatim whenever it exists
+  (`:1921-1923`), and the repo always ships one, so the embedded fallback only runs for a user config
+  dir with no canonical file. Still to do: either delete the embedded fallback or regenerate it from
+  the canonical file. Do not hand-edit the embedded strings without running the generator end to end
+  in a scratch directory.
 - **Upgrade risk for existing users.** Deleting a script assumes the user's deployed
   `configs/system_keybinds.lua` is replaced on upgrade. `migrate-hypr-to-lua.sh:1921-1922` copies the
   canonical file over the deployed one, so this holds — but confirm it for the release that carries
@@ -550,9 +557,23 @@ Deleting or porting a script invalidates prose elsewhere. Check and update:
 - **`hl.get_config("general.layout")` return type.** `same_size_floating` falls back to it when the
   workspace does not report `tiled_layout`. It returns a string in the current build; confirm on the
   Gentoo host.
-- **Layout-aware focus is still bash.** `LayoutKeybindDispatch.sh` remains the largest bash hot path
-  in the keybind tree (LUA-009). Until it is ported, `SUPER + j/k` and the layout-aware arrow focus
-  binds still spawn several processes per keypress.
+- **Layout-aware focus is now in-process.** `LayoutKeybindDispatch.sh` and `LuaCycleWindow.sh` are
+  gone (LUA-009/LUA-010). `SUPER + j/k`, `ALT + Tab` and the layout-aware arrow focus binds now run
+  `lua/window_actions.lua` inside the Lua VM. Per-layout runtime confirmation is still outstanding on
+  the Gentoo host.
+- **`dispatch_changed_focus` assumes a synchronous dispatch.** The ported layout-aware paths read
+  `hl.get_active_window().address`, dispatch, read it again, and treat "unchanged" as a no-op that
+  triggers the fallback. That matches the old script's hyprctl round trip only if `hl.dispatch`
+  applies focus synchronously inside the Lua VM. Confirm on the Gentoo host that `SUPER + j` on a
+  scrolling workspace advances exactly one column and does not double-step.
+- **`cycle_next` backwards direction.** `hl.dsp.window.cycle_next({ next = false })` is the documented
+  form for the previous window; the undocumented `prev` field is a leftover with a known bug
+  (hyprwm/Hyprland#14716). Verified against the Hyprland v0.56.2 source (`Actions::cycleNext` uses
+  `previous = !next`), not yet exercised at runtime.
+- **`pin` has no handler in `lua/user_keybinds_helper.lua`.** `docs/HOWTO-Change-Keybindgs.md` shows
+  `dispatch("pin", ...)` in its examples, but the helper has no `pin` branch, so it reaches
+  `raw_dispatch_cmd("pin")` and `hyprctl dispatch pin` fails like the other legacy names. Same defect
+  class as D1/D3. Add `hl.dsp.window.pin({ action })` next time the user-facing examples are touched.
 
 ---
 
@@ -706,3 +727,47 @@ files changed, verification evidence, follow-ups.
   outside the scope of the first pass and still have live references
   (`configs/system_keybinds.lua` `cyclenext` handler; `LayoutKeybindDispatch.sh:17`). Start LUA-009
   before attempting LUA-010.
+
+### LUA-009 — Port `LayoutKeybindDispatch.sh`
+
+- 2026-10-03 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
+  - Added: `layout_cycle()`, `layout_focus()` and their helpers in
+    `config/hypr/lua/window_actions.lua`.
+  - Changed: `config/hypr/configs/system_keybinds.lua` — `SUPER + j`/`k` and the four layout-aware
+    `SUPER + arrow` binds now call the Lua actions instead of `exec_cmd`ing the script.
+  - Deleted: `config/hypr/scripts/LayoutKeybindDispatch.sh`.
+  - Port: layout resolution is `workspace.tiled_layout`, then `general.layout`, then `dwindle`.
+    `dispatch_changed_focus` is the in-process form of the old address-before/address-after check.
+    Scrolling tries `hl.dsp.layout("focus l/r")` then falls back to `hl.dsp.focus`; monocle tries
+    `cyclenext`/`cycleprev` then falls back to the address-sorted cycle; everything else tries
+    `hl.dsp.window.cycle_next()` then falls back. Master and unknown layouts use `hl.dsp.focus`.
+  - Evidence: the legacy `layoutmsg`/`cyclenext`/`movefocus` strings the script passed to `hyprctl`
+    are not Lua globals (D3), so on 0.56.2 every `dispatch_changed_focus` attempt failed and the
+    fallback ran. The port keeps the attempt-then-fallback shape so a build that does honour the
+    layout message still behaves the same.
+  - Verification: `luac -p` clean on all three changed Lua files, and the LUA-011 audit (every
+    `dispatch("…")` name in the canonical keybinds has an explicit handler) passes. **Runtime
+    verification outstanding on the Gentoo host**: `SUPER + j`/`k` and `SUPER + arrow` on dwindle,
+    master, scrolling and monocle, with no `hyprctl`/`jq` fork visible in `ps`.
+  - Follow-ups: `docs/Keybinds.md:107-110` updated. The backwards direction was verified against the
+    Hyprland v0.56.2 source rather than at runtime.
+
+### LUA-010 — Port `LuaCycleWindow.sh`
+
+- 2026-10-03 — agent `Oz`
+  - Added: `cycle_window()` and its address-sorted helper in `config/hypr/lua/window_actions.lua`.
+  - Changed: `config/hypr/configs/system_keybinds.lua` (the `cyclenext` handler no longer
+    `exec_cmd`s the script) and `config/hypr/lua/user_keybinds_helper.lua` (gains a `cyclenext`
+    handler; it previously fell through to a legacy name that no longer resolves).
+  - Deleted: `config/hypr/scripts/LuaCycleWindow.sh`.
+  - Port: filters `hl.get_windows({ workspace = <id> })` to `mapped` and not `hidden`, sorts by `y`,
+    then `x`, then `address` (the old `jq` `sort_by(.y, .x, .address)`), finds the active window and
+    focuses the next/previous entry, wrapping. Uses `win.at.x`/`win.at.y` and
+    `hl.dsp.focus({ window = <HL.Window> })` — no `address:0x…` strings, no JSON.
+  - Evidence: the script forked bash + 2 `hyprctl` + a ~25-line `jq` program per press; the port is
+    zero processes and zero IPC.
+  - Verification: `luac -p` clean. **Runtime verification outstanding on the Gentoo host**:
+    `ALT + Tab` and `SUPER + j`/`k` walk every window on the workspace and wrap, with no `hyprctl` or
+    `jq` process spawned.
+  - Follow-ups: `docs/Keybinds.md:11,110` updated. The generator's embedded fallback still names the
+    deleted script — see [open questions](#9-open-questions-and-known-risks).
