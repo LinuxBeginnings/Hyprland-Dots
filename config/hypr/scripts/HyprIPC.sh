@@ -70,3 +70,15 @@ hypr_request() {
 
   printf '%s' "$1" | socat - "UNIX-CONNECT:$socket" 2>/dev/null
 }
+
+# hypr_emit_event <name>
+# Ask Hyprland to broadcast a custom event on socket2. This is how a script tells
+# the event-driven Waybar modules that something they render has changed; socket2
+# is write-only from Hyprland's side, so the event goes through the Lua
+# dispatcher. It arrives on socket2 as `custom>><name>`.
+hypr_emit_event() {
+  local name="$1"
+
+  command -v hyprctl >/dev/null 2>&1 || return 1
+  hyprctl dispatch "hl.dsp.event(\"$name\")" >/dev/null 2>&1 || true
+}

@@ -120,9 +120,10 @@ render() {
 case "$mode" in
 layout)
   # A workspace carries its own layout, so a workspace or monitor switch can
-  # change the label too. Layout changes made by ChangeLayout.sh arrive as its
-  # RTMIN+8 Waybar signal instead, which re-runs this script.
-  event_re='^(workspace|workspacev2|focusedmon|monitoradded|monitorremoved|configreloaded)>>'
+  # change the label too. A layout change produces no event of its own, so
+  # ChangeLayout.sh and the layout menu push one in with hypr_emit_event, which
+  # arrives as `custom>>kool:layout`.
+  event_re='^(custom|workspace|workspacev2|focusedmon|monitoradded|monitorremoved|configreloaded)>>'
   ;;
 keyboard)
   event_re='^activelayout>>'

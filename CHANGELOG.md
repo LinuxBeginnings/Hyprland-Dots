@@ -37,6 +37,18 @@
 - `lua/laptop-lid.lua` uses `hl.exec_cmd` instead of `os.execute`
   - `os.execute` blocks until the script exits; `hl.exec_cmd` spawns and returns
   - The file is a sample that is not loaded by default, so this was latent
+- Layout label refresh now goes through the Hyprland socket
+  - Waybar only re-execs a custom module while the script is not running
+  - Both status modules loop, so `signal: 8` never fired
+  - The label went stale until the next workspace switch
+  - `ChangeLayout.sh` and the layout menu now emit `custom>>kool:layout`
+  - `hypr_emit_event` in `HyprIPC.sh` sends it; the listener re-renders on it
+- `HyprLayoutModule.sh` had lost its `change_layout` path
+  - `set_layout` called an empty variable, so the layout menu set nothing
+- Night light icon updates on change instead of a 3s poll
+  - `custom/nightlight` re-ran bash + pgrep every 3s for a manual label
+  - `Hyprsunset.sh` pushes RTMIN+9 on change and reads its state without `cat`
+  - The module keeps a 60s interval for hyprsunset exiting outside the script
 
 ## Added:
 

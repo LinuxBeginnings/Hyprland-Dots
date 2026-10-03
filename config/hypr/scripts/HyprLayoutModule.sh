@@ -11,6 +11,7 @@ IFS=$'\n\t'
 
 SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 rofi_config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-layout.rasi"
+change_layout="${SCRIPTSDIR}/ChangeLayout.sh"
 layouts=(dwindle master scrolling monocle)
 
 # The status read goes straight to the Hyprland IPC socket. It used to shell
@@ -168,8 +169,11 @@ next_layout() {
 	echo "${layouts[0]}"
 }
 
+# Tell the event-driven Waybar module that the layout it renders has changed.
+# It is a looping script, so Waybar will not re-exec it on an RT signal - it
+# listens on socket2 instead.
 refresh_waybar() {
-	pkill -RTMIN+8 waybar 2>/dev/null || true
+	hypr_emit_event "kool:layout"
 }
 
 set_layout() {

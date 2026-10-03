@@ -233,6 +233,18 @@ is not a keybind at all — the cost is paid continuously rather than per keypre
 re-renders only when a relevant event arrives, and reads current state with one socket request.
 `HyprIPC.sh` holds the socket plumbing. Neither script calls `hyprctl`.
 
+**A looping module cannot be refreshed by a Waybar `signal`.** Waybar re-execs a custom module's
+`exec` on SIGRTMIN+N only while that script is *not* running - documented as "if a `signal` is
+defined then the script will run once on startup and will only update with a signal". Both status
+modules are long-running, so `signal: 8` on `custom/hypr_layout` was dead configuration, and the
+label went stale until the next socket event. Anything a listener cannot observe for itself - a
+layout change produces no Hyprland event - is now pushed to it as a socket2 custom event through
+`hypr_emit_event`. A one-shot `exec` can still use a signal, which is how `custom/nightlight` works.
+
+Also documented there: `restart-interval` cannot be combined with `interval` (continuous scripts
+only), which is why the looping modules use the former and the one-shot night-light module the
+latter.
+
 ### D7 — Blocking calls inside the config Lua VM
 
 `io.popen` and `os.execute` run on the compositor's own thread and wait for the child to finish, so
@@ -515,6 +527,18 @@ tree: these run on the compositor's own thread and are never reached through a s
 
 Acceptance: no `io.popen` or `os.execute` left on a live compositor path; the zoom gestures, the
 laptop monitor layout and the lid binds still behave; `luac -p` clean.
+
+### LUA-014 — Refresh the night-light module on change (D6)
+
+Depends on: LUA-012. Status: **done.**
+
+`custom/nightlight` polled `Hyprsunset.sh status` on `interval: 3`, so bash plus `pgrep` ran
+continuously for a label the user changes by hand. Hyprland has no hyprsunset event, so the module is
+driven by an RT signal instead: it is a one-shot `exec`, which is the case Waybar's `signal` option
+is designed for (verified: 1 run at startup, then one run per signal).
+
+Acceptance: the icon updates immediately on toggle; an idle session no longer re-runs the script
+every 3 seconds.
 
 ---
 
@@ -872,6 +896,26 @@ files changed, verification evidence, follow-ups.
 
 ### LUA-012 — Stop Waybar polling `hyprctl`
 
+- 2026-10-03 — agent `Oz`: follow-up pass. The layout label could go stale because Waybar's `signal`
+  does not re-exec a script that is still running (see D6), so `signal: 8` on `custom/hypr_layout`
+  was dead config. Refresh now goes through the socket.
+  - Added: `hypr_emit_event` in `config/hypr/scripts/HyprIPC.sh`.
+  - Changed: `config/hypr/scripts/HyprEventWatch.sh` (layout mode also matches `^custom>>`),
+    `config/hypr/scripts/HyprLayoutModule.sh` (`refresh_waybar` emits the event),
+    `config/hypr/scripts/ChangeLayout.sh` (sources `HyprIPC.sh`, emits after a successful switch),
+    `config/hypr/waybar/ModulesCustom` (dropped the dead `signal: 8`).
+  - **Bug found while testing:** `HyprLayoutModule.sh` had lost its `change_layout` assignment when
+    `get_layout()` was rewritten, so `set_layout()` ran an empty command and the layout menu set
+    nothing. Restored.
+  - Evidence: `hl.dsp.event("x")` arrives on socket2 as `custom>>x`; a probe wrapper proved Waybar
+    re-runs a one-shot `exec` on RTMIN+9 (1 run at startup, then one per signal), and that it does
+    **not** re-run a running script.
+  - Verification: `bash -n` clean; the deployed listener re-rendered on the emitted event (1 -> 2
+    lines) while socket2 showed `custom>>kool:layout`; Waybar reloaded with both listeners and their
+    `socat` children alive.
+  - Follow-ups: pressing `SUPER + ALT + 1..4` and the layout menu's set action still need a by-hand
+    confirmation that the label changes without a workspace switch.
+
 - 2026-10-03 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
   - Added: `config/hypr/scripts/HyprIPC.sh` (socket resolution + request helper) and
     `config/hypr/scripts/HyprEventWatch.sh` (socket2 event listener serving both status modules).
@@ -913,3 +957,19 @@ files changed, verification evidence, follow-ups.
     [open questions](#9-open-questions-and-known-risks). The `os.execute` fallbacks in
     `lua/user_startup_helper.lua:82` and `UserConfigs/user_laptops.lua:211` are guarded by
     `hl.exec_cmd` and unreachable on a Lua build, so they were left in place.
+
+### LUA-014 — Refresh the night-light module on change
+
+- 2026-10-03 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
+  - Changed: `config/hypr/scripts/Hyprsunset.sh` (added `refresh_waybar` on RTMIN+9 and a
+    `read_state` helper that avoids forking `cat`), `config/hypr/waybar/ModulesCustom`
+    (`custom/nightlight`: `interval` 3 -> 60, added `signal: 9`).
+  - Why not event-driven: Hyprland has no hyprsunset event. The state only changes when
+    `Hyprsunset.sh` changes it, so the script signals; the long interval covers hyprsunset exiting on
+    its own, which `cmd_status` deliberately treats as off.
+  - Evidence: a probe wrapper around the module's `exec` showed Waybar re-running a one-shot script
+    on RTMIN+9 exactly once per signal.
+  - Verification: `bash -n` clean; the module reports `signal: 9` and `interval: 60` as loaded;
+    `Hyprsunset.sh status` still emits valid Waybar JSON.
+  - Follow-ups: clicking the icon should update it immediately; worth a by-hand check that the
+    icon also flips when hyprsunset is killed outside the script (within the 60s interval).
