@@ -49,11 +49,18 @@
   - `custom/nightlight` re-ran bash + pgrep every 3s for a manual label
   - `Hyprsunset.sh` pushes RTMIN+9 on change and reads its state without `cat`
   - The module keeps a 60s interval for hyprsunset exiting outside the script
+- Existing installs never received the layout-refresh throttle
+  - `copy.sh` protects `UserConfigs`, so shipped copies kept the old code
+  - `patches/70-user-laptops-refresh-throttle.sh` inserts it in place
 
 ## Added:
 
 - `scripts/HyprIPC.sh` and `scripts/HyprEventWatch.sh`
   - Socket helpers, plus the event listener the two status modules use
+- `patches/60-user-laptops-nonblocking.sh`
+  - Removes the blocking `io.popen` calls from an installed `user_laptops.lua`
+- `patches/70-user-laptops-refresh-throttle.sh`
+  - Adds the layout-refresh throttle to an installed `user_laptops.lua`
 
 ## Updated:
 
