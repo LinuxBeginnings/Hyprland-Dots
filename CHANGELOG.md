@@ -59,6 +59,9 @@
 
 ## Added:
 
+- Lua syntax validation in Quick Settings (`Kool_Quick_Settings.sh`)
+  - Automatically validates edited `.lua` files with `luac -p` on editor close
+  - Sends desktop notifications for syntax errors, successful check, or if `luac` is not installed
 - `scripts/HyprIPC.sh` and `scripts/HyprEventWatch.sh`
   - Socket helpers, plus the event listener the two status modules use
 - `patches/60-user-laptops-nonblocking.sh`

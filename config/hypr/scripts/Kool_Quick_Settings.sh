@@ -89,6 +89,42 @@ show_info() {
   fi
 }
 
+check_lua_syntax() {
+  local target_file="$1"
+  [[ -n "$target_file" && "$target_file" == *.lua ]] || return 0
+  local filename
+  filename="$(basename "$target_file")"
+
+  if ! command -v luac >/dev/null 2>&1; then
+    if [[ -f "$iDIR/note.png" ]]; then
+      notify-send -u normal -t 5000 -i "$iDIR/note.png" "Lua Syntax Check" "luac not found can't run syntax check on $filename"
+    else
+      notify-send -u normal -t 5000 "Lua Syntax Check" "luac not found can't run syntax check on $filename"
+    fi
+    return 0
+  fi
+
+  local err_out
+  if err_out=$(luac -p "$target_file" 2>&1); then
+    if [[ -f "$iDIR/note.png" ]]; then
+      notify-send -u low -t 3000 -i "$iDIR/note.png" "Lua Syntax Check" "Syntax check passed for $filename"
+    else
+      notify-send -u low -t 3000 "Lua Syntax Check" "Syntax check passed for $filename"
+    fi
+  else
+    if [[ -f "$iDIR/error.png" ]]; then
+      notify-send -u critical -t 8000 -i "$iDIR/error.png" "Lua Syntax Error" "Failed syntax check on $filename:\n$err_out"
+    else
+      notify-send -u critical -t 8000 "Lua Syntax Error" "Failed syntax check on $filename:\n$err_out"
+    fi
+  fi
+}
+
+if [[ "${1:-}" == "--check-lua" ]]; then
+  check_lua_syntax "${2:-}"
+  exit 0
+fi
+
 get_context_monitor_name() {
   if ! command -v hyprctl >/dev/null 2>&1; then
     return 1
@@ -563,21 +599,28 @@ handle_choice() {
     selected_cmd=("${edit_cmd[@]}")
     [[ ${#visual_cmd[@]} -gt 0 ]] && selected_cmd=("${visual_cmd[@]}")
 
-    if is_tui_editor "${selected_cmd[@]}"; then
-      if [[ -x "$scriptsDir/LaunchTerminal.sh" ]]; then
-        "$scriptsDir/LaunchTerminal.sh" "$term" "${selected_cmd[*]} '$file'" >/dev/null 2>&1 &
-      elif command -v kitty >/dev/null 2>&1; then
-        kitty "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
-      elif command -v ghostty >/dev/null 2>&1; then
-        ghostty -e "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
-      elif command -v alacritty >/dev/null 2>&1; then
-        alacritty -e "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
-      elif command -v "${term_cmd[0]}" >/dev/null 2>&1; then
-        "${term_cmd[@]}" -e "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
+    (
+      if is_tui_editor "${selected_cmd[@]}"; then
+        if [[ -x "$scriptsDir/LaunchTerminal.sh" ]]; then
+          "$scriptsDir/LaunchTerminal.sh" "$term" "${selected_cmd[*]} '$file'; '$scriptsDir/Kool_Quick_Settings.sh' --check-lua '$file'"
+        elif command -v kitty >/dev/null 2>&1; then
+          kitty "${selected_cmd[@]}" "$file"
+          check_lua_syntax "$file"
+        elif command -v ghostty >/dev/null 2>&1; then
+          ghostty -e "${selected_cmd[@]}" "$file"
+          check_lua_syntax "$file"
+        elif command -v alacritty >/dev/null 2>&1; then
+          alacritty -e "${selected_cmd[@]}" "$file"
+          check_lua_syntax "$file"
+        elif command -v "${term_cmd[0]}" >/dev/null 2>&1; then
+          "${term_cmd[@]}" -e "${selected_cmd[@]}" "$file"
+          check_lua_syntax "$file"
+        fi
+      else
+        "${selected_cmd[@]}" "$file"
+        check_lua_syntax "$file"
       fi
-    else
-      "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
-    fi
+    ) >/dev/null 2>&1 &
   fi
 }
 
