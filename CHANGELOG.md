@@ -74,6 +74,7 @@
 
 ## Updated:
 
+- Removed KB default "pc105" from `user_settings.lua`
 - `docs/HOWTO-Change-Keybindgs.md` now covers `dispatch(...)` resolution
   - Documents the in-process helper mapping and the native `hl.dsp.*` form
   - Corrects the `["repeat"]` and `dispatch("pin")` examples
