@@ -725,6 +725,16 @@ Deleting or porting a script invalidates prose elsewhere. Check and update:
   spawned it goes away, which it checks every 5s. That is deliberate - it replaces a guard that let
   orphans live for the whole session - but a bar killed with `SIGKILL` leaves its listener up for up
   to 5s. A stale pidfile is harmless: the guard only signals a PID it can still see.
+- **Only one half of an icon/text pair may run a script.** `custom/swaync` and `custom/keyboard` are
+  split into `#icon`/`#text`. If both halves ran the same `exec` they would share a pidfile, trip the
+  single-instance guard, and Waybar would log `stopped unexpectedly` every `restart-interval`. Keep
+  the icon half static, the way `cpu#icon` is.
+- **`custom/weather2` cannot be an icon/text pair.** `waybar-weather` returns a single `text` field
+  with the condition emoji already inside it (`{"text":"\ud83c\udf19 45.2\u00b0F",...}`), so there is no separate
+  icon value to put in an icon half. It is styled as a single pill instead; splitting it would need
+  the service to emit an `icon` field. `idle_inhibitor` is the same shape of problem: it only
+  provides `{icon}`, and its `{status}` is the word "activated", so a text half would just print
+  that.
 
 ---
 
@@ -1039,3 +1049,24 @@ files changed, verification evidence, follow-ups.
   - Follow-ups: the hardware definitions (battery, network, bluetooth) are present but unlisted, so
     they need adding to `modules-right` on a machine that has them. `backlight` and `temperature`
     already come from the included project `Modules`.
+
+- 2026-10-04 — agent `Oz`: styling pass so the bar reads as one family. Every item is now a
+  two-segment pill (coloured icon + dark text) or, where that is impossible, a single pill styled to
+  match.
+  - Changed: `Matt-Legacy-config` (`custom/hint` and `custom/keyboard` became `#icon`/`#text`
+    pairs), `Matt-bright-style.css` (paired styling for both, `#custom-weather2` styled at all - it
+    had no selector before - and `#idle_inhibitor` became a coloured icon pill).
+  - Constraint found: a pair only splits when the module exposes both halves. `custom/hint` carries a
+    glyph in the project file (`U+F0E81`), so its icon half is that glyph. `custom/keyboard`'s format
+    is `" {} "` - **no glyph** - so a static `U+2328` (KEYBOARD, standard Unicode rather than a
+    private-use character, so it renders in the font stack) was supplied. `custom/weather2` and
+    `idle_inhibitor` cannot be split at all; see [open questions](#9-open-questions-and-known-risks).
+  - **Bug introduced and fixed in the same pass:** both keyboard halves ran
+    `HyprEventWatch.sh keyboard`, so they shared one pidfile and the single-instance guard made them
+    kill each other - Waybar logged `keyboard stopped unexpectedly, is it endless?` and re-ran it
+    every 10s. The icon half is now static with no `exec`, exactly like `cpu#icon`; only the text half
+    runs the listener.
+  - Verification: restarted with the config. Log clean apart from the portal `[info]` line; `Bar
+    configured ... for output: Virtual-1`; exactly one keyboard listener and two `swaync-client`
+    halves; two `socat` readers, each parented to a live listener; stale pidfiles from earlier bars
+    cleared.

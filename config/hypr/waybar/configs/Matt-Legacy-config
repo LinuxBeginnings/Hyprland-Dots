@@ -21,7 +21,7 @@
   "spacing": 0,
   "margin": "5 15 0 15",
   "modules-left": ["custom/menu", "custom/hypr_layout", "custom/separator", "hyprland/workspaces", "custom/separator", "hyprland/window"],
-  "modules-center": [ "clock#icon", "clock#text", "idle_inhibitor", "custom/weather2", "custom/hint"],
+  "modules-center": [ "clock#icon", "clock#text", "idle_inhibitor", "custom/weather2", "custom/hint#icon", "custom/hint#text"],
   "modules-right": [
     "custom/swaync#icon",
     "custom/swaync#text",
@@ -31,7 +31,8 @@
     "memory#text",
     "pulseaudio#icon",
     "pulseaudio#text",
-    "custom/keyboard",
+    "custom/keyboard#icon",
+    "custom/keyboard#text",
     "tray",
     "custom/separator",
     "custom/power"
@@ -76,6 +77,41 @@
     "tooltip": true,
     "tooltip-format": "Left Click: Launch Notification Center\nRight Click: Do Not Disturb",
     "escape": true
+  },
+
+  /* Split so they read like cpu/memory/pulseaudio. custom/hint already carries a
+     glyph in the project file, so its icon half is that glyph. custom/keyboard
+     has no glyph (its format is " {} "), so a static one is supplied here. */
+  "custom/hint#icon": {
+    "format": "󰺁",
+    "on-click": "$HOME/.config/hypr/scripts/KeyHints.sh",
+    "on-click-right": "$HOME/.config/hypr/scripts/KeyBinds.sh",
+    "tooltip": true,
+    "tooltip-format": "Left Click: Quick Tips\nRight Click: Keybinds"
+  },
+
+  "custom/hint#text": {
+    "format": "HINT!",
+    "on-click": "$HOME/.config/hypr/scripts/KeyHints.sh",
+    "on-click-right": "$HOME/.config/hypr/scripts/KeyBinds.sh",
+    "tooltip": true,
+    "tooltip-format": "Left Click: Quick Tips\nRight Click: Keybinds"
+  },
+
+  /* Static, exactly like cpu#icon: only the text half runs the listener, or the
+     two halves would share one pidfile and the single-instance guard would make
+     them kill each other. */
+  "custom/keyboard#icon": {
+    "format": "⌨",
+    "tooltip": false,
+    "on-click": "$HOME/.config/hypr/scripts/KeyboardLayout.sh switch"
+  },
+
+  "custom/keyboard#text": {
+    "exec": "$HOME/.config/hypr/scripts/HyprEventWatch.sh keyboard",
+    "restart-interval": 10,
+    "format": "{}",
+    "on-click": "$HOME/.config/hypr/scripts/KeyboardLayout.sh switch"
   },
 
   "hyprland/workspaces": {

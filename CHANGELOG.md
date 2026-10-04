@@ -67,8 +67,9 @@
   - Adds the layout-refresh throttle to an installed `user_laptops.lua`
 - `waybar/configs/Matt-Legacy-config` and `waybar/style/Matt-bright-style.css`
   - A top bar layout built on the project module files via `include`
-  - `custom/menu`, `custom/hint`, `custom/power` and `tray` come from there
-  - `custom/swaync` is split into an icon/text pair, matching cpu/memory
+  - `custom/menu`, `custom/power` and `tray` come from those files
+  - `custom/swaync`, `custom/hint`, `custom/keyboard` are icon/text pairs
+  - Only the text half of a pair runs a script, so listeners cannot collide
   - The style inlines its gruvbox palette, so it ships as one file
 
 ## Updated:

@@ -140,8 +140,8 @@ margin: 5px 5px 5px 0;
 }
 
 #idle_inhibitor {
-background-color: @bg-dark;
-color: @fg;
+background-color: @accent-purple;
+color: @bg-black;
 border-radius: 10px;
 margin: 5px;
 padding: 0 10px;
@@ -149,7 +149,7 @@ font-size: 20px;
 }
 
 #idle_inhibitor.activated {
-color: @accent-green;
+background-color: @accent-green;
 }
 
 #network.icon {
@@ -290,14 +290,40 @@ margin: 5px;
 font-size: 20px;
 }
 
-#custom-hint {
-background-color: @bg-dark;
-color: @accent-yellow;
-padding: 0 12px;
-border-radius: 10px;
-margin: 5px;
+#custom-hint.icon {
+background-color: @accent-green;
+color: @bg-black;
+padding: 0 10px;
+border-radius: 10px 0 0 10px;
+margin: 5px 0 5px 5px;
 font-size: 20px;
 }
+
+#custom-hint.text {
+background-color: @bg-dark;
+color: @accent-green;
+padding: 0 12px;
+border-radius: 0 10px 10px 0;
+margin: 5px 5px 5px 0;
+}
+
+#custom-keyboard.icon {
+background-color: @accent-cyan;
+color: @bg-black;
+padding: 0 10px;
+border-radius: 10px 0 0 10px;
+margin: 5px 0 5px 5px;
+font-size: 20px;
+}
+
+#custom-keyboard.text {
+background-color: @bg-dark;
+color: @accent-cyan;
+padding: 0 12px;
+border-radius: 0 10px 10px 0;
+margin: 5px 5px 5px 0;
+}
+
 
 #custom-power {
 background-color: @red;
@@ -306,6 +332,14 @@ padding: 0 12px;
 border-radius: 10px;
 margin: 5px;
 font-size: 20px;
+}
+
+#custom-weather2 {
+background-color: @bg-dark;
+color: @accent-blue;
+padding: 0 12px;
+border-radius: 10px;
+margin: 5px;
 }
 
 @keyframes blink {
