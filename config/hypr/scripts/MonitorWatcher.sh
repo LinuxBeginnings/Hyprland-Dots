@@ -1,0 +1,299 @@
+#!/usr/bin/env bash
+# ==================================================
+#  KoolDots (2026)
+#  Project URL: https://github.com/LinuxBeginnings
+#  License: GNU GPLv3
+#  SPDX-License-Identifier: GPL-3.0-or-later
+# ==================================================
+# Purpose:
+#   Watch Hyprland's socket2 event stream and hand DP-2 connect/disconnect
+#   over to DisplayProfile.sh. One watcher per session, debounced, and it
+#   reconnects by itself when Hyprland replaces the socket.
+#
+#   Started from UserConfigs/user_startup.lua. Safe to run by hand.
+set -Eeuo pipefail
+
+pending=0
+socket_warnings=0
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+MW_PROFILE_SCRIPT="${MW_PROFILE_SCRIPT:-$config_home/hypr/scripts/DisplayProfile.sh}"
+MW_SOCAT="${MW_SOCAT:-socat}"
+MW_DEBOUNCE="${MW_DEBOUNCE:-1.5}"
+MW_RECONNECT_DELAY="${MW_RECONNECT_DELAY:-2}"
+# Empty means "forever"; the tests bound it so they terminate.
+MW_MAX_RECONNECTS="${MW_MAX_RECONNECTS-}"
+MW_RUNTIME_DIR="${MW_RUNTIME_DIR:-${XDG_RUNTIME_DIR:-/tmp}}"
+MW_LOG_FILE="${MW_LOG_FILE:-$MW_RUNTIME_DIR/kooldots-display-profiles/monitor-watcher.log}"
+MW_LOCK_FILE="${MW_LOCK_FILE:-$MW_RUNTIME_DIR/kooldots-monitor-watcher.lock}"
+MW_LOCK_WAIT="${MW_LOCK_WAIT:-0}"
+MW_APPLY_RETRIES="${MW_APPLY_RETRIES:-3}"
+MW_RETRY_DELAY="${MW_RETRY_DELAY:-2}"
+MW_STATE_DIR="${MW_STATE_DIR:-$MW_RUNTIME_DIR/kooldots-display-profiles}"
+# Written by DisplayProfile.sh: line 1 the fingerprint, line 2 the layout name.
+MW_STATE_FILE="${MW_STATE_FILE:-$MW_STATE_DIR/current}"
+# Written by the menu (and Quick Settings) around nwg-displays: holds its PID.
+MW_PAUSE_FILE="${MW_PAUSE_FILE:-$MW_STATE_DIR/pause}"
+
+log() {
+  local line
+  line="$(date '+%Y-%m-%d %H:%M:%S') [MonitorWatcher] $*"
+  # stderr, never stdout: helpers such as generate_waybar_config return their
+  # value on stdout, and a log line there would be captured into it.
+  printf '%s\n' "$line" >&2
+  mkdir -p -- "$(dirname -- "$MW_LOG_FILE")" 2>/dev/null || return 0
+  if [[ -f $MW_LOG_FILE ]] && (( $(stat -c %s "$MW_LOG_FILE" 2>/dev/null || echo 0) > 1048576 )); then
+    : > "$MW_LOG_FILE"
+  fi
+  printf '%s\n' "$line" >> "$MW_LOG_FILE" 2>/dev/null || true
+}
+
+die() { log "ERROR: $*"; exit 1; }
+
+# --- Singleton -------------------------------------------------------------
+# Exactly one watcher per user. A second one says so and leaves the session
+# alone - it must never apply a profile behind the first watcher's back.
+acquire_lock() {
+  command -v flock >/dev/null 2>&1 || { log "WARN: flock not found; running without singleton protection"; return 0; }
+  mkdir -p -- "$(dirname -- "$MW_LOCK_FILE")" 2>/dev/null || true
+  exec 9>"$MW_LOCK_FILE" || { log "WARN: cannot open lock file $MW_LOCK_FILE"; return 0; }
+  if [[ $MW_LOCK_WAIT == 0 ]]; then
+    flock -n 9 || { log "another MonitorWatcher is already running; exiting"; exit 0; }
+  else
+    flock -w "$MW_LOCK_WAIT" 9 || { log "another MonitorWatcher is already running; exiting"; exit 0; }
+  fi
+}
+
+# --- Event source ----------------------------------------------------------
+# socket_path: resolved on EVERY connect attempt, never cached.
+#
+# HYPRLAND_INSTANCE_SIGNATURE is baked into this process at start. If Hyprland
+# restarts, that value names a socket that no longer exists, and retrying it
+# forever would silently stop all automatic switching. So fall back to the
+# newest live .socket2.sock under $XDG_RUNTIME_DIR/hypr/.
+socket_path() {
+  local runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+  local sig=${HYPRLAND_INSTANCE_SIGNATURE:-}
+  local candidate newest
+
+  if [[ -n $sig ]]; then
+    candidate="$runtime/hypr/$sig/.socket2.sock"
+    if [[ -S $candidate ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  fi
+
+  newest=""
+  for candidate in "$runtime"/hypr/*/.socket2.sock; do
+    [[ -S $candidate ]] || continue
+    if [[ -z $newest || $candidate -nt $newest ]]; then
+      newest=$candidate
+    fi
+  done
+  if [[ -n $newest ]]; then
+    [[ -n $sig ]] && log "instance signature $sig has no socket; using $newest"
+    printf '%s\n' "$newest"
+    return 0
+  fi
+
+  if [[ -z $sig ]]; then
+    die "cannot determine the Hyprland event socket: HYPRLAND_INSTANCE_SIGNATURE is unset and no socket2 socket exists under $runtime/hypr"
+  fi
+  return 1
+}
+
+# stream_events: Hyprland's socket2 stream, or a fixture file for the tests.
+stream_events() {
+  if [[ -n ${MW_EVENT_FILE:-} ]]; then
+    cat -- "$MW_EVENT_FILE"
+    # MW_EVENT_LINGER keeps this subshell alive after the fixture is drained,
+    # the way a real socat stays blocked on the socket.
+    [[ -n ${MW_EVENT_LINGER:-} ]] && sleep "$MW_EVENT_LINGER"
+    return 0
+  fi
+  local socket
+  if ! socket="$(socket_path)"; then
+    # Once, then rarely: this can repeat every MW_RECONNECT_DELAY seconds.
+    if (( socket_warnings % 30 == 0 )); then
+      log "WARN: no Hyprland event socket available yet; still retrying"
+    fi
+    socket_warnings=$((socket_warnings + 1))
+    return 1
+  fi
+  socket_warnings=0
+  "$MW_SOCAT" -U - "UNIX-CONNECT:$socket"
+}
+
+# event_class <event-line> -> "monitor" | "config" | "" (ignored).
+#
+# Any monitor appearing or disappearing matters now, not one named port: the
+# set of connected monitors IS the key this system looks layouts up by.
+# `configreloaded` matters because a reload re-applies monitors.lua over the
+# running state, which would otherwise silently undo the active layout.
+event_class() {
+  case $1 in
+    monitoradded'>>'* | monitorremoved'>>'* \
+      | monitoraddedv2'>>'* | monitorremovedv2'>>'*) printf 'monitor\n' ;;
+    configreloaded'>>'* | configreloaded) printf 'config\n' ;;
+    *) printf '\n' ;;
+  esac
+}
+
+# paused: true while the drag-and-drop GUI is up. Applying a stored layout
+# mid-drag would silently throw away the arrangement the user is making, so
+# every event is dropped until the GUI exits. A pause file left behind by a
+# crashed GUI must not disable this watcher forever, so a dead PID clears it.
+paused() {
+  local pid
+  [[ -f $MW_PAUSE_FILE ]] || return 1
+  pid="$(head -n1 -- "$MW_PAUSE_FILE" 2>/dev/null || true)"
+  if [[ $pid =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+    log "paused by pid $pid; ignoring display events"
+    return 0
+  fi
+  log "removing a stale pause file (pid ${pid:-unknown} is gone)"
+  rm -f -- "$MW_PAUSE_FILE"
+  return 1
+}
+
+apply_auto() {
+  log "applying automatic profile selection"
+  # 9>&- : never hand the watcher's own lock descriptor to the controller. The
+  # waybar it starts would inherit it and hold this watcher's lock forever,
+  # so no watcher could start again until that waybar died.
+  local rc=0
+  "$MW_PROFILE_SCRIPT" auto 9>&- || rc=$?
+  (( rc == 0 )) && return 0
+  log "WARN: DisplayProfile.sh auto failed (exit $rc)"
+  return 1
+}
+
+# apply_current: re-apply the layout that is running. Used after a config
+# reload, so a layout the user picked by hand survives SUPER+ALT+R instead of
+# jumping back to the monitor set's default. A generated layout has no name to
+# re-apply, so that falls back to auto.
+apply_current() {
+  local name=""
+  [[ -f $MW_STATE_FILE ]] && name="$(sed -n '2p' -- "$MW_STATE_FILE" 2>/dev/null || true)"
+  if [[ -n $name && $name != "(auto)" ]]; then
+    log "config reloaded; re-applying $name"
+    if "$MW_PROFILE_SCRIPT" -- "$name" 9>&-; then return 0; fi
+    log "WARN: re-applying $name failed; falling back to auto"
+  fi
+  apply_auto
+}
+
+# flush_pending: the controller refuses while another change holds its lock,
+# which is exactly what happens when a monitor is unplugged mid-switch.
+# Dropping the event there would leave the displays wrong until the user
+# pressed a key, so retry a bounded number of times.
+flush_pending() {
+  local attempt=0
+  while (( pending )); do
+    if paused; then
+      log "dropping the pending change while paused"
+      pending=0
+      return 0
+    fi
+    if { [[ $pending_class == config ]] && apply_current; } \
+       || { [[ $pending_class != config ]] && apply_auto; }; then
+      pending=0
+      return 0
+    fi
+    attempt=$((attempt + 1))
+    if (( attempt >= MW_APPLY_RETRIES )); then
+      log "WARN: giving up on this monitor event after $attempt attempts"
+      pending=0
+      return 1
+    fi
+    log "apply failed; retry $attempt of $MW_APPLY_RETRIES in ${MW_RETRY_DELAY}s"
+    sleep "$MW_RETRY_DELAY"
+  done
+  return 0
+}
+
+# --- Main ------------------------------------------------------------------
+main() {
+  if [[ ${1:-} == "--print-socket" ]]; then
+    # Debug helper: show which socket this process would connect to.
+    socket_path || die "no Hyprland event socket found"
+    return 0
+  fi
+
+  acquire_lock
+
+  [[ -x $MW_PROFILE_SCRIPT ]] || die "controller not found or not executable: $MW_PROFILE_SCRIPT"
+  if [[ -z ${MW_EVENT_FILE:-} ]]; then
+    # The reader is a hard dependency; the socket is not. Hyprland may still be
+    # starting, and socket_path() dies by itself when there is no way at all to
+    # identify a session.
+    command -v "$MW_SOCAT" >/dev/null 2>&1 || die "required command not found: $MW_SOCAT"
+    socket_path >/dev/null || log "WARN: no event socket yet; will keep retrying"
+  fi
+
+  # Startup reconciliation: a monitor may have been connected before Hyprland
+  # started, so no event is coming for it.
+  if paused; then
+    log "paused at startup; skipping reconciliation"
+  else
+    apply_auto
+  fi
+
+  local reconnects=0 line rc cls
+  pending=0
+  pending_class=monitor
+  while true; do
+    log "listening for display events"
+    pending=0
+    pending_class=monitor
+    while true; do
+      # `read` returning non-zero is normal control flow here (timeout or end
+      # of stream), so it must never trip `set -e`.
+      rc=0
+      line=""
+      if (( pending )); then
+        IFS= read -r -t "$MW_DEBOUNCE" line || rc=$?
+      else
+        IFS= read -r line || rc=$?
+      fi
+      if (( rc == 0 )); then
+        cls="$(event_class "$line")"
+        if [[ -n $cls ]]; then
+          log "relevant event ($cls): $line"
+          # A monitor change outranks a config reload: the set of monitors
+          # decided which layout applies in the first place.
+          [[ $cls == monitor || $pending -eq 0 ]] && pending_class=$cls
+          pending=1
+        fi
+        continue
+      fi
+      if (( rc > 128 )); then
+        # read timed out: the burst has settled
+        flush_pending
+        continue
+      fi
+      # end of stream: `read` may still have handed us a final unterminated line
+      if [[ -n $line ]]; then
+        cls="$(event_class "$line")"
+        if [[ -n $cls ]]; then
+          log "relevant event ($cls): $line"
+          [[ $cls == monitor || $pending -eq 0 ]] && pending_class=$cls
+          pending=1
+        fi
+      fi
+      flush_pending
+      break
+    done < <(stream_events 9>&-)
+
+    if [[ -n $MW_MAX_RECONNECTS ]] && (( reconnects >= MW_MAX_RECONNECTS )); then
+      log "event stream closed; reconnect limit reached, exiting"
+      return 0
+    fi
+    reconnects=$((reconnects + 1))
+    log "event stream closed; reconnect attempt $reconnects in ${MW_RECONNECT_DELAY}s"
+    sleep "$MW_RECONNECT_DELAY"
+  done
+}
+
+main "$@"

@@ -116,7 +116,9 @@ handle_open() {
 
     # Restore wallpaper on re-enabled internal monitor
     if [ -x "$SCRIPTSDIR/WallpaperDaemon.sh" ]; then
-        "$SCRIPTSDIR/WallpaperDaemon.sh" >> "$LOGFILE" 2>&1 &
+        # 9>&- : same reason as in WaybarStartup.sh - this spawn happens while
+        # a lock is held on fd 9, and a child that inherits it holds the lock.
+        "$SCRIPTSDIR/WallpaperDaemon.sh" >> "$LOGFILE" 2>&1 9>&- &
     fi
 
     sleep 0.3

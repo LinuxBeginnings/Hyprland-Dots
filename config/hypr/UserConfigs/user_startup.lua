@@ -92,6 +92,10 @@ local startup_commands = {
   -- "kdeconnect-app",
   -- "blueman-applet",
   -- "$HOME/.config/hypr/UserScripts/RainbowBorders.sh",
+
+  -- Work/Home display profiles: one watcher per session. It reconciles the
+  -- profile on startup, so DisplayProfile.sh must NOT be launched here too.
+  "$HOME/.config/hypr/scripts/MonitorWatcher.sh",
 }
 
 local function run_startup_commands()
@@ -104,4 +108,22 @@ if hl and hl.on then
   hl.on("hyprland.start", run_startup_commands)
 else
   run_startup_commands()
+end
+
+-- Laptop lid: the display-layout system (DisplayProfile.sh) owns clamshell
+-- behaviour now that user_laptops.lua is disabled, so tell it to re-decide the
+-- layout whenever the lid opens or closes. DisplayProfile.sh reads the lid
+-- state itself and switches the internal panel off only when an external
+-- monitor is present, so it never leaves the laptop with no screen.
+if hl and hl.bind then
+  local function kooldots_lid_changed()
+    local script = "$HOME/.config/hypr/scripts/DisplayProfile.sh auto"
+    if hl.exec_cmd then
+      hl.exec_cmd(script)
+    else
+      os.execute(script .. " >/dev/null 2>&1 &")
+    end
+  end
+  hl.bind("switch:on:Lid Switch", kooldots_lid_changed)
+  hl.bind("switch:off:Lid Switch", kooldots_lid_changed)
 end

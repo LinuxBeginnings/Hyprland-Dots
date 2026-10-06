@@ -47,3 +47,9 @@ htmlcov/
 
 # Copy-Logs
 Copy-Logs/
+
+# AI assistant planning/working docs — not part of the dotfiles
+/Agents/
+.claude/
+CLAUDE.md
+.superpowers/

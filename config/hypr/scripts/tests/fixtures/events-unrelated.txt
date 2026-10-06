@@ -1,0 +1,6 @@
+workspace>>2
+activewindow>>firefox,x
+monitoradded>>eDP-1
+monitoraddedv2>>0,eDP-1,BOE
+focusedmon>>eDP-1,1
+openlayer>>waybar

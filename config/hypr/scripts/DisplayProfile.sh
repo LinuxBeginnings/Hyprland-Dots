@@ -1,0 +1,777 @@
+#!/usr/bin/env bash
+# ==================================================
+#  KoolDots (2026)
+#  Project URL: https://github.com/LinuxBeginnings
+#  License: GNU GPLv3
+#  SPDX-License-Identifier: GPL-3.0-or-later
+# ==================================================
+# Purpose:
+#   The only component allowed to change display and Waybar state.
+#
+#     DisplayProfile.sh auto                  resolve and apply
+#     DisplayProfile.sh -- <layout>           apply a named layout
+#     DisplayProfile.sh capture -- <name>     save the live state
+#     DisplayProfile.sh set-default -- <name> make a layout this set's default
+#     DisplayProfile.sh delete -- <name>      delete a layout
+#     DisplayProfile.sh label -- <text>       name this monitor set
+#     DisplayProfile.sh list                  layout names, one per line
+#     DisplayProfile.sh monitors-json          path to the normalized monitors
+#     DisplayProfile.sh waybar-config          path Waybar should run with
+#     DisplayProfile.sh --dry-run              print the plan, change nothing
+#
+#   Monitors are identified by device (make|model|serial), never by port, and a
+#   monitor set is keyed by the sorted identities of everything connected. All
+#   of that lives in lib_display_store.sh, which never touches the session.
+#
+#   The governing safety rule: never end with zero active outputs. Any output
+#   may be disabled, including a laptop panel, so enabled monitors are applied
+#   and verified BEFORE anything is disabled, and a post-disable check with no
+#   active output falls back to a rescue layout that ignores the store.
+set -Eeuo pipefail
+
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+# Overridable so the test suite can substitute fakes.
+DP_HYPRCTL="${DP_HYPRCTL:-hyprctl}"
+DP_JQ="${DP_JQ:-jq}"
+DP_WAYBAR="${DP_WAYBAR:-waybar}"
+DP_PGREP="${DP_PGREP:-pgrep}"
+DP_PKILL="${DP_PKILL:-pkill}"
+DP_NOTIFY="${DP_NOTIFY:-notify-send}"
+DP_FLOCK="${DP_FLOCK:-flock}"
+DP_SYSTEMD_RUN="${DP_SYSTEMD_RUN:-systemd-run}"
+# WaybarStartup.sh owns the Waybar lifecycle in these dots and serialises every
+# start on a shared lock (see Refresh.sh's comment). Delegating to it is how we
+# avoid being a second, competing owner of the bar.
+DP_WAYBAR_STARTUP="${DP_WAYBAR_STARTUP:-$config_home/hypr/scripts/WaybarStartup.sh}"
+DP_WAYBAR_CONFIG="${DP_WAYBAR_CONFIG:-$config_home/hypr/waybar/config}"
+DP_WAYBAR_STYLE="${DP_WAYBAR_STYLE:-$config_home/hypr/waybar/style.css}"
+DP_STORE_FILE="${DP_STORE_FILE:-$config_home/hypr/UserConfigs/display-layouts.json}"
+DP_MONITORS_LUA="${DP_MONITORS_LUA:-$config_home/hypr/UserConfigs/monitors.lua}"
+DP_RUNTIME_DIR="${DP_RUNTIME_DIR:-${XDG_RUNTIME_DIR:-/tmp}}"
+STATE_DIR="$DP_RUNTIME_DIR/kooldots-display-profiles"
+DP_LOG_FILE="${DP_LOG_FILE:-$STATE_DIR/display-profile.log}"
+LOCK_FILE="$DP_RUNTIME_DIR/kooldots-display-profile.lock"
+STATE_FILE="$STATE_DIR/current"
+DP_VERIFY_ATTEMPTS="${DP_VERIFY_ATTEMPTS:-10}"
+DP_VERIFY_DELAY="${DP_VERIFY_DELAY:-0.3}"
+# Lid handling (took over from user_laptops.lua). DP_LID_STATE forces the
+# reading in tests ("open"/"closed"); empty means read the real state files
+# matched by DP_LID_GLOB.
+DP_LID_STATE="${DP_LID_STATE:-}"
+DP_LID_GLOB="${DP_LID_GLOB:-/proc/acpi/button/lid/*/state}"
+
+DRY_RUN=0
+
+# shellcheck source=./lib_display_store.sh
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib_display_store.sh"
+DS_JQ="$DP_JQ"
+
+# --- Output ----------------------------------------------------------------
+usage() {
+  sed -n '9,30p' -- "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+}
+
+log() {
+  local line
+  line="$(date '+%Y-%m-%d %H:%M:%S') [DisplayProfile] $*"
+  # stderr, never stdout: helpers such as dp_waybar_generate return their value
+  # on stdout, and a log line there would be captured into it.
+  printf '%s\n' "$line" >&2
+  if [[ $DRY_RUN -eq 0 ]]; then
+    mkdir -p -- "$(dirname -- "$DP_LOG_FILE")" 2>/dev/null || return 0
+    if [[ -f $DP_LOG_FILE ]] && (( $(stat -c %s "$DP_LOG_FILE" 2>/dev/null || echo 0) > 1048576 )); then
+      : > "$DP_LOG_FILE"
+    fi
+    printf '%s\n' "$line" >> "$DP_LOG_FILE" 2>/dev/null || true
+  fi
+}
+
+say_plan() { printf 'DRY: %s\n' "$*"; }
+
+notify() {
+  [[ $DRY_RUN -eq 1 ]] && { say_plan "notify-send $*"; return 0; }
+  command -v "$DP_NOTIFY" >/dev/null 2>&1 || return 0
+  "$DP_NOTIFY" -a "Display profile" "$1" "${2:-}" >/dev/null 2>&1 || true
+}
+
+die() { log "ERROR: $*"; exit 1; }
+
+# jq is not optional: every layout decision is a jq program. Fail loudly rather
+# than silently doing nothing.
+dp_require_tools() {
+  command -v "$DP_JQ" >/dev/null 2>&1 \
+    || die "required command not found: $DP_JQ (install jq)"
+  command -v "$DP_HYPRCTL" >/dev/null 2>&1 \
+    || die "required command not found: $DP_HYPRCTL"
+}
+
+# --- Hyprland --------------------------------------------------------------
+# hypr_eval <lua-code>: apply config at runtime.
+#
+# `hyprctl keyword` only works with the legacy hyprlang parser. On this Lua
+# config it answers "keyword can't work with non-legacy parsers. Use eval."
+# on stdout WITH exit status 0, so the status alone cannot be trusted and the
+# reply has to be inspected.
+hypr_eval() {
+  local code=$1 out
+  if [[ $DRY_RUN -eq 1 ]]; then
+    say_plan "$DP_HYPRCTL eval $code"
+    return 0
+  fi
+  if ! out="$("$DP_HYPRCTL" eval "$code" 2>&1)"; then
+    log "ERROR: hyprctl eval failed: ${out:-<no output>}"
+    return 1
+  fi
+  case $out in
+    *non-legacy* | *[Ee]rror* | *invalid* | *Unknown*)
+      log "ERROR: hyprctl rejected the command: $out"
+      return 1
+      ;;
+  esac
+  return 0
+}
+
+monitor_lua() {  # port mode x y scale transform
+  printf 'hl.monitor({ output = "%s", mode = "%s", position = "%sx%s", scale = "%s", transform = %s })' \
+    "$1" "$2" "$3" "$4" "$5" "${6:-0}"
+}
+
+# dp_monitors: normalize `hyprctl -j monitors all` into a file and print its
+# path. A physically disconnected monitor is absent from that list; a disabled
+# but connected one is present with "disabled": true.
+dp_monitors() {
+  local raw="$STATE_DIR/monitors.raw.json" out="$STATE_DIR/monitors.json"
+  mkdir -p -- "$STATE_DIR"
+  if ! "$DP_HYPRCTL" -j monitors all >"$raw" 2>/dev/null; then
+    log "ERROR: cannot read monitors from $DP_HYPRCTL"
+    return 1
+  fi
+  if ! "$DP_JQ" -e 'type == "array"' -- "$raw" >/dev/null 2>&1; then
+    log "WARN: unparseable monitor output; treating as no monitors"
+    printf '[]\n' >"$raw"
+  fi
+  ds_normalize "$raw" >"$out" || return 1
+  printf '%s\n' "$out"
+}
+
+# dp_verify_monitor <port> <mode> <x> <y> <scale>
+#   `hl.monitor` answers ok even for an output that does not exist, so this is
+#   the only real proof a layout was applied.
+#
+#   Width and height are accepted in either orientation: hyprctl reports a
+#   rotated monitor's dimensions transformed, and the mode is the panel's own.
+dp_verify_monitor() {
+  local port=$1 mode=$2 x=$3 y=$4 scale=$5 transform=${6:-0} attempt wh w h rr
+  if [[ $DRY_RUN -eq 1 ]]; then say_plan "verify $port is $mode at ${x}x${y}"; return 0; fi
+  wh=${mode%@*}; w=${wh%x*}; h=${wh#*x}; rr=${mode#*@}
+  for (( attempt = 1; attempt <= DP_VERIFY_ATTEMPTS; attempt++ )); do
+    # The dimension swap is tolerated ONLY for a quarter-turn, where hyprctl
+    # reports the transformed size while the layout stores the panel's own
+    # mode. For an unrotated monitor the dimensions are checked exactly, and
+    # the transform itself is always checked - otherwise a rotation that never
+    # took effect would report success.
+    if "$DP_HYPRCTL" -j monitors 2>/dev/null | "$DP_JQ" -e \
+        --arg p "$port" --argjson w "$w" --argjson h "$h" \
+        --argjson x "$x" --argjson y "$y" --argjson s "$scale" \
+        --argjson rr "$rr" --argjson t "$transform" '
+        any(.[];
+          .name == $p
+          and ((.disabled // false) == false)
+          and ((.transform // 0) == $t)
+          and ( if ($t % 2) == 1
+                then ((.width == $w and .height == $h) or (.width == $h and .height == $w))
+                else (.width == $w and .height == $h) end )
+          and .x == $x and .y == $y
+          and (((.scale // 1) - $s) | fabs) < 0.01
+          and (((.refreshRate // 0) - $rr) | fabs) < 0.5)' >/dev/null 2>&1; then
+      log "verified $port is $mode at ${x}x${y} scale $scale"
+      return 0
+    fi
+    [[ $DP_VERIFY_DELAY == 0 ]] || sleep "$DP_VERIFY_DELAY"
+  done
+  log "WARN: $port did not reach $mode at ${x}x${y} scale $scale"
+  return 1
+}
+
+dp_any_active() {
+  [[ $DRY_RUN -eq 1 ]] && return 0
+  "$DP_HYPRCTL" -j monitors 2>/dev/null \
+    | "$DP_JQ" -e '[ .[] | select((.disabled // false) == false) ] | length > 0' >/dev/null 2>&1
+}
+
+# dp_rescue: everything connected, one row, scale 1. Ignores the store entirely
+# so a bad stored layout cannot keep the screen dark.
+dp_rescue() {
+  local norm port mode w x=0
+  log "rescue: enabling every connected monitor in one row at scale 1"
+  norm="$(dp_monitors)" || return 1
+  # Every monitor here has just been disabled, and Hyprland reports a disabled
+  # monitor's width/height/refreshRate as 0 while keeping its availableModes.
+  # Taking the live values would ask for mode "0x0@0" and place every monitor
+  # at x=0, which is precisely the wrong thing to do in the one code path whose
+  # job is to get a picture back.
+  while IFS=$'\t' read -r port mode w; do
+    [[ -n $port ]] || continue
+    hypr_eval "$(monitor_lua "$port" "$mode" "$x" 0 1 0)" || true
+    # width from the MODE, not from the live report, for the same reason.
+    [[ $w =~ ^[0-9]+$ ]] && (( w > 0 )) && x=$(( x + w ))
+  done < <("$DP_JQ" -r "$ds__best_live_mode_def"'
+      .[] | best_live_mode as $m
+      | [ .port, $m,
+          ( if ($m | test("^[0-9]+x")) then ($m | split("x")[0] | tonumber) else 0 end ) ]
+      | @tsv' -- "$norm")
+
+  # Say whether it worked: a silent failed rescue is indistinguishable from a
+  # successful one, and this is the last thing standing between the user and a
+  # black screen.
+  if dp_any_active; then
+    log "rescue: at least one monitor is active again"
+    return 0
+  fi
+  log "ERROR: rescue ran but no monitor is still active; a TTY may be needed"
+  notify "Display layouts" "No monitor could be brought back. Switch to a TTY and run DisplayProfile.sh auto"
+  return 1
+}
+
+# dp_apply_layout <layout.json>: the ordering that keeps the screen alive.
+# dp_lid_closed: true when the laptop lid is shut. An internal panel is named
+# eDP*/LVDS*/DSI*; those are the only outputs a closed lid is about.
+dp_lid_closed() {
+  case "$DP_LID_STATE" in
+    closed) return 0 ;;
+    open)   return 1 ;;
+  esac
+  local f
+  for f in $DP_LID_GLOB; do
+    [[ -r $f ]] || continue
+    grep -qi 'closed' "$f" && return 0
+  done
+  return 1
+}
+
+# dp_lid_override <layout.json> -> the layout with internal panels switched off
+# WHEN the lid is closed and at least one external monitor is still enabled.
+# Never leaves zero enabled: a shut laptop with no external keeps its panel.
+dp_lid_override() {
+  dp_lid_closed || { cat -- "$1"; return 0; }
+  "$DP_JQ" -c '
+    def internal: (.port | test("^(eDP|LVDS|DSI)"));
+    ( [ .monitors[] | select(.enabled == true and (internal | not)) ] | length ) as $ext_on
+    | if $ext_on > 0
+      then .monitors |= map(if internal then .enabled = false else . end)
+      else . end
+  ' -- "$1"
+}
+
+dp_apply_layout() {
+  local layout=$1 port mode x y scale transform primary_id primary_port
+  ds_validate_layout "$layout" || { notify "Display profile" "That layout is not usable"; return 1; }
+
+  # Lid/clamshell: with the lid shut and an external monitor on, drop the
+  # internal panel. Applied here so both `auto` and a named layout honour it.
+  if dp_lid_closed; then
+    local overridden="$STATE_DIR/active-layout.lid.json"
+    if dp_lid_override "$layout" >"$overridden" \
+       && ! cmp -s -- "$layout" "$overridden"; then
+      log "lid is closed and an external monitor is present; switching the internal panel off"
+      layout="$overridden"
+    fi
+  fi
+
+  # 1. configure everything the layout enables
+  while IFS=$'\t' read -r port mode x y scale transform; do
+    [[ -n $port ]] || continue
+    hypr_eval "$(monitor_lua "$port" "$mode" "$x" "$y" "$scale" "$transform")" || return 1
+  done < <("$DP_JQ" -r '.monitors[] | select(.enabled == true)
+            | [ .port, .mode, .x, .y, .scale, (.transform // 0) ] | @tsv' -- "$layout")
+
+  # 2. verify ALL of them before disabling anything
+  while IFS=$'\t' read -r port mode x y scale transform; do
+    [[ -n $port ]] || continue
+    if ! dp_verify_monitor "$port" "$mode" "$x" "$y" "$scale" "$transform"; then
+      log "ERROR: $port did not apply; disabling nothing"
+      notify "Display profile" "$port did not apply; nothing was disabled"
+      return 1
+    fi
+  done < <("$DP_JQ" -r '.monitors[] | select(.enabled == true)
+            | [ .port, .mode, .x, .y, .scale, (.transform // 0) ] | @tsv' -- "$layout")
+
+  # 3. disable the rest. Hyprland moves their workspaces elsewhere and does not
+  #    move them back, so say which ones they were.
+  while IFS= read -r port; do
+    [[ -n $port ]] || continue
+    log "disabling $port$(dp_workspaces_on "$port")"
+    hypr_eval "hl.monitor({ output = \"$port\", disabled = true })" || true
+  done < <("$DP_JQ" -r '.monitors[] | select(.enabled != true) | .port' -- "$layout")
+
+  # 4. never end with zero active outputs
+  if ! dp_any_active; then
+    log "ERROR: zero active outputs after applying; entering rescue"
+    notify "Display profile" "No active monitor was left; restoring every connected one"
+    dp_rescue
+    return 1
+  fi
+
+  # 5. focus the primary
+  primary_id="$("$DP_JQ" -r '.primary // ""' -- "$layout")"
+  primary_port="$("$DP_JQ" -r --arg p "$primary_id" \
+    '[ .monitors[] | select(.identity == $p and .enabled == true) | .port ] | .[0] // ""' -- "$layout")"
+  if [[ -n $primary_port ]]; then
+    hypr_eval "hl.dispatch(hl.dsp.focus({ monitor = \"$primary_port\" }))" || true
+  fi
+
+  # 6. Waybar follows the layout
+  dp_waybar_apply "$layout" || log "WARN: the Waybar step failed; the display state is applied"
+  return 0
+}
+
+dp_workspaces_on() {
+  local port=$1 ws
+  [[ $DRY_RUN -eq 1 ]] && return 0
+  ws="$("$DP_HYPRCTL" -j workspaces 2>/dev/null \
+    | "$DP_JQ" -r --arg p "$port" '[ .[] | select(.monitor == $p) | .name ] | join(",")' 2>/dev/null || true)"
+  [[ -n ${ws:-} ]] && printf ' (workspaces %s will move)' "$ws"
+  return 0
+}
+
+# --- State -----------------------------------------------------------------
+# Two lines: the fingerprint, then the layout name. The menu reads it to show
+# what is running, and the watcher re-applies THIS layout after a config
+# reload rather than jumping back to the set's default.
+dp_state_write() {
+  [[ $DRY_RUN -eq 1 ]] && return 0
+  mkdir -p -- "$STATE_DIR"
+  printf '%s\n%s\n' "$1" "$2" >"$STATE_FILE" 2>/dev/null || true
+}
+
+# --- Coexistence -----------------------------------------------------------
+# This system manages only what it has been given. A user who configures
+# monitors in monitors.lua, or through MonitorProfiles.sh, keeps control until
+# they save a layout for the monitor set in front of them.
+# Strips --[[ block ]] comments and -- line comments, then looks for a call.
+dp_lua_has_monitor_call() {
+  awk '
+    { line = $0 }
+    # inside a block comment: look only for its end
+    inblock {
+      i = index(line, "]]")
+      if (i == 0) next
+      line = substr(line, i + 2)
+      inblock = 0
+    }
+    {
+      # drop a block comment that opens on this line
+      while ((o = index(line, "--[[")) > 0) {
+        rest = substr(line, o + 4)
+        c = index(rest, "]]")
+        if (c == 0) { line = substr(line, 1, o - 1); inblock = 1; break }
+        line = substr(line, 1, o - 1) substr(rest, c + 2)
+      }
+      # drop a line comment
+      if ((o = index(line, "--")) > 0) line = substr(line, 1, o - 1)
+      if (line ~ /hl[[:space:]]*\.[[:space:]]*monitor[[:space:]]*[({]/) { found = 1; exit }
+    }
+    END { exit (found ? 0 : 1) }
+  ' "$1" 2>/dev/null
+}
+
+dp_stand_down() {
+  local norm=$1 fp
+  [[ -f $DP_MONITORS_LUA ]] || return 1
+  # Find a real hl.monitor call, in any of the shapes Lua allows:
+  #   hl.monitor({...})   hl.monitor{...}   if x then hl.monitor({...}) end
+  # while ignoring both comment forms, because the file SHIPS as commented
+  # examples and treating those as user configuration would disable the whole
+  # feature for everyone.
+  dp_lua_has_monitor_call "$DP_MONITORS_LUA" || return 1
+  fp="$(ds_fingerprint "$norm")"
+  if ds_store_read "$DP_STORE_FILE" | "$DP_JQ" -e --arg fp "$fp" \
+       '((.fingerprints[$fp].layouts // {}) | length) > 0' >/dev/null 2>&1; then
+    return 1
+  fi
+  log "standing down: $DP_MONITORS_LUA configures monitors itself and no layout is saved for this set"
+  return 0
+}
+
+# --- Waybar ----------------------------------------------------------------
+# The bars follow the layout. Outputs are stored as identities and resolved to
+# ports here, so the bars follow the monitor rather than the port.
+#
+# dp_waybar_outputs <layout.json> -> the ports the bars belong on, one per
+# line, sorted. Empty means "every monitor", which needs no generated config.
+dp_waybar_outputs() {
+  local layout=$1 mode
+  mode="$("$DP_JQ" -r '.waybar.mode // "all"' -- "$layout")"
+  case $mode in
+    all) : ;;
+    primary)
+      "$DP_JQ" -r '.primary as $p | .monitors[]
+        | select(.identity == $p and .enabled == true) | .port' -- "$layout" | sort
+      ;;
+    selected)
+      "$DP_JQ" -r '(.waybar.outputs // []) as $sel | .monitors[]
+        | select(.enabled == true and (.identity | IN($sel[]))) | .port' -- "$layout" | sort
+      ;;
+  esac
+}
+
+# dp_waybar_generate <layout.json> -> the config path Waybar should run with.
+#   For "all" that is the user's own config and nothing is generated, which
+#   keeps WaybarLayout.sh's choice of layout untouched. Otherwise the active
+#   layout file is copied with an "output" array injected into every bar.
+dp_waybar_generate() {
+  local layout=$1 ports json src dst
+  mapfile -t ports < <(dp_waybar_outputs "$layout")
+  if (( ${#ports[@]} == 0 )); then printf '%s\n' "$DP_WAYBAR_CONFIG"; return 0; fi
+
+  src="$(readlink -f -- "$DP_WAYBAR_CONFIG" 2>/dev/null || printf '%s' "$DP_WAYBAR_CONFIG")"
+  if [[ ! -r $src ]]; then
+    log "WARN: cannot read waybar config $src; using it unmodified"
+    printf '%s\n' "$DP_WAYBAR_CONFIG"
+    return 0
+  fi
+  dst="$STATE_DIR/config-active"
+  # ["DP-2", "eDP-1"] — jq builds it so the quoting is never hand-rolled.
+  json="$(printf '%s\n' "${ports[@]}" | "$DP_JQ" -R -s -c \
+    'split("\n") | map(select(length > 0))' | sed 's/","/", "/g')"
+
+  mkdir -p -- "$STATE_DIR"
+  # An "output" key may be a single line or a multi-line array; drop either in
+  # full, or the leftover array entries would make the config unparseable.
+  # No `--` before the file: GNU awk reads it as a filename, not as an
+  # end-of-options marker, and then fails to open it.
+  if awk -v out="$json" '
+      skipping {
+        if ($0 ~ /\]/) { skipping = 0 }
+        next
+      }
+      /^[[:space:]]*"output"[[:space:]]*:/ {
+        if ($0 ~ /\[/ && $0 !~ /\]/) { skipping = 1 }
+        next
+      }
+      { print }
+      /^[[:space:]]*"layer"[[:space:]]*:/ { printf "\"output\": %s,\n", out; n++ }
+      END { if (n == 0) exit 3 }
+    ' "$src" > "$dst.tmp" 2>/dev/null; then
+    mv -f -- "$dst.tmp" "$dst"
+    log "waybar restricted to ${ports[*]}"
+    printf '%s\n' "$dst"
+  else
+    rm -f -- "$dst.tmp"
+    log "WARN: no bar with a \"layer\" key found in $src; leaving Waybar on every monitor"
+    printf '%s\n' "$DP_WAYBAR_CONFIG"
+  fi
+}
+
+dp_waybar_service_enabled() {
+  command -v systemctl >/dev/null 2>&1 || return 1
+  [[ "$(systemctl --user is-enabled waybar.service 2>/dev/null || true)" == "enabled" ]]
+}
+
+dp_waybar_apply() {
+  local layout=$1 cfg running
+  if [[ $DRY_RUN -eq 1 ]]; then
+    cfg="$(dp_waybar_generate "$layout")"
+    say_plan "$DP_WAYBAR -c $cfg -s $DP_WAYBAR_STYLE"
+    return 0
+  fi
+  cfg="$(dp_waybar_generate "$layout")" || return 1
+
+  # Already right? Leave it alone. Every needless restart blanks the bars for
+  # about a second, re-registers every tray item and re-fetches the weather.
+  # Both the path and the content matter: the path catches a mode switch, the
+  # content catches a layout changed by WaybarLayout.sh under the same path.
+  running="$("$DP_PGREP" -af waybar 2>/dev/null \
+    | sed -n 's/.*-c \([^ ]*\).*/\1/p' | head -n1 || true)"
+  if [[ -n $running && $running == "$cfg" ]] && cmp -s -- "$running" "$cfg"; then
+    log "waybar already runs $(basename -- "$cfg"); not restarting it"
+    return 0
+  fi
+
+  log "restarting waybar with $(basename -- "$cfg")"
+
+  # Prefer the dots' own owner: it holds the shared Waybar lock, and it reads
+  # the config path back from this script's waybar-config verb, so the
+  # restriction we just generated is the one it launches with.
+  #
+  # Except when waybar.service is enabled: WaybarStartup.sh then hands the
+  # restart to systemd, whose unit does not pass -c, so a per-layout
+  # restriction would be silently dropped - and, because the running bar then
+  # has no -c to compare against, every later apply would restart it again.
+  if [[ -x $DP_WAYBAR_STARTUP ]] && { [[ $cfg == "$DP_WAYBAR_CONFIG" ]] || ! dp_waybar_service_enabled; }; then
+    "$DP_WAYBAR_STARTUP" --restart 9>&- >/dev/null 2>&1 \
+      || log "WARN: $DP_WAYBAR_STARTUP --restart failed"
+    return 0
+  fi
+
+  if "$DP_PGREP" -x waybar >/dev/null 2>&1; then
+    "$DP_PKILL" -INT -x waybar >/dev/null 2>&1 || true
+    local attempt
+    for attempt in 1 2 3 4 5; do
+      "$DP_PGREP" -x waybar >/dev/null 2>&1 || break
+      sleep 0.2
+    done
+    "$DP_PKILL" -9 -x waybar >/dev/null 2>&1 || true
+  fi
+
+  # A script invoked from a Waybar module runs inside waybar.service's cgroup,
+  # and killing Waybar from there makes systemd tear the cgroup down, taking
+  # this restart with it. A transient scope escapes that.
+  if command -v "$DP_SYSTEMD_RUN" >/dev/null 2>&1; then
+    "$DP_SYSTEMD_RUN" --user --scope --quiet --collect \
+      --unit="kooldots-waybar-$$-$RANDOM" \
+      -- "$DP_WAYBAR" -c "$cfg" -s "$DP_WAYBAR_STYLE" >/dev/null 2>&1 9>&- &
+  else
+    ( "$DP_WAYBAR" -c "$cfg" -s "$DP_WAYBAR_STYLE" >"$STATE_DIR/waybar.log" 2>&1 9>&- & )
+  fi
+  return 0
+}
+
+# --- Housekeeping ----------------------------------------------------------
+# The previous two-profile implementation generated these. Nothing reads them
+# now, and leaving them invites a stale bar config.
+dp_cleanup_legacy() {
+  [[ $DRY_RUN -eq 1 ]] && return 0
+  rm -f -- "$STATE_DIR/config-home" "$STATE_DIR/config-work" 2>/dev/null || true
+}
+
+# --- Verbs -----------------------------------------------------------------
+dp_apply_named() {
+  local name=$1 norm fp layout tmp
+  ds_name_valid "$name" || die "not a usable layout name: $name"
+  norm="$(dp_monitors)" || return 1
+  [[ "$(ds_count "$norm")" -gt 0 ]] || { log "no monitors connected; nothing to do"; return 0; }
+  fp="$(ds_fingerprint "$norm")"
+  if ! ds_store_read "$DP_STORE_FILE" | "$DP_JQ" -e --arg fp "$fp" --arg n "$name" \
+        '(.fingerprints[$fp].layouts // {}) | has($n)' >/dev/null 2>&1; then
+    log "ERROR: no layout named $name for this monitor set"
+    notify "Display profile" "No layout named $name for the monitors in front of you"
+    return 1
+  fi
+  tmp="$(mktemp)"
+  ds_store_read "$DP_STORE_FILE" | "$DP_JQ" -c --arg fp "$fp" --arg n "$name" \
+    '.fingerprints[$fp].layouts[$n]' >"$tmp"
+  layout="$STATE_DIR/active-layout.json"
+  mkdir -p -- "$STATE_DIR"
+  ds_assign_ports "$tmp" "$norm" >"$layout"
+  printf '%s\n' "$fp" >"$STATE_DIR/active-layout.fingerprint"
+  rm -f -- "$tmp"
+  log "applying layout $name"
+  if dp_apply_layout "$layout"; then
+    dp_state_write "$fp" "$name"
+    log "layout $name is active"
+    return 0
+  fi
+  return 1
+}
+
+# A damaged store makes every layout vanish from the menu. Saying nothing
+# leaves the user to conclude their layouts are gone and reach for Reset, which
+# is the one destructive button. So say it, once per run.
+dp_report_store_health() {
+  case "$(ds_store_status "$DP_STORE_FILE")" in
+    malformed)
+      log "WARN: $DP_STORE_FILE is malformed; reading it as empty and refusing every write"
+      notify "Display layouts" "Your layout file is damaged. Nothing was overwritten: $DP_STORE_FILE"
+      ;;
+    future)
+      log "WARN: $DP_STORE_FILE was written by a newer version; reading what I can and refusing every write"
+      notify "Display layouts" "Your layout file is from a newer version. Nothing will be written to it."
+      ;;
+  esac
+}
+
+dp_auto() {
+  local norm resolved layout fp name source
+  dp_report_store_health
+  norm="$(dp_monitors)" || return 1
+  if [[ "$(ds_count "$norm")" -eq 0 ]]; then
+    log "no monitors connected; standing down"
+    return 0
+  fi
+  if dp_stand_down "$norm"; then return 0; fi
+  resolved="$STATE_DIR/resolved.json"
+  mkdir -p -- "$STATE_DIR"
+  if ! ds_resolve "$norm" "$DP_STORE_FILE" >"$resolved"; then
+    log "nothing to resolve"
+    return 0
+  fi
+  fp="$("$DP_JQ" -r '.fingerprint' -- "$resolved")"
+  name="$("$DP_JQ" -r '.name' -- "$resolved")"
+  source="$("$DP_JQ" -r '.source' -- "$resolved")"
+  layout="$STATE_DIR/active-layout.json"
+  "$DP_JQ" -c '.layout' -- "$resolved" >"$layout"
+  printf '%s\n' "$fp" >"$STATE_DIR/active-layout.fingerprint"
+  log "auto -> $name ($source)"
+  if dp_apply_layout "$layout"; then
+    dp_state_write "$fp" "$name"
+    log "auto -> $name complete"
+    return 0
+  fi
+  return 1
+}
+
+dp_capture() {
+  local name=$1 norm fp layout
+  ds_name_valid "$name" || die "not a usable layout name: $name"
+  norm="$(dp_monitors)" || return 1
+  [[ "$(ds_count "$norm")" -gt 0 ]] || die "no monitors connected; nothing to capture"
+  fp="$(ds_fingerprint "$norm")"
+  layout="$STATE_DIR/captured.json"
+  mkdir -p -- "$STATE_DIR"
+  ds_capture "$norm" >"$layout"
+  if [[ $DRY_RUN -eq 1 ]]; then say_plan "save the live state as $name"; return 0; fi
+  ds_store_set "$DP_STORE_FILE" "$fp" "$name" "$layout" || die "could not save $name"
+  log "saved the live state as $name"
+  notify "Display profile" "Saved as $name"
+  dp_state_write "$fp" "$name"
+}
+
+dp_simple_store_verb() {  # verb name
+  local verb=$1 name=$2 norm fp
+  ds_name_valid "$name" || die "not a usable name: $name"
+  norm="$(dp_monitors)" || return 1
+  fp="$(ds_fingerprint "$norm")"
+  [[ -n $fp ]] || die "no monitors connected"
+  if [[ $DRY_RUN -eq 1 ]]; then say_plan "$verb $name"; return 0; fi
+  case $verb in
+    set-default) ds_store_default "$DP_STORE_FILE" "$fp" "$name" || die "no layout named $name" ;;
+    delete)      ds_store_delete  "$DP_STORE_FILE" "$fp" "$name" || die "could not delete $name" ;;
+    label)       ds_store_label   "$DP_STORE_FILE" "$fp" "$name" || die "could not set the label" ;;
+  esac
+  log "$verb: $name"
+}
+
+dp_list() {
+  local norm
+  norm="$(dp_monitors)" || return 1
+  ds_layout_names "$norm" "$DP_STORE_FILE"
+}
+
+# dp_import_nwg <file>: nwg-displays only writes a monitors.conf on Hyprland and
+# never applies anything, and the Lua fork never reads that file. This bridges
+# the gap: parse what nwg wrote and apply it, so a drag-and-drop takes effect.
+# It does not save on its own — the menu offers that afterwards via capture.
+dp_import_nwg() {
+  local conf=$1 norm layout fp
+  [[ -n $conf ]] || die "import-nwg needs the path to the file nwg-displays wrote"
+  [[ -f $conf ]] || die "no such file: $conf"
+  norm="$(dp_monitors)" || return 1
+  [[ "$(ds_count "$norm")" -gt 0 ]] || { log "no monitors connected; nothing to import"; return 0; }
+  fp="$(ds_fingerprint "$norm")"
+  layout="$STATE_DIR/active-layout.json"
+  mkdir -p -- "$STATE_DIR"
+  if ! ds_from_nwg_conf "$conf" "$norm" >"$layout.tmp" 2>/dev/null; then
+    rm -f -- "$layout.tmp"
+    die "nothing usable in $conf — did you press Apply in nwg-displays?"
+  fi
+  mv -f -- "$layout.tmp" "$layout"
+  printf '%s\n' "$fp" >"$STATE_DIR/active-layout.fingerprint"
+  log "importing the arrangement from nwg-displays"
+  dp_apply_layout "$layout"
+}
+
+# --- main ------------------------------------------------------------------
+main() {
+  local arg verb="" name=""
+  for arg in "$@"; do [[ $arg == "--dry-run" ]] && DRY_RUN=1; done
+
+  case "${1-}" in
+    "" | --dry-run)                      verb=auto ;;
+    --)                                  shift; verb=layout; name=${1-} ;;
+    auto | list | monitors-json | waybar-config) verb=$1 ;;
+    capture | set-default | delete | label)
+      verb=$1; shift
+      [[ ${1-} == "--" ]] && shift
+      name=${1-}
+      ;;
+    import-nwg)
+      verb=$1; name=${2-}
+      ;;
+    -h | --help)                         usage; return 0 ;;
+    -*)                                  usage; die "unknown option: $1" ;;
+    *)                                   verb=layout; name=$1 ;;
+  esac
+
+  dp_require_tools
+  dp_cleanup_legacy
+
+  case $verb in
+    auto)          dp_auto ;;
+    layout)        [[ -n $name ]] || die "no layout name given"; dp_apply_named "$name" ;;
+    capture)       [[ -n $name ]] || die "capture needs a name"; dp_capture "$name" ;;
+    set-default | delete | label)
+                   [[ -n $name ]] || die "$verb needs a name"; dp_simple_store_verb "$verb" "$name" ;;
+    list)          dp_list ;;
+    import-nwg)    dp_import_nwg "$name" ;;
+    monitors-json) dp_monitors ;;
+    waybar-config) dp_waybar_config_verb ;;
+    *)             usage; die "unknown verb: $verb" ;;
+  esac
+}
+
+dp_waybar_config_verb() {
+  local norm resolved layout recorded fp
+  norm="$(dp_monitors)" || { printf '%s\n' "$DP_WAYBAR_CONFIG"; return 0; }
+  layout="$STATE_DIR/active-layout.json"
+  fp="$(ds_fingerprint "$norm")"
+  recorded=""
+  [[ -f $STATE_DIR/active-layout.fingerprint ]] \
+    && recorded="$(head -n1 -- "$STATE_DIR/active-layout.fingerprint" 2>/dev/null || true)"
+  # A layout recorded for a different set of monitors would restrict the bars
+  # to a port that is not there any more, leaving no bar on any screen.
+  if [[ $recorded != "$fp" ]]; then
+    log "the recorded layout belongs to another monitor set; resolving afresh"
+    rm -f -- "$layout"
+  fi
+  if [[ ! -f $layout ]]; then
+    resolved="$STATE_DIR/resolved.json"
+    if ds_resolve "$norm" "$DP_STORE_FILE" >"$resolved" 2>/dev/null; then
+      "$DP_JQ" -c '.layout' -- "$resolved" >"$layout"
+    else
+      printf '%s\n' "$DP_WAYBAR_CONFIG"; return 0
+    fi
+  fi
+  dp_waybar_generate "$layout"
+}
+
+# Serialise profile changes. A second invocation waits briefly, then gives up
+# rather than interleaving monitor and waybar operations.
+#
+# The lock is held on an explicit descriptor rather than via `exec flock CMD`,
+# because the waybar this script starts outlives it: with `exec flock` waybar
+# inherits flock's own descriptor and keeps the lock held for its whole
+# lifetime, which deadlocks every later run. Fd 9 is closed explicitly for
+# every child that outlives this script.
+#
+# A dry run changes nothing, so it must neither take the lock nor wait for it.
+# Read-only verbs must not take it either, or opening the menu could block on a
+# profile change in progress.
+wants_dry_run() {
+  local arg
+  for arg in "$@"; do
+    [[ $arg == "--dry-run" ]] && return 0
+  done
+  return 1
+}
+
+wants_read_only() {
+  case "${1-}" in list | monitors-json | waybar-config | -h | --help) return 0 ;; esac
+  return 1
+}
+
+if [[ -z ${DP_SKIP_LOCK:-} ]] && ! wants_dry_run "$@" && ! wants_read_only "$@"; then
+  if ! command -v "$DP_FLOCK" >/dev/null 2>&1; then
+    log "WARN: $DP_FLOCK not found; continuing without a lock, so two layout changes could interleave"
+  else
+    mkdir -p -- "$(dirname -- "$LOCK_FILE")" 2>/dev/null || true
+    if exec 9>"$LOCK_FILE"; then
+      "$DP_FLOCK" -w 10 9 || die "another display layout change is in progress; giving up"
+    else
+      log "WARN: cannot open $LOCK_FILE; continuing without a lock"
+    fi
+  fi
+fi
+
+main "$@"

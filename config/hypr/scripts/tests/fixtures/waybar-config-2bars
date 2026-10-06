@@ -1,0 +1,15 @@
+/* ---- fake dual bar layout ---- */
+// ### DUAL TOP and BOTTOM ### //
+[{
+"include": [ "$HOME/.config/hypr/waybar/Modules" ],
+"layer": "top",
+"position": "top",
+"modules-left": ["clock"]
+},
+{
+"include": [ "$HOME/.config/hypr/waybar/Modules" ],
+"layer": "top",
+"position": "bottom",
+"output": "HDMI-A-1",
+"modules-left": ["cpu"]
+}]

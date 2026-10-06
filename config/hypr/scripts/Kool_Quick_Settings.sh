@@ -550,7 +550,19 @@ handle_choice() {
       notify-send -i "$iDIR/error.png" "E-R-R-O-R" "Install nwg-displays first"
       return
     fi
-    nwg-displays
+    # nwg-displays writes monitors.conf, which the Lua config never reads, so
+    # point it at a discard path: the arrangement is kept by saving it as a
+    # layout instead. The pause file stops MonitorWatcher.sh re-applying the
+    # stored layout while the GUI is up, which would undo the drag.
+    qs_state_dir="${XDG_RUNTIME_DIR:-/tmp}/kooldots-display-profiles"
+    mkdir -p -- "$qs_state_dir"
+    nwg-displays -m "$qs_state_dir/nwg-monitors.conf.discard" 9>&- &
+    qs_nwg_pid=$!
+    printf '%s\n' "$qs_nwg_pid" > "$qs_state_dir/pause"
+    wait "$qs_nwg_pid" || true
+    rm -f -- "$qs_state_dir/pause"
+    notify-send -i "$iDIR/ja.png" "Monitors" \
+      "To keep this arrangement: SUPER+ALT+D then 'Save current state as...'"
     ;;
   "GTK Settings (nwg-look)")
     if ! command -v nwg-look &>/dev/null; then

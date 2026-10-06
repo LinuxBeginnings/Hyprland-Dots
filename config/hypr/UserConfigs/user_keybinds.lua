@@ -115,3 +115,25 @@ if not submap then
     .. "Copy config/hypr/lua/submap_helper.lua to ~/.config/hypr/lua/ to enable them.")
 end
 
+-- =============================================================================
+-- DISPLAY PROFILES (Work / Home)
+-- =============================================================================
+-- SUPER+ALT+D opens the profile popup (Automatic / Home / Work / Cancel).
+-- SUPER+ALT+W forces Work mode and is the fallback when rofi will not start.
+-- Both combos were free; the plan's original SUPER+ALT+H and SUPER+ALT+P are
+-- already taken by "Horizonal scroll right" and the KB-passthrough submap.
+bind(
+  "SUPER ALT",
+  "D",
+  exec_cmd("$HOME/.config/hypr/scripts/DisplayProfileMenu.sh"),
+  { description = "Display layouts: menu for this monitor set" }
+)
+bind(
+  "SUPER ALT",
+  "W",
+  -- A bare layout name is the controller's "apply this layout" verb, passed
+  -- after -- so a name that looks like an option stays data. Create a layout
+  -- called Work (menu -> Edit parameters) and this key applies it.
+  exec_cmd("$HOME/.config/hypr/scripts/DisplayProfile.sh -- Work"),
+  { description = "Display layouts: apply the layout named Work" }
+)

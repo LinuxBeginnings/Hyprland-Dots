@@ -1,0 +1,6 @@
+[
+{"name":"DP-1","description":"AOC 24G2 A1","make":"AOC","model":"24G2","serial":"A1","width":1920,"height":1080,"refreshRate":60.000,"x":0,"y":0,"scale":1,"transform":0,"focused":false,"disabled":false,"availableModes":["1920x1080@60.00Hz"]},
+{"name":"DP-2","description":"AOC 24G2 A2","make":"AOC","model":"24G2","serial":"A2","width":1920,"height":1080,"refreshRate":60.000,"x":1920,"y":0,"scale":1,"transform":0,"focused":false,"disabled":false,"availableModes":["1920x1080@60.00Hz"]},
+{"name":"DP-3","description":"Dell P2419H D1","make":"Dell","model":"P2419H","serial":"D1","width":1920,"height":1080,"refreshRate":60.000,"x":0,"y":1080,"scale":1,"transform":0,"focused":false,"disabled":false,"availableModes":["1920x1080@60.00Hz"]},
+{"name":"DP-4","description":"Dell P2419H D2","make":"Dell","model":"P2419H","serial":"D2","width":1920,"height":1080,"refreshRate":60.000,"x":1920,"y":1080,"scale":1,"transform":0,"focused":false,"disabled":false,"availableModes":["1920x1080@60.00Hz"]}
+]

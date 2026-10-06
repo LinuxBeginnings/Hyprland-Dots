@@ -18,6 +18,15 @@
 --   or when the lid is opened.
 -- * Listens to hotplug events (monitor.added, monitor.removed) and lid switch events.
 
+-- DISABLED. The display-layout system (scripts/MonitorWatcher.sh +
+-- scripts/DisplayProfile.sh) now owns all monitor management for this install,
+-- including clamshell/lid handling. Running this file as well meant two
+-- controllers reacted to the same monitor.added / lid events and fought each
+-- other, which is why a scale set in nwg-displays did not stick. To restore the
+-- original KooLDots behaviour and hand control back to this file, delete the
+-- `do return end` line below.
+do return end
+
 local FALLBACK_INTERNAL = "eDP-1"
 
 local function read_file(path)

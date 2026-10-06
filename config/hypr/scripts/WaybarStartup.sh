@@ -15,7 +15,20 @@ SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 # knowledge of the hypr/-owned location, so every direct launch must pass
 # explicit -c/-s flags.
 WAYBAR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar"
-WAYBAR_CONFIG_ARG="$WAYBAR_DIR/config"
+# Ask the display-layout controller which Waybar config to run. With a
+# per-layout bar restriction in place that is a generated file; without the
+# feature installed, or if anything about it fails, this falls back to the
+# plain config so this script keeps working on its own.
+kooldots_waybar_config() {
+  local dp="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/DisplayProfile.sh" p=""
+  if [ -x "$dp" ]; then
+    p="$("$dp" waybar-config 2>/dev/null | tail -n1 || true)"
+  fi
+  if [ -n "$p" ] && [ -f "$p" ]; then printf '%s\n' "$p"
+  else printf '%s\n' "${WAYBAR_DIR:-${waybar_dir:-}}/config"; fi
+}
+
+WAYBAR_CONFIG_ARG="$(kooldots_waybar_config)"
 WAYBAR_STYLE_ARG="$WAYBAR_DIR/style.css"
 
 is_waybar_running() {
@@ -64,7 +77,11 @@ ensure_wallust_waybar_colors() {
     mkdir -p "$(dirname "$colors_file")" 2>/dev/null || true
     [ -f "$colors_file" ] || touch "$colors_file" 2>/dev/null || true
     if [ ! -s "$colors_file" ] && [ -x "$SCRIPTSDIR/WallustSwww.sh" ]; then
-        "$SCRIPTSDIR/WallustSwww.sh" >/dev/null 2>&1 &
+        # 9>&- : this runs while the shared Waybar lock is held on fd 9, and
+        # flock keeps the lock until every descriptor on it is closed. A child
+        # that inherits it strands the lock for its whole run, after which the
+        # next WaybarStartup.sh exits without starting a bar.
+        "$SCRIPTSDIR/WallustSwww.sh" >/dev/null 2>&1 9>&- &
     fi
 }
 
