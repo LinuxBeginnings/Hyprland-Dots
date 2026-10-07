@@ -65,6 +65,8 @@ assert_contains "$CALL_LOG" 'scale = "1.5"' "the stored scale was used"
 assert_contains "$CALL_LOG" 'position = "1280x0"' "the stored position was used"
 assert_contains "$CALL_LOG" 'transform = 0' "transform is always passed"
 assert_count_re 0 "$CALL_LOG" 'disabled = true'
+# enabled monitors are explicitly re-enabled (clears a prior disable)
+assert_count_re 2 "$CALL_LOG" 'disabled = false'
 assert_contains "$CALL_LOG" 'hl.dispatch(hl.dsp.focus({ monitor = "DP-2" }))' "focus went to the primary"
 
 it "a layout that disables a monitor enables the others first"

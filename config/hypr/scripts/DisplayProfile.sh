@@ -133,7 +133,7 @@ hypr_eval() {
 }
 
 monitor_lua() {  # port mode x y scale transform
-  printf 'hl.monitor({ output = "%s", mode = "%s", position = "%sx%s", scale = "%s", transform = %s })' \
+  printf 'hl.monitor({ output = "%s", mode = "%s", position = "%sx%s", scale = "%s", transform = %s, disabled = false })' \
     "$1" "$2" "$3" "$4" "$5" "${6:-0}"
 }
 
