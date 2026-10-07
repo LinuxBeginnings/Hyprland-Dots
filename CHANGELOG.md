@@ -56,6 +56,11 @@
   - The guard was keyed by module name only, so a second bar replaced it
   - Waybar then reported `stopped unexpectedly` and re-ran it every 10s
   - It is now keyed by the parent bar; a listener exits when its bar does
+- A shut laptop lid no longer switches off its only screen
+  - `user_laptops.lua` disabled the internal panel whenever the lid closed
+  - With no external monitor that left the session with no output at all
+  - The panel now stays on unless another monitor can show the session
+  - `patches/80-display-layouts.sh` applies the same fix to existing installs
 
 ## Added:
 
@@ -74,6 +79,21 @@
   - `custom/swaync`, `custom/hint`, `custom/keyboard` are icon/text pairs
   - Only the text half of a pair runs a script, so listeners cannot collide
   - The style inlines its gruvbox palette, so it ships as one file
+- Multi-monitor display layouts
+  - A layout belongs to a monitor set, keyed by device, not by port
+  - `SUPER + ALT + D` opens the menu; `SUPER + ALT + W` applies layout `Work`
+  - Applying writes the layout to `UserConfigs/monitors.lua`, which Lua loads
+  - So a layout survives a reload, a restart and a lid event
+  - Per layout: on/off, mode, scale, rotation, position, primary, Waybar bars
+  - `nwg-displays` is bridged: arrange, then the menu applies and saves it
+  - Lid handling stays in `user_laptops.lua`, which reads the same file
+  - 489 checks run from JSON fixtures with no monitors attached
+- `Monitor Profiles` uses the same layout store
+  - Reached from Quick Settings (`SUPER + SHIFT + E`) and lists this set's layouts
+  - `Monitor_Profiles/*.lua` is offered as a one-way import into the store
+- `patches/80-display-layouts.sh` activates the feature on existing installs
+  - `copy.sh` only adds missing `UserConfigs` files, so the edits never landed
+  - It starts `MonitorWatcher.sh` and adds the two display keybinds
 
 ## Updated:
 

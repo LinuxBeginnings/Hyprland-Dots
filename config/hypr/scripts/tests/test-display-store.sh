@@ -591,4 +591,46 @@ printf '# only a comment\n' >"$WORK/nwg-empty.conf"
 if ds_from_nwg_conf "$WORK/nwg-empty.conf" "$n_dual" >/dev/null 2>&1; then fail "should refuse empty"; else pass_msg; fi
 
 
+# --- the nwg parser's field shapes -----------------------------------------
+# A `desc:` name IS a monitor description, and descriptions contain commas
+# ("Dell Inc., DELL U2412M"). Treating field 1 as the name would shift every
+# following field by one and silently drop the monitor from the import.
+it "a comma inside a description does not misalign the fields"
+printf 'monitor=desc:ACME, Inc. X27,1920x1080@60.00,0x0,1.0\n' >"$WORK/nwg-comma.conf"
+jq -c '[ .[] | if (.identity|startswith("ASUS")) then .description = "ACME, Inc. X27" else . end ]' \
+  "$n_dual" >"$WORK/n-comma.norm.json"
+ds_from_nwg_conf "$WORK/nwg-comma.conf" "$WORK/n-comma.norm.json" >"$WORK/n-comma.layout.json"
+assert_json_eq "$WORK/n-comma.layout.json" '.monitors | length' '1'
+assert_json_eq "$WORK/n-comma.layout.json" '.monitors[0].mode' '1920x1080@60.00'
+assert_json_eq "$WORK/n-comma.layout.json" '.monitors[0].scale' '1'
+assert_json_eq "$WORK/n-comma.layout.json" '.monitors[0].x' '0'
+
+it "a negative position is parsed rather than dropped"
+# A monitor placed left of the origin gets a negative x, which is a legitimate
+# arrangement and must not make the line unparseable.
+printf 'monitor=DP-2,1920x1080@119.88,-1920x0,1.0\n' >"$WORK/nwg-neg.conf"
+ds_from_nwg_conf "$WORK/nwg-neg.conf" "$n_dual" >"$WORK/nwg-neg.layout.json"
+assert_json_eq "$WORK/nwg-neg.layout.json" '.monitors[0].x' '-1920'
+
+it "extras a layout cannot express are refused, not silently dropped"
+# A mirrored arrangement applied as a plain one would quietly un-mirror the
+# user's monitors, so the import must fail and say which setting is the problem.
+printf 'monitor=DP-2,1920x1080@119.88,0x0,1.0,mirror,eDP-1\n' >"$WORK/nwg-mirror.conf"
+if ds_from_nwg_conf "$WORK/nwg-mirror.conf" "$n_dual" \
+     >"$WORK/nwg-mirror.layout.json" 2>"$WORK/nwg-mirror.err"; then
+  fail "a mirrored arrangement must not import as a plain layout"
+else pass_msg; fi
+assert_contains "$WORK/nwg-mirror.err" 'mirror' "the reason names the setting that cannot be stored"
+
+it "a 10-bit arrangement is refused for the same reason"
+printf 'monitor=DP-2,1920x1080@119.88,0x0,1.0,bitdepth,10\n' >"$WORK/nwg-10bit.conf"
+if ds_from_nwg_conf "$WORK/nwg-10bit.conf" "$n_dual" >/dev/null 2>&1; then
+  fail "bitdepth must not be dropped silently"
+else pass_msg; fi
+
+it "an arrangement with no extras still imports"
+printf 'monitor=DP-2,1920x1080@119.88,0x0,1.0\n' >"$WORK/nwg-plain.conf"
+ds_from_nwg_conf "$WORK/nwg-plain.conf" "$n_dual" >"$WORK/nwg-plain.layout.json" 2>/dev/null \
+  && pass_msg || fail "a plain arrangement must import"
+
 summary "test-display-store"

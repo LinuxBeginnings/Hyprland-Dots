@@ -8,6 +8,13 @@ In **KoolDots (2026)** with the Lua configuration workflow, all personal and mul
 
 This guide explains how monitor configuration works in Hyprland Lua, how monitor profiles interact with user overrides, and provides practical examples for single, multi-monitor, high-refresh, and scaled displays.
 
+> **Easier first:** KoolDots ships a display-layout system that writes this file
+> for you. Press `SUPER + ALT + D`, arrange the monitors (drag and drop, or the
+> parameter table) and save the result under a name; it then restores itself
+> whenever that set of monitors is connected. See
+> [`../README-display-layouts.md`](../README-display-layouts.md). Hand-editing the
+> file, as described below, still works.
+
 ---
 
 ## 1. Overview & Architecture
@@ -17,7 +24,16 @@ This guide explains how monitor configuration works in Hyprland Lua, how monitor
 - **System Monitors (`~/.config/hypr/lua/monitors.lua`)**:
   Provides fallback defaults (such as `output = "", mode = "preferred", position = "auto", scale = "1"`).
 - **User Monitors (`~/.config/hypr/UserConfigs/monitors.lua`)**:
-  Contains your persistent custom monitor definitions. When the `MonitorProfiles.sh` script or profile selector runs, selected profiles write here. Any custom `hl.monitor({...})` blocks you add here will be preserved.
+  Contains your persistent custom monitor definitions, and is loaded by
+  `lua/monitors.lua` on every config load.
+  - Normally this file is **generated**: applying a layout writes the current
+    arrangement here, and a marker comment at the top says so. Anything you edit
+    by hand while that marker is present is replaced the next time a layout is
+    applied.
+  - **Delete the marker line to take the file over.** From then on it is treated
+    as yours: it is never overwritten, and any custom `hl.monitor({...})` blocks
+    you add are preserved. `user_laptops.lua` reads its rules from this same
+    file, so the lid and clamshell behaviour follows them.
 
 ### The `hl.monitor()` Helper Syntax
 

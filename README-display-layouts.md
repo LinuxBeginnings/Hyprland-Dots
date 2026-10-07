@@ -1,9 +1,8 @@
 # Multi-Monitor Display Layouts
 
-> A fork addition to KooL's Hyprland Dots. It remembers how you arrange your
-> monitors and restores that arrangement automatically whenever the same set of
-> monitors is connected — on a laptop or a desktop, with any number of screens.
-> Nothing in it is tied to one specific machine.
+> Remembers how you arrange your monitors and restores that arrangement whenever
+> the same set of monitors is connected — on a laptop or a desktop, with any
+> number of screens. Nothing in it is tied to one specific machine.
 
 For day-to-day use, press **`SUPER` + `ALT` + `D`**. Everything starts there.
 
@@ -48,17 +47,27 @@ session.**
         │ sourced by
   DisplayProfile.sh      — the ONLY component that calls hl.monitor. Applies,
                            verifies, falls back to a rescue layout, handles the
-                           lid, drives Waybar, imports from nwg-displays.
+                           lid, drives Waybar, imports from nwg-displays, and
+                           writes the result to UserConfigs/monitors.lua.
         │ driven by
   DisplayProfileMenu.sh  — the SUPER+ALT+D rofi menu (rows built per monitor set)
   DisplayProfileSetup.sh — the grid parameter table
+  MonitorProfiles.sh     — SUPER+SHIFT+E: the same layouts, plus a one-way
+                           import of the legacy Monitor_Profiles/ files
   MonitorWatcher.sh      — watches Hyprland's socket2 and calls the controller
 ```
 
+Applying a layout does two things: it changes the session, and it writes the
+same rules to `UserConfigs/monitors.lua`. That file is not a cache —
+`lua/monitors.lua` loads it on every config load, and `UserConfigs/user_laptops.lua`
+reads its rules from the same place. It is what makes a layout survive a reload,
+a restart and a lid event, and it is why the laptop controller does not have to
+be switched off for this one to work.
+
 Because the data model never touches the session, the entire logic is tested
-from JSON fixtures with no monitors attached — **439 automated checks** cover
+from JSON fixtures with no monitors attached — **489 automated checks** cover
 three- and four-monitor desktops, two identical monitors with no serial, a
-rotated monitor, a closed lid and the nwg-displays bridge.
+rotated monitor, a closed lid, the nwg-displays bridge and the installer patch.
 
 **New files** (all under `config/hypr/`):
 
@@ -71,14 +80,16 @@ rotated monitor, a closed lid and the nwg-displays bridge.
 | `scripts/MonitorWatcher.sh` | socket2 watcher (one per session) |
 | `scripts/README-display-profiles.md` | Full operational guide |
 | `UserConfigs/display-layouts.json` | Your saved layouts (ships empty) |
-| `scripts/tests/` | 10 suites + 34 fixtures |
+| `scripts/tests/` | 9 suites + 33 fixtures |
 
-**Existing dotfiles files adjusted** (small, each with a fallback so the dots
-still work without this feature): `WaybarStartup.sh`, `Refresh.sh`,
-`WaybarLayout.sh`, `Kool_Quick_Settings.sh`, `LidSwitch.sh`, `lib_copy.sh`,
-`UserConfigs/user_keybinds.lua`, `UserConfigs/user_startup.lua`, and
-`UserConfigs/user_laptops.lua` (disabled, because it was a second monitor
-controller that fought this one — see "Coexistence").
+**Existing files changed**, each with a fallback so the dots still work without
+this feature: `WaybarStartup.sh` and `Refresh.sh` (ask the controller which
+Waybar config to run, and fall back to the plain one), `Kool_Quick_Settings.sh`
+(the nwg-displays entry), `LidSwitch.sh`, `MonitorProfiles.sh` (now a front end
+for this system), `scripts/lib_copy.sh` (ships the store, add-only),
+`UserConfigs/user_keybinds.lua` and `UserConfigs/user_startup.lua` — and
+`patches/80-display-layouts.sh`, which is what puts those last two into an
+install that already has them.
 
 ## Getting started
 
@@ -92,6 +103,12 @@ arrangement. To keep one:
 2. `SUPER`+`ALT`+`D` → **Save current state as…** and give it a name.
 
 Connecting that set of monitors later applies that layout automatically.
+
+Step 2 is about the *name*, not about whether the arrangement survives: the
+arrangement is written to `UserConfigs/monitors.lua` as soon as it is applied,
+so a reload or a restart brings it back. What a name buys you is a choice — an
+unnamed arrangement is replaced by the set's saved layout the next time that set
+of monitors is connected.
 
 ## The menu (`SUPER` + `ALT` + `D`)
 
@@ -127,14 +144,25 @@ layout, and where the *bars* go.
 
 ## Drag-and-drop with nwg-displays
 
-On this Lua-config fork, `nwg-displays` can only *write a file*; it does not
-apply anything at runtime, because the fork does not `source` that file. So the
-menu **bridges** it: open `nwg-displays` through *Arrange monitors*, drag and
-set scale, press **Apply**, then close. The system reads what nwg wrote, applies
-it through `hl.monitor` (the change takes effect as you close the window), and
-the menu reopens offering to save it. Run `nwg-displays` *directly* from a
-terminal and this bridge does not run, so the arrangement is lost — always go
-through the menu.
+`nwg-displays` writes a `monitors.conf` that this Lua config never reads, and it
+applies its own arrangement by dispatching `dpms` and running `hyprctl reload`.
+That reload re-runs the Lua config, so what you dragged is replaced by the
+stored layout for a moment — and then lost, because nwg's file is not what the
+Lua config reads.
+
+The menu bridges the gap: it opens `nwg-displays` against a **discard path** in
+the runtime state directory, then reads what nwg wrote, applies it through
+`hl.monitor` and writes it to `UserConfigs/monitors.lua`. So the drag both takes
+effect and sticks, and the menu reopens offering to save it under a name.
+
+Two consequences worth knowing:
+
+- Run `nwg-displays` *directly* from a terminal and this bridge does not run, so
+  the arrangement is lost. Always go through the menu.
+- Mirroring and 10-bit colour are expressible in `nwg-displays` but not in a
+  layout. Rather than silently applying a mirrored arrangement as a plain one,
+  the import refuses and names the setting; use the parameter table for those
+  monitors.
 
 ## Waybar
 
@@ -150,20 +178,33 @@ internal panel off; opening it or unplugging the external brings it back. The
 system never leaves you with zero active screens — a shut laptop with no
 external keeps its panel on.
 
+Lid handling lives in `UserConfigs/user_laptops.lua`, which is still enabled. It
+reads the same `UserConfigs/monitors.lua` this system writes, so the two agree
+rather than fighting; this system additionally honours the lid when it applies a
+layout, so a layout applied with the lid shut does not light the panel back up.
+
 ## Coexistence — when it deliberately does nothing
 
 If you configure monitors yourself (an uncommented `hl.monitor(...)` in
-`UserConfigs/monitors.lua`, or a profile chosen through `MonitorProfiles.sh`)
-and the current monitor set has no saved layout, the system stands down and
-leaves your configuration alone. Saving one layout for that monitor set hands
-control over. This is why `user_laptops.lua` was disabled: it reacted to the
-same monitor and lid events and fought this system; its clamshell behaviour is
-now handled here instead.
+`UserConfigs/monitors.lua` that this system did not write) and the current
+monitor set has no saved layout, the system stands down and leaves your
+configuration alone. Saving one layout for that monitor set hands control over.
+
+The generated file carries a marker line saying so, and a marked file never
+counts as your configuration — otherwise the system would stand down for every
+newly plugged-in monitor as soon as it had written the file once. Delete the
+marker line to take the file over.
+
+`Monitor Profiles` (Quick Settings → **Choose Monitor Profiles**) is a front end
+for this system rather than a second one: it lists the layouts saved for the
+monitors in front of you, and offers the `.lua` files in `Monitor_Profiles/` as
+a one-way import.
 
 ## Command line
 
 ```
 DisplayProfile.sh auto                  decide and apply
+DisplayProfile.sh reapply               put back the layout already on screen
 DisplayProfile.sh -- <layout>           apply a named layout of this set
 DisplayProfile.sh capture -- <name>     save the live state under a name
 DisplayProfile.sh set-default -- <name> make it this set's default

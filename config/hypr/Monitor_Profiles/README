@@ -1,15 +1,21 @@
-# Create a Monitor profile you want to on this directory
+# Monitor profiles (legacy)
 
-# Create a unique file name i.e. Mirror, or Office, Scale, etc etc
+# These .lua files are no longer where layouts live. They are offered by
+# `Monitor Profiles` (Quick Settings: SUPER SHIFT E, then Choose Monitor
+# Profiles) as a ONE-WAY IMPORT: choosing one applies it and saves what is on
+# screen as a layout under the same name, after which it restores automatically
+# like any other layout.
 
-# tip: You can easily create a profile using nwg-displays
-# after creating a profile using nwg-displays:
-# - copy ~/.config/hypr/UserConfigs/monitors.lua here as <name>.lua
-# suggest not to call it default
+# To make a layout now, use SUPER ALT D:
+# - Arrange monitors - drag and drop (nwg-displays), or
+# - Edit parameters (table)
+# then Save current state as...
 
-# Note, after selecting Profiles wanted via Rofi (SUPER SHIFT E):
-# - writes ~/.config/hypr/UserConfigs/monitors.lua
+# tip: if you arrange monitors with nwg-displays, go through the SUPER ALT D
+# menu rather than running it yourself. The menu is what applies the result and
+# persists it. Running nwg-displays directly loses the arrangement, because this
+# Lua config does not read the file it writes.
 
-# Monitor profile should be loaded automatically once selected by KooL Rofi Settings ROfi Menu, unless you disabled the auto-reload function on Hyprland settings.
-# However, if it does not load, kindly log out and re-login. This seem apparent if you are using a Virtual Environment.
-
+# Adding a file here still works as a way to get a profile in. The import writes
+# the layout under the file's name, so give it a name you are happy to keep
+# (letters, digits, space, dot, dash and underscore).

@@ -171,15 +171,31 @@ apply_auto() {
 
 # apply_current: re-apply the layout that is running. Used after a config
 # reload, so a layout the user picked by hand survives SUPER+ALT+R instead of
-# jumping back to the monitor set's default. A generated layout has no name to
-# re-apply, so that falls back to auto.
+# jumping back to the monitor set's default.
+#
+# `(auto)` covers a generated layout AND an arrangement dragged in nwg-displays
+# and not yet saved under a name. Both are on screen and recorded in
+# active-layout.json, so the controller is asked to REPLAY that file rather than
+# to re-resolve: re-resolving would silently replace the arrangement the user
+# just made. The controller re-checks the fingerprint itself and falls back to
+# `auto` when the recorded layout is not for the monitors now connected.
 apply_current() {
-  local name=""
-  [[ -f $MW_STATE_FILE ]] && name="$(sed -n '2p' -- "$MW_STATE_FILE" 2>/dev/null || true)"
+  local name="" recorded="" layout_fp=""
+  if [[ -f $MW_STATE_FILE ]]; then
+    recorded="$(sed -n '1p' -- "$MW_STATE_FILE" 2>/dev/null || true)"
+    name="$(sed -n '2p' -- "$MW_STATE_FILE" 2>/dev/null || true)"
+  fi
   if [[ -n $name && $name != "(auto)" ]]; then
     log "config reloaded; re-applying $name"
     if "$MW_PROFILE_SCRIPT" -- "$name" 9>&-; then return 0; fi
     log "WARN: re-applying $name failed; falling back to auto"
+  elif [[ $name == "(auto)" && -n $recorded && -f $MW_STATE_DIR/active-layout.json ]]; then
+    layout_fp="$(head -n1 -- "$MW_STATE_DIR/active-layout.fingerprint" 2>/dev/null || true)"
+    if [[ -n $layout_fp && $layout_fp == "$recorded" ]]; then
+      log "config reloaded; re-applying the recorded layout"
+      if "$MW_PROFILE_SCRIPT" reapply 9>&-; then return 0; fi
+      log "WARN: replaying the recorded layout failed; falling back to auto"
+    fi
   fi
   apply_auto
 }

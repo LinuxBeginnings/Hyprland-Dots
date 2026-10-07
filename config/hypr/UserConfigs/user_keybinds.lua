@@ -116,12 +116,13 @@ if not submap then
 end
 
 -- =============================================================================
--- DISPLAY PROFILES (Work / Home)
+-- DISPLAY LAYOUTS
 -- =============================================================================
--- SUPER+ALT+D opens the profile popup (Automatic / Home / Work / Cancel).
--- SUPER+ALT+W forces Work mode and is the fallback when rofi will not start.
--- Both combos were free; the plan's original SUPER+ALT+H and SUPER+ALT+P are
--- already taken by "Horizonal scroll right" and the KB-passthrough submap.
+-- SUPER+ALT+D opens the layout menu for the monitor set in front of you.
+-- SUPER+ALT+W applies a layout named Work directly, which is also the fallback
+-- for when rofi will not start. Both combos were free: SUPER+ALT+H and
+-- SUPER+ALT+P are taken by "horizontal scroll right" and the KB-passthrough
+-- submap.
 bind(
   "SUPER ALT",
   "D",

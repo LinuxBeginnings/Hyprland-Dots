@@ -17,18 +17,23 @@ SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 WAYBAR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar"
 # Ask the display-layout controller which Waybar config to run. With a
 # per-layout bar restriction in place that is a generated file; without the
-# feature installed, or if anything about it fails, this falls back to the
-# plain config so this script keeps working on its own.
+# feature installed, or if anything about it fails, this falls back to the plain
+# config so this script keeps working on its own.
+#
+# The fallback directory is passed in rather than read from a variable: a bare
+# ${waybar_dir} expands to nothing - and then to "/config" - unless the caller
+# happens to have set it.
 kooldots_waybar_config() {
+  local fallback_dir=$1
   local dp="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/DisplayProfile.sh" p=""
   if [ -x "$dp" ]; then
     p="$("$dp" waybar-config 2>/dev/null | tail -n1 || true)"
   fi
   if [ -n "$p" ] && [ -f "$p" ]; then printf '%s\n' "$p"
-  else printf '%s\n' "${WAYBAR_DIR:-${waybar_dir:-}}/config"; fi
+  else printf '%s\n' "$fallback_dir/config"; fi
 }
 
-WAYBAR_CONFIG_ARG="$(kooldots_waybar_config)"
+WAYBAR_CONFIG_ARG="$(kooldots_waybar_config "$WAYBAR_DIR")"
 WAYBAR_STYLE_ARG="$WAYBAR_DIR/style.css"
 
 is_waybar_running() {

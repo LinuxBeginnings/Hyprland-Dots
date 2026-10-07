@@ -289,4 +289,31 @@ if sed 's/#.*$//' "$SCRIPT" | grep -nE '^[^=]*"\$MW_PROFILE_SCRIPT"' | grep -qv 
   fail "a controller call does not close fd 9: $(grep -nE '^[^=]*"\$MW_PROFILE_SCRIPT"' "$SCRIPT" | grep -v '9>&-')"
 else pass_msg; fi
 
+it "configreloaded with a recorded (auto) layout replays it instead of re-resolving"
+# `(auto)` covers a generated layout AND an arrangement dragged in nwg-displays
+# and not yet saved. Both are on screen and recorded in active-layout.json, so
+# a reload must replay that file - re-resolving would replace the arrangement
+# the user just made.
+printf 'FP\n(auto)\n' >"$SANDBOX/kooldots-display-profiles/current"
+printf 'FP\n' >"$SANDBOX/kooldots-display-profiles/active-layout.fingerprint"
+printf '{"monitors":[]}\n' >"$SANDBOX/kooldots-display-profiles/active-layout.json"
+st=$(run_watcher events-configreloaded.txt)
+assert_status 0 "$st" "watcher exit"
+assert_contains "$PROFILE_LOG" 'reapply' "the recorded layout was replayed"
+rm -f "$SANDBOX/kooldots-display-profiles/active-layout.json" \
+      "$SANDBOX/kooldots-display-profiles/active-layout.fingerprint" \
+      "$SANDBOX/kooldots-display-profiles/current"
+
+it "configreloaded with a (auto) record from another set falls back to auto"
+printf 'FP\n(auto)\n' >"$SANDBOX/kooldots-display-profiles/current"
+printf 'OTHER\n' >"$SANDBOX/kooldots-display-profiles/active-layout.fingerprint"
+printf '{"monitors":[]}\n' >"$SANDBOX/kooldots-display-profiles/active-layout.json"
+st=$(run_watcher events-configreloaded.txt)
+assert_status 0 "$st" "watcher exit"
+[[ $(grep -c '^auto$' "$PROFILE_LOG") -ge 1 ]] || fail "expected an auto call: $(cat "$PROFILE_LOG")"
+rm -f "$SANDBOX/kooldots-display-profiles/active-layout.json" \
+      "$SANDBOX/kooldots-display-profiles/active-layout.fingerprint" \
+      "$SANDBOX/kooldots-display-profiles/current"
+pass_msg
+
 summary "test-monitor-watcher"

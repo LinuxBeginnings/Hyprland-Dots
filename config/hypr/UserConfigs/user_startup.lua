@@ -93,8 +93,10 @@ local startup_commands = {
   -- "blueman-applet",
   -- "$HOME/.config/hypr/UserScripts/RainbowBorders.sh",
 
-  -- Work/Home display profiles: one watcher per session. It reconciles the
-  -- profile on startup, so DisplayProfile.sh must NOT be launched here too.
+  -- Monitor management: one watcher per session. It reconciles the saved layout
+  -- on startup and after every monitor event, and it is the only thing that
+  -- calls DisplayProfile.sh - so do NOT add DisplayProfile.sh here as well, or
+  -- two controllers would apply layouts at the same time.
   "$HOME/.config/hypr/scripts/MonitorWatcher.sh",
 }
 
@@ -110,20 +112,11 @@ else
   run_startup_commands()
 end
 
--- Laptop lid: the display-layout system (DisplayProfile.sh) owns clamshell
--- behaviour now that user_laptops.lua is disabled, so tell it to re-decide the
--- layout whenever the lid opens or closes. DisplayProfile.sh reads the lid
--- state itself and switches the internal panel off only when an external
--- monitor is present, so it never leaves the laptop with no screen.
-if hl and hl.bind then
-  local function kooldots_lid_changed()
-    local script = "$HOME/.config/hypr/scripts/DisplayProfile.sh auto"
-    if hl.exec_cmd then
-      hl.exec_cmd(script)
-    else
-      os.execute(script .. " >/dev/null 2>&1 &")
-    end
-  end
-  hl.bind("switch:on:Lid Switch", kooldots_lid_changed)
-  hl.bind("switch:off:Lid Switch", kooldots_lid_changed)
-end
+-- Laptop lid: user_laptops.lua owns clamshell behaviour and binds the lid
+-- switch itself, from the same UserConfigs/monitors.lua this system writes. So
+-- nothing is bound here: a second handler for one switch means whichever runs
+-- last wins, and which that is is not defined.
+--
+-- DisplayProfile.sh still honours the lid when it applies a layout (it switches
+-- the internal panel off only while an external monitor is on), so a layout
+-- applied with the lid shut does not light the panel back up.

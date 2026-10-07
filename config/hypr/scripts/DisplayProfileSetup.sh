@@ -174,58 +174,60 @@ position_label() {
 monitor_count() { "$DS_JQ" -r '.monitors | length' -- "$DRAFT"; }
 
 # --- the monitor submenu ---------------------------------------------------
+# One choice per opening: every branch returns, so there is no loop here. The
+# caller's table loop redraws, which keeps the table the single place that shows
+# the effect of a change.
 monitor_menu() {
   local i=$1 n choice mode scale transform row order valign enabled
   n="$(monitor_label "$i")"
-  while true; do
-    enabled="$("$DS_JQ" -r --argjson i "$i" '.monitors[$i].enabled' -- "$DRAFT")"
-    choice="$(pick "$n" "Monitor" \
-      "$([[ $enabled == true ]] && echo 'Switch this monitor off' || echo 'Switch this monitor on')" \
-      "Mode" "Scale" "Rotation" "Row" "Order within the row" "Vertical alignment" "Back")" || return 0
-    case $choice in
-      'Switch this monitor off') edit_monitor "$i" '.enabled = false'; return 0 ;;
-      'Switch this monitor on')  edit_monitor "$i" '.enabled = true';  return 0 ;;
-      Mode)
-        local -a modes=()
-        mapfile -t modes < <("$DS_JQ" -r --slurpfile live "$MON_FILE" --argjson i "$i" '
-          .monitors[$i].identity as $id
-          | [ $live[0][] | select(.identity == $id) | .modes[]? ] | unique | reverse | .[]' -- "$DRAFT")
-        if (( ${#modes[@]} == 0 )); then
-          notify "Display layouts" "This monitor reports no modes; leaving it as it is"
-          return 0
-        fi
-        mode="$(pick "$n" "Mode" "${modes[@]}")" || return 0
-        edit_monitor "$i" "$(printf '.mode = "%s"' "$mode")"
+  enabled="$("$DS_JQ" -r --argjson i "$i" '.monitors[$i].enabled' -- "$DRAFT")"
+  choice="$(pick "$n" "Monitor" \
+    "$([[ $enabled == true ]] && echo 'Switch this monitor off' || echo 'Switch this monitor on')" \
+    "Mode" "Scale" "Rotation" "Row" "Order within the row" "Vertical alignment" "Back")" || return 0
+  case $choice in
+    'Switch this monitor off') edit_monitor "$i" '.enabled = false'; return 0 ;;
+    'Switch this monitor on')  edit_monitor "$i" '.enabled = true';  return 0 ;;
+    Mode)
+      local -a modes=()
+      mapfile -t modes < <("$DS_JQ" -r --slurpfile live "$MON_FILE" --argjson i "$i" '
+        .monitors[$i].identity as $id
+        | [ $live[0][] | select(.identity == $id) | .modes[]? ] | unique | reverse | .[]' -- "$DRAFT")
+      if (( ${#modes[@]} == 0 )); then
+        notify "Display layouts" "This monitor reports no modes; leaving it as it is"
         return 0
-        ;;
-      Scale)
-        scale="$(pick "$n" "Scale" "${SCALES[@]}")" || return 0
-        edit_monitor "$i" "$(printf '.scale = %s' "$scale")"
-        return 0
-        ;;
-      Rotation)
-        transform="$(pick "$n" "Rotation (0 none, 1 = 90°, 2 = 180°, 3 = 270°)" "${TRANSFORMS[@]}")" || return 0
-        edit_monitor "$i" "$(printf '.transform = %s' "$transform")"
-        return 0
-        ;;
-      Row)
-        row="$(pick "$n" "Row" "${ROWS_CHOICES[@]}")" || return 0
-        edit_monitor "$i" "$(printf '.grid.row = %s' "$row")"
-        return 0
-        ;;
-      'Order within the row')
-        order="$(pick "$n" "Order" "${ORDERS[@]}")" || return 0
-        edit_monitor "$i" "$(printf '.grid.order = %s' "$order")"
-        return 0
-        ;;
-      'Vertical alignment')
-        valign="$(pick "$n" "Vertical alignment" "${VALIGNS[@]}")" || return 0
-        edit_monitor "$i" "$(printf '.grid.valign = "%s"' "$valign")"
-        return 0
-        ;;
-      Back) return 0 ;;
-    esac
-  done
+      fi
+      mode="$(pick "$n" "Mode" "${modes[@]}")" || return 0
+      edit_monitor "$i" "$(printf '.mode = "%s"' "$mode")"
+      return 0
+      ;;
+    Scale)
+      scale="$(pick "$n" "Scale" "${SCALES[@]}")" || return 0
+      edit_monitor "$i" "$(printf '.scale = %s' "$scale")"
+      return 0
+      ;;
+    Rotation)
+      transform="$(pick "$n" "Rotation (0 none, 1 = 90°, 2 = 180°, 3 = 270°)" "${TRANSFORMS[@]}")" || return 0
+      edit_monitor "$i" "$(printf '.transform = %s' "$transform")"
+      return 0
+      ;;
+    Row)
+      row="$(pick "$n" "Row" "${ROWS_CHOICES[@]}")" || return 0
+      edit_monitor "$i" "$(printf '.grid.row = %s' "$row")"
+      return 0
+      ;;
+    'Order within the row')
+      order="$(pick "$n" "Order" "${ORDERS[@]}")" || return 0
+      edit_monitor "$i" "$(printf '.grid.order = %s' "$order")"
+      return 0
+      ;;
+    'Vertical alignment')
+      valign="$(pick "$n" "Vertical alignment" "${VALIGNS[@]}")" || return 0
+      edit_monitor "$i" "$(printf '.grid.valign = "%s"' "$valign")"
+      return 0
+      ;;
+    Back) return 0 ;;
+  esac
+  return 0
 }
 
 primary_menu() {
@@ -293,9 +295,15 @@ save_and_apply() {
     fi
   fi
   recompute
-  if ! ds_validate_layout "$DRAFT" 2>/dev/null; then
-    log "this layout cannot be applied: every monitor is disabled, or a value is out of range"
-    notify "Display layouts" "Every monitor is disabled — switch at least one back on"
+  # Report the validator's OWN reason. "every monitor is disabled" is the wrong
+  # thing to say for a mode, scale, transform or Waybar-mode failure, and the
+  # table gives the user no other way to find out which value it is unhappy with.
+  local why=""
+  if ! why="$(ds_validate_layout "$DRAFT" 2>&1 >/dev/null)"; then
+    why="${why##*invalid layout: }"
+    why="${why:-unknown reason}"
+    log "this layout cannot be applied: $why"
+    notify "Display layouts" "Cannot save this layout: $why"
     return 1
   fi
   if ! ds_store_set "$DPS_STORE_FILE" "$MON_FP" "$name" "$DRAFT"; then

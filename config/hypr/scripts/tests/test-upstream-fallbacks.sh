@@ -25,17 +25,17 @@ printf '{}\n' >"$WORK/waybar/config"
 
 # resolve_in <script> -> what kooldots_waybar_config prints, with
 # XDG_CONFIG_HOME pointed at the sandbox so the controller it looks for is the
-# fake one (or absent).
+# fake one (or absent). The fallback directory is passed as an argument, the way
+# every caller does it - the function no longer reads a variable that happens to
+# be in scope.
 resolve_in() {
   local script=$1 fn
   fn="$(sed -n '/^kooldots_waybar_config()/,/^}/p' -- "$S/$script")"
   [[ -n $fn ]] || { printf 'NO_FUNCTION\n'; return 0; }
   env XDG_CONFIG_HOME="$WORK" bash -c "
     set -uo pipefail
-    waybar_dir='$WORK/waybar'
-    WAYBAR_DIR='$WORK/waybar'
     $fn
-    kooldots_waybar_config"
+    kooldots_waybar_config '$WORK/waybar'"
 }
 
 install_controller() {  # body
@@ -47,11 +47,21 @@ EOS
 }
 
 for f in WaybarStartup.sh Refresh.sh; do
-  it "$f has a kooldots_waybar_config function"
-  if sed -n '/^kooldots_waybar_config()/,/^}/p' -- "$S/$f" | grep -qE 'waybar_dir|WAYBAR_DIR'; then
+  it "$f has a kooldots_waybar_config function that uses the directory it is given"
+  if sed -n '/^kooldots_waybar_config()/,/^}/p' -- "$S/$f" | grep -qE '\$fallback_dir'; then
     pass_msg
-  else fail "the function is missing or does not fall back to \$waybar_dir"; fi
+  else fail "the function is missing or does not use \$fallback_dir"; fi
 done
+
+it "every caller passes the fallback directory explicitly"
+# Relying on bash's dynamic scoping to see the caller's `local waybar_dir` is
+# what made the old fallback silently resolve to "/config" if it ever stopped
+# being in scope.
+bad=""
+for f in WaybarStartup.sh Refresh.sh; do
+  grep -qE 'kooldots_waybar_config "\$(WAYBAR_DIR|waybar_dir)"' "$S/$f" || bad="$bad $f"
+done
+if [[ -z $bad ]]; then pass_msg; else fail "a caller does not pass the directory:$bad"; fi
 
 install_controller 'printf "%s\n" "/tmp/from-controller"'
 : >"$WORK/waybar/from-controller" 2>/dev/null || true
@@ -124,7 +134,7 @@ if grep -q 'kooldots-display-profiles' "$S/Kool_Quick_Settings.sh" \
 else fail "no pause protocol around the GUI"; fi
 
 it "Quick Settings points nwg-displays at the discard path"
-assert_contains "$S/Kool_Quick_Settings.sh" 'nwg-monitors.conf.discard' \
+assert_contains "$S/Kool_Quick_Settings.sh" 'nwg-monitors.discard.conf' \
   "the real monitors.conf is not written" && pass_msg
 
 it "Quick Settings still tells the user to install nwg-displays when it is missing"

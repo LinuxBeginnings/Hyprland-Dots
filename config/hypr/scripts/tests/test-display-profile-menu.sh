@@ -196,7 +196,7 @@ assert_contains "$PROFILE_LOG" 'delete -- Work' "the chosen layout was deleted" 
 it "the arrange row launches the GUI with a discard path"
 run_menu store-v1 FAKE_ROFI_INDEX=4,11
 assert_contains "$PROFILE_LOG" 'nwg-displays -m' "the GUI was launched with -m"
-assert_contains "$PROFILE_LOG" 'nwg-monitors.conf.discard' "pointed at the discard path"
+assert_contains "$PROFILE_LOG" 'nwg-monitors.discard.conf' "pointed at the discard path"
 pass_msg
 
 it "the pause file exists while the GUI runs and is gone afterwards"
@@ -209,7 +209,7 @@ it "after Arrange+Apply, the menu imports what nwg wrote (bridge)"
 nwg_conf='monitor=desc:BOE 0x0630,1920x1080@60.03,0x0,1.25'
 FAKE_ROFI_INDEX=4,11 FAKE_NWG_WRITES="$nwg_conf" run_menu store-v1
 assert_contains "$PROFILE_LOG" 'import-nwg' "the controller was asked to import the nwg file"
-assert_contains "$PROFILE_LOG" 'nwg-monitors.conf.discard' "it imported the discard file nwg wrote"
+assert_contains "$PROFILE_LOG" 'nwg-monitors.discard.conf' "it imported the discard file nwg wrote"
 pass_msg
 
 it "nothing to import (nwg wrote nothing) does not call import-nwg"

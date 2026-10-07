@@ -124,21 +124,55 @@ array injected into every bar. Your own config and your choice of Waybar layout
 If this feature is ever removed, those scripts fall back to the plain config on
 their own.
 
+## How a layout is stored
+
+Applying a layout does two things. It calls `hl.monitor` for the session you are
+in, and it writes the same rules to `UserConfigs/monitors.lua`.
+
+That file is not a cache. `lua/monitors.lua` loads it on every config load, and
+`UserConfigs/user_laptops.lua` reads its rules from the same place — which is
+why the two are not competing controllers. It is what makes a layout survive a
+reload, a restart and a lid event, and it is the reason `user_laptops.lua` is
+still enabled.
+
+The file it writes carries a marker line saying it was generated. **Delete that
+marker line to take the file over**: from then on it is treated as yours, it is
+never overwritten, and the lid logic still honours what it says.
+
 ## When it deliberately does nothing
 
 **If you configure monitors yourself**, the system stands down. Specifically: if
-`UserConfigs/monitors.lua` contains an uncommented `hl.monitor(...)` line — you
-wrote one, or `MonitorProfiles.sh` wrote one — and the monitor set in front of
-you has no saved layout, nothing is applied and a line is written to the log.
+`UserConfigs/monitors.lua` contains an uncommented `hl.monitor(...)` line that
+this system did not write, and the monitor set in front of you has no saved
+layout, nothing is applied and a line is written to the log.
 
-This is on purpose: your `monitors.lua` and the Monitor Profiles menu keep
-working exactly as before, and two systems do not fight over the same screens.
+The marker line is what separates the two cases. Without it, the file this
+system generates would itself look like user configuration, and the system would
+stand down for every newly plugged-in monitor the moment it had written the file
+once.
 
 **Saving one layout for that monitor set hands control over** — from then on,
-this system manages that set regardless of `monitors.lua`.
+this system manages that set regardless of your own `hl.monitor(...)` lines.
 
-So "it does nothing" is the expected outcome in exactly one case. If that is
-you, either save a layout, or comment out your `hl.monitor(...)` lines.
+So "it does nothing" is the expected outcome in exactly one case: you wrote your
+own rules and have not saved a layout for the monitors in front of you. Either
+save a layout, or comment your rules out.
+
+## The Monitor Profiles menu
+
+Reached from Quick Settings (`SUPER` + `SHIFT` + `E`) → **Choose Monitor
+Profiles**. This is a front end for the same system, not a second one. It lists,
+in one place:
+
+- the layouts saved for the monitors in front of you, which it applies through
+  `DisplayProfile.sh` exactly as the layout menu does; and
+- the `.lua` files in `Monitor_Profiles/`, offered as a **one-way import**:
+  choosing one applies that profile and saves what is on screen as a layout
+  under the same name, after which it restores automatically like any other
+  layout.
+
+Adding a file to `Monitor_Profiles/` still works, but it is a way to get a
+layout into the store once, not a second place layouts live.
 
 ## Things worth knowing
 
@@ -152,9 +186,19 @@ you, either save a layout, or comment out your `hl.monitor(...)` lines.
 - **Two identical monitors with no serial number** are told apart by which port
   they were on when you saved the layout. Swap their cables and they swap places
   until you save again.
-- **An arrangement made in `nwg-displays` is not saved until you save it.** That
-  program knows nothing about monitor sets, so the menu reopens afterwards and
-  offers to save it. Quick Settings' own `nwg-displays` entry does the same.
+- **An arrangement made in `nwg-displays` has no name yet.** The program knows
+  nothing about monitor sets, so the menu reopens afterwards and offers to save
+  it. Until you do, it is applied and written to `UserConfigs/monitors.lua` (so
+  a reload does not undo it), but it is not what a newly connected monitor
+  restores. Quick Settings' own `nwg-displays` entry behaves the same way.
+- **`nwg-displays` applies its own arrangement and reloads Hyprland.** Its
+  reload re-runs the Lua config, which does not read the file nwg writes, so the
+  screens can jump back for a moment before the import re-applies your drag.
+  That is expected; the end state is the arrangement you made.
+- **Mirroring and 10-bit colour are refused, not dropped.** `nwg-displays` can
+  express both, a layout cannot, and applying a mirrored arrangement as a plain
+  one would silently un-mirror it. The import fails and names the setting
+  instead; use the parameter table for those monitors.
 - **Never zero screens.** Any monitor may be switched off, including a laptop
   panel, but the enabled monitors are applied and verified *before* anything is
   switched off, and if a layout would leave nothing active the system restores
@@ -165,16 +209,23 @@ you, either save a layout, or comment out your `hl.monitor(...)` lines.
 | Path | What it is |
 |---|---|
 | `UserConfigs/display-layouts.json` | Your layouts. The installer only ever *adds* this file when it is missing, so an upgrade cannot overwrite it. |
+| `UserConfigs/monitors.lua` | Generated: the layout that is applied, as `hl.monitor` rules. Loaded by `lua/monitors.lua` and read by `user_laptops.lua`. Delete its marker line to take it over. |
 | `scripts/lib_display_store.sh` | The data model. Pure: no `hyprctl`, no session state. |
 | `scripts/DisplayProfile.sh` | The only thing that changes monitors, focus and Waybar. |
 | `scripts/DisplayProfileMenu.sh` | `SUPER`+`ALT`+`D`. |
 | `scripts/DisplayProfileSetup.sh` | The parameter table. |
 | `scripts/MonitorWatcher.sh` | Watches Hyprland's event socket. One per session. |
+| `scripts/MonitorProfiles.sh` | Quick Settings → **Choose Monitor Profiles**: this system's layouts, plus a one-way import of `Monitor_Profiles/`. |
+| `scripts/tests/` | The 489-check suite. It is installed with the rest of `config/hypr`, so it is available on an installed system too - run it with `bash ~/.config/hypr/scripts/tests/run-all.sh`. |
 
 Runtime state lives in `$XDG_RUNTIME_DIR/kooldots-display-profiles/`:
 `display-profile.log`, `monitor-watcher.log`, `current` (the fingerprint and the
-running layout's name), `config-active`, `pause`, and the throwaway
-`nwg-monitors.conf.discard`.
+running layout's name), `active-layout.json` and `active-layout.fingerprint`
+(what is on screen now), `config-active`, `pause`, `monitors*.json` scratch
+files, and the throwaway `nwg-monitors.discard.conf` and its Lua sibling. The
+`.conf` suffix on that last one matters: `nwg-displays` derives the Lua file it
+also writes from it, and a path without it makes nwg write to
+`~/.config/hypr/monitors.lua` instead.
 
 > **If you update these scripts by hand, never copy the repo's
 > `UserConfigs/display-layouts.json` over your own.** The repo ships it empty,
@@ -186,6 +237,7 @@ running layout's name), `config-active`, `pause`, and the throwaway
 
 ```
 DisplayProfile.sh auto                  decide and apply
+DisplayProfile.sh reapply               put back the layout already on screen
 DisplayProfile.sh -- <layout>           apply a named layout of this set
 DisplayProfile.sh capture -- <name>     save the live state under a name
 DisplayProfile.sh set-default -- <name> make it this set's default
@@ -194,6 +246,7 @@ DisplayProfile.sh label -- <text>       name this monitor set
 DisplayProfile.sh list                  layout names for this set
 DisplayProfile.sh monitors-json          path to the normalized monitor list
 DisplayProfile.sh waybar-config          the config path Waybar should run
+DisplayProfile.sh import-nwg <file>      apply what nwg-displays wrote
 DisplayProfile.sh --dry-run auto         print the plan, change nothing
 ```
 
@@ -262,20 +315,31 @@ script.
 
 ## Rollback
 
-The files replaced when this was installed are in
-`~/.config/hypr/backups/multi-monitor-<timestamp>/`.
+Take a copy of the files the feature touches before you start, then put them
+back:
 
 ```bash
-B=~/.config/hypr/backups/multi-monitor-<timestamp>   # pick the one you want
+# Stop the watcher first, or it will keep re-applying a layout.
 pkill -f 'Monitor[W]atcher' || true
-cp "$B"/{WaybarStartup.sh,Refresh.sh,WaybarLayout.sh,Kool_Quick_Settings.sh,LidSwitch.sh} ~/.config/hypr/scripts/
+
+# Your own pre-change copies, or the backups copy.sh makes.
+B=<your-backup-dir>
+cp "$B"/{WaybarStartup.sh,Refresh.sh,Kool_Quick_Settings.sh,LidSwitch.sh,MonitorProfiles.sh} \
+   ~/.config/hypr/scripts/
 cp "$B"/user_keybinds.lua ~/.config/hypr/UserConfigs/
-cp "$B"/lib_copy.sh ~/Documents/Dev/Hyperland/Hyprland-Dots/scripts/   # repo only
+
+# In the repo checkout: scripts/lib_copy.sh, UserConfigs/user_startup.lua,
+# UserConfigs/user_laptops.lua, UserConfigs/user_keybinds.lua, and
+# patches/80-display-layouts.sh.
+
 rm -f ~/.config/hypr/scripts/{DisplayProfile.sh,DisplayProfileMenu.sh,DisplayProfileSetup.sh,MonitorWatcher.sh,lib_display_store.sh}
-rm -rf "$XDG_RUNTIME_DIR/kooldots-display-profiles" "$XDG_RUNTIME_DIR"/kooldots-display-profile.lock "$XDG_RUNTIME_DIR"/kooldots-monitor-watcher.lock
+rm -rf "$XDG_RUNTIME_DIR/kooldots-display-profiles" \
+       "$XDG_RUNTIME_DIR"/kooldots-display-profile.lock \
+       "$XDG_RUNTIME_DIR"/kooldots-monitor-watcher.lock
 hyprctl reload
 ```
 
-`UserConfigs/display-layouts.json` is yours; deleting it only forgets your
-layouts. Remove the `MonitorWatcher.sh` line from `UserConfigs/user_startup.lua`
-to stop it starting at login.
+Three things are yours rather than the feature's, and are safe to keep:
+`UserConfigs/display-layouts.json` (deleting it only forgets your layouts) and
+`UserConfigs/monitors.lua`. To stop it starting at login, remove the
+`MonitorWatcher.sh` line from `UserConfigs/user_startup.lua`.

@@ -217,4 +217,17 @@ else pass_msg; fi
 it "rofi is asked for an index, not for the line text"
 assert_contains "$ROFI_LOG" '-format i' "rofi -format i" && pass_msg
 
+# --- refusals name the real reason -----------------------------------------
+it "the table reports the validator's own reason, not just 'disabled'"
+# A live scale of zero is refused by the validator. The old code always said
+# "every monitor is disabled", which is simply wrong here and left the user with
+# no way to find out which value the table was unhappy about.
+jq -c '[ .[] | if .name == "DP-2" then .scale = 0 else . end ]' \
+  "$F/monitors-dual.json" >"$WORK/zero-src.json"
+ds_normalize "$WORK/zero-src.json" >"$WORK/zero.json"
+before_zero="$(cat "$F/store-empty.json")"
+run_setup "$WORK/zero.json" "$F/store-empty.json" FAKE_ROFI_INDEX=5 FAKE_ROFI_TEXT='Zero'
+assert_contains "$WORK/out.txt" 'scale' "the reason names the offending value"
+assert_eq "the store is untouched" "$before_zero" "$(cat "$WORK/store.json")"
+
 summary "test-display-profile-setup"

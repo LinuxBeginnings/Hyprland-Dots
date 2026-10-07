@@ -260,6 +260,13 @@ ds_inherit() {
 #   has none saved. Everything on, best mode, one row by port order, and any
 #   per-device scale/transform the user has already chosen elsewhere.
 #   Never written to the store on its own; the menu offers to save it.
+#
+#   A monitor reporting neither available modes nor a live size has no mode we
+#   could ask for, and therefore no logical size to place it by. "preferred" is
+#   not a substitute: the validator refuses it (Hyprland cannot be asked for it
+#   and the grid cannot measure it), so such a monitor is left out of the
+#   generated layout and named on stderr instead of producing a layout that
+#   cannot be stored or applied.
 ds_generate() {
   local norm=$1 store=$2 tmp layout ids id sc tr
   tmp="$(mktemp)"
@@ -277,15 +284,21 @@ ds_generate() {
       elif ((.width // 0) > 0 and (.height // 0) > 0)
       then ( (.width | tostring) + "x" + (.height | tostring) + "@"
              + ((.refreshRate * 100 | round) / 100 | tostring) )
-      else "preferred"
+      else null
       end;
-    { monitors: [ to_entries[] | .key as $i | .value |
-        { identity, port, enabled: true,
-          mode: best_mode, scale: 1, transform: 0, x: 0, y: 0,
-          grid: { row: 1, order: ($i + 1), valign: "top" } } ],
-      primary: (.[0].identity // ""),
-      waybar: { mode: "all", outputs: [] } }
+    ( [ to_entries[] | .key as $i | .value | (best_mode) as $m
+        | select($m != null)
+        | { identity, port, enabled: true,
+            mode: $m, scale: 1, transform: 0, x: 0, y: 0,
+            grid: { row: 1, order: ($i + 1), valign: "top" } } ] ) as $mons
+    | { monitors: $mons,
+        primary: ($mons[0].identity // ""),
+        waybar: { mode: "all", outputs: [] } }
   ' -- "$norm" >"$tmp"
+
+  if [[ "$("$DS_JQ" -r 'length' -- "$norm")" != "$("$DS_JQ" -r '.monitors | length' -- "$tmp")" ]]; then
+    ds_log "a connected monitor reports neither a mode nor a size; it cannot be placed and is left out"
+  fi
 
   ids="$("$DS_JQ" -r '.monitors[].identity' -- "$tmp")"
   while IFS= read -r id; do
@@ -503,53 +516,106 @@ ds_store_label() {
     ' | ds__write "$store"
 }
 
-# Prints the backup path. Used before the menu's Reset, which is the only
-# writer allowed to touch a malformed store.
 # ds_from_nwg_conf <nwg.conf> <normalized.json> -> a layout built from what
-# nwg-displays wrote. nwg on Hyprland only writes this file; it never applies
-# anything at runtime, and the Lua fork never reads the file. This bridge is
-# what turns a drag-and-drop in nwg into one of our layouts.
+# nwg-displays wrote.
+#
+# nwg DOES apply its arrangement: it dispatches dpms and runs `hyprctl reload`.
+# What it cannot do on this fork is make that arrangement stick, because the
+# reload re-runs the Lua config and nwg's own output is not what the Lua config
+# reads. So this bridge turns a drag into one of our layouts, which is then both
+# applied and written to UserConfigs/monitors.lua where the Lua config WILL read
+# it. Callers point nwg at a discard path on purpose: nothing should depend on
+# nwg's file beyond this parse.
 #
 #   monitor=<name>,<WxH@R>,<XxY>,<scale>[,extras]
 #   monitor=<name>,transform,<n>        (separate line)
 #   monitor=<name>,disable              (separate line)
 #
 # <name> is `desc:<hyprctl .description>` (with '#' doubled) or a port name.
+# Extras after the scale (mirror, bitdepth, cm, vrr, ...) have no place in a
+# layout and are refused rather than dropped - see the note in the function.
 ds_from_nwg_conf() {
-  local conf=$1 norm=$2 raw
+  local conf=$1 norm=$2 raw extras
   # Parse the nwg lines into one JSON object per monitor name.
-  raw="$(awk -F',' '
+  #
+  # nwg writes, in order: name, mode, position, scale, then any extras. The name
+  # is a `desc:<description>` for a monitor it identifies by description, and a
+  # description may itself contain a comma, so the name cannot simply be field
+  # 1: the mode/position/scale triple is located by SHAPE instead, and the name
+  # is everything before it. The `transform`/`disable` forms carry no triple, so
+  # their verb is matched at the end of the line.
+  #
+  # Positions may be negative (a monitor placed left of the origin), which is
+  # why the position pattern allows a leading minus.
+  raw="$(awk '
+    function remember(n) { if (!(n in seen)) { order[++cnt] = n; seen[n] = 1 } }
+    function join_fields(a, from, to,   i, s) {
+      s = a[from]
+      for (i = from + 1; i <= to; i++) s = s "," a[i]
+      return s
+    }
+    function json_str(x) { gsub(/\\/, "\\\\", x); gsub(/"/, "\\\"", x); return "\"" x "\"" }
     /^[[:space:]]*monitor=/ {
       line = $0; sub(/^[[:space:]]*monitor=/, "", line)
       n = split(line, a, ",")
-      name = a[1]; gsub(/##/, "#", name)
-      if (a[2] == "transform") { tr[name] = a[3] + 0; next }
-      if (a[2] == "disable")   { dis[name] = 1; if (!(name in seen)) { order[++cnt] = name; seen[name] = 1 } next }
-      mode[name] = a[2]; pos[name] = a[3]; scale[name] = a[4]
-      if (!(name in seen)) { order[++cnt] = name; seen[name] = 1 }
+      if (n < 2) next
+      if (a[n] == "disable") {
+        name = join_fields(a, 1, n - 1); gsub(/##/, "#", name)
+        if (name == "") next
+        dis[name] = 1; remember(name); next
+      }
+      if (a[n-1] == "transform") {
+        name = join_fields(a, 1, n - 2); gsub(/##/, "#", name)
+        if (name == "") next
+        tr[name] = a[n] + 0; remember(name); next
+      }
+      mi = 0
+      for (i = 1; i <= n - 2; i++)
+        if (a[i] ~ /^[0-9]+x[0-9]+@[0-9]+(\.[0-9]+)?$/ &&
+            a[i+1] ~ /^-?[0-9]+x-?[0-9]+$/ &&
+            a[i+2] ~ /^[0-9]+(\.[0-9]+)?$/) mi = i
+      if (mi == 0) next
+      name = join_fields(a, 1, mi - 1); gsub(/##/, "#", name)
+      if (name == "") next
+      mode[name] = a[mi]; pos[name] = a[mi+1]; scale[name] = a[mi+2]
+      for (i = mi + 3; i <= n; i++) extras[name] = extras[name] (extras[name] == "" ? "" : ",") a[i]
+      remember(name)
     }
     END {
       printf "["
       for (i = 1; i <= cnt; i++) {
         name = order[i]; np = pos[name]; split(np, p, "x")
-        printf "%s{\"name\":%s,\"mode\":%s,\"x\":%d,\"y\":%d,\"scale\":%s,\"transform\":%d,\"enabled\":%s}",
+        printf "%s{\"name\":%s,\"mode\":%s,\"x\":%d,\"y\":%d,\"scale\":%s,\"transform\":%d,\"enabled\":%s,\"extras\":%s}",
           (i > 1 ? "," : ""),
           json_str(name),
           json_str(mode[name] == "" ? "" : mode[name]),
           (np == "" ? 0 : p[1]) + 0, (np == "" ? 0 : p[2]) + 0,
           (scale[name] == "" ? "1" : scale[name]),
           (name in tr ? tr[name] : 0),
-          (name in dis ? "false" : "true")
+          (name in dis ? "false" : "true"),
+          json_str(extras[name] == "" ? "" : extras[name])
       }
       printf "]"
     }
-    function json_str(x) { gsub(/\\/, "\\\\", x); gsub(/"/, "\\\"", x); return "\"" x "\"" }
   ' "$conf")"
 
   # Join each parsed entry to a connected monitor, by description (desc:form)
   # or by port name, and emit a layout. A trailing space on a description (as
   # hyprctl sometimes reports) is tolerated by comparing trimmed values.
   [[ -n ${raw//[[:space:]]/} && $raw != "[]" ]] || { ds_log "no monitors parsed from nwg config"; return 1; }
+
+  # A layout can express on/off, mode, scale, rotation and position - nothing
+  # else. nwg also writes mirror, bitdepth, colour management and VRR settings.
+  # Dropping those silently would quietly change the arrangement the user just
+  # dragged, so refuse the import and name exactly what cannot be represented.
+  extras="$(printf '%s' "$raw" | "$DS_JQ" -r '
+    [ .[] | select((.extras // "") != "") | .name + " (" + .extras + ")" ]
+    | join(", ")' 2>/dev/null || true)"
+  if [[ -n ${extras//[[:space:]]/} ]]; then
+    ds_log "nwg-displays wrote settings a layout cannot store: $extras"
+    ds_log "arrange these monitors from the parameter table instead, or drop those settings in nwg-displays"
+    return 1
+  fi
   "$DS_JQ" -cn --slurpfile live "$norm" --argjson raw "$raw" '
     def trim: sub("^\\s+";"") | sub("\\s+$";"");
     ( $live[0] ) as $live

@@ -134,31 +134,41 @@ arrange_monitors() {
   fi
   if [[ $DRY_RUN -eq 1 ]]; then printf 'DRY: %s -m <discard>\n' "$DPM_NWG_DISPLAYS"; return 0; fi
   mkdir -p -- "$STATE_DIR"
-  # nwg-displays writes monitors.conf, which this Lua config never reads. Point
-  # it at a discard path: capturing the result is how an arrangement persists.
-  local discard="$STATE_DIR/nwg-monitors.conf.discard"
+  # nwg-displays always writes a hyprlang monitors.conf, which this Lua config
+  # never reads, and from 0.4.3 it also writes a Lua sibling next to it. Point it
+  # at a DISCARD path in the state directory - never at
+  # UserConfigs/monitors.lua, which this system owns - and keep the path ending
+  # in .conf so the sibling is contained here too instead of escaping to
+  # ~/.config/hypr/monitors.lua.
+  local discard="$STATE_DIR/nwg-monitors.discard.conf"
+  local sibling="$STATE_DIR/nwg-monitors.discard.lua"
+  rm -f -- "$discard" "$sibling"
+  # Pause BEFORE the GUI starts, with our own PID, and only then replace it with
+  # the GUI's. nwg applies its arrangement itself (dpms plus `hyprctl reload`),
+  # and that reload emits a burst of monitor events: if the watcher saw them it
+  # would re-apply the stored layout and silently undo the drag. Writing the
+  # pause file after the fork would leave exactly that window open.
+  printf '%s\n' "$$" >"$STATE_DIR/pause"
   # 9>&- : never hand a lock descriptor to a GUI that outlives this script.
   "$DPM_NWG_DISPLAYS" -m "$discard" 9>&- &
   local pid=$!
-  # The watcher drops display events while this file holds a live PID. Without
-  # it, applying from the GUI emits a burst of monitor events and the watcher
-  # would re-apply the stored layout, silently undoing the drag.
   printf '%s\n' "$pid" >"$STATE_DIR/pause"
   wait "$pid" || true
   rm -f -- "$STATE_DIR/pause"
 
-  # nwg on Hyprland only WROTE the arrangement to the file; it applied nothing.
-  # Bridge it: hand that file to the controller, which parses it and applies it
-  # through hl.monitor so the drag actually takes effect. The menu then reopens
-  # and offers to save the now-applied state.
+  # nwg's reload put the STORED layout back on screen, because the Lua config
+  # does not read nwg's file. Bridge it: hand that file to the controller, which
+  # parses it, applies it through hl.monitor, and writes it to
+  # UserConfigs/monitors.lua so it survives. The menu then reopens and offers to
+  # save it under a name.
   if [[ -s $discard ]] && grep -q '^[[:space:]]*monitor=' "$discard" 2>/dev/null; then
     log "importing the arrangement nwg-displays wrote"
     "$DPM_PROFILE_SCRIPT" import-nwg "$discard" 9>&- \
       || notify "Display layouts" "Could not apply the arrangement from nwg-displays"
-    rm -f -- "$discard"
   else
     log "nwg-displays wrote no arrangement; nothing to import"
   fi
+  rm -f -- "$discard" "$sibling"
   return 0
 }
 
@@ -236,7 +246,8 @@ menu_once() {  # $1: an extra note for the message line
   local note=${1:-} idx action name count
   build_rows
   count="$(ds_count "$MON_FILE")"
-  local mesg="Monitor set: $(set_label_or_fp) ($count monitors)"
+  local mesg
+  mesg="Monitor set: $(set_label_or_fp) ($count monitors)"
   local running; running="$(running_name)"
   [[ -n $running ]] && mesg="$mesg · running: $running"
   [[ -n $note ]] && mesg="$note · $mesg"

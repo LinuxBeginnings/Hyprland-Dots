@@ -72,25 +72,31 @@ ensure_wayland_env() {
   fi
 }
 
+# Ask the display-layout controller which Waybar config to run. With a
+# per-layout bar restriction in place that is a generated file; without the
+# feature installed, or if anything about it fails, this falls back to the plain
+# config so this script keeps working on its own.
+#
+# The fallback directory is passed in rather than read from a variable: this used
+# to rely on bash's dynamic scoping to see restart_waybar's `local waybar_dir`,
+# and a bare ${waybar_dir} expands to nothing - and then to "/config" - the moment
+# that stops being true.
+kooldots_waybar_config() {
+  local fallback_dir=$1
+  local dp="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/DisplayProfile.sh" p=""
+  if [ -x "$dp" ]; then
+    p="$("$dp" waybar-config 2>/dev/null | tail -n1 || true)"
+  fi
+  if [ -n "$p" ] && [ -f "$p" ]; then printf '%s\n' "$p"
+  else printf '%s\n' "$fallback_dir/config"; fi
+}
+
 # Restart waybar once, DETACHED from this script's cgroup.
 # This script is typically invoked from a waybar module on-click or keybind, so
 # it runs inside waybar.service's cgroup. Killing waybar from in there makes systemd tear
 # down the whole unit and every process in it - this script included - so the replacement
 # waybar never gets launched and the bar stays gone. Running the restart as a transient
 # systemd unit puts it outside that cgroup, where it survives the teardown.
-# Ask the display-layout controller which Waybar config to run. With a
-# per-layout bar restriction in place that is a generated file; without the
-# feature installed, or if anything about it fails, this falls back to the
-# plain config so this script keeps working on its own.
-kooldots_waybar_config() {
-  local dp="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/DisplayProfile.sh" p=""
-  if [ -x "$dp" ]; then
-    p="$("$dp" waybar-config 2>/dev/null | tail -n1 || true)"
-  fi
-  if [ -n "$p" ] && [ -f "$p" ]; then printf '%s\n' "$p"
-  else printf '%s\n' "${WAYBAR_DIR:-${waybar_dir:-}}/config"; fi
-}
-
 restart_waybar() {
   ensure_wayland_env
   local scripts_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
@@ -106,7 +112,7 @@ restart_waybar() {
     restart_cmd="\"$scripts_dir/WaybarStartup.sh\" --restart"
   else
     local waybar_cfg
-    waybar_cfg="$(kooldots_waybar_config)"
+    waybar_cfg="$(kooldots_waybar_config "$waybar_dir")"
     restart_cmd="if command -v .waybar-wrapped >/dev/null 2>&1; then .waybar-wrapped -c \"$waybar_cfg\" -s \"$waybar_dir/style.css\" >/dev/null 2>&1 & else waybar -c \"$waybar_cfg\" -s \"$waybar_dir/style.css\" >/dev/null 2>&1 & fi"
   fi
 

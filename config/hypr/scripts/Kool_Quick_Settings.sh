@@ -473,6 +473,7 @@ handle_choice() {
   local choice="$1"
   local quick_settings_monitor="$2"
   local file=""
+  local qs_state_dir="" qs_discard="" qs_nwg_pid=""
 
   case "$choice" in
   "Manage User Defaults" | "Configure User Defaults" | "Set User Defaults")
@@ -545,22 +546,39 @@ handle_choice() {
   "Edit User Monitor config")
     file="$user_monitors_lua"
     ;;
-  "Configure Workspace Rules (nwg-displays)")
+  "Arrange Monitors (nwg-displays)")
     if ! command -v nwg-displays &>/dev/null; then
       notify-send -i "$iDIR/error.png" "E-R-R-O-R" "Install nwg-displays first"
       return
     fi
-    # nwg-displays writes monitors.conf, which the Lua config never reads, so
-    # point it at a discard path: the arrangement is kept by saving it as a
-    # layout instead. The pause file stops MonitorWatcher.sh re-applying the
-    # stored layout while the GUI is up, which would undo the drag.
+    # nwg-displays writes a hyprlang monitors.conf that this Lua config never
+    # reads, and it applies its own arrangement with `hyprctl reload` - which
+    # re-runs the Lua config and puts the STORED layout back on screen. So it is
+    # pointed at a discard path in the runtime state directory, and what it wrote
+    # is imported afterwards: that both applies the drag and persists it to
+    # UserConfigs/monitors.lua, which the Lua config DOES read.
+    #
+    # The path keeps its .conf suffix on purpose: nwg derives the Lua sibling it
+    # also writes from it (removesuffix(".conf") + ".lua"), and a path that does
+    # not end in .conf makes it fall back to ~/.config/hypr/monitors.lua instead.
     qs_state_dir="${XDG_RUNTIME_DIR:-/tmp}/kooldots-display-profiles"
+    qs_discard="$qs_state_dir/nwg-monitors.discard.conf"
     mkdir -p -- "$qs_state_dir"
-    nwg-displays -m "$qs_state_dir/nwg-monitors.conf.discard" 9>&- &
+    rm -f -- "$qs_discard" "$qs_state_dir/nwg-monitors.discard.lua"
+    # Pause BEFORE the GUI starts, with our own PID: nwg's reload emits monitor
+    # events, and the watcher would re-apply the stored layout over the drag.
+    # Writing the pause file after the fork would leave that window open.
+    printf '%s\n' "$$" > "$qs_state_dir/pause"
+    nwg-displays -m "$qs_discard" 9>&- &
     qs_nwg_pid=$!
     printf '%s\n' "$qs_nwg_pid" > "$qs_state_dir/pause"
     wait "$qs_nwg_pid" || true
     rm -f -- "$qs_state_dir/pause"
+    if [[ -s $qs_discard ]] && grep -q '^[[:space:]]*monitor=' "$qs_discard" 2>/dev/null; then
+      "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/DisplayProfile.sh" import-nwg "$qs_discard" \
+        >/dev/null 2>&1 || true
+    fi
+    rm -f -- "$qs_discard" "$qs_state_dir/nwg-monitors.discard.lua"
     notify-send -i "$iDIR/ja.png" "Monitors" \
       "To keep this arrangement: SUPER+ALT+D then 'Save current state as...'"
     ;;
@@ -717,7 +735,7 @@ Choose Kitty Terminal Theme
 Choose Ghostty Terminal Theme
 Choose Wlogout Theme
 Choose Wlogout Wallpaper
-Configure Workspace Rules (nwg-displays)
+Arrange Monitors (nwg-displays)
 GTK Settings (nwg-look)
 QT Apps Settings (qt6ct)
 QT Apps Settings (qt5ct)
@@ -758,7 +776,7 @@ show_main_menu() {
   printf '%b\n' "[[ User Settings ]]\x00meta\x1fManage User Defaults Edit User Defaults Edit User Keybinds Edit User ENV variables Edit User Startup Apps overlay Edit User Window Rules overlay Edit User Layer Rules overlay Edit User Settings Edit User Decorations Edit User Animations Edit User Laptop Settings Edit User Monitor config Select Hyprview Layout"
   printf '%b\n' "[[ System Settings ]]\x00meta\x1fEdit System Default Keybinds Edit System Default Startup Apps Edit System Default Window Rules Edit System Default Layer Rules Edit System Default Settings"
   printf '%b\n' "[[ Toggle Options ]]\x00meta\x1fToggle Waybar Weather units C F Toggle Waybar Clock 12H 24H Toggle Game Mode"
-  printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Choose Wlogout Theme Choose Wlogout Wallpaper Configure Workspace Rules nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Rainbow Borders Mode"
+  printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Choose Wlogout Theme Choose Wlogout Wallpaper Arrange Monitors nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Rainbow Borders Mode"
   printf '%s\n' "[ Quick Links]"
   printf '%s\n' "Manage User Defaults"
   printf '%s\n' "Set User Keybinds"
@@ -791,7 +809,7 @@ show_main_menu() {
   printf '%s\n' "Choose Ghostty Terminal Theme"
   printf '%s\n' "Choose Wlogout Theme"
   printf '%s\n' "Choose Wlogout Wallpaper"
-  printf '%s\n' "Configure Workspace Rules (nwg-displays)"
+  printf '%s\n' "Arrange Monitors (nwg-displays)"
   printf '%s\n' "GTK Settings (nwg-look)"
   printf '%s\n' "QT Apps Settings (qt6ct)"
   printf '%s\n' "QT Apps Settings (qt5ct)"

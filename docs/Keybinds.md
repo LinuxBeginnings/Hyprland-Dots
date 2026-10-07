@@ -57,6 +57,13 @@ Source: `config/hypr/configs/system_keybinds.lua`
 - `SUPER + ALT + B` — Waybar layout menu (`WaybarLayout.sh`)
 - `SUPER + ALT + R` — Refresh bar and menus (`Refresh.sh`)
 
+## Monitors / Display Layouts
+Source: `config/hypr/UserConfigs/user_keybinds.lua`, not the system file
+- `SUPER + ALT + D` — Display layout menu for the monitor set in front of you (`DisplayProfileMenu.sh`)
+- `SUPER + ALT + W` — Apply the display layout named `Work` (`DisplayProfile.sh -- Work`)
+  - Create a layout called `Work` first, or this bind reports that there is none
+- `SUPER + SHIFT + E` → **Choose Monitor Profiles** — The same layouts, plus a one-way import of `Monitor_Profiles/` (`MonitorProfiles.sh`)
+
 ## Session / System Controls
 - `SUPER + Q` — Close active window (`killactive`)
 - `SUPER + SHIFT + Q` — Terminate active process (`KillActiveProcess.sh`)
