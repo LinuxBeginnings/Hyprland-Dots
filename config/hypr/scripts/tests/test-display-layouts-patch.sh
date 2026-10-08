@@ -24,6 +24,17 @@ source "$HERE/lib_test.sh"
 # repo root, three levels up.
 PATCH="$SCRIPT_DIR/../../../patches/80-display-layouts.sh"
 WORK="$(mktemp -d)"; trap 'rm -rf -- "$WORK"' EXIT
+
+# The suite is installed with the rest of config/hypr, but the patch it tests is
+# not: patches/ is repo-side, and the installer runs it from there. Running from
+# ~/.config/hypr/scripts/tests therefore finds no patch, so say so and report
+# clean instead of failing every check.
+if [[ ! -f $PATCH ]]; then
+  it "the installer patch is not present here (repo-only test)"
+  pass_msg
+  summary "test-display-layouts-patch"
+  exit 0
+fi
 HOME_DIR="$WORK/home"
 
 # An install that predates the display-layout system: the templates as they

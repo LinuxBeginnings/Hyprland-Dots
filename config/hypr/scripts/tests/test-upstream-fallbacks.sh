@@ -171,14 +171,23 @@ if [[ -z $bad ]]; then pass_msg; else fail "$bad"; fi
 # The repo ships an EMPTY display-layouts.json, so anything that copies the
 # repo's UserConfigs over a live one destroys every saved layout. The installer
 # is add-only; this check is what keeps it that way.
-it "lib_copy.sh only ADDS UserConfigs files that are missing"
-blk="$(sed -n '/UserConfigs are protected/,/^      else$/p' "$S/../../../scripts/lib_copy.sh")"
-if printf '%s' "$blk" | grep -q 'if \[ ! -f "\$dst_file" \]'; then pass_msg
-else fail "the UserConfigs branch is no longer guarded by a not-exists test"; fi
+#
+# lib_copy.sh is repo-side, so these two only mean anything in a checkout; this
+# suite is also installed into ~/.config/hypr/scripts/tests.
+LIB_COPY="$S/../../../scripts/lib_copy.sh"
+if [[ -f $LIB_COPY ]]; then
+  it "lib_copy.sh only ADDS UserConfigs files that are missing"
+  blk="$(sed -n '/UserConfigs are protected/,/^      else$/p' "$LIB_COPY")"
+  if printf '%s' "$blk" | grep -q 'if \[ ! -f "\$dst_file" \]'; then pass_msg
+  else fail "the UserConfigs branch is no longer guarded by a not-exists test"; fi
 
-it "lib_copy.sh ships the layout store at all"
-assert_contains "$S/../../../scripts/lib_copy.sh" 'display-layouts.json' \
-  "the store is included in the UserConfigs find" && pass_msg
+  it "lib_copy.sh ships the layout store at all"
+  assert_contains "$LIB_COPY" 'display-layouts.json' \
+    "the store is included in the UserConfigs find" && pass_msg
+else
+  it "lib_copy.sh is not present here (repo-only checks)"
+  pass_msg
+fi
 
 # --- nothing else changed in those files -----------------------------------
 it "the upstream scripts are still valid bash"
