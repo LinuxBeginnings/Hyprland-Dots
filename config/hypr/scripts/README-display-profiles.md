@@ -171,8 +171,11 @@ in one place:
   under the same name, after which it restores automatically like any other
   layout.
 
-Adding a file to `Monitor_Profiles/` still works, but it is a way to get a
-layout into the store once, not a second place layouts live.
+`Monitor_Profiles/Work.lua` ships as an example profile: one `preferred` / `auto`
+/ `1` rule per output, matched by port, covering `eDP-1`, `DP-1`..`DP-3` and
+`HDMI-A-1`/`HDMI-A-2`. Copy it, edit it, or add your own file. Importing one is
+how a profile gets into the store - it is not a second place layouts live, and a
+profile matched by port does not follow a monitor moved to another port.
 
 ## Running nwg-displays directly
 
@@ -253,7 +256,8 @@ alone and let the watcher import the arrangement instead.
 | `scripts/DisplayProfileSetup.sh` | The parameter table. |
 | `scripts/MonitorWatcher.sh` | Watches Hyprland's event socket, and `~/.config/hypr/monitors.conf` so a directly-run `nwg-displays` is imported. One per session. |
 | `scripts/MonitorProfiles.sh` | Quick Settings → **Choose Monitor Profiles**: this system's layouts, plus a one-way import of `Monitor_Profiles/`. |
-| `scripts/tests/` | The 495-check suite. It is installed with the rest of `config/hypr`, so it is available on an installed system too - run it with `bash ~/.config/hypr/scripts/tests/run-all.sh`. |
+| `Monitor_Profiles/Work.lua` | An example profile: one `preferred`/`auto`/`1` rule per output, matched by port. |
+| `scripts/tests/` | The 504-check suite. It is installed with the rest of `config/hypr`, so it is available on an installed system too - run it with `bash ~/.config/hypr/scripts/tests/run-all.sh`. |
 
 Runtime state lives in `$XDG_RUNTIME_DIR/kooldots-display-profiles/`:
 `display-profile.log`, `monitor-watcher.log`, `current` (the fingerprint and the
@@ -351,6 +355,11 @@ bash ~/.config/hypr/scripts/tests/run-all.sh
 to one machine?" — it fails if a port name such as `eDP-1` reappears in any
 script.
 
+`test-lua-syntax.sh` parses every `.lua` file under the config with `luac`. Worth
+knowing because a syntax error in any one of them takes the whole config load
+down, and the `UserConfigs` files are loaded through a `pcall`, so the failure is
+silent — the file simply stops running.
+
 ## Rollback
 
 Take a copy of the files the feature touches before you start, then put them
@@ -360,7 +369,11 @@ back:
 # Stop the watcher first, or it will keep re-applying a layout.
 pkill -f 'Monitor[W]atcher' || true
 
-# Your own pre-change copies, or the backups copy.sh makes.
+# Your own pre-change copies, or the backups copy.sh makes. Keep them BESIDE the
+# config directory - copy.sh uses ~/.config/hypr-backup-<timestamp> - never
+# inside it: every .lua file under ~/.config/hypr is part of the configuration,
+# so a copy of a file that was already broken there fails a syntax sweep (and a
+# copy of a working one is a second copy of the same rules).
 B=<your-backup-dir>
 cp "$B"/{WaybarStartup.sh,Refresh.sh,Kool_Quick_Settings.sh,LidSwitch.sh,MonitorProfiles.sh} \
    ~/.config/hypr/scripts/

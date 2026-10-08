@@ -20,17 +20,19 @@ HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./lib_test.sh
 source "$HERE/lib_test.sh"
 
-# lib_test.sh sets SCRIPT_DIR to the scripts directory; the patch lives at the
+# lib_test.sh sets SCRIPT_DIR to the scripts directory; the patches live at the
 # repo root, three levels up.
-PATCH="$SCRIPT_DIR/../../../patches/80-display-layouts.sh"
+PATCH_DIR="$SCRIPT_DIR/../../../patches"
+PATCH="$PATCH_DIR/80-display-layouts.sh"
+PATCH81="$PATCH_DIR/81-monitor-profiles-readme.sh"
 WORK="$(mktemp -d)"; trap 'rm -rf -- "$WORK"' EXIT
 
-# The suite is installed with the rest of config/hypr, but the patch it tests is
-# not: patches/ is repo-side, and the installer runs it from there. Running from
-# ~/.config/hypr/scripts/tests therefore finds no patch, so say so and report
-# clean instead of failing every check.
-if [[ ! -f $PATCH ]]; then
-  it "the installer patch is not present here (repo-only test)"
+# The suite is installed with the rest of config/hypr, but the patches it tests
+# are not: patches/ is repo-side, and the installer runs them from there. Running
+# from ~/.config/hypr/scripts/tests therefore finds no patches, so say so and
+# report clean instead of failing every check.
+if [[ ! -d $PATCH_DIR ]]; then
+  it "the installer patches are not present here (repo-only test)"
   pass_msg
   summary "test-display-layouts-patch"
   exit 0
@@ -159,5 +161,55 @@ cp "$WORK/odd/hypr/UserConfigs/user_startup.lua" "$WORK/odd/before.lua"
 run_patch "$WORK/odd" >/dev/null 2>&1 && pass_msg || fail "must exit 0"
 assert_eq "the file is untouched" "$(cat "$WORK/odd/before.lua")" \
   "$(cat "$WORK/odd/hypr/UserConfigs/user_startup.lua")"
+
+# --- patches/81-monitor-profiles-readme.sh ----------------------------------
+# Monitor_Profiles/ is restored from the backup on upgrade, so a REWRITTEN README
+# in it never reaches an existing install - the backup's copy wins. This patch
+# APPENDS a note instead, and must never lose what a user already wrote there.
+MP="$WORK/mp"
+MP_README="$MP/hypr/Monitor_Profiles/README"
+OLD_README='# Create a Monitor profile you want to on this directory
+# tip: You can easily create a profile using nwg-displays
+'
+
+seed_readme() {  # <content>
+  rm -rf "$MP"; mkdir -p "$MP/hypr/Monitor_Profiles"
+  printf '%s' "$1" >"$MP_README"
+}
+
+run_patch81() {
+  env KOOLDOTS_CONFIG_HOME="$MP" KOOLDOTS_LOG="$WORK/patch81.log" bash "$PATCH81"
+}
+
+it "the README patch appends the current notes without dropping the old text"
+seed_readme "$OLD_README"
+run_patch81 >/dev/null 2>&1 || fail "the patch exited non-zero"
+if grep -qF 'Create a Monitor profile you want' "$MP_README" \
+   && grep -qF 'Managed by the display-layout system' "$MP_README"; then pass_msg
+else fail "expected both the old text and the new note"; fi
+
+it "the README patch is idempotent"
+before="$(cat "$MP_README")"
+run_patch81 >/dev/null 2>&1
+assert_eq "byte-identical after a second run" "$before" "$(cat "$MP_README")"
+
+it "the README patch keeps a user's own notes and still adds the note"
+seed_readme '# Create a Monitor profile you want to on this directory
+# MY OWN NOTES: do not delete
+'
+run_patch81 >/dev/null 2>&1
+if grep -qF 'MY OWN NOTES' "$MP_README" \
+   && grep -qF 'Managed by the display-layout system' "$MP_README"; then pass_msg
+else fail "expected their text to survive and the note to be added"; fi
+
+it "the README patch leaves the repo's own copy alone"
+seed_readme "$(cat "$SCRIPT_DIR/../Monitor_Profiles/README")"
+before="$(cat "$MP_README")"
+run_patch81 >/dev/null 2>&1
+assert_eq "untouched" "$before" "$(cat "$MP_README")"
+
+it "the README patch skips when there is nothing to patch"
+rm -rf "$MP"; mkdir -p "$MP"
+run_patch81 >/dev/null 2>&1 && pass_msg || fail "must exit 0 with no README"
 
 summary "test-display-layouts-patch"

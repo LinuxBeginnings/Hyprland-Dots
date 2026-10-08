@@ -37,11 +37,22 @@ it "no script assumes a monitor may never be disabled"
 hit="$(grep -nE 'never disable (eDP|the laptop)' "$S"/DisplayProfile.sh "$S"/MonitorWatcher.sh 2>/dev/null || true)"
 if [[ -z $hit ]]; then pass_msg; else fail "$hit"; fi
 
-it "the shipped store is an empty version 1 store"
+# The store ships EMPTY in the repo, which is what the installer's add-only rule
+# depends on. On an installed system it holds the user's own layouts, so "empty"
+# is the wrong thing to assert there - only the shape is. scripts/lib_copy.sh is
+# repo-side, so its presence is what says which of the two this is.
 store="$S/../UserConfigs/display-layouts.json"
-if jq -e '.version == 1 and (.fingerprints | length) == 0' "$store" >/dev/null 2>&1; then
-  pass_msg
-else fail "$store is missing or not an empty v1 store"; fi
+if [[ -f "$S/../../../scripts/lib_copy.sh" ]]; then
+  it "the shipped store is an empty version 1 store"
+  if jq -e '.version == 1 and (.fingerprints | length) == 0' "$store" >/dev/null 2>&1; then
+    pass_msg
+  else fail "$store is missing or not an empty v1 store"; fi
+else
+  it "the installed store is a version 1 store"
+  if jq -e '.version == 1 and (.fingerprints | type) == "object"' "$store" >/dev/null 2>&1; then
+    pass_msg
+  else fail "$store is missing or not a v1 store"; fi
+fi
 
 it "every new script is executable"
 bad=""

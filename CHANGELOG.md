@@ -66,6 +66,10 @@
   - `9>&-` on the call inside `<(...)` left bash's saved copy of fd 9 open
   - So the subshell held the flock, and no watcher could start until socat ended
   - The subshell now closes fd 9 with `exec 9>&-` before it starts the stream
+- Existing installs kept the old `Monitor_Profiles/README`
+  - On upgrade it is restored from the backup, so the shipped copy never lands
+  - `patches/81-monitor-profiles-readme.sh` appends the current notes instead
+  - It appends rather than replaces, so a user's own notes there survive
 
 ## Added:
 
@@ -94,13 +98,24 @@
   - The watcher watches nwg's own `monitors.conf` and imports it when it changes
   - A run the menu did not start leaves no pause file, so it is found by name
   - Lid handling stays in `user_laptops.lua`, which reads the same file
-  - 495 checks run from JSON fixtures with no monitors attached
+  - 504 checks run from JSON fixtures with no monitors attached
 - `Monitor Profiles` uses the same layout store
   - From Quick Settings (`SUPER + SHIFT + E`), lists this set's layouts
   - `Monitor_Profiles/*.lua` is offered as a one-way import into the store
 - `patches/80-display-layouts.sh` activates the feature on existing installs
   - `copy.sh` only adds missing `UserConfigs` files, so the edits never landed
   - It starts `MonitorWatcher.sh` and adds the two display keybinds
+- `config/hypr/scripts/tests/test-lua-syntax.sh`
+  - Parses every `.lua` file under the config with `luac -p`
+  - One syntax error anywhere takes the whole config load down with it
+  - The `UserConfigs` files load through a `pcall`, so that failure is silent
+  - It also catches a stray copy of a broken file left in the config tree
+  - Reports and passes where `luac` is not installed
+- `Monitor_Profiles/Work.lua`, a shipped profile to copy or edit
+  - One `preferred` / `auto` / `1` rule per output, matched by port
+  - Covers `eDP-1`, `DP-1`..`DP-3`, `HDMI-A-1` and `HDMI-A-2`
+  - Apply it from Choose Monitor Profiles, then `SUPER + ALT + W` applies it
+  - `preferred` rather than `highres`: the panel's own choice, always usable
 
 ## Updated:
 

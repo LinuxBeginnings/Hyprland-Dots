@@ -65,7 +65,7 @@ a restart and a lid event, and it is why the laptop controller does not have to
 be switched off for this one to work.
 
 Because the data model never touches the session, the entire logic is tested
-from JSON fixtures with no monitors attached — **495 automated checks** cover
+from JSON fixtures with no monitors attached — **504 automated checks** cover
 three- and four-monitor desktops, two identical monitors with no serial, a
 rotated monitor, a closed lid, the nwg-displays bridge and the installer patch.
 
@@ -80,7 +80,8 @@ rotated monitor, a closed lid, the nwg-displays bridge and the installer patch.
 | `scripts/MonitorWatcher.sh` | socket2 watcher (one per session) |
 | `scripts/README-display-profiles.md` | Full operational guide |
 | `UserConfigs/display-layouts.json` | Your saved layouts (ships empty) |
-| `scripts/tests/` | 9 suites + 33 fixtures |
+| `Monitor_Profiles/Work.lua` | An example profile to copy or edit |
+| `scripts/tests/` | 10 suites + 34 fixtures |
 
 **Existing files changed**, each with a fallback so the dots still work without
 this feature: `WaybarStartup.sh` and `Refresh.sh` (ask the controller which
