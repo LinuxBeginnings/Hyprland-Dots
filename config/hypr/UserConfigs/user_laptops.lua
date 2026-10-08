@@ -18,6 +18,16 @@
 --   or when the lid is opened.
 -- * Listens to hotplug events (monitor.added, monitor.removed) and lid switch events.
 
+-- This file stays ENABLED. The display-layout system
+-- (scripts/MonitorWatcher.sh + scripts/DisplayProfile.sh) writes its resolved
+-- layout to UserConfigs/monitors.lua, which is exactly the file this one reads
+-- below - so the two agree instead of fighting. Disabling this file would also
+-- not have helped: UserConfigs is never overwritten on upgrade, so an existing
+-- install would have kept the old copy and both controllers would still run.
+--
+-- Lid/clamshell behaviour lives here, and only here: it binds the lid switch,
+-- so nothing else should.
+
 local FALLBACK_INTERNAL = "eDP-1"
 
 local function read_file(path)
@@ -275,21 +285,24 @@ local function apply_laptop_monitor_layout(trigger_refresh)
       end
     end
   else
-    -- No external displays connected: internal panel must be enabled (unless lid is closed)
+    -- No external displays connected, so the internal panel is the ONLY screen.
+    -- It stays on whatever the lid is doing: a closed lid with nothing else to
+    -- show the session must not blank the panel, or the laptop goes dark with no
+    -- way back. Mode and scale are still taken from the stored config, but its
+    -- on/off state and position are overridden - a single monitor belongs at the
+    -- origin, and the stored config may belong to a monitor set that had more.
     local int_cfg = get_monitor_config(internal)
-    if lid_closed then
-      hl.monitor({ output = internal, disabled = true })
-    elseif int_cfg then
-      hl.monitor(int_cfg)
-    else
-      hl.monitor({
-        output = internal,
-        disabled = false,
-        mode = default_fallback.mode or "preferred",
-        position = "0x0",
-        scale = default_fallback.scale or "auto",
-      })
+    local int_on = {
+      output = internal,
+      disabled = false,
+      mode = (int_cfg and int_cfg.mode) or default_fallback.mode or "preferred",
+      position = "0x0",
+      scale = (int_cfg and int_cfg.scale) or default_fallback.scale or "auto",
+    }
+    if int_cfg and int_cfg.transform then
+      int_on.transform = int_cfg.transform
     end
+    hl.monitor(int_on)
   end
 
   if trigger_refresh then

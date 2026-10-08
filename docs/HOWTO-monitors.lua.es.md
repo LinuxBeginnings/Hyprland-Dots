@@ -8,6 +8,14 @@ En **KoolDots (2026)** con el flujo de configuración en Lua, todas las configur
 
 Esta guía explica cómo funciona la configuración de pantallas en Hyprland Lua, cómo interactúan los perfiles de monitor con las modificaciones de usuario y ofrece ejemplos prácticos para configuraciones individuales, multimonitor, alta tasa de refresco y escalado.
 
+> **Más fácil primero:** KoolDots incluye un sistema de disposiciones de pantalla
+> que escribe este archivo por usted. Presione `SUPER + ALT + D`, ordene las
+> pantallas (arrastrando, o con la tabla de parámetros) y guarde el resultado con
+> un nombre; a partir de ahí se restaura solo cada vez que se conecta ese conjunto
+> de pantallas. Consulte
+> [`../README-display-layouts.md`](../README-display-layouts.md). Editar el
+> archivo a mano, como se describe abajo, sigue funcionando.
+
 ---
 
 ## 1. Descripción general y arquitectura
@@ -17,7 +25,17 @@ Esta guía explica cómo funciona la configuración de pantallas en Hyprland Lua
 - **Monitores del sistema (`~/.config/hypr/lua/monitors.lua`)**:
   Proporciona reglas de reserva globales (por ejemplo: `output = "", mode = "preferred", position = "auto", scale = "1"`).
 - **Monitores del usuario (`~/.config/hypr/UserConfigs/monitors.lua`)**:
-  Contiene las definiciones de monitor personalizadas y persistentes. Cuando se ejecuta el script `MonitorProfiles.sh` o el selector de perfiles, los ajustes se guardan en este archivo. Las llamadas personalizadas a `hl.monitor({...})` agregadas aquí se conservan tras las actualizaciones.
+  Contiene las definiciones de monitor personalizadas y persistentes, y
+  `lua/monitors.lua` lo carga en cada lectura de la configuración.
+  - Normalmente este archivo es **generado**: al aplicar una disposición se
+    escribe aquí la disposición actual, y un comentario marcador al inicio lo
+    indica. Todo lo que edite a mano mientras ese marcador siga presente se
+    reemplaza la próxima vez que se aplique una disposición.
+  - **Borre la línea del marcador para tomar el control del archivo.** A partir
+    de ahí se trata como suyo: nunca se sobrescribe, y las llamadas
+    personalizadas a `hl.monitor({...})` que agregue se conservan.
+    `user_laptops.lua` lee sus reglas de este mismo archivo, así que el
+    comportamiento de la tapa y del modo acoplado las sigue.
 
 ### Sintaxis de la función `hl.monitor()`
 

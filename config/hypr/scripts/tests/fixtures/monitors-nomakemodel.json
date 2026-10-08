@@ -1,0 +1,4 @@
+[
+{"name":"DP-1","description":"Dell P2419H DEF456","make":"Dell","model":"P2419H","serial":"DEF456","width":1920,"height":1080,"refreshRate":60.000,"x":0,"y":0,"scale":1,"transform":0,"focused":false,"disabled":false,"availableModes":["1920x1080@60.00Hz"]},
+{"name":"HDMI-A-2","description":"  ","make":"","model":"","serial":"","width":1920,"height":1080,"refreshRate":59.940,"x":1920,"y":0,"scale":1,"transform":0,"focused":false,"disabled":false,"availableModes":["1920x1080@59.94Hz"]}
+]

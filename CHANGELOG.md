@@ -56,6 +56,20 @@
   - The guard was keyed by module name only, so a second bar replaced it
   - Waybar then reported `stopped unexpectedly` and re-ran it every 10s
   - It is now keyed by the parent bar; a listener exits when its bar does
+- A shut laptop lid no longer switches off its only screen
+  - `user_laptops.lua` disabled the internal panel whenever the lid closed
+  - With no external monitor that left the session with no output at all
+  - The panel now stays on unless another monitor can show the session
+  - `patches/80-display-layouts.sh` applies the same fix to existing installs
+- A killed `MonitorWatcher.sh` no longer strands its own lock
+  - The event stream runs in a process-substitution subshell that outlives it
+  - `9>&-` on the call inside `<(...)` left bash's saved copy of fd 9 open
+  - So the subshell held the flock, and no watcher could start until socat ended
+  - The subshell now closes fd 9 with `exec 9>&-` before it starts the stream
+- Existing installs kept the old `Monitor_Profiles/README`
+  - On upgrade it is restored from the backup, so the shipped copy never lands
+  - `patches/81-monitor-profiles-readme.sh` appends the current notes instead
+  - It appends rather than replaces, so a user's own notes there survive
 
 ## Added:
 
@@ -74,9 +88,44 @@
   - `custom/swaync`, `custom/hint`, `custom/keyboard` are icon/text pairs
   - Only the text half of a pair runs a script, so listeners cannot collide
   - The style inlines its gruvbox palette, so it ships as one file
+- Multi-monitor display layouts
+  - A layout belongs to a monitor set, keyed by device, not by port
+  - `SUPER + ALT + D` opens the menu; `SUPER + ALT + W` applies layout `Work`
+  - Applying writes the layout to `UserConfigs/monitors.lua`, which Lua loads
+  - So a layout survives a reload, a restart and a lid event
+  - Per layout: on/off, mode, scale, rotation, position, primary, Waybar bars
+  - `nwg-displays` is bridged, and a run you start yourself is imported too
+  - The watcher watches nwg's own `monitors.conf` and imports it when it changes
+  - A run the menu did not start leaves no pause file, so it is found by name
+  - Lid handling stays in `user_laptops.lua`, which reads the same file
+  - 504 checks run from JSON fixtures with no monitors attached
+- `Monitor Profiles` uses the same layout store
+  - From Quick Settings (`SUPER + SHIFT + E`), lists this set's layouts
+  - `Monitor_Profiles/*.lua` is offered as a one-way import into the store
+- `patches/80-display-layouts.sh` activates the feature on existing installs
+  - `copy.sh` only adds missing `UserConfigs` files, so the edits never landed
+  - It starts `MonitorWatcher.sh` and adds the two display keybinds
+- `config/hypr/scripts/tests/test-lua-syntax.sh`
+  - Parses every `.lua` file under the config with `luac -p`
+  - One syntax error anywhere takes the whole config load down with it
+  - The `UserConfigs` files load through a `pcall`, so that failure is silent
+  - It also catches a stray copy of a broken file left in the config tree
+  - Reports and passes where `luac` is not installed
+- `Monitor_Profiles/Work.lua`, a shipped profile to copy or edit
+  - One `preferred` / `auto` / `1` rule per output, matched by port
+  - Covers `eDP-1`, `DP-1`..`DP-3`, `HDMI-A-1` and `HDMI-A-2`
+  - Apply it from Choose Monitor Profiles, then `SUPER + ALT + W` applies it
+  - `preferred` rather than `highres`: the panel's own choice, always usable
 
 ## Updated:
 
+- Do not add `require("monitors")` to your Hyprland config
+  - `nwg-displays` 0.4.3+ writes a Lua sibling at `~/.config/hypr/monitors.lua`
+  - This config never loads that path, so the sibling stays inert on purpose
+  - Adding the `require` makes it live and it competes with `monitors.lua`
+  - Its own README suggests the line for Hyprland 0.55+; ignore it here
+- The display-layout docs no longer say a direct `nwg-displays` run is lost
+  - `README-display-layouts.md` and the operational guide cover it instead
 - Removed KB default "pc105" from `user_settings.lua`
 - `docs/HOWTO-Change-Keybindgs.md` now covers `dispatch(...)` resolution
   - Documents the in-process helper mapping and the native `hl.dsp.*` form

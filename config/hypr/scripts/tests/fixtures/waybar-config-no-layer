@@ -1,0 +1,6 @@
+/* fake layout with no line-start "layer" key at all */
+[{
+"include": [ "$HOME/.config/hypr/waybar/Modules" ],
+"position": "top",
+"modules-left": ["clock"]
+}]

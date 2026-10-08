@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "fingerprints": {
+    "ASUSTek COMPUTER INC|VG249Q3A|S7LMBS003105 + BOE|0x0630|": {
+      "label": "Nha",
+      "default": "Home",
+      "layouts": {
+        "Home": {
+          "monitors": [
+            {
+              "identity": "BOE|0x0630|",
+              "port": "eDP-1",
+              "enabled": true,
+              "mode": "1920x1080@60.00",
+              "scale": 1.5,
+              "transform": 0,
+              "x": 0,
+              "y": 0,
+              "grid": {
+                "row": 1,
+                "order": 1,
+                "valign": "bottom"
+              }
+            },
+            {
+              "identity": "ASUSTek COMPUTER INC|VG249Q3A|S7LMBS003105",
+              "port": "DP-2",
+              "enabled": true,
+              "mode": "1920x1080@119.88",
+              "scale": 1,
+              "transform": 0,
+              "x": 1280,
+              "y": 0,
+              "grid": {
+                "row": 1,
+                "order": 2,
+                "valign": "bottom"
+              }
+            }
+          ],
+          "primary": "ASUSTek COMPUTER INC|VG249Q3A|S7LMBS003105",
+          "waybar": {
+            "mode": "selected",
+            "outputs": [
+              "ASUSTek COMPUTER INC|VG249Q3A|S7LMBS003105"
+            ]
+          }
+        },
+        "Work": {
+          "monitors": [
+            {
+              "identity": "BOE|0x0630|",
+              "port": "eDP-1",
+              "enabled": true,
+              "mode": "1920x1080@60.00",
+              "scale": 1.5,
+              "transform": 0,
+              "x": 0,
+              "y": 0,
+              "grid": {
+                "row": 1,
+                "order": 1,
+                "valign": "bottom"
+              }
+            },
+            {
+              "identity": "ASUSTek COMPUTER INC|VG249Q3A|S7LMBS003105",
+              "port": "DP-2",
+              "enabled": false,
+              "mode": "1920x1080@119.88",
+              "scale": 1,
+              "transform": 0,
+              "x": 1280,
+              "y": 0,
+              "grid": {
+                "row": 1,
+                "order": 2,
+                "valign": "bottom"
+              }
+            }
+          ],
+          "primary": "BOE|0x0630|",
+          "waybar": {
+            "mode": "all",
+            "outputs": []
+          }
+        }
+      }
+    }
+  }
+}

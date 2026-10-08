@@ -579,7 +579,11 @@ ensure_lua_keybinds() {
           echo "${ERROR:-[ERROR]} - Failed to sync system file: ${YELLOW:-}$rel_path${RESET:-}" 2>&1 | tee -a "$log"
         fi
       fi
-    done < <(find "$src_dir" -maxdepth 1 -type f -name '*.lua' -print0)
+    # display-layouts.json rides along with the Lua templates: it is a
+    # UserConfigs file like the rest, and UserConfigs are only ever ADDED when
+    # missing, so a user's saved display layouts are never overwritten.
+    done < <(find "$src_dir" -maxdepth 1 -type f \
+                  \( -name '*.lua' -o -name 'display-layouts.json' \) -print0)
   done
 
   # Sync root-level lua metadata and config files if present
