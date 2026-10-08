@@ -174,6 +174,40 @@ in one place:
 Adding a file to `Monitor_Profiles/` still works, but it is a way to get a
 layout into the store once, not a second place layouts live.
 
+## Running nwg-displays directly
+
+`nwg-displays` writes a `monitors.conf` that this Lua config never reads, and it
+applies its own arrangement by dispatching `dpms` and running `hyprctl reload`.
+That reload re-runs the Lua config, so what you dragged is briefly replaced by
+the stored layout.
+
+The watcher bridges the gap. It watches `~/.config/hypr/monitors.conf` - nwg's
+own default - and when that file changes it hands it to the controller, which
+applies it and writes `UserConfigs/monitors.lua`. So **you can run
+`nwg-displays` however you like**: from the layout menu, a launcher, or a
+terminal. Nothing has to know that you launched it, because the signal is the
+file changing, not the process.
+
+The arrangement lands within about two seconds of pressing **Apply**, and the
+screens may jump back once in between. That is nwg's own reload applying the
+stored layout before the import replaces it; the end state is what you dragged.
+
+While nwg-displays is open the watcher drops monitor and reload events, so its
+reload cannot undo the drag before the import lands. That check is by process
+name, so it works for a run the menu did not start.
+
+## Do not add `require("monitors")`
+
+From 0.4.3, `nwg-displays` also writes a Lua sibling next to its `.conf`, at
+`~/.config/hypr/monitors.lua`. **This config never loads that path, on purpose:**
+`lua/monitors.lua` loads `UserConfigs/monitors.lua`, which the controller owns,
+and that separation is what keeps one writer in charge.
+
+`nwg-displays`' own README tells Hyprland 0.55+ users to add
+`require("monitors")`. Do not: it would make the sibling live, and it would then
+compete with `UserConfigs/monitors.lua` for the same monitors. Leave the sibling
+alone and let the watcher import the arrangement instead.
+
 ## Things worth knowing
 
 - **Switching a monitor off moves its workspaces.** Hyprland moves them to
@@ -195,6 +229,9 @@ layout into the store once, not a second place layouts live.
   reload re-runs the Lua config, which does not read the file nwg writes, so the
   screens can jump back for a moment before the import re-applies your drag.
   That is expected; the end state is the arrangement you made.
+- **A run of `nwg-displays` you started yourself is imported too.** The watcher
+  watches nwg's own `monitors.conf`, so the menu is a convenience, not a
+  requirement. See "Running nwg-displays directly" above.
 - **Mirroring and 10-bit colour are refused, not dropped.** `nwg-displays` can
   express both, a layout cannot, and applying a mirrored arrangement as a plain
   one would silently un-mirror it. The import fails and names the setting
@@ -214,15 +251,16 @@ layout into the store once, not a second place layouts live.
 | `scripts/DisplayProfile.sh` | The only thing that changes monitors, focus and Waybar. |
 | `scripts/DisplayProfileMenu.sh` | `SUPER`+`ALT`+`D`. |
 | `scripts/DisplayProfileSetup.sh` | The parameter table. |
-| `scripts/MonitorWatcher.sh` | Watches Hyprland's event socket. One per session. |
+| `scripts/MonitorWatcher.sh` | Watches Hyprland's event socket, and `~/.config/hypr/monitors.conf` so a directly-run `nwg-displays` is imported. One per session. |
 | `scripts/MonitorProfiles.sh` | Quick Settings → **Choose Monitor Profiles**: this system's layouts, plus a one-way import of `Monitor_Profiles/`. |
-| `scripts/tests/` | The 489-check suite. It is installed with the rest of `config/hypr`, so it is available on an installed system too - run it with `bash ~/.config/hypr/scripts/tests/run-all.sh`. |
+| `scripts/tests/` | The 495-check suite. It is installed with the rest of `config/hypr`, so it is available on an installed system too - run it with `bash ~/.config/hypr/scripts/tests/run-all.sh`. |
 
 Runtime state lives in `$XDG_RUNTIME_DIR/kooldots-display-profiles/`:
 `display-profile.log`, `monitor-watcher.log`, `current` (the fingerprint and the
 running layout's name), `active-layout.json` and `active-layout.fingerprint`
 (what is on screen now), `config-active`, `pause`, `monitors*.json` scratch
-files, and the throwaway `nwg-monitors.discard.conf` and its Lua sibling. The
+files, `nwg-import.stamp` (what the watcher has already imported), and the
+throwaway `nwg-monitors.discard.conf` the menu points `nwg-displays` at. The
 `.conf` suffix on that last one matters: `nwg-displays` derives the Lua file it
 also writes from it, and a path without it makes nwg write to
 `~/.config/hypr/monitors.lua` instead.

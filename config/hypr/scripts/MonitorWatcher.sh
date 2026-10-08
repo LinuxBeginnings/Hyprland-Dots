@@ -6,9 +6,13 @@
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
 # Purpose:
-#   Watch Hyprland's socket2 event stream and hand DP-2 connect/disconnect
-#   over to DisplayProfile.sh. One watcher per session, debounced, and it
-#   reconnects by itself when Hyprland replaces the socket.
+#   Watch Hyprland's socket2 event stream and hand monitor changes over to
+#   DisplayProfile.sh. One watcher per session, debounced, and it reconnects by
+#   itself when Hyprland replaces the socket.
+#
+#   It also watches for an arrangement written by nwg-displays, so running that
+#   program DIRECTLY - not just through the layout menu - is what updates
+#   UserConfigs/monitors.lua. See import_nwg_conf below.
 #
 #   Started from UserConfigs/user_startup.lua. Safe to run by hand.
 set -Eeuo pipefail
@@ -34,6 +38,32 @@ MW_STATE_DIR="${MW_STATE_DIR:-$MW_RUNTIME_DIR/kooldots-display-profiles}"
 MW_STATE_FILE="${MW_STATE_FILE:-$MW_STATE_DIR/current}"
 # Written by the menu (and Quick Settings) around nwg-displays: holds its PID.
 MW_PAUSE_FILE="${MW_PAUSE_FILE:-$MW_STATE_DIR/pause}"
+
+# --- nwg-displays integration ----------------------------------------------
+# nwg-displays writes a hyprlang monitors.conf that this Lua config never reads,
+# so an arrangement made by a DIRECTLY launched nwg-displays would otherwise be
+# lost: only the menu could bridge it, because only the menu owned the process.
+#
+# A direct run cannot be paused the way the menu pauses it, but its Apply writes
+# the file and THEN reloads Hyprland, so a change on disk is the signal - which
+# is what the idle poll in main() looks for.
+#
+# The path is nwg's own default. From 0.4.3 it also writes a Lua sibling next to
+# it (~/.config/hypr/monitors.lua); lua/monitors.lua does not load that path, so
+# neither file competes with the UserConfigs/monitors.lua the controller owns.
+MW_NWG_CONF="${MW_NWG_CONF:-$config_home/hypr/monitors.conf}"
+# Touched after every import attempt and once at startup, so only a change made
+# while this watcher is running is picked up.
+MW_NWG_STAMP="${MW_NWG_STAMP:-$MW_STATE_DIR/nwg-import.stamp}"
+# The process name that means "the user is arranging monitors". An explicitly
+# EMPTY value disables the check - which is why this uses ${V-default} and not
+# ${V:-default} - and the tests rely on that so a real nwg-displays on the
+# machine cannot suppress them.
+MW_NWG_PROC="${MW_NWG_PROC-nwg-displays}"
+MW_PGREP="${MW_PGREP:-pgrep}"
+# The idle poll, in seconds. This is also the interval at which the conf above
+# is checked, and it is the only clock in this script.
+MW_IDLE_POLL="${MW_IDLE_POLL:-2}"
 
 log() {
   local line
@@ -140,12 +170,31 @@ event_class() {
   esac
 }
 
+# nwg_running: true while nwg-displays is open.
+#
+# `pgrep -x` matches a console script by name: the kernel names a shebang script
+# after the script, not after its interpreter, so this finds
+# /usr/bin/nwg-displays even though it is really python3.
+nwg_running() {
+  [[ -n $MW_NWG_PROC ]] || return 1
+  command -v "$MW_PGREP" >/dev/null 2>&1 || return 1
+  "$MW_PGREP" -x "$MW_NWG_PROC" >/dev/null 2>&1
+}
+
 # paused: true while the drag-and-drop GUI is up. Applying a stored layout
 # mid-drag would silently throw away the arrangement the user is making, so
-# every event is dropped until the GUI exits. A pause file left behind by a
-# crashed GUI must not disable this watcher forever, so a dead PID clears it.
+# every event is dropped until the GUI exits.
+#
+# Two things can be arranging monitors: the menu's own nwg-displays, which
+# records its PID in the pause file, and one the user launched themselves, which
+# has no file to leave behind and is found by name. A pause file left behind by
+# a crashed GUI must not disable this watcher forever, so a dead PID clears it.
 paused() {
   local pid
+  if nwg_running; then
+    log "nwg-displays is running; ignoring display events until it exits"
+    return 0
+  fi
   [[ -f $MW_PAUSE_FILE ]] || return 1
   pid="$(head -n1 -- "$MW_PAUSE_FILE" 2>/dev/null || true)"
   if [[ $pid =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
@@ -155,6 +204,45 @@ paused() {
   log "removing a stale pause file (pid ${pid:-unknown} is gone)"
   rm -f -- "$MW_PAUSE_FILE"
   return 1
+}
+
+# touch_nwg_stamp: start the clock. Called at startup, so an arrangement written
+# before this session is ignored - it has either been applied already or is
+# superseded by the stored layout - and after every import attempt.
+touch_nwg_stamp() {
+  mkdir -p -- "$(dirname -- "$MW_NWG_STAMP")" 2>/dev/null || true
+  : >"$MW_NWG_STAMP" 2>/dev/null || true
+}
+
+# import_nwg_conf: hand an arrangement nwg-displays wrote to the controller,
+# which applies it and writes UserConfigs/monitors.lua.
+#
+# This does not wait for the window to close: the arrangement lands as soon as
+# Apply is pressed, and nwg's own Cancel/revert writes the file back, which
+# imports the reverted arrangement in turn. The two agree either way.
+#
+# The cheap tests come first and are bash builtins, so an idle tick that finds
+# nothing forks nothing; the single grep runs only when the file has changed.
+import_nwg_conf() {
+  [[ -f $MW_NWG_CONF ]] || return 0
+  [[ $MW_NWG_CONF -nt $MW_NWG_STAMP ]] || return 0
+  if ! grep -q '^[[:space:]]*monitor=' "$MW_NWG_CONF" 2>/dev/null; then
+    # nwg-displays creates this file empty at startup, so there is usually
+    # nothing in it yet. Stamping stops us re-reading it until it changes.
+    touch_nwg_stamp
+    return 0
+  fi
+  log "nwg-displays wrote a new arrangement; importing it"
+  if "$MW_PROFILE_SCRIPT" import-nwg "$MW_NWG_CONF" 9>&-; then
+    log "imported the arrangement from $MW_NWG_CONF"
+  else
+    log "WARN: could not import $MW_NWG_CONF; see the display profile log"
+  fi
+  # Stamp whatever happened. A refusal (a mirrored arrangement, say) is
+  # deterministic for this content, so retrying it on every poll would only fill
+  # the log; pressing Apply again in nwg-displays retries with a new file.
+  touch_nwg_stamp
+  return 0
 }
 
 apply_auto() {
@@ -256,6 +344,10 @@ main() {
     apply_auto
   fi
 
+  # Start the clock for nwg-displays: an arrangement written before this session
+  # has either been applied already or is superseded by the stored layout.
+  touch_nwg_stamp
+
   local reconnects=0 line rc cls
   pending=0
   pending_class=monitor
@@ -271,7 +363,10 @@ main() {
       if (( pending )); then
         IFS= read -r -t "$MW_DEBOUNCE" line || rc=$?
       else
-        IFS= read -r line || rc=$?
+        # The idle read times out on purpose: that timeout is the only clock
+        # this script has, and it is what lets a directly launched
+        # nwg-displays be noticed without a second process.
+        IFS= read -r -t "$MW_IDLE_POLL" line || rc=$?
       fi
       if (( rc == 0 )); then
         cls="$(event_class "$line")"
@@ -287,6 +382,9 @@ main() {
       if (( rc > 128 )); then
         # read timed out: the burst has settled
         flush_pending
+        # ...and with nothing pending, this was the idle tick. Two builtin tests
+        # per tick; the import only runs if nwg-displays wrote the file.
+        import_nwg_conf
         continue
       fi
       # end of stream: `read` may still have handed us a final unterminated line
@@ -300,7 +398,13 @@ main() {
       fi
       flush_pending
       break
-    done < <(stream_events 9>&-)
+    # `exec 9>&-` in the subshell, NOT `stream_events 9>&-` on the call: bash
+    # saves and restores the descriptor around a redirected command, and the
+    # saved copy keeps the lock held by this subshell for as long as it lives.
+    # The stream outlives the watcher by design - it is blocked on the socket -
+    # so that leftover would strand the lock and no watcher could ever start
+    # again after this one was killed.
+    done < <(exec 9>&-; stream_events)
 
     if [[ -n $MW_MAX_RECONNECTS ]] && (( reconnects >= MW_MAX_RECONNECTS )); then
       log "event stream closed; reconnect limit reached, exiting"

@@ -65,7 +65,7 @@ a restart and a lid event, and it is why the laptop controller does not have to
 be switched off for this one to work.
 
 Because the data model never touches the session, the entire logic is tested
-from JSON fixtures with no monitors attached — **489 automated checks** cover
+from JSON fixtures with no monitors attached — **495 automated checks** cover
 three- and four-monitor desktops, two identical monitors with no serial, a
 rotated monitor, a closed lid, the nwg-displays bridge and the installer patch.
 
@@ -146,23 +146,33 @@ layout, and where the *bars* go.
 
 `nwg-displays` writes a `monitors.conf` that this Lua config never reads, and it
 applies its own arrangement by dispatching `dpms` and running `hyprctl reload`.
-That reload re-runs the Lua config, so what you dragged is replaced by the
-stored layout for a moment — and then lost, because nwg's file is not what the
-Lua config reads.
+That reload re-runs the Lua config, so what you dragged is briefly replaced by
+the stored layout.
 
-The menu bridges the gap: it opens `nwg-displays` against a **discard path** in
-the runtime state directory, then reads what nwg wrote, applies it through
-`hl.monitor` and writes it to `UserConfigs/monitors.lua`. So the drag both takes
-effect and sticks, and the menu reopens offering to save it under a name.
+The watcher bridges the gap: it notices that nwg wrote the file, reads it,
+applies it through `hl.monitor` and writes it to `UserConfigs/monitors.lua`. So
+the drag both takes effect and sticks.
 
-Two consequences worth knowing:
+**Run it however you like** — from the layout menu, a launcher, or a terminal.
+The result is the same, because the watcher watches the *file*, not the process.
+The menu's own entry additionally reopens offering to save the arrangement under
+a name; after a direct run, use `SUPER`+`ALT`+`D` → **Save current state as…**.
 
-- Run `nwg-displays` *directly* from a terminal and this bridge does not run, so
-  the arrangement is lost. Always go through the menu.
+Three things worth knowing:
+
+- The arrangement lands within about two seconds of pressing **Apply**, and the
+  screens may jump back once in between. That is `nwg-displays`' own reload
+  applying the stored layout before the import replaces it, and the end state is
+  what you dragged.
 - Mirroring and 10-bit colour are expressible in `nwg-displays` but not in a
   layout. Rather than silently applying a mirrored arrangement as a plain one,
   the import refuses and names the setting; use the parameter table for those
   monitors.
+- **Do not add `require("monitors")` to your Hyprland config.** `nwg-displays`
+  0.4.3+ writes a Lua sibling at `~/.config/hypr/monitors.lua`, and this config
+  deliberately never loads that path. Adding the `require` makes it live, and it
+  then competes with `UserConfigs/monitors.lua` for the same monitors. Its own
+  README suggests that line for Hyprland 0.55+; ignore it here.
 
 ## Waybar
 

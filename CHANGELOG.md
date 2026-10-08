@@ -61,6 +61,11 @@
   - With no external monitor that left the session with no output at all
   - The panel now stays on unless another monitor can show the session
   - `patches/80-display-layouts.sh` applies the same fix to existing installs
+- A killed `MonitorWatcher.sh` no longer strands its own lock
+  - The event stream runs in a process-substitution subshell that outlives it
+  - `9>&-` on the call inside `<(...)` left bash's saved copy of fd 9 open
+  - So the subshell held the flock, and no watcher could start until socat ended
+  - The subshell now closes fd 9 with `exec 9>&-` before it starts the stream
 
 ## Added:
 
@@ -85,11 +90,13 @@
   - Applying writes the layout to `UserConfigs/monitors.lua`, which Lua loads
   - So a layout survives a reload, a restart and a lid event
   - Per layout: on/off, mode, scale, rotation, position, primary, Waybar bars
-  - `nwg-displays` is bridged: arrange, then the menu applies and saves it
+  - `nwg-displays` is bridged, and a run you start yourself is imported too
+  - The watcher watches nwg's own `monitors.conf` and imports it when it changes
+  - A run the menu did not start leaves no pause file, so it is found by name
   - Lid handling stays in `user_laptops.lua`, which reads the same file
-  - 489 checks run from JSON fixtures with no monitors attached
+  - 495 checks run from JSON fixtures with no monitors attached
 - `Monitor Profiles` uses the same layout store
-  - Reached from Quick Settings (`SUPER + SHIFT + E`) and lists this set's layouts
+  - From Quick Settings (`SUPER + SHIFT + E`), lists this set's layouts
   - `Monitor_Profiles/*.lua` is offered as a one-way import into the store
 - `patches/80-display-layouts.sh` activates the feature on existing installs
   - `copy.sh` only adds missing `UserConfigs` files, so the edits never landed
@@ -97,6 +104,13 @@
 
 ## Updated:
 
+- Do not add `require("monitors")` to your Hyprland config
+  - `nwg-displays` 0.4.3+ writes a Lua sibling at `~/.config/hypr/monitors.lua`
+  - This config never loads that path, so the sibling stays inert on purpose
+  - Adding the `require` makes it live and it competes with `monitors.lua`
+  - Its own README suggests the line for Hyprland 0.55+; ignore it here
+- The display-layout docs no longer say a direct `nwg-displays` run is lost
+  - `README-display-layouts.md` and the operational guide cover it instead
 - Removed KB default "pc105" from `user_settings.lua`
 - `docs/HOWTO-Change-Keybindgs.md` now covers `dispatch(...)` resolution
   - Documents the in-process helper mapping and the native `hl.dsp.*` form

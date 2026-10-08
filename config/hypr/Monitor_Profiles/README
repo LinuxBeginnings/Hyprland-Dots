@@ -11,10 +11,13 @@
 # - Edit parameters (table)
 # then Save current state as...
 
-# tip: if you arrange monitors with nwg-displays, go through the SUPER ALT D
-# menu rather than running it yourself. The menu is what applies the result and
-# persists it. Running nwg-displays directly loses the arrangement, because this
-# Lua config does not read the file it writes.
+# tip: run nwg-displays however you like - the SUPER ALT D menu, a launcher, or
+# a terminal. MonitorWatcher.sh watches the monitors.conf it writes and imports
+# the arrangement into UserConfigs/monitors.lua either way.
+#
+# Do NOT add require("monitors") to your Hyprland config: on nwg-displays 0.4.3+
+# that would load the Lua file nwg writes next to its .conf, and it would then
+# compete with UserConfigs/monitors.lua.
 
 # Adding a file here still works as a way to get a profile in. The import writes
 # the layout under the file's name, so give it a name you are happy to keep

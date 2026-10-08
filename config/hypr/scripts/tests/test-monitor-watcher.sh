@@ -19,6 +19,10 @@ trap 'rm -rf "$SANDBOX"' EXIT
 BIN="$SANDBOX/bin"
 mkdir -p "$BIN"
 PROFILE_LOG="$SANDBOX/profile-calls.log"
+# The nwg-displays integration. Every run points at the sandbox, so a real
+# ~/.config/hypr/monitors.conf on the machine is never consulted.
+NWG_CONF="$SANDBOX/nwg-monitors.conf"
+NWG_STAMP="$SANDBOX/kooldots-display-profiles/nwg-import.stamp"
 
 # Fake controller: records each invocation instead of touching the session.
 cat > "$BIN/DisplayProfile.sh" <<'EOS'
@@ -41,6 +45,13 @@ run_watcher() {
     "MW_RUNTIME_DIR=$SANDBOX"
     "MW_LOG_FILE=$SANDBOX/watcher.log"
     "MW_RETRY_DELAY=0.3"
+    # Hermetic nwg-displays integration: sandbox paths, and the process check
+    # disabled so a real nwg-displays on the machine cannot suppress these runs.
+    # The tests that cover it re-enable it.
+    "MW_NWG_CONF=$NWG_CONF"
+    "MW_NWG_STAMP=$NWG_STAMP"
+    "MW_NWG_PROC="
+    "MW_IDLE_POLL=0.3"
   )
   [[ -n $fixture ]] && env_args+=("MW_EVENT_FILE=$FIXTURES/$fixture")
   env "${env_args[@]}" "$@" timeout 30 bash "$SCRIPT" >"$SANDBOX/out.txt" 2>&1
@@ -48,6 +59,40 @@ run_watcher() {
 }
 
 profile_calls() { wc -l < "$PROFILE_LOG" | tr -d ' '; }
+
+# start_watcher_bg / stop_watcher_bg run the watcher detached, so a test can do
+# something WHILE it runs - which is the only way to exercise a file it watches.
+#
+# Deliberately not `pid="$(start_watcher_bg ...)"`: a command substitution runs
+# the launch in a subshell, which makes the watcher a grandchild, and `wait`
+# cannot reap it - so the next test would start while the singleton lock is still
+# held and every later watcher would exit with "already running".
+start_watcher_bg() {  # <linger seconds>
+  : >"$PROFILE_LOG"
+  env "MW_PROFILE_SCRIPT=$BIN/DisplayProfile.sh" "MW_DEBOUNCE=0.3" \
+      "MW_RECONNECT_DELAY=0.1" "MW_MAX_RECONNECTS=0" "MW_RUNTIME_DIR=$SANDBOX" \
+      "MW_LOG_FILE=$SANDBOX/watcher.log" "MW_RETRY_DELAY=0.3" \
+      "MW_NWG_CONF=$NWG_CONF" "MW_NWG_STAMP=$NWG_STAMP" "MW_NWG_PROC=" \
+      "MW_IDLE_POLL=0.3" "MW_EVENT_FILE=$FIXTURES/events-unrelated.txt" \
+      "MW_EVENT_LINGER=$1" \
+      bash "$SCRIPT" >"$SANDBOX/out.txt" 2>&1 &
+  WATCHER_PID=$!
+}
+
+stop_watcher_bg() {
+  [[ -n ${WATCHER_PID:-} ]] || return 0
+  kill "$WATCHER_PID" 2>/dev/null || true
+  wait "$WATCHER_PID" 2>/dev/null || true
+  # The lock is released when the process is gone, and the next test starts a
+  # watcher immediately, so do not return until it really is gone.
+  local i
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    kill -0 "$WATCHER_PID" 2>/dev/null || break
+    sleep 0.1
+  done
+  kill -9 "$WATCHER_PID" 2>/dev/null || true
+  WATCHER_PID=""
+}
 
 it "startup: reconciles once with 'auto' even when no event ever arrives"
 st=$(run_watcher events-no-display.txt)
@@ -141,9 +186,9 @@ assert_not_contains "$SANDBOX/out.txt" "already running" && pass_msg
 
 # --- findings from the whole-branch review ---------------------------------
 it "the event stream does not keep the watcher lock held"
-# The stream is read through process substitution. If that subshell inherits
-# the lock descriptor, a socat left blocked on the socket holds the lock after
-# the watcher is killed, and no watcher can ever start again.
+# The stream is read through process substitution, and it outlives the watcher
+# by design: it is blocked on the socket. This covers the case where the watcher
+# exits on its own; the killed case is the next test.
 cat > "$BIN/DisplayProfile.sh" <<'EOS'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$PROFILE_LOG"
@@ -156,7 +201,8 @@ rm -f "$lock"
 env "MW_PROFILE_SCRIPT=$BIN/DisplayProfile.sh" "MW_DEBOUNCE=0.3" \
     "MW_RECONNECT_DELAY=0.1" "MW_MAX_RECONNECTS=0" "MW_RUNTIME_DIR=$SANDBOX" \
     "MW_LOG_FILE=$SANDBOX/watcher.log" "MW_EVENT_FILE=$FIXTURES/events-unrelated.txt" \
-    "MW_EVENT_LINGER=4" \
+    "MW_EVENT_LINGER=4" "MW_NWG_CONF=$NWG_CONF" "MW_NWG_STAMP=$NWG_STAMP" \
+    "MW_NWG_PROC=" "MW_IDLE_POLL=0.3" \
     bash "$SCRIPT" >"$SANDBOX/out.txt" 2>&1
 if flock -n "$lock" true; then
   pass_msg
@@ -164,6 +210,20 @@ else
   fail "the lock is still held by the lingering event stream"
 fi
 pkill -P $$ -x sleep >/dev/null 2>&1 || true
+
+it "a killed watcher does not strand the lock in its event-stream subshell"
+# This is the case that matters: the subshell running the stream is a child that
+# survives the watcher, so if it keeps the lock descriptor, killing the watcher
+# (a restart, a logout, Ctrl-C) leaves the lock held for as long as the socket
+# stays open - and no watcher can ever start again. `9>&-` on the call inside
+# <( ) is not enough, because bash saves and restores the descriptor around a
+# redirected command and the saved copy keeps the lock.
+rm -f "$lock"
+start_watcher_bg 5
+sleep 0.8
+stop_watcher_bg
+if flock -n "$lock" true; then pass_msg
+else fail "the lock is still held after the watcher was killed"; fi
 
 it "a stale instance signature does not stop the watcher finding the live socket"
 # HYPRLAND_INSTANCE_SIGNATURE is baked in at process start. After Hyprland is
@@ -315,5 +375,65 @@ rm -f "$SANDBOX/kooldots-display-profiles/active-layout.json" \
       "$SANDBOX/kooldots-display-profiles/active-layout.fingerprint" \
       "$SANDBOX/kooldots-display-profiles/current"
 pass_msg
+
+# --- a directly launched nwg-displays ---------------------------------------
+# The menu can pause the watcher and import afterwards, because it owns the
+# process. A direct run cannot be paused, but its Apply writes the file and then
+# reloads Hyprland, so a change on disk is the signal - and these runs write the
+# file while the watcher is already up, which is the whole point of the path.
+
+it "an arrangement written by a directly-run nwg-displays is imported"
+rm -f "$NWG_CONF" "$NWG_STAMP"
+start_watcher_bg 3
+sleep 0.8
+printf 'monitor=eDP-1,1920x1080@60.00,0x0,1.0\n' >"$NWG_CONF"
+sleep 1.2
+stop_watcher_bg
+assert_contains "$PROFILE_LOG" 'import-nwg' "the controller was asked to import it"
+assert_contains "$PROFILE_LOG" "$NWG_CONF" "and the file nwg wrote is the one named"
+pass_msg
+
+it "the import is stamped, so the same arrangement is not imported twice"
+# The stamp is now newer than the file, so a fresh watcher - which stamps again
+# at startup - leaves the file alone.
+start_watcher_bg 2
+sleep 1.0
+stop_watcher_bg
+[[ "$(grep -c 'import-nwg' "$PROFILE_LOG" || true)" == "0" ]] \
+  || fail "an unchanged arrangement was imported again"
+pass_msg
+
+it "a monitors.conf left over from an earlier session is ignored"
+rm -f "$NWG_STAMP"
+printf 'monitor=eDP-1,1920x1080@60.00,0x0,1.0\n' >"$NWG_CONF"
+touch -d '1 hour ago' "$NWG_CONF"
+start_watcher_bg 2
+sleep 1.0
+stop_watcher_bg
+[[ "$(grep -c 'import-nwg' "$PROFILE_LOG" || true)" == "0" ]] \
+  || fail "a file that predates the session was imported"
+pass_msg
+
+it "a monitors.conf with no monitor= line is not worth a controller call"
+# nwg-displays creates the file empty at startup, so it exists long before it
+# holds anything. It is made newer than the stamp here, which is the case that
+# would otherwise be imported.
+rm -f "$NWG_CONF" "$NWG_STAMP"
+printf '# Generated by nwg-displays on 2026-01-01 at 00:00:00. Do not edit manually.\n' >"$NWG_CONF"
+start_watcher_bg 3
+sleep 0.8
+touch "$NWG_CONF"
+sleep 1.0
+stop_watcher_bg
+[[ "$(grep -c 'import-nwg' "$PROFILE_LOG" || true)" == "0" ]] \
+  || fail "a file with no monitor= line was imported"
+pass_msg
+
+it "a running nwg-displays counts as paused"
+# Launched by the user it leaves no pause file behind, so it is found by name.
+st=$(run_watcher events-burst.txt "MW_NWG_PROC=nwg-displays" "MW_PGREP=/bin/true")
+assert_status 0 "$st" "watcher exit"
+[[ $(profile_calls) == 0 ]] || fail "expected no calls while nwg-displays runs, got $(profile_calls)"
+assert_contains "$SANDBOX/watcher.log" "nwg-displays is running" && pass_msg
 
 summary "test-monitor-watcher"
