@@ -78,6 +78,7 @@
   - A stop waits for the bar to leave, and a restart forces the launch
   - `LidSwitch.sh` asks the same question before signalling a bar
   - Issue: [#158](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/158)
+    - Thanks again Angel Spano @jasueh for the info to find issue
 
 ## Added:
 
