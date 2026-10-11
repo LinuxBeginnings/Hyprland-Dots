@@ -35,14 +35,65 @@ kooldots_waybar_config() {
 
 WAYBAR_CONFIG_ARG="$(kooldots_waybar_config "$WAYBAR_DIR")"
 WAYBAR_STYLE_ARG="$WAYBAR_DIR/style.css"
+# How long a stop waits for the bar to leave the process table, in 0.1s ticks.
+# Overridable so the test suite does not have to sleep it out.
+WAYBAR_EXIT_WAIT_TICKS="${WAYBAR_EXIT_WAIT_TICKS:-30}"
+
+# Any process at all matching a waybar name, in any state. This is a question
+# about the process table, not about whether the user has a bar: a process that
+# is dumping core matches here and still has to be escalated against, while
+# is_waybar_running() is what decides whether there is a bar on screen.
+waybar_processes_present() {
+    pgrep -x "waybar" >/dev/null 2>&1 || pgrep -x '\.waybar-wrapped' >/dev/null 2>&1
+}
+
+# waybar_live_pids <exact process name> -> the PIDs that are alive and usable.
+#
+# `pgrep` matches a process in any state, and two of those states are not a bar:
+#   Z - it has already exited and is only waiting to be reaped;
+#   D - uninterruptible sleep, which is what this bar looks like while it dumps
+#       core after a signal. It cannot be interrupted while it finishes.
+# Neither is a bar anyone can see, and taking one for a running bar is what let
+# a restart skip its own launch and leave the session with no bar until the
+# next attempt.
+#
+# `ps` ships in the same procps package as the `pgrep`/`pkill` this script
+# already depends on, so it is no new requirement. A process that disappears
+# between the pgrep and the state read is skipped; one whose state cannot be
+# read at all is kept, because guessing "not running" there would start a
+# second bar, and a duplicate is worse than a delay.
+waybar_live_pids() {
+    local name=$1 pid state
+    for pid in $(pgrep -x "$name" 2>/dev/null); do
+        kill -0 "$pid" 2>/dev/null || continue
+        state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d '[:space:]')"
+        case "$state" in
+            Z*|D*) continue ;;
+        esac
+        printf '%s\n' "$pid"
+    done
+}
 
 is_waybar_running() {
-    pgrep -x "waybar" >/dev/null 2>&1 || pgrep -x '\.waybar-wrapped' >/dev/null 2>&1
+    [ -n "$(waybar_live_pids "waybar")" ] || [ -n "$(waybar_live_pids '\.waybar-wrapped')" ]
 }
 
 wait_for_waybar() {
     for _ in $(seq 1 80); do
         is_waybar_running && return 0
+        sleep 0.1
+    done
+    return 1
+}
+
+# Wait for the last usable bar to leave, up to ~3s. A bar that was just
+# signalled does not always go at once: its exit path can take a moment, and
+# while it is still in the process table a relaunch would see it and skip
+# itself. A process that is already dumping core is not waited for - it is not a
+# bar, and it cannot be hurried.
+wait_for_waybar_exit() {
+    for _ in $(seq 1 "$WAYBAR_EXIT_WAIT_TICKS"); do
+        is_waybar_running || return 0
         sleep 0.1
     done
     return 1
@@ -118,24 +169,35 @@ start_waybar_via_systemd() {
 # restart cannot leave a stale bar behind. SIGINT goes first because Waybar
 # handles it for a clean shutdown, whereas SIGTERM can be blocked in processes
 # that inherited Hyprland's signal mask.
+#
+# It then waits for the bar to actually leave. Returning while the old bar was
+# still in the process table is what let the relaunch decide a bar was already
+# up and skip itself. Returns non-zero if a usable bar is still there, which
+# means it outlived SIGKILL as well.
 stop_waybar_instances() {
     pkill -INT -x waybar >/dev/null 2>&1 || true
     pkill -INT -x '.waybar-wrapped' >/dev/null 2>&1 || true
     pkill -x waybar >/dev/null 2>&1 || true
     pkill -x '.waybar-wrapped' >/dev/null 2>&1 || true
     sleep 0.2
-    if is_waybar_running; then
+    # Escalate on the raw matches, not on is_waybar_running(): a process that is
+    # dumping core is not a bar, but -9 is what reaps it as soon as it becomes
+    # interruptible.
+    if waybar_processes_present; then
         pkill -9 -x waybar >/dev/null 2>&1 || true
         pkill -9 -x '.waybar-wrapped' >/dev/null 2>&1 || true
-        sleep 0.1
     fi
+    wait_for_waybar_exit
 }
 
 # Safety net: if more than one Waybar is already alive (the historical bug),
 # keep the newest instance and terminate the rest.
+#
+# Only live instances count. A process that is dumping core must never be picked
+# as the one to keep, or this would kill the working bar and leave the corpse.
 dedupe_waybar_instances() {
     local pids keep count pid
-    pids="$(pgrep -x waybar 2>/dev/null || true)"
+    pids="$(waybar_live_pids "waybar")"
     [ -n "$pids" ] || return 0
     count="$(printf '%s\n' "$pids" | wc -l | tr -d ' ')"
     [ "$count" -gt 1 ] || return 0
@@ -154,7 +216,10 @@ dedupe_waybar_instances() {
 }
 
 start_waybar_direct() {
-    if is_waybar_running; then
+    # "force" skips the already-running guard. A restart passes it: a process it
+    # could not kill is not a usable bar, and a restart has to end with a bar on
+    # screen rather than with nothing.
+    if [ "${1:-}" != "force" ] && is_waybar_running; then
         return 0
     fi
     if command -v waybar >/dev/null 2>&1; then
@@ -173,7 +238,7 @@ start_waybar_direct() {
 main() {
     # --restart forces a clean single-instance restart; the default is
     # start-if-missing so concurrent startup callers stay idempotent.
-    local mode="start"
+    local mode="start" force=""
     case "${1:-}" in
         --restart|-r) mode="restart" ;;
     esac
@@ -202,7 +267,10 @@ main() {
                 exit 0
             fi
         fi
-        stop_waybar_instances
+        # A bar that outlives the stop and the wait has outlived SIGKILL as
+        # well, so it cannot be a usable bar any more. It must not veto the
+        # relaunch: a restart has to end with a bar on screen.
+        stop_waybar_instances || force="force"
     elif is_waybar_running; then
         # Already up (possibly duplicated by an older release): keep one bar.
         dedupe_waybar_instances
@@ -221,7 +289,7 @@ main() {
         exit 0
     fi
 
-    if start_waybar_direct; then
+    if start_waybar_direct "$force"; then
         dedupe_waybar_instances
         exec 9>&-
         exit 0

@@ -70,6 +70,14 @@
   - On upgrade it is restored from the backup, so the shipped copy never lands
   - `patches/81-monitor-profiles-readme.sh` appends the current notes instead
   - It appends rather than replaces, so a user's own notes there survive
+- Waybar no longer goes missing after a restart
+  - A bar that was just signalled can linger while it dumps core
+  - `pgrep` kept matching it, so the relaunch thought a bar was already up
+  - It skipped its own launch, so the session had no bar until the next try
+  - `is_waybar_running` now ignores `Z` (exited) and `D` (dumping core)
+  - A stop waits for the bar to leave, and a restart forces the launch
+  - `LidSwitch.sh` asks the same question before signalling a bar
+  - Issue: [#158](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/158)
 
 ## Added:
 

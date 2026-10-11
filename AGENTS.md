@@ -20,6 +20,8 @@ Project rules for AI agents working in this repository.
 - Never wrap a sentence across two lines. Every bullet is a single line.
 - Keep every line under ~80 characters so it does not wrap when pasted.
 - Backtick code, paths, settings and keys.
+- An entry that came from an issue or a PR ends with a link to it.
+  - Last nested bullet: `  - Issue: [#158](<url>)` or `  - PR: [#159](<url>)`.
 - Keep `development` current: add the entry as the change lands, under the next version heading at the top of the file.
 - Create that heading if it is missing. Never edit a section for a version that is already released.
 
@@ -32,8 +34,10 @@ Shape:
   - `<cause>`
   - `<what changed>`
   - `<effect>`
+  - Issue: [#158](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/158)
 - `<second fix>` `<one line summary>`
   - `<detail>`
+  - PR: [#159](https://github.com/LinuxBeginnings/Hyprland-Dots/pull/159)
 ```
 
 ## Commit messages

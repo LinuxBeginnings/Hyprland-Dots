@@ -50,6 +50,27 @@ save_monitor_state() {
     fi
 }
 
+# A process that has already exited (state Z) or is dumping core (state D)
+# still answers `pgrep`, but neither is a bar anyone can see: signalling one
+# would leave the session with no bar at all. So ask the question WaybarStartup
+# asks - "is there a bar?" - rather than "is a process named waybar there?".
+# `ps` ships in the same procps package as the `pgrep`/`pkill` used here, and a
+# process whose state cannot be read is kept, so the conservative answer wins.
+is_waybar_running() {
+    local name pid state
+    for name in waybar '\.waybar-wrapped'; do
+        for pid in $(pgrep -x "$name" 2>/dev/null || true); do
+            kill -0 "$pid" 2>/dev/null || continue
+            state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d '[:space:]')"
+            case "$state" in
+                Z*|D*) continue ;;
+            esac
+            return 0
+        done
+    done
+    return 1
+}
+
 handle_close() {
     local mon
     mon="$(get_internal_monitor)"
@@ -122,7 +143,7 @@ handle_open() {
     fi
 
     sleep 0.3
-    if pgrep -x waybar >/dev/null 2>&1 || pgrep -x '.waybar-wrapped' >/dev/null 2>&1; then
+    if is_waybar_running; then
         pkill -SIGUSR2 -x waybar >> "$LOGFILE" 2>&1 || true
     elif [ -x "$SCRIPTSDIR/WaybarStartup.sh" ]; then
         "$SCRIPTSDIR/WaybarStartup.sh" >> "$LOGFILE" 2>&1 || true
@@ -164,7 +185,7 @@ handle_refresh() {
     # WaybarStartup.sh, which serializes on the shared Waybar lock. Never call
     # Refresh.sh here: its kill+respawn path raced with concurrent monitor
     # events and produced duplicate bars.
-    if pgrep -x waybar >/dev/null 2>&1 || pgrep -x '.waybar-wrapped' >/dev/null 2>&1; then
+    if is_waybar_running; then
         pkill -SIGUSR2 -x waybar >> "$LOGFILE" 2>&1 || true
         sleep 0.2
     elif [ -x "$SCRIPTSDIR/WaybarStartup.sh" ]; then
