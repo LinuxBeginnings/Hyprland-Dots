@@ -636,6 +636,38 @@ reset_store
 run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" auto --dry-run >/dev/null 2>&1
 if [[ -e "$WORK/monitors.lua" ]]; then fail "a dry run wrote the file"; else pass_msg; fi
 
+# Only an explicit apply persists. A login must not rewrite the user's own file,
+# and a saved layout is re-resolved from the store anyway - so `auto` and
+# `reapply` leave whatever is there untouched.
+it "auto does not create monitors.lua when there is none"
+reset_store
+run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" auto >/dev/null 2>&1
+if [[ -e "$WORK/monitors.lua" ]]; then fail "auto wrote the file"; else pass_msg; fi
+
+it "auto leaves the shipped template alone"
+reset_store
+printf -- '-- User monitor overrides\n-- hl.monitor({ output = "eDP-1" })\n' >"$WORK/monitors.lua"
+cp "$WORK/monitors.lua" "$WORK/monitors.lua.shipped"
+run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" auto >/dev/null 2>&1
+assert_eq "the template is byte-identical after a boot" \
+  "$(cat "$WORK/monitors.lua.shipped")" "$(cat "$WORK/monitors.lua")"
+
+it "a boot does not rewrite a generated monitors.lua"
+reset_store
+run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" -- Home >/dev/null 2>&1
+cp "$WORK/monitors.lua" "$WORK/monitors.lua.applied"
+run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" auto >/dev/null 2>&1
+assert_eq "byte-identical after auto" \
+  "$(cat "$WORK/monitors.lua.applied")" "$(cat "$WORK/monitors.lua")"
+
+it "reapply does not rewrite monitors.lua"
+reset_store
+run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" -- Work >/dev/null 2>&1
+cp "$WORK/monitors.lua" "$WORK/monitors.lua.work"
+run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" reapply >/dev/null 2>&1
+assert_eq "byte-identical after reapply" \
+  "$(cat "$WORK/monitors.lua.work")" "$(cat "$WORK/monitors.lua")"
+
 it "the generated monitors.lua is valid Lua"
 # A syntax error in this file would take the whole Hyprland config down at the
 # next load, so it is worth a real parser rather than a grep. Skipped where no

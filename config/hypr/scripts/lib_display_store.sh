@@ -257,9 +257,17 @@ ds_inherit() {
 }
 
 # ds_generate <normalized.json> <store.json> -> a layout for a monitor set that
-#   has none saved. Everything on, best mode, one row by port order, and any
-#   per-device scale/transform the user has already chosen elsewhere.
-#   Never written to the store on its own; the menu offers to save it.
+#   has none saved. Everything on, the mode already on screen, one row by port
+#   order, and any per-device scale/transform the user has already chosen
+#   elsewhere. Never written to the store on its own; the menu offers to save it.
+#
+#   The mode is deliberately NOT the largest one the monitor advertises. A panel
+#   - and a VM's virtual output in particular - can report a mode far larger than
+#   the one Hyprland chose for it under a "preferred" default, and taking that is
+#   how a fresh install ends up at, say, 5120x2440@50 on a panel that should be
+#   1920x1080@60. So generation follows what is already running: the advertised
+#   mode with the live resolution whose refresh is closest to the live refresh.
+#   The largest mode is only a last resort for an output with no live size.
 #
 #   A monitor reporting neither available modes nor a live size has no mode we
 #   could ask for, and therefore no logical size to place it by. "preferred" is
@@ -271,22 +279,31 @@ ds_generate() {
   local norm=$1 store=$2 tmp layout ids id sc tr
   tmp="$(mktemp)"
   "$DS_JQ" -c '
-    def best_mode:
-      if ((.modes // []) | length) > 0
-      then ( .modes
-             | map( . as $m
-                    | ($m | split("@")) as $p
-                    | ($p[0] | split("x")) as $d
-                    | { mode: $m,
-                        area: (($d[0] | tonumber) * ($d[1] | tonumber)),
-                        rr: ($p[1] | tonumber) } )
-             | sort_by(-.area, -.rr) | .[0].mode )
-      elif ((.width // 0) > 0 and (.height // 0) > 0)
-      then ( (.width | tostring) + "x" + (.height | tostring) + "@"
-             + ((.refreshRate * 100 | round) / 100 | tostring) )
-      else null
-      end;
-    ( [ to_entries[] | .key as $i | .value | (best_mode) as $m
+    def gen_mode:
+      ( (.width // 0) > 0 and (.height // 0) > 0 ) as $live
+      | ( (.width | tostring) + "x" + (.height | tostring) ) as $wh
+      | ( .refreshRate // 0 ) as $rr
+      | ( [ (.modes // [])[] | select(startswith($wh + "@")) ] ) as $same
+      | if $live and ($same | length) > 0
+        then ( $same
+               | map( . as $m
+                      | { mode: $m,
+                          d: (((($m | split("@")[1]) | tonumber) - $rr) | fabs) } )
+               | sort_by(.d) | .[0].mode )
+        elif ((.modes // []) | length) > 0
+        then ( .modes
+               | map( . as $m
+                      | ($m | split("@")) as $p
+                      | ($p[0] | split("x")) as $d
+                      | { mode: $m,
+                          area: (($d[0] | tonumber) * ($d[1] | tonumber)),
+                          rr: ($p[1] | tonumber) } )
+               | sort_by(-.area, -.rr) | .[0].mode )
+        elif $live
+        then ( $wh + "@" + (($rr * 100 | round) / 100 | tostring) )
+        else null
+        end;
+    ( [ to_entries[] | .key as $i | .value | (gen_mode) as $m
         | select($m != null)
         | { identity, port, enabled: true,
             mode: $m, scale: 1, transform: 0, x: 0, y: 0,

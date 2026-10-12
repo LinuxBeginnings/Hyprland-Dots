@@ -9,24 +9,14 @@
 -- Monitor Configuration
 -- See Hyprland wiki for more details
 -- https://wiki.hyprland.org/Configuring/Monitors/
-
+--
+-- One wildcard rule, "preferred": the panel's own EDID choice, which is always a
+-- mode the output can carry. Chaining "highrr" or "highres" after it does not
+-- add a fallback - the last matching rule wins - so a chain ending in "highres"
+-- would ask every output for the largest mode it advertises.
 hl.monitor({
     output = "",
     mode = "preferred",
-    position = "auto",
-    scale = "1",
-})
-
-hl.monitor({
-    output = "",
-    mode = "highrr",
-    position = "auto",
-    scale = "1",
-})
-
-hl.monitor({
-    output = "",
-    mode = "highres",
     position = "auto",
     scale = "1",
 })

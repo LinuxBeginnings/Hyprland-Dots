@@ -291,6 +291,11 @@ dp_lid_override() {
 # from that same file, so writing it here is what keeps a reload, a restart and
 # the laptop controller in agreement instead of three things fighting over the
 # monitors.
+#
+# It is written ONLY for an explicit user action - applying a named layout, or
+# importing a drag. The automatic paths (auto, reapply) never write it: the file
+# belongs to the user, and a login must not overwrite what they put there. A
+# saved layout is already in the store, which auto re-resolves from.
 dp_monitors_lua_is_ours() {
   [[ -f $DP_MONITORS_LUA ]] && grep -qF -- "$DP_MONITORS_LUA_MARKER" "$DP_MONITORS_LUA" 2>/dev/null
 }
@@ -358,6 +363,9 @@ dp_monitors_lua_render() {
 
 # dp_monitors_lua_write <layout.json> <fingerprint> <name>
 #
+# Called only for an explicit apply; see the note on dp_apply_layout's persist
+# argument.
+#
 # The STORED layout is written, never the lid-overridden one: the lid is a
 # runtime condition, and user_laptops.lua re-decides it from this file plus the
 # current lid state. Baking "internal panel off" in would strand the panel off
@@ -383,14 +391,21 @@ dp_monitors_lua_write() {
   return 1
 }
 
-# dp_apply_layout <layout.json> [fingerprint] [name]
+# dp_apply_layout <layout.json> [fingerprint] [name] [persist]
 #
 # The fingerprint and name are optional so the import path can omit them, but
 # every caller that knows them passes them: they are what gets stamped into the
 # generated UserConfigs/monitors.lua, and a layout that cannot say which monitor
 # set it belongs to cannot be replayed after a reload.
+#
+# `persist` decides whether the applied layout is written to
+# UserConfigs/monitors.lua. Only an explicit user action persists - applying a
+# named layout, or importing an arrangement dragged in nwg-displays. Pass
+# "persist" for those. The automatic paths (auto, reapply) pass "no-persist"
+# and leave the file alone; the saved layout is already in the store, which
+# auto re-resolves from.
 dp_apply_layout() {
-  local layout=$1 fp=${2-} name=${3-}
+  local layout=$1 fp=${2-} name=${3-} persist=${4-no-persist}
   local stored=$1
   local port mode x y scale transform primary_id primary_port
   ds_validate_layout "$layout" || { notify "Display profile" "That layout is not usable"; return 1; }
@@ -450,9 +465,13 @@ dp_apply_layout() {
     hypr_eval "hl.dispatch(hl.dsp.focus({ monitor = \"$primary_port\" }))" || true
   fi
 
-  # 6. persist it as Lua so a reload or a restart brings the same arrangement
-  #    back. `stored`, not `layout`: see the note on dp_monitors_lua_write.
-  dp_monitors_lua_write "$stored" "$fp" "$name" || true
+  # 6. persist it as Lua, but only when the user asked for this layout. An
+  #    automatic apply must not rewrite the user's own monitors.lua; the saved
+  #    layout is already in the store and auto re-resolves from there.
+  #    `stored`, not `layout`: see the note on dp_monitors_lua_write.
+  if [[ $persist == persist ]]; then
+    dp_monitors_lua_write "$stored" "$fp" "$name" || true
+  fi
 
   # 7. Waybar follows the layout
   dp_waybar_apply "$layout" || log "WARN: the Waybar step failed; the display state is applied"
@@ -696,7 +715,9 @@ dp_apply_named() {
   printf '%s\n' "$fp" >"$STATE_DIR/active-layout.fingerprint"
   rm -f -- "$tmp"
   log "applying layout $name"
-  if dp_apply_layout "$layout" "$fp" "$name"; then
+  # An explicit apply is what the user asked for, so it is the one path allowed
+  # to write UserConfigs/monitors.lua.
+  if dp_apply_layout "$layout" "$fp" "$name" persist; then
     dp_state_write "$fp" "$name"
     log "layout $name is active"
     return 0
@@ -742,7 +763,9 @@ dp_auto() {
   "$DP_JQ" -c '.layout' -- "$resolved" >"$layout"
   printf '%s\n' "$fp" >"$STATE_DIR/active-layout.fingerprint"
   log "auto -> $name ($source)"
-  if dp_apply_layout "$layout" "$fp" "$name"; then
+  # Never persist here: this runs on every login, and monitors.lua is the user's
+  # file. A saved layout is re-resolved from the store on the next login anyway.
+  if dp_apply_layout "$layout" "$fp" "$name" no-persist; then
     dp_state_write "$fp" "$name"
     log "auto -> $name complete"
     return 0
@@ -770,7 +793,9 @@ dp_reapply() {
   if [[ -n $recorded && $recorded == "$fp" && -f $layout ]] \
      && ds_validate_layout "$layout" 2>/dev/null; then
     log "re-applying the recorded layout for this monitor set"
-    if dp_apply_layout "$layout" "$fp" "(auto)"; then
+    # A replay, not a new choice: whatever this layout is, it was already
+    # persisted (or deliberately not) when it was applied.
+    if dp_apply_layout "$layout" "$fp" "(auto)" no-persist; then
       dp_state_write "$fp" "(auto)"
       return 0
     fi
@@ -848,7 +873,9 @@ dp_import_nwg() {
   mv -f -- "$layout.tmp" "$layout"
   printf '%s\n' "$fp" >"$STATE_DIR/active-layout.fingerprint"
   log "importing the arrangement from nwg-displays"
-  if dp_apply_layout "$layout" "$fp" "(auto)"; then
+  # A drag the user made in nwg-displays is an explicit action, so it persists -
+  # otherwise the arrangement would be undone by the next config reload.
+  if dp_apply_layout "$layout" "$fp" "(auto)" persist; then
     # Record it as the running layout. Without this the state file still names
     # the previous layout, the menu shows the wrong one as running, and a config
     # reload re-applies the OLD layout - silently undoing the drag. `(auto)` is

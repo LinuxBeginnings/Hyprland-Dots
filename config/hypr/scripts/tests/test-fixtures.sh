@@ -20,6 +20,7 @@ F="$HERE/fixtures"
 
 for f in monitors-dual monitors-triple monitors-quad-2rows monitors-twins-noserial \
          monitors-nomakemodel monitors-rotated monitors-empty monitors-nomodes \
+         monitors-vm-virtual \
          store-empty store-v1 store-future store-missing-default; do
   check "fixture $f is valid JSON" jq -e . "$F/$f.json"
 done
@@ -37,10 +38,18 @@ assert_json_eq "$F/monitors-rotated.json"        '[.[] | select(.transform == 1)
 assert_json_eq "$F/monitors-nomodes.json"        '[.[] | select((.availableModes | length) == 0)] | length' 1
 assert_json_eq "$F/monitors-nomakemodel.json"    '[.[] | select(.make == "" and .model == "")] | length' 1
 
+# The VM fixture exists to pin the generation rule. Its shape is the bug: the
+# output runs 1920x1080 while advertising a much larger 5120x2440, so a
+# generator that takes the largest mode pins the screen to one nobody can use.
+assert_json_eq "$F/monitors-vm-virtual.json" 'length' 1
+assert_json_eq "$F/monitors-vm-virtual.json" '.[] | "\(.width)x\(.height)"' '1920x1080'
+assert_json_eq "$F/monitors-vm-virtual.json" \
+  '[ .[].availableModes[] | select(test("^5120x2440@")) ] | length' 1
+
 # Every monitors fixture must carry the fields ds_normalize reads, or the
 # normalizer's // defaults would hide a broken fixture.
 for f in monitors-dual monitors-triple monitors-quad-2rows monitors-twins-noserial \
-         monitors-nomakemodel monitors-rotated monitors-nomodes; do
+         monitors-nomakemodel monitors-rotated monitors-nomodes monitors-vm-virtual; do
   check "fixture $f has every field ds_normalize reads" \
     jq -e 'all(.[]; has("name") and has("make") and has("model") and has("serial")
             and has("width") and has("height") and has("refreshRate")

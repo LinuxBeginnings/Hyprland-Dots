@@ -257,6 +257,16 @@ assert_json_eq "$WORK/gen-triple.json" '.primary' 'Dell|U2720Q|ABC123'
 it "a generated layout validates"
 ds_validate_layout "$WORK/gen-triple.json" 2>/dev/null && pass_msg || fail "should validate"
 
+# The generation rule follows the mode already on screen, never the largest one
+# the monitor advertises. A VM's virtual output advertises 5120x2440@50 while
+# Hyprland is running it at 1920x1080@60; taking the largest is exactly what
+# pinned Virtual-1 to a mode nobody could use.
+n_vm="$(norm vm-virtual)"
+ds_generate "$n_vm" "$F/store-empty.json" >"$WORK/gen-vm.json"
+assert_json_eq "$WORK/gen-vm.json" '.monitors[0].mode' '1920x1080@60.00'
+it "a generated VM layout validates"
+ds_validate_layout "$WORK/gen-vm.json" 2>/dev/null && pass_msg || fail "should validate"
+
 # Review Focus 1: no availableModes -> fall back to the current mode, never "@".
 n_nm="$(norm nomodes)"
 ds_generate "$n_nm" "$F/store-empty.json" >"$WORK/gen-nm.json"

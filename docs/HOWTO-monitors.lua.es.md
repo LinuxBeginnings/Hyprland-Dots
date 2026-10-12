@@ -27,10 +27,12 @@ Esta guía explica cómo funciona la configuración de pantallas en Hyprland Lua
 - **Monitores del usuario (`~/.config/hypr/UserConfigs/monitors.lua`)**:
   Contiene las definiciones de monitor personalizadas y persistentes, y
   `lua/monitors.lua` lo carga en cada lectura de la configuración.
-  - Normalmente este archivo es **generado**: al aplicar una disposición se
-    escribe aquí la disposición actual, y un comentario marcador al inicio lo
-    indica. Todo lo que edite a mano mientras ese marcador siga presente se
-    reemplaza la próxima vez que se aplique una disposición.
+  - Normalmente este archivo es **generado**: al aplicar una disposición (o al
+    importar un ajuste hecho con `nwg-displays`) se escribe aquí la disposición
+    actual, y un comentario marcador al inicio lo indica. Un inicio de sesión
+    **no** lo reescribe: solo lo hace una aplicación explícita, así que editarlo
+    a mano es seguro. Todo lo que edite mientras ese marcador siga presente se
+    reemplaza la próxima vez que aplique una disposición.
   - **Borre la línea del marcador para tomar el control del archivo.** A partir
     de ahí se trata como suyo: nunca se sobrescribe, y las llamadas
     personalizadas a `hl.monitor({...})` que agregue se conservan.

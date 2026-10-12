@@ -4,6 +4,18 @@
 
 ## Fixed:
 
+- Monitors no longer default to the largest mode a panel advertises
+  - `ds_generate` took the biggest available mode, not the one in use
+  - A VM's `Virtual-1` was pinned to `5120x2440@50` on every boot
+  - It now keeps the mode already on screen, the panel's own `preferred` choice
+- A boot no longer overwrites `UserConfigs/monitors.lua`
+  - `DisplayProfile.sh auto` rewrote the file on every login, not on an apply
+  - Hand edits were replaced, and the shipped `Virtual-1` rule was overridden
+  - Only an explicit apply or an nwg-displays drag writes it now
+- The shipped wildcard monitor default is `preferred`, not `highres`
+  - `lua/monitors.lua` chained `preferred`/`highrr`/`highres` for `output = ""`
+  - The last matching rule wins, so every output was asked for `highres`
+  - `Monitor_Profiles/default.lua` had the same chain
 - Layout-aware focus binds no longer fork a script per keypress
   - `SUPER + j`/`k` and `SUPER + arrow` ran `LayoutKeybindDispatch.sh`
   - It spawned bash, 4-8 `hyprctl` and `jq` processes on every press
@@ -82,6 +94,11 @@
 
 ## Added:
 
+- `patches/82-monitors-lua-reset.sh` recovers an upgraded install
+  - Removes a `UserConfigs/monitors.lua` that an older version generated
+  - Keeps a `monitors.lua.generated-backup-<date>` copy beside it
+  - Saved layouts live in `display-layouts.json` and are untouched
+  - Runs once, so a layout applied later is never removed
 - Lua syntax validation in Quick Settings (`Kool_Quick_Settings.sh`)
   - Automatically validates edited `.lua` files with `luac -p` on editor close
   - Sends desktop notifications for syntax errors, successful check, or if `luac` is not installed
@@ -100,14 +117,14 @@
 - Multi-monitor display layouts
   - A layout belongs to a monitor set, keyed by device, not by port
   - `SUPER + ALT + D` opens the menu; `SUPER + ALT + W` applies layout `Work`
-  - Applying writes the layout to `UserConfigs/monitors.lua`, which Lua loads
+  - A layout you apply is written to `UserConfigs/monitors.lua`, which Lua loads
   - So a layout survives a reload, a restart and a lid event
   - Per layout: on/off, mode, scale, rotation, position, primary, Waybar bars
   - `nwg-displays` is bridged, and a run you start yourself is imported too
   - The watcher watches nwg's own `monitors.conf` and imports it when it changes
   - A run the menu did not start leaves no pause file, so it is found by name
   - Lid handling stays in `user_laptops.lua`, which reads the same file
-  - 504 checks run from JSON fixtures with no monitors attached
+  - 548 checks run from JSON fixtures with no monitors attached
 - `Monitor Profiles` uses the same layout store
   - From Quick Settings (`SUPER + SHIFT + E`), lists this set's layouts
   - `Monitor_Profiles/*.lua` is offered as a one-way import into the store

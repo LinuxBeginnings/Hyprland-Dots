@@ -26,10 +26,11 @@ This guide explains how monitor configuration works in Hyprland Lua, how monitor
 - **User Monitors (`~/.config/hypr/UserConfigs/monitors.lua`)**:
   Contains your persistent custom monitor definitions, and is loaded by
   `lua/monitors.lua` on every config load.
-  - Normally this file is **generated**: applying a layout writes the current
-    arrangement here, and a marker comment at the top says so. Anything you edit
-    by hand while that marker is present is replaced the next time a layout is
-    applied.
+  - Normally this file is **generated**: applying a layout (or importing a drag
+    from `nwg-displays`) writes the current arrangement here, and a marker
+    comment at the top says so. A login does **not** rewrite it — only an
+    explicit apply does — so editing it by hand is safe. Anything you edit while
+    that marker is present is replaced the next time you apply a layout.
   - **Delete the marker line to take the file over.** From then on it is treated
     as yours: it is never overwritten, and any custom `hl.monitor({...})` blocks
     you add are preserved. `user_laptops.lua` reads its rules from this same

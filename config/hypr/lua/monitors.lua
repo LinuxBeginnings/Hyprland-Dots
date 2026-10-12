@@ -6,7 +6,12 @@
 -- ==================================================
 
 -- Converted from config/hypr/monitors.conf (active monitor entries only).
-
+--
+-- The wildcard default is "preferred": the panel's own EDID choice, which is
+-- always a mode the output can actually carry. Do NOT chain "highrr" or
+-- "highres" after it: the last matching rule wins, so a chain ending in
+-- "highres" asks every output for the largest mode it advertises, which is how
+-- a VM's virtual output ends up at 5120x2440@50 instead of a usable mode.
 hl.monitor({
     output = "",
     mode = "preferred",
@@ -14,20 +19,7 @@ hl.monitor({
     scale = "1",
 })
 
-hl.monitor({
-    output = "",
-    mode = "highrr",
-    position = "auto",
-    scale = "1",
-})
-
-hl.monitor({
-    output = "",
-    mode = "highres",
-    position = "auto",
-    scale = "1",
-})
-
+-- Explicit per-output rules override the wildcard above.
 hl.monitor({
     output = "Virtual-1",
     mode = "1920x1080@60",

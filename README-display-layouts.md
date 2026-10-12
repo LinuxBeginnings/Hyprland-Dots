@@ -17,8 +17,9 @@ the exact rollback procedure — see
 
 When the set of connected monitors changes — you plug one in, unplug one, close
 the lid — the system detects it and applies the layout you saved for *that set
-of monitors*. If you never saved one, it arranges the monitors side by side and
-leaves them usable, so a fresh install works out of the box.
+of monitors*. If you never saved one, it arranges the monitors side by side at
+the mode each one is already using — the panel's own choice, never the largest
+mode it advertises — so a fresh install works out of the box.
 
 Three ideas carry the whole design:
 
@@ -64,8 +65,13 @@ reads its rules from the same place. It is what makes a layout survive a reload,
 a restart and a lid event, and it is why the laptop controller does not have to
 be switched off for this one to work.
 
+Only **you** write that file: applying a named layout, or importing a drag from
+`nwg-displays`. The automatic apply does not — it runs on every login, and the
+file is yours. A saved layout is re-read from the store instead, so leaving the
+file alone loses nothing.
+
 Because the data model never touches the session, the entire logic is tested
-from JSON fixtures with no monitors attached — **504 automated checks** cover
+from JSON fixtures with no monitors attached — **548 automated checks** cover
 three- and four-monitor desktops, two identical monitors with no serial, a
 rotated monitor, a closed lid, the nwg-displays bridge and the installer patch.
 
@@ -81,7 +87,7 @@ rotated monitor, a closed lid, the nwg-displays bridge and the installer patch.
 | `scripts/README-display-profiles.md` | Full operational guide |
 | `UserConfigs/display-layouts.json` | Your saved layouts (ships empty) |
 | `Monitor_Profiles/Work.lua` | An example profile to copy or edit |
-| `scripts/tests/` | 10 suites + 34 fixtures |
+| `scripts/tests/` | 10 suites + 35 fixtures |
 
 **Existing files changed**, each with a fallback so the dots still work without
 this feature: `WaybarStartup.sh` and `Refresh.sh` (ask the controller which
@@ -90,7 +96,8 @@ Waybar config to run, and fall back to the plain one), `Kool_Quick_Settings.sh`
 for this system), `scripts/lib_copy.sh` (ships the store, add-only),
 `UserConfigs/user_keybinds.lua` and `UserConfigs/user_startup.lua` — and
 `patches/80-display-layouts.sh`, which is what puts those last two into an
-install that already has them.
+install that already has them. `patches/82-monitors-lua-reset.sh` clears a
+`UserConfigs/monitors.lua` that an earlier version generated at the wrong mode.
 
 ## Getting started
 
@@ -105,11 +112,11 @@ arrangement. To keep one:
 
 Connecting that set of monitors later applies that layout automatically.
 
-Step 2 is about the *name*, not about whether the arrangement survives: the
-arrangement is written to `UserConfigs/monitors.lua` as soon as it is applied,
-so a reload or a restart brings it back. What a name buys you is a choice — an
-unnamed arrangement is replaced by the set's saved layout the next time that set
-of monitors is connected.
+Step 2 is about the *name*, not about whether the arrangement survives: a drag
+is written to `UserConfigs/monitors.lua` as soon as it is imported, so a reload
+or a restart brings it back. What a name buys you is a choice — an unnamed
+arrangement is replaced by the set's saved layout the next time that set of
+monitors is connected.
 
 ## The menu (`SUPER` + `ALT` + `D`)
 

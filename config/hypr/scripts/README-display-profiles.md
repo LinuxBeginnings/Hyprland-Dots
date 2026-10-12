@@ -13,7 +13,8 @@ Press **`SUPER` + `ALT` + `D`**. Everything starts there.
 When the set of connected monitors changes — you plug in a monitor, unplug one,
 switch one off at the wall — the watcher notices and applies the layout you
 saved for *that set of monitors*. If you have never saved one, it arranges them
-side by side and leaves them usable.
+side by side and leaves them usable, at the mode each one is already using: the
+panel's own choice, never the largest mode it advertises.
 
 Three ideas, and the rest follows from them:
 
@@ -135,6 +136,12 @@ why the two are not competing controllers. It is what makes a layout survive a
 reload, a restart and a lid event, and it is the reason `user_laptops.lua` is
 still enabled.
 
+**Only an explicit apply writes it** — a named layout, or a drag imported from
+`nwg-displays`. The automatic apply (`auto`, `reapply`) never does: it runs on
+every login and after every monitor event, the file is yours, and a saved layout
+is re-resolved from the store anyway. So editing it by hand is safe; a boot will
+not put its own arrangement back over your edit.
+
 The file it writes carries a marker line saying it was generated. **Delete that
 marker line to take the file over**: from then on it is treated as yours, it is
 never overwritten, and the lid logic still honours what it says.
@@ -243,13 +250,19 @@ alone and let the watcher import the arrangement instead.
   panel, but the enabled monitors are applied and verified *before* anything is
   switched off, and if a layout would leave nothing active the system restores
   every connected monitor at scale 1.
+- **An upgrade clears a `monitors.lua` an older version generated.** Versions up
+  to v2.3.28 wrote the file on every apply and asked for the largest mode a
+  monitor advertises, which pinned a VM's `Virtual-1` to `5120x2440@50`.
+  `patches/82-monitors-lua-reset.sh` removes that generated file once, keeping a
+  `monitors.lua.generated-backup-<date>` copy beside it. Your saved layouts live
+  in `display-layouts.json` and are unaffected.
 
 ## Files
 
 | Path | What it is |
 |---|---|
 | `UserConfigs/display-layouts.json` | Your layouts. The installer only ever *adds* this file when it is missing, so an upgrade cannot overwrite it. |
-| `UserConfigs/monitors.lua` | Generated: the layout that is applied, as `hl.monitor` rules. Loaded by `lua/monitors.lua` and read by `user_laptops.lua`. Delete its marker line to take it over. |
+| `UserConfigs/monitors.lua` | Written when you apply a layout or import a drag, as `hl.monitor` rules; a boot never rewrites it. Loaded by `lua/monitors.lua` and read by `user_laptops.lua`. Delete its marker line to take it over. |
 | `scripts/lib_display_store.sh` | The data model. Pure: no `hyprctl`, no session state. |
 | `scripts/DisplayProfile.sh` | The only thing that changes monitors, focus and Waybar. |
 | `scripts/DisplayProfileMenu.sh` | `SUPER`+`ALT`+`D`. |
@@ -257,7 +270,7 @@ alone and let the watcher import the arrangement instead.
 | `scripts/MonitorWatcher.sh` | Watches Hyprland's event socket, and `~/.config/hypr/monitors.conf` so a directly-run `nwg-displays` is imported. One per session. |
 | `scripts/MonitorProfiles.sh` | Quick Settings → **Choose Monitor Profiles**: this system's layouts, plus a one-way import of `Monitor_Profiles/`. |
 | `Monitor_Profiles/Work.lua` | An example profile: one `preferred`/`auto`/`1` rule per output, matched by port. |
-| `scripts/tests/` | The 504-check suite. It is installed with the rest of `config/hypr`, so it is available on an installed system too - run it with `bash ~/.config/hypr/scripts/tests/run-all.sh`. |
+| `scripts/tests/` | The 548-check suite. It is installed with the rest of `config/hypr`, so it is available on an installed system too - run it with `bash ~/.config/hypr/scripts/tests/run-all.sh`. |
 
 Runtime state lives in `$XDG_RUNTIME_DIR/kooldots-display-profiles/`:
 `display-profile.log`, `monitor-watcher.log`, `current` (the fingerprint and the
