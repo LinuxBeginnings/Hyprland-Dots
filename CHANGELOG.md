@@ -111,6 +111,7 @@
 
 ## Added:
 
+- Indicator to mark current animation
 - `config/hypr/scripts/tests/test-migrate-animations.sh`
   - Covers carrying the animation from `UserAnimations.conf` into Lua
   - 11 checks, from a sandbox `XDG_CONFIG_HOME` with no session
@@ -227,10 +228,11 @@
   - `scripts/LuaAutoReload.sh` is redundant: Hyprland reloads the Lua config automatically when a file is saved
   - `lua/keybinds.lua` and `lua/keybind_helpers.lua` were never loaded by `hyprland.lua`; they duplicated `configs/system_keybinds.lua` and carried the same legacy-dispatcher bug
 
-## Update: 
-  - To make easier to find I updated descriptions for: 
-     - waybar restart `SUPER ALT R`
-     - Hyprview `SUPER CTRL TAB`
+## Update:
+
+- To make easier to find I updated descriptions for:
+  - waybar restart `SUPER ALT R`
+  - Hyprview `SUPER CTRL TAB`
 
 ---
 
