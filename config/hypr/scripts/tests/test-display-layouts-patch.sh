@@ -26,6 +26,7 @@ PATCH_DIR="$SCRIPT_DIR/../../../patches"
 PATCH="$PATCH_DIR/80-display-layouts.sh"
 PATCH81="$PATCH_DIR/81-monitor-profiles-readme.sh"
 PATCH82="$PATCH_DIR/82-monitors-lua-reset.sh"
+PATCH83="$PATCH_DIR/83-user-laptops-lid-open.sh"
 WORK="$(mktemp -d)"; trap 'rm -rf -- "$WORK"' EXIT
 
 # The suite is installed with the rest of config/hypr, but the patches it tests
@@ -278,5 +279,133 @@ env KOOLDOTS_CONFIG_HOME="$WORK/ml-empty" KOOLDOTS_LOG="$WORK/patch82.log" \
   bash "$PATCH82" >/dev/null 2>&1 && pass_msg || fail "must exit 0"
 it "the reset patch invents no config tree"
 if [[ -e "$WORK/ml-empty/hypr" ]]; then fail "it created a config tree"; else pass_msg; fi
+
+# --- patches/83-user-laptops-lid-open.sh ------------------------------------
+# The lid-open branch replayed the stored rule for the panel, and a rule that
+# omits `disabled` does not switch an output back on. The rules in monitors.lua
+# omit it, so opening the lid left the panel dark. Only an installed
+# user_laptops.lua can be reached: copy.sh protects UserConfigs.
+LU="$WORK/lu"
+UC83="$LU/hypr/UserConfigs/user_laptops.lua"
+
+# The shape v2.3.27.7 shipped. The no-externals branch is the one patch 80
+# leaves behind, so this is an install that has already had that fix.
+seed_lid_install() {
+  rm -rf "$LU"
+  mkdir -p "$LU/hypr/UserConfigs"
+  cat >"$UC83" <<'LUA'
+local function apply_laptop_monitor_layout(trigger_refresh)
+  if #externals > 0 then
+    -- External display(s) connected
+    if lid_closed then
+      -- Clamshell / Docked mode: lid is closed, disable internal panel
+      hl.monitor({ output = internal, disabled = true })
+    else
+      -- Lid is open: apply internal display configuration from monitors.lua
+      local int_cfg = get_monitor_config(internal)
+      if int_cfg then
+        hl.monitor(int_cfg)
+      else
+        hl.monitor({
+          output = internal,
+          disabled = false,
+          mode = default_fallback.mode or "preferred",
+          position = default_fallback.position or "auto",
+          scale = default_fallback.scale or "auto",
+        })
+      end
+    end
+
+    -- Apply configurations for external displays from monitors.lua
+    for _, ext_name in ipairs(externals) do
+      local cfg = get_monitor_config(ext_name)
+      if cfg then
+        hl.monitor(cfg)
+      else
+        -- Fallback if not explicitly defined in monitors.lua
+        hl.monitor({
+          output = ext_name,
+          disabled = false,
+          mode = default_fallback.mode or "preferred",
+          position = default_fallback.position or "auto",
+          scale = default_fallback.scale or "auto",
+        })
+      end
+    end
+  else
+    -- No external displays connected
+    local int_cfg = get_monitor_config(internal)
+    if int_cfg then
+      hl.monitor(int_cfg)
+    else
+      hl.monitor({ output = internal, disabled = false })
+    end
+  end
+end
+LUA
+}
+
+run_patch83() {
+  env KOOLDOTS_CONFIG_HOME="$LU" KOOLDOTS_LOG="$WORK/patch83.log" bash "$PATCH83"
+}
+
+seed_lid_install
+it "the lid-open patch runs cleanly on an install with the old branch"
+run_patch83 && pass_msg || fail "the patch exited non-zero"
+
+it "the lid-open branch no longer replays the stored rule as-is"
+assert_not_contains "$UC83" 'Lid is open: apply internal display configuration' \
+  "the branch still replays the stored rule" && pass_msg
+
+it "the lid-open branch turns the panel back on"
+assert_contains "$UC83" 'hl.monitor(int_on)' "the new call is not there"
+assert_contains "$UC83" 'disabled = false,' "the forced enable is not there" && pass_msg
+
+it "the clamshell branch keeps its lid test"
+# Exactly one `disabled = true` may remain: the clamshell one.
+assert_count 1 "$UC83" 'disabled = true' && pass_msg
+
+assert_eq "the patched lid-open block is byte-identical to the repo's copy" \
+  "$(sed -n '/^  if #externals > 0 then/,/^  else$/p' "$SCRIPT_DIR/../UserConfigs/user_laptops.lua")" \
+  "$(sed -n '/^  if #externals > 0 then/,/^  else$/p' "$UC83")"
+
+it "a second run changes nothing"
+before="$(cat "$UC83")"
+run_patch83 >/dev/null 2>&1 || fail "the second run exited non-zero"
+assert_eq "the file is byte-identical after a second run" "$before" "$(cat "$UC83")"
+
+it "the patch is applied without patch 80's no-externals fix"
+# An install that never ran patch 80 still has the old no-externals branch, which
+# carries a second `disabled = true` and its own `hl.monitor(int_cfg)`. It must
+# still get this fix, and keep that branch exactly as it was.
+seed_lid_install
+awk '
+  $0 == "    -- No external displays connected" { seen = 1 }
+  !done && seen && $0 == "    if int_cfg then" {
+    print "    if lid_closed then"
+    print "      hl.monitor({ output = internal, disabled = true })"
+    print "    elseif int_cfg then"
+    done = 1
+    next
+  }
+  { print }
+' "$UC83" >"$UC83.pre80" && cat "$UC83.pre80" >"$UC83"
+run_patch83 >/dev/null 2>&1 || fail "the patch exited non-zero"
+assert_contains "$UC83" 'hl.monitor(int_on)' "the lid-open branch was not fixed"
+assert_contains "$UC83" 'elseif int_cfg then' "the untouched no-externals branch was rewritten" && pass_msg
+
+it "a customised lid-open branch is left alone"
+seed_lid_install
+sed -i 's/^      -- Lid is open: apply internal display configuration from monitors.lua$/      -- my own note/' "$UC83"
+before="$(cat "$UC83")"
+run_patch83 >/dev/null 2>&1 && pass_msg || fail "must exit 0 on a file it does not recognise"
+assert_eq "the file is untouched" "$before" "$(cat "$UC83")"
+
+mkdir -p "$WORK/lu-empty"
+it "a missing user_laptops.lua is skipped cleanly"
+env KOOLDOTS_CONFIG_HOME="$WORK/lu-empty" KOOLDOTS_LOG="$WORK/patch83.log" \
+  bash "$PATCH83" >/dev/null 2>&1 && pass_msg || fail "must exit 0 with nothing to patch"
+it "the lid-open patch invents no config tree"
+if [[ -e "$WORK/lu-empty/hypr" ]]; then fail "it created a config tree"; else pass_msg; fi
 
 summary "test-display-layouts-patch"

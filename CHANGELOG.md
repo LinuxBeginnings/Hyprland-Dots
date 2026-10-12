@@ -4,6 +4,12 @@
 
 ## Fixed:
 
+- Opening the lid turns the laptop panel back on
+  - `user_laptops.lua` replayed the stored `monitors.lua` rule as it was
+  - A rule that omits `disabled` does not switch an output back on
+  - So the panel stayed dark and its workspaces stayed on the external screen
+  - The branch now always sets `disabled = false`, keeping the stored mode
+  - `patches/83-user-laptops-lid-open.sh` fixes existing installs
 - The animation chosen from the menu no longer resets to the defaults
   - `copy.sh` copies the repo's `UserConfigs` before the migration runs
   - The shipped comment-only `user_animations.lua` was already in place
@@ -63,9 +69,6 @@
   - `user_laptops.lua` used `io.popen` for the lid-state fallback
   - `connected_drm_connectors()` ran one `io.popen("ls ...")` per DRM card
   - Lid state now reads fixed sysfs paths, connectors use plain file reads
-- `lua/laptop-lid.lua` uses `hl.exec_cmd` instead of `os.execute`
-  - `os.execute` blocks until the script exits; `hl.exec_cmd` spawns and returns
-  - The file is a sample that is not loaded by default, so this was latent
 - Layout label refresh now goes through the Hyprland socket
   - Waybar only re-execs a custom module while the script is not running
   - Both status modules loop, so `signal: 8` never fired
@@ -188,6 +191,11 @@
 
 ## Removed:
 
+- The dead lid close/open paths in `scripts/LidSwitch.sh`
+  - Nothing called them: `user_laptops.lua` binds the lid switch itself
+  - Close switched the panel off with no external monitor to show the session
+  - Open replayed a rule without `disabled = false`, so the panel stayed off
+  - `lua/laptop-lid.lua`, the sample that bound them, is now a pointer only
 - `scripts/LayoutKeybindDispatch.sh` and `scripts/LuaCycleWindow.sh`
   - Both are replaced by in-process actions in `lua/window_actions.lua`
   - `docs/Keybinds.md` names the in-process actions instead of the scripts

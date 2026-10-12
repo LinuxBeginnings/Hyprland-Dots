@@ -253,19 +253,24 @@ local function apply_laptop_monitor_layout(trigger_refresh)
       -- Clamshell / Docked mode: lid is closed, disable internal panel
       hl.monitor({ output = internal, disabled = true })
     else
-      -- Lid is open: apply internal display configuration from monitors.lua
+      -- Lid is open: the internal panel has to come back ON, so `disabled = false`
+      -- is forced rather than replayed. In the Lua monitor API a rule that omits
+      -- `disabled` leaves the output off, and the rules in monitors.lua (and the
+      -- shipped Monitor_Profiles) do omit it - replaying one verbatim is what
+      -- left the panel dark after a lid open. Mode, position, scale and
+      -- transform still come from the stored rule.
       local int_cfg = get_monitor_config(internal)
-      if int_cfg then
-        hl.monitor(int_cfg)
-      else
-        hl.monitor({
-          output = internal,
-          disabled = false,
-          mode = default_fallback.mode or "preferred",
-          position = default_fallback.position or "auto",
-          scale = default_fallback.scale or "auto",
-        })
+      local int_on = {
+        output = internal,
+        disabled = false,
+        mode = (int_cfg and int_cfg.mode) or default_fallback.mode or "preferred",
+        position = (int_cfg and int_cfg.position) or default_fallback.position or "auto",
+        scale = (int_cfg and int_cfg.scale) or default_fallback.scale or "auto",
+      }
+      if int_cfg and int_cfg.transform then
+        int_on.transform = int_cfg.transform
       end
+      hl.monitor(int_on)
     end
 
     -- Apply configurations for external displays from monitors.lua
