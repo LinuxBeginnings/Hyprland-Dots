@@ -4,6 +4,16 @@
 
 ## Fixed:
 
+- Rofi and wlogout selections no longer reset on an upgrade
+  - `copy_phase2` replaces `hypr/` and `wlogout/` with the repo copies
+  - The rofi `@theme` line and `wlogout/.current_theme` were never restored
+  - `restore_hypr_assets` now carries the active rofi theme into `config.rasi`
+  - `restore_wlogout_selection` re-applies the saved wlogout preset
+  - `RofiWlogoutTheme.sh` reads `.current_theme` back into `CURRENT_PRESET`
+- The restore helpers no longer look in the wrong backup directory
+  - They declared `local BACKUP_DIR`, hiding the cached suffix
+  - `get_backup_dirname` then generated a fresh timestamp per call
+  - A run crossing a minute boundary restored from a path that never existed
 - Monitors no longer default to the largest mode a panel advertises
   - `ds_generate` took the biggest available mode, not the one in use
   - A VM's `Virtual-1` was pinned to `5120x2440@50` on every boot
@@ -94,6 +104,9 @@
 
 ## Added:
 
+- `config/hypr/scripts/tests/test-installer-selections.sh`
+  - Covers the rofi `@theme` carry and the wlogout preset restore
+  - 20 checks, from a sandbox `XDG_CONFIG_HOME` with no session
 - `patches/82-monitors-lua-reset.sh` recovers an upgraded install
   - Removes a `UserConfigs/monitors.lua` that an older version generated
   - Keeps a `monitors.lua.generated-backup-<date>` copy beside it
@@ -124,7 +137,7 @@
   - The watcher watches nwg's own `monitors.conf` and imports it when it changes
   - A run the menu did not start leaves no pause file, so it is found by name
   - Lid handling stays in `user_laptops.lua`, which reads the same file
-  - 548 checks run from JSON fixtures with no monitors attached
+  - 568 checks run from JSON fixtures with no monitors attached
 - `Monitor Profiles` uses the same layout store
   - From Quick Settings (`SUPER + SHIFT + E`), lists this set's layouts
   - `Monitor_Profiles/*.lua` is offered as a one-way import into the store
@@ -145,6 +158,9 @@
 
 ## Updated:
 
+- `docs/HOWTO-Upgrade-Dotfiles.md` says what an upgrade keeps
+  - The rofi theme, the wlogout preset and the saved display layouts
+  - The `.es.md` translation is kept in sync
 - Do not add `require("monitors")` to your Hyprland config
   - `nwg-displays` 0.4.3+ writes a Lua sibling at `~/.config/hypr/monitors.lua`
   - This config never loads that path, so the sibling stays inert on purpose

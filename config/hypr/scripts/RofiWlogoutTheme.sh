@@ -33,6 +33,14 @@ WLOGOUT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/wlogout"
 THEMES_DIR="${WLOGOUT_DIR}/themes"
 BACKUP_DIR="${THEMES_DIR}/user_backup"
 
+# The preset that is applied now, as recorded by apply_theme. Without reading it
+# back the menu cannot mark the active theme, and apply_theme's auto-backup
+# branch never sees what it is switching away from.
+CURRENT_PRESET=""
+if [[ -f "${WLOGOUT_DIR}/.current_theme" ]]; then
+    CURRENT_PRESET="$(head -n1 "${WLOGOUT_DIR}/.current_theme" 2>/dev/null | tr -d '[:space:]')"
+fi
+
 # Locate Rofi config with KoolDots fallback
 ROFI_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config.rasi"
 if [[ ! -f "$ROFI_CONFIG" && -f "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config.rasi" ]]; then

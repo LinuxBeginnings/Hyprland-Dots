@@ -49,3 +49,21 @@
     ```
 
   | Nota: Este método puede generar ocasionalmente conflictos de fusión (`merge`) en `git`. El método anterior siempre funciona
+
+## Qué conserva una actualización
+
+Una actualización reemplaza la configuración gestionada por el repositorio con
+la copia del repositorio y luego vuelve a poner encima sus propias elecciones.
+Se conservan:
+
+- el tema de rofi del selector de temas: la línea `@theme` en
+  `hypr/rofi/config.rasi`
+- el preset de wlogout del selector de wlogout: `wlogout/.current_theme`,
+  incluido un `user_backup` guardado
+- sus disposiciones de pantalla guardadas: `UserConfigs/display-layouts.json`
+- todo lo que hay en `UserConfigs/`, `UserScripts/` y `Monitor_Profiles/`
+- `hyprlock.conf`, `hypridle.conf` y `wallpaper_effects/`
+
+Todo lo que edite a mano dentro de un archivo gestionado por el repositorio que
+el instalador reescribe se sigue reemplazando. Guarde sus cambios personales en
+los directorios indicados arriba.
