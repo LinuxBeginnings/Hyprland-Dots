@@ -4,6 +4,13 @@
 
 ## Fixed:
 
+- The animation chosen from the menu no longer resets to the defaults
+  - `copy.sh` copies the repo's `UserConfigs` before the migration runs
+  - The shipped comment-only `user_animations.lua` was already in place
+  - The migration kept any existing `user_animations.lua`, placeholder and all
+  - On a hyprlang install the choice lives in `UserAnimations.conf`
+  - `migrate-hypr-to-lua.sh` converts it to `hl.curve`/`hl.animation` Lua
+  - A preset the Animations menu wrote is still left untouched
 - Rofi and wlogout selections no longer reset on an upgrade
   - `copy_phase2` replaces `hypr/` and `wlogout/` with the repo copies
   - The rofi `@theme` line and `wlogout/.current_theme` were never restored
@@ -104,6 +111,9 @@
 
 ## Added:
 
+- `config/hypr/scripts/tests/test-migrate-animations.sh`
+  - Covers carrying the animation from `UserAnimations.conf` into Lua
+  - 11 checks, from a sandbox `XDG_CONFIG_HOME` with no session
 - `config/hypr/scripts/tests/test-installer-selections.sh`
   - Covers the rofi `@theme` carry and the wlogout preset restore
   - 20 checks, from a sandbox `XDG_CONFIG_HOME` with no session
