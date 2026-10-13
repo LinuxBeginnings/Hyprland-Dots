@@ -103,6 +103,7 @@ run_fns() {
       FAKE_WAYBAR_PIDS="$FAKE_WAYBAR_PIDS" \
       FAKE_PS_STATE="$FAKE_PS_STATE" \
       FAKE_PS_READABLE="$FAKE_PS_READABLE" \
+      WAYBAR_SETTLE_DELAY="0" \
       WAYBAR_EXIT_WAIT_TICKS="$WAYBAR_EXIT_WAIT_TICKS" \
       WAYBAR_CONFIG_ARG="$WORK/waybar/config" \
       WAYBAR_STYLE_ARG="$WORK/waybar/style.css" \
@@ -249,9 +250,18 @@ if grep -q 'if is_waybar_running_settled; then' "$LID" \
    && extract_fn "$LID" is_waybar_running_settled | grep -q 'is_waybar_running && return 0'; then pass_msg
 else fail "LidSwitch.sh still decides on a single read"; fi
 
-it "both scripts are still valid bash"
+it "WallustSwww.sh checks the Waybar startup lock before signalling reload"
+WALLUST="$S/WallustSwww.sh"
+if extract_fn "$WALLUST" reload_running_waybar_colors | grep -q 'waybar-startup.*\.lock'; then pass_msg
+else fail "WallustSwww.sh signals waybar without checking startup lock"; fi
+
+it "WaybarStartup.sh exports HYPRLAND_INSTANCE_SIGNATURE if unset"
+if extract_fn "$SCRIPT" wait_for_wayland | grep -q 'HYPRLAND_INSTANCE_SIGNATURE='; then pass_msg
+else fail "WaybarStartup.sh does not discover/export HYPRLAND_INSTANCE_SIGNATURE"; fi
+
+it "all scripts are still valid bash"
 bad=""
-for f in WaybarStartup.sh LidSwitch.sh; do
+for f in WaybarStartup.sh LidSwitch.sh WallustSwww.sh; do
   bash -n "$S/$f" 2>/dev/null || bad="$bad $f"
 done
 if [[ -z $bad ]]; then pass_msg; else fail "syntax errors in:$bad"; fi

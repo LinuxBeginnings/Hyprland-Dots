@@ -20,7 +20,7 @@ hl.env("QT_AUTO_SCREEN_SCALE_FACTOR", "1")
 hl.env("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1")
 hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
 hl.env("QT_STYLE_OVERRIDE", "Fusion")
-hl.env("QT_QUICK_CONTROLS_STYLE", "Basic")
+hl.env("QT_QUICK_CONTROLS_STYLE", "org.hyprland.style")
 hl.env("GDK_SCALE", "1")
 hl.env("QT_SCALE_FACTOR", "1")
 hl.env("MOZ_ENABLE_WAYLAND", "1")
@@ -43,7 +43,7 @@ hl.env("NVD_BACKEND", "direct")
 hl.env("GSK_RENDERER", "ngl")
 
 -- VM / Software rendering fallback (enabled by detector in VM)
--- hl.env("WLR_RENDERER_ALLOW_SOFTWARE", "1")
+hl.env("WLR_RENDERER_ALLOW_SOFTWARE", "1")
 
 -- Fix for missing mime-info database error
 local current_data_dirs = os.getenv("XDG_DATA_DIRS") or ""

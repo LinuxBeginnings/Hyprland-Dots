@@ -117,6 +117,14 @@ dp_require_tools() {
     || die "required command not found: $DP_JQ (install jq)"
   command -v "$DP_HYPRCTL" >/dev/null 2>&1 \
     || die "required command not found: $DP_HYPRCTL"
+  if [[ -z ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
+    local rt="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" sig_dir
+    for sig_dir in "$rt"/hypr/*/; do
+      [[ -S ${sig_dir}.socket.sock ]] || continue
+      export HYPRLAND_INSTANCE_SIGNATURE="$(basename "$sig_dir")"
+      break
+    done
+  fi
 }
 
 # --- Hyprland --------------------------------------------------------------

@@ -35,6 +35,9 @@ kooldots_waybar_config() {
 
 WAYBAR_CONFIG_ARG="$(kooldots_waybar_config "$WAYBAR_DIR")"
 WAYBAR_STYLE_ARG="$WAYBAR_DIR/style.css"
+# How long a start holds the lock after process detection to allow GTK/socket
+# initialization before external reloads are permitted.
+WAYBAR_SETTLE_DELAY="${WAYBAR_SETTLE_DELAY:-0.4}"
 # How long a stop waits for the bar to leave the process table, in 0.1s ticks.
 # Overridable so the test suite does not have to sleep it out.
 WAYBAR_EXIT_WAIT_TICKS="${WAYBAR_EXIT_WAIT_TICKS:-30}"
@@ -101,7 +104,12 @@ waybar_processes_alive() {
 
 wait_for_waybar() {
     for _ in $(seq 1 80); do
-        is_waybar_running && return 0
+        if is_waybar_running; then
+            if [ "$(printf '%s' "$WAYBAR_SETTLE_DELAY" | tr -d '0.')" != "" ]; then
+                sleep "$WAYBAR_SETTLE_DELAY"
+            fi
+            return 0
+        fi
         sleep 0.1
     done
     return 1
@@ -121,31 +129,37 @@ wait_for_waybar_exit() {
 }
 
 wait_for_wayland() {
-    if [ -n "${WAYLAND_DISPLAY:-}" ] && [ -S "$runtime_dir/$WAYLAND_DISPLAY" ]; then
-        return 0
-    fi
-    for _ in $(seq 1 30); do
-        for socket in "$runtime_dir"/wayland-[0-9]*; do
-            [ -S "$socket" ] || continue
-            case "$(basename "$socket")" in
-                *awww*) continue ;;
-            esac
-            export WAYLAND_DISPLAY="$(basename "$socket")"
-            return 0
+    if [ -z "${WAYLAND_DISPLAY:-}" ] || [ ! -S "$runtime_dir/$WAYLAND_DISPLAY" ]; then
+        for _ in $(seq 1 30); do
+            for socket in "$runtime_dir"/wayland-[0-9]*; do
+                [ -S "$socket" ] || continue
+                case "$(basename "$socket")" in
+                    *awww*) continue ;;
+                esac
+                export WAYLAND_DISPLAY="$(basename "$socket")"
+                break 2
+            done
+            sleep 0.1
         done
-        sleep 0.1
-    done
-    return 1
+    fi
+
+    if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        for sig_dir in "$runtime_dir"/hypr/*/; do
+            [ -S "${sig_dir}.socket.sock" ] || continue
+            export HYPRLAND_INSTANCE_SIGNATURE="$(basename "$sig_dir")"
+            break
+        done
+    fi
 }
 
 sync_portal_env() {
     if command -v dbus-update-activation-environment >/dev/null 2>&1; then
         dbus-update-activation-environment --systemd \
-            WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GSETTINGS_SCHEMA_DIR WEATHER_UNITS >/dev/null 2>&1 || true
+            WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GSETTINGS_SCHEMA_DIR WEATHER_UNITS >/dev/null 2>&1 || true
     fi
     if command -v systemctl >/dev/null 2>&1; then
         systemctl --user import-environment \
-            WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GSETTINGS_SCHEMA_DIR WEATHER_UNITS >/dev/null 2>&1 || true
+            WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GSETTINGS_SCHEMA_DIR WEATHER_UNITS >/dev/null 2>&1 || true
     fi
 }
 
@@ -208,6 +222,7 @@ stop_waybar_instances() {
         pkill -9 -x waybar >/dev/null 2>&1 || true
         pkill -9 -x '.waybar-wrapped' >/dev/null 2>&1 || true
     fi
+    pkill -x waybar-weather >/dev/null 2>&1 || true
     wait_for_waybar_exit
 }
 
@@ -248,13 +263,14 @@ start_waybar_direct() {
     if [ "${1:-}" != "force" ] && is_waybar_running; then
         return 0
     fi
+    local log_target="${WAYBAR_LOG:-/dev/null}"
     if command -v waybar >/dev/null 2>&1; then
-        waybar -c "$WAYBAR_CONFIG_ARG" -s "$WAYBAR_STYLE_ARG" 9>&- >/dev/null 2>&1 &
+        waybar -c "$WAYBAR_CONFIG_ARG" -s "$WAYBAR_STYLE_ARG" 9>&- >"$log_target" 2>&1 &
         wait_for_waybar
         return 0
     fi
     if command -v .waybar-wrapped >/dev/null 2>&1; then
-        .waybar-wrapped -c "$WAYBAR_CONFIG_ARG" -s "$WAYBAR_STYLE_ARG" 9>&- >/dev/null 2>&1 &
+        .waybar-wrapped -c "$WAYBAR_CONFIG_ARG" -s "$WAYBAR_STYLE_ARG" 9>&- >"$log_target" 2>&1 &
         wait_for_waybar
         return 0
     fi

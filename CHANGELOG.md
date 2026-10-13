@@ -8,8 +8,11 @@
   - `startup.lua` chained `WallpaperDaemon.sh` and `WaybarStartup.sh` with `&&`
   - A wallpaper delay or failure blocked Waybar from ever launching
   - `WaybarStartup.sh` used `flock -n`, dropping concurrent restarts
+  - `WallustSwww.sh` sent `SIGUSR2` while Waybar was still initializing
   - `startup.lua` now launches them as separate startup commands
   - `WaybarStartup.sh` uses bounded wait on its lock, preserving restarts
+  - `WaybarStartup.sh` discovers and exports `HYPRLAND_INSTANCE_SIGNATURE`
+  - `WallustSwww.sh` skips signalling while Waybar holds the startup lock
 - Duplicate waybars when opening laptop lid
 - Opening the lid turns the laptop panel back on
   - `user_laptops.lua` replayed the stored `monitors.lua` rule as it was
