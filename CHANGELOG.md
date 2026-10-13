@@ -7,9 +7,9 @@
 - Waybar no longer fails to start on boot or after screen lock
   - `startup.lua` chained `WallpaperDaemon.sh` and `WaybarStartup.sh` with `&&`
   - A wallpaper delay or failure blocked Waybar from ever launching
-  - `WaybarStartup.sh` used non-blocking `flock -n`, dropping concurrent restarts
+  - `WaybarStartup.sh` used `flock -n`, dropping concurrent restarts
   - `startup.lua` now launches them as separate startup commands
-  - `WaybarStartup.sh` uses bounded wait on its lock so restarts are not dropped
+  - `WaybarStartup.sh` uses bounded wait on its lock, preserving restarts
 - Duplicate waybars when opening laptop lid
 - Opening the lid turns the laptop panel back on
   - `user_laptops.lua` replayed the stored `monitors.lua` rule as it was
