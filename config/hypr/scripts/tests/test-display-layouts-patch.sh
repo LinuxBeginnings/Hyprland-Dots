@@ -6,7 +6,7 @@
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
 # Purpose:
-#   Tests for patches/80-display-layouts.sh. copy.sh only ADDS missing
+#   Tests for the display-layout user-config patches. copy.sh only ADDS missing
 #   UserConfigs files, so on an install that already has them the patch is the
 #   ONLY thing that activates the display-layout feature. What is checked here
 #   is that it activates it, that it does not touch the parts of the files it
@@ -27,6 +27,7 @@ PATCH="$PATCH_DIR/80-display-layouts.sh"
 PATCH81="$PATCH_DIR/81-monitor-profiles-readme.sh"
 PATCH82="$PATCH_DIR/82-monitors-lua-reset.sh"
 PATCH83="$PATCH_DIR/83-user-laptops-lid-open.sh"
+PATCH84="$PATCH_DIR/84-user-laptops-single-monitor.sh"
 WORK="$(mktemp -d)"; trap 'rm -rf -- "$WORK"' EXIT
 
 # The suite is installed with the rest of config/hypr, but the patches it tests
@@ -407,5 +408,113 @@ env KOOLDOTS_CONFIG_HOME="$WORK/lu-empty" KOOLDOTS_LOG="$WORK/patch83.log" \
   bash "$PATCH83" >/dev/null 2>&1 && pass_msg || fail "must exit 0 with nothing to patch"
 it "the lid-open patch invents no config tree"
 if [[ -e "$WORK/lu-empty/hypr" ]]; then fail "it created a config tree"; else pass_msg; fi
+
+# --- patches/84-user-laptops-single-monitor.sh ------------------------------
+# The no-externals branch replayed the stored rule for the panel. A rule that
+# omits `disabled` does not switch an output back on, and a rule carried over
+# from a monitor set that had more keeps its old position - so the only screen
+# could come back dark, or off the origin. The block matched here is the one
+# patches/80-display-layouts.sh leaves behind.
+LU84="$WORK/lu84"
+UC84="$LU84/hypr/UserConfigs/user_laptops.lua"
+
+seed_no_ext_install() {
+  rm -rf "$LU84"
+  mkdir -p "$LU84/hypr/UserConfigs"
+  cat >"$UC84" <<'LUA'
+local function apply_laptop_monitor_layout(trigger_refresh)
+  if #externals > 0 then
+    -- External display(s) connected
+    if lid_closed then
+      -- Clamshell / Docked mode: lid is closed, disable internal panel
+      hl.monitor({ output = internal, disabled = true })
+    else
+      -- Lid is open: the internal panel has to come back ON
+      local int_cfg = get_monitor_config(internal)
+      local int_on = {
+        output = internal,
+        disabled = false,
+        mode = (int_cfg and int_cfg.mode) or default_fallback.mode or "preferred",
+        position = (int_cfg and int_cfg.position) or default_fallback.position or "auto",
+        scale = (int_cfg and int_cfg.scale) or default_fallback.scale or "auto",
+      }
+      hl.monitor(int_on)
+    end
+  else
+    -- No external displays connected: internal panel must be enabled (unless lid is closed)
+    local int_cfg = get_monitor_config(internal)
+    -- A shut lid with no external monitor must NOT switch the only
+    -- screen off: that leaves the session with no output at all.
+    if int_cfg then
+      hl.monitor(int_cfg)
+    else
+      hl.monitor({
+        output = internal,
+        disabled = false,
+        mode = default_fallback.mode or "preferred",
+        position = "0x0",
+        scale = default_fallback.scale or "auto",
+      })
+    end
+  end
+end
+LUA
+}
+
+run_patch84() {
+  env KOOLDOTS_CONFIG_HOME="$LU84" KOOLDOTS_LOG="$WORK/patch84.log" bash "$PATCH84"
+}
+
+seed_no_ext_install
+it "the single-monitor patch runs cleanly on an install with the old branch"
+run_patch84 && pass_msg || fail "the patch exited non-zero"
+
+it "the no-externals branch no longer replays the stored rule as-is"
+assert_not_contains "$UC84" 'if int_cfg then' \
+  "the branch still replays the stored rule" && pass_msg
+
+it "the no-externals branch keeps the only screen on, at the origin"
+assert_contains "$UC84" 'hl.monitor(int_on)' "the new call is not there"
+assert_contains "$UC84" 'position = "0x0",' "the origin pin is not there" && pass_msg
+
+it "the clamshell branch keeps its lid test"
+# Exactly one `disabled = true` may remain: the clamshell one.
+assert_count 1 "$UC84" 'disabled = true' && pass_msg
+
+it "the lid-open branch is left alone"
+assert_contains "$UC84" 'Lid is open: the internal panel has to come back ON' \
+  "the lid-open branch was rewritten" && pass_msg
+
+# The file holds more than one `^  else$` and more than one `^  end$` -
+# `post_layout_refresh` has both - so the block is taken from its own marker
+# comment to the end of the function that holds it, rather than by line range.
+no_externals_block() { # <file>
+  awk '/^    -- No external displays connected/ { inblock = 1 }
+       inblock { print }
+       inblock && /^  end$/ { exit }' "$1"
+}
+
+assert_eq "the patched no-externals block is byte-identical to the repo's copy" \
+  "$(no_externals_block "$SCRIPT_DIR/../UserConfigs/user_laptops.lua")" \
+  "$(no_externals_block "$UC84")"
+
+it "a second run changes nothing"
+before="$(cat "$UC84")"
+run_patch84 >/dev/null 2>&1 || fail "the second run exited non-zero"
+assert_eq "the file is byte-identical after a second run" "$before" "$(cat "$UC84")"
+
+it "a customised no-externals branch is left alone"
+seed_no_ext_install
+sed -i 's/^    -- No external displays connected: internal panel must be enabled (unless lid is closed)$/    -- my own note/' "$UC84"
+before="$(cat "$UC84")"
+run_patch84 >/dev/null 2>&1 && pass_msg || fail "must exit 0 on a file it does not recognise"
+assert_eq "the file is untouched" "$before" "$(cat "$UC84")"
+
+mkdir -p "$WORK/lu84-empty"
+it "a missing user_laptops.lua is skipped cleanly"
+env KOOLDOTS_CONFIG_HOME="$WORK/lu84-empty" KOOLDOTS_LOG="$WORK/patch84.log" \
+  bash "$PATCH84" >/dev/null 2>&1 && pass_msg || fail "must exit 0 with nothing to patch"
+it "the single-monitor patch invents no config tree"
+if [[ -e "$WORK/lu84-empty/hypr" ]]; then fail "it created a config tree"; else pass_msg; fi
 
 summary "test-display-layouts-patch"

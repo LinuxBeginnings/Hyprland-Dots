@@ -11,6 +11,14 @@
   - So the panel stayed dark and its workspaces stayed on the external screen
   - The branch now always sets `disabled = false`, keeping the stored mode
   - `patches/83-user-laptops-lid-open.sh` fixes existing installs
+- The only screen stays on, at the origin, when nothing else is connected
+  - The no-externals branch replayed the stored `monitors.lua` rule as it was
+  - A rule that omits `disabled` does not switch an output back on
+  - A rule from a monitor set that had more kept its old position
+  - So the only screen could come back dark, or off the origin
+  - The branch now forces `disabled = false` and `position = "0x0"`
+  - A stored `transform` is carried over too, which the branch dropped
+  - `patches/84-user-laptops-single-monitor.sh` fixes existing installs
 - The animation chosen from the menu no longer resets to the defaults
   - `copy.sh` copies the repo's `UserConfigs` before the migration runs
   - The shipped comment-only `user_animations.lua` was already in place
