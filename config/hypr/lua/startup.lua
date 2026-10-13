@@ -37,7 +37,8 @@ end
 local startup_commands = {
   -- Fix an unresolvable Ghostty theme before the terminal is ever opened.
   scriptsDir .. "/GhosttyThemeGuard.sh",
-  "sleep 1; $HOME/.config/hypr/scripts/WallpaperDaemon.sh && $HOME/.config/hypr/scripts/WaybarStartup.sh",
+  scriptsDir .. "/WallpaperDaemon.sh",
+  scriptsDir .. "/WaybarStartup.sh",
   "$HOME/.config/hypr/initial-boot.sh",
   "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP WEATHER_UNITS KITTY_CONFIG_DIRECTORY",
   "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP WEATHER_UNITS KITTY_CONFIG_DIRECTORY",

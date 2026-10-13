@@ -164,8 +164,8 @@ assert_eq "the second row starts below the tallest monitor of the first" '1440' 
 it "the mode list offers only that monitor's own modes"
 run_setup "$WORK/triple.json" "$F/store-empty.json" FAKE_ROFI_INDEX=0,1
 modes="$(rows_of_call 3)"
-assert_contains_str "its own mode is offered" "$modes" '2560x1440@59.95'
-assert_not_contains_str "another monitor's mode is not offered" "$modes" '1920x1080@144.00'
+assert_contains "$modes" '2560x1440@59.95' "its own mode is offered"
+assert_not_contains "$modes" '1920x1080@144.00' "another monitor's mode is not offered"
 pass_msg
 
 it "the primary row offers the connected monitors"

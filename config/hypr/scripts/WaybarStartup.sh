@@ -271,13 +271,15 @@ main() {
 
     local lock_file="${runtime_dir}/waybar-startup-${UID:-$(id -u)}.lock"
 
-    # Non-blocking lock: every Waybar start/restart funnels through here so two
+    # Bounded lock: every Waybar start/restart funnels through here so two
     # concurrent callers can never both launch a bar. The winner holds the lock
-    # until Waybar is confirmed running; losers exit and leave the winner to own
-    # the lifecycle.
+    # until Waybar is confirmed running. Wait briefly so restart/start requests
+    # in flight are serialized rather than dropped mid-kill.
     exec 9>"$lock_file"
     if command -v flock >/dev/null 2>&1; then
-        if ! flock -n 9; then
+        local lock_timeout=3
+        [ "$mode" = "restart" ] && lock_timeout=5
+        if ! flock -w "$lock_timeout" 9; then
             exec 9>&-
             exit 0
         fi
