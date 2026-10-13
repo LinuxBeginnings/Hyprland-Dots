@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- Duplicate waybars when opening laptop lid
 - Opening the lid turns the laptop panel back on
   - `user_laptops.lua` replayed the stored `monitors.lua` rule as it was
   - A rule that omits `disabled` does not switch an output back on

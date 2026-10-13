@@ -215,16 +215,39 @@ it "start_waybar_direct honours the force argument"
 if extract_fn "$SCRIPT" start_waybar_direct | grep -q '"force"'; then pass_msg
 else fail "the launch ignores the force argument"; fi
 
-it "dedupe keeps a live bar, never a corpse"
-if extract_fn "$SCRIPT" dedupe_waybar_instances | grep -q 'waybar_live_pids'; then pass_msg
-else fail "dedupe can pick a core-dumping process as the one to keep"; fi
+it "dedupe sees every waybar process that has not exited"
+# The duplicate clean-up is the last line of defence. It has to count a process
+# it would not call a usable bar, or one caught mid-reload in state D survives
+# as a second bar - which is exactly how a duplicate outlived this clean-up.
+if extract_fn "$SCRIPT" dedupe_waybar_instances | grep -q 'waybar_processes_alive' \
+   && ! extract_fn "$SCRIPT" dedupe_waybar_instances | grep -q 'waybar_live_pids'; then pass_msg
+else fail "dedupe only looks at the bars it would call usable"; fi
+
+it "the wider list still drops a process that has exited"
+# Z is the one state that is definitely not a bar any more. D is not: the same
+# state covers a bar reading its CSS and a bar dumping core, so only the
+# duplicate clean-up may act on it.
+if extract_fn "$SCRIPT" waybar_processes_alive | grep -q 'Z\*)' \
+   && ! extract_fn "$SCRIPT" waybar_processes_alive | grep -q 'D\*'; then pass_msg
+else fail "waybar_processes_alive does not tell Z apart from D"; fi
+
+it "dedupe keeps the newest process, so a corpse can never be the survivor"
+if extract_fn "$SCRIPT" dedupe_waybar_instances | grep -q 'sort -n | tail -n1'; then pass_msg
+else fail "the survivor is no longer the newest"; fi
 
 it "LidSwitch.sh asks the same question before signalling a bar"
 # Signalling a dying process instead of starting a bar is the same bug one step
 # further out, and it is the copy of the check that is easiest to forget.
-if extract_fn "$LID" is_waybar_running | grep -q 'Z\*|D\*' \
-   && grep -q 'if is_waybar_running; then' "$LID"; then pass_msg
+if extract_fn "$LID" is_waybar_running | grep -q 'Z\*|D\*'; then pass_msg
 else fail "LidSwitch.sh still signals a process that is not a bar"; fi
+
+it "LidSwitch.sh settles that question before starting a bar"
+# The refresh's own wallpaper step has just told waybar to reload, so a single
+# read can catch a live bar in state D - which is not a bar by the check above.
+# Deciding to start one on that read is the duplicate, so the decision waits.
+if grep -q 'if is_waybar_running_settled; then' "$LID" \
+   && extract_fn "$LID" is_waybar_running_settled | grep -q 'is_waybar_running && return 0'; then pass_msg
+else fail "LidSwitch.sh still decides on a single read"; fi
 
 it "both scripts are still valid bash"
 bad=""

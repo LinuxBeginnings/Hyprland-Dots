@@ -78,6 +78,27 @@ is_waybar_running() {
     [ -n "$(waybar_live_pids "waybar")" ] || [ -n "$(waybar_live_pids '\.waybar-wrapped')" ]
 }
 
+# waybar_processes_alive <exact process name> -> every PID that is still there.
+#
+# The same question as waybar_live_pids, asked for a different purpose.
+# `dedupe_waybar_instances` has to end with exactly one bar, so a process that
+# waybar_live_pids would not call a bar - one caught in state D while it reads
+# its CSS and fonts, or one that is dumping core - still has to be seen. Missing
+# it is how a second bar survived a start: the state is read once, waybar is
+# mid-reload at that instant, and the leftover is then invisible to the clean-up
+# that exists to reap it. Only Z (exited, awaiting reap) is definitely gone.
+waybar_processes_alive() {
+    local name=$1 pid state
+    for pid in $(pgrep -x "$name" 2>/dev/null); do
+        kill -0 "$pid" 2>/dev/null || continue
+        state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d '[:space:]')"
+        case "$state" in
+            Z*) continue ;;
+        esac
+        printf '%s\n' "$pid"
+    done
+}
+
 wait_for_waybar() {
     for _ in $(seq 1 80); do
         is_waybar_running && return 0
@@ -193,11 +214,16 @@ stop_waybar_instances() {
 # Safety net: if more than one Waybar is already alive (the historical bug),
 # keep the newest instance and terminate the rest.
 #
-# Only live instances count. A process that is dumping core must never be picked
-# as the one to keep, or this would kill the working bar and leave the corpse.
+# This is the last thing standing between a race and a second bar, so it asks
+# the wider question: every process that has not exited, not only the ones that
+# look usable. A bar in state D is still a bar holding a surface, and leaving it
+# out is exactly how a duplicate outlived the clean-up meant to reap it.
+#
+# The one to keep is the newest, and a process that is dumping core can never be
+# it: it is older than the bar that replaced it.
 dedupe_waybar_instances() {
     local pids keep count pid
-    pids="$(waybar_live_pids "waybar")"
+    pids="$(waybar_processes_alive "waybar")"
     [ -n "$pids" ] || return 0
     count="$(printf '%s\n' "$pids" | wc -l | tr -d ' ')"
     [ "$count" -gt 1 ] || return 0

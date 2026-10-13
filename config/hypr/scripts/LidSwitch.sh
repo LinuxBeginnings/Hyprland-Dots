@@ -57,6 +57,23 @@ is_waybar_running() {
     return 1
 }
 
+# is_waybar_running() with a moment of patience.
+#
+# The wallpaper step of a refresh tells Waybar to reload its CSS, so by the time
+# this script asks whether a bar is there, waybar can be in state D reading that
+# file - and D is deliberately not a bar, because a bar dumping core is in D as
+# well. One read is therefore not enough to conclude that there is no bar: a
+# busy one clears D within a tick or two, a dying one does not. The first read
+# is immediate, so a bar that is plainly running costs nothing.
+is_waybar_running_settled() {
+    local attempt
+    for attempt in 1 2 3 4 5 6; do
+        is_waybar_running && return 0
+        sleep 0.2
+    done
+    return 1
+}
+
 handle_refresh() {
     # A single monitor hotplug or lid toggle fires several events in a row
     # (monitor.added for each output, lid switch, DPMS). Coalesce them into one
@@ -92,7 +109,12 @@ handle_refresh() {
     # WaybarStartup.sh, which serializes on the shared Waybar lock. Never call
     # Refresh.sh here: its kill+respawn path raced with concurrent monitor
     # events and produced duplicate bars.
-    if is_waybar_running; then
+    #
+    # The check is settled rather than a single read, because the wallpaper step
+    # above has just told Waybar to reload: a bar reading its CSS is in state D,
+    # which is not a bar by is_waybar_running()'s definition, and deciding on
+    # that one read starts a second bar beside a perfectly good one.
+    if is_waybar_running_settled; then
         pkill -SIGUSR2 -x waybar >> "$LOGFILE" 2>&1 || true
         sleep 0.2
     elif [ -x "$SCRIPTSDIR/WaybarStartup.sh" ]; then
