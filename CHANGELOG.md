@@ -144,11 +144,28 @@
 ## Added:
 
 - Indicator to mark current animation
+- Indicator to mark the current Rainbow Borders mode
+  - `Kool_Quick_Settings.sh` marks the mode in effect and pre-selects it
+  - The marker is stripped before the choice is used as a mode
+- Indicator to mark the current selection in the other pickers
+  - `Kitty_themes.sh`, `Ghostty_themes.sh`, `RofiThemeSelector.sh`
+  - `ChangeStarshipPrompt.sh` and `ZshChangeTheme.sh` had none at all
+  - `ThemeChanger.sh` marked the theme but never pre-selected the row
+  - `select-hyprview-layout.sh`, `MonitorProfiles.sh`, wlogout blur level
+  - The marker is stripped again before a choice is read as a name or path
 - `config/hypr/scripts/tests/test-migrate-animations.sh`
   - Covers carrying the animation from `UserAnimations.conf` into Lua
   - 11 checks, from a sandbox `XDG_CONFIG_HOME` with no session
 - `config/hypr/scripts/tests/test-installer-selections.sh`
   - Covers the rofi `@theme` carry and the wlogout preset restore
+  - 20 checks, from a sandbox `XDG_CONFIG_HOME` with no session
+- `config/hypr/scripts/tests/test-rainbow-borders-menu.sh`
+  - Covers the Rainbow Borders indicator and the marker strip
+  - 11 checks, from a sandbox `XDG_CONFIG_HOME` with no session
+- Marker tests for the four theme pickers
+  - `tests/test-kitty-theme-menu.sh`, `tests/test-ghostty-theme-menu.sh`
+  - `tests/test-starship-prompt-menu.sh`, `tests/test-zsh-theme-menu.sh`
+  - Each asserts the marker never reaches a config, a link or `ZSH_THEME`
   - 20 checks, from a sandbox `XDG_CONFIG_HOME` with no session
 - `patches/82-monitors-lua-reset.sh` recovers an upgraded install
   - Removes a `UserConfigs/monitors.lua` that an older version generated

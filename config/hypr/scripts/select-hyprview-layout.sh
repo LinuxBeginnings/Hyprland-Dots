@@ -37,9 +37,13 @@ if [[ -f "$layout_config" && -r "$layout_config" ]]; then
   done
 fi
 
+# Mark the layout in effect and pre-select its row.
+MARKER="👉"
 default_row=0
+menu_layouts=("${layouts[@]}")
 for i in "${!layouts[@]}"; do
   if [[ "${layouts[$i]}" == "$current_layout" ]]; then
+    menu_layouts[i]="$MARKER ${layouts[$i]}"
     default_row="$i"
     break
   fi
@@ -51,7 +55,7 @@ fi
 
 "$config_home/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 choice="$(
-  printf '%s\n' "${layouts[@]}" | rofi -i -dmenu -config "$rofi_theme" \
+  printf '%s\n' "${menu_layouts[@]}" | rofi -i -dmenu -config "$rofi_theme" \
     -p "Hyprview Layout" \
     -mesg "Current layout: $current_layout" \
     -theme-str 'window { width: 32%; }' \
@@ -59,6 +63,9 @@ choice="$(
 )"
 
 [[ -z "$choice" ]] && exit 0
+
+# Strip the marker before the choice is matched against the layout list.
+choice="${choice#"$MARKER "}"
 
 for layout in "${layouts[@]}"; do
   if [[ "$choice" == "$layout" ]]; then

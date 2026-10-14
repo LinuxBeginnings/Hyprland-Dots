@@ -16,6 +16,9 @@ rofi_theme_fallback="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-edit.ras
 wallust_include_path="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf"
 wallust_option_label="Set by wallpaper"
 default_option_label="Default - no color"
+# Same indicator the other selection menus use. Stripped again before a row is
+# read as a theme name.
+MARKER="👉"
 wallust_refresh_script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustSwww.sh"
 
 notify_user() {
@@ -160,15 +163,27 @@ else
   done
 fi
 
+# What the message line names as current, mirroring the row chosen above.
+current_label="$current_theme"
+if [[ "$wallust_enabled" == "1" ]]; then
+  current_label="$wallust_option_label"
+elif [[ -z "$current_theme" ]]; then
+  current_label="$default_option_label"
+fi
+
+# Mark the entry in effect. The marker is removed again before the choice is
+# compared against the labels.
+menu_entries[$current_selection_index]="$MARKER ${menu_entries[$current_selection_index]}"
+
 "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 choice=$(
   printf "%s\n" "${menu_entries[@]}" |
-    rofi -i -dmenu -p "Ghostty Theme" "${rofi_config_args[@]}" -mesg "Select a theme to apply" -selected-row "$current_selection_index"
+    rofi -i -dmenu -p "Ghostty Theme" "${rofi_config_args[@]}" -mesg "Current: $current_label · Select a theme to apply" -selected-row "$current_selection_index"
 )
 
 [[ -z "$choice" ]] && exit 0
 
-
+choice="${choice#"$MARKER "}"
 selected_theme="$choice"
 
 if [[ "$selected_theme" == "$wallust_option_label" ]]; then

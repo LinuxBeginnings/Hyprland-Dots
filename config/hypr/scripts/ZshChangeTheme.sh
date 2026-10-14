@@ -13,6 +13,8 @@
 # Variables
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
 rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-zsh-theme.rasi"
+# Same indicator the other selection menus use. Never part of a theme name.
+MARKER="👉"
 
 if [ -n "$(grep -i nixos < /etc/os-release)" ]; then
   notify-send -i "$iDIR/note.png" "NOT Supported" "Sorry NixOS does not support this KooL feature"
@@ -102,22 +104,52 @@ fi
 # Add "Random" option to the beginning of the array
 themes_array=("Random" "${themes_array[@]}")
 
-rofi_command="rofi -i -dmenu -config $rofi_theme"
+# The theme Oh My Zsh is set to, read from the same line this script rewrites.
+# Oh My Zsh's own "random" is a real setting, so it marks the Random row.
+current_theme=""
+if [ -f "$zsh_path" ]; then
+    zsh_theme_line="$(grep -E '^[[:space:]]*(export[[:space:]]+)?ZSH_THEME=' "$zsh_path" 2>/dev/null | head -n1 || true)"
+    if [ -n "$zsh_theme_line" ]; then
+        current_theme="${zsh_theme_line#*=}"
+        current_theme="${current_theme%%#*}"
+        current_theme="$(printf '%s' "$current_theme" | tr -d '[:space:]')"
+        current_theme="${current_theme%\"}"; current_theme="${current_theme#\"}"
+        current_theme="${current_theme%\'}"; current_theme="${current_theme#\'}"
+    fi
+fi
+
+# Mark the theme in effect and pre-select its row.
+default_row=0
+menu_list=()
+for i in "${!themes_array[@]}"; do
+    theme_name="${themes_array[$i]}"
+    if [ -n "$current_theme" ] && { [ "$theme_name" = "$current_theme" ] || { [ "$theme_name" = "Random" ] && [ "$current_theme" = "random" ]; }; }; then
+        menu_list+=("$MARKER $theme_name")
+        default_row=$i
+    else
+        menu_list+=("$theme_name")
+    fi
+done
+
+# An array, not a string: the message line contains a space, and an unquoted
+# expansion would hand rofi a stray argument instead.
+rofi_command=(rofi -i -dmenu -config "$rofi_theme" -selected-row "$default_row" -mesg "Current: ${current_theme:-unknown}")
 
 menu() {
-    for theme in "${themes_array[@]}"; do
-        echo "$theme"
-    done
+    printf '%s\n' "${menu_list[@]}"
 }
 
 main() {
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
-    choice=$(menu | ${rofi_command})
+    choice=$(menu | "${rofi_command[@]}")
 
     # if nothing selected, script won't change anything
     if [ -z "$choice" ]; then
         exit 0
     fi
+
+    # Strip the marker before the choice is written to .zshrc.
+    choice="${choice#"$MARKER "}"
 
     zsh_path="$HOME/.zshrc"
     var_name="ZSH_THEME"

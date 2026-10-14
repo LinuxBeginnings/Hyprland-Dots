@@ -30,6 +30,9 @@ dp="$SCRIPTSDIR/DisplayProfile.sh"
 MP_HYPRCTL="${MP_HYPRCTL:-hyprctl}"
 MP_STATE_DIR="${MP_STATE_DIR:-${XDG_RUNTIME_DIR:-/tmp}/kooldots-display-profiles}"
 msg="❗NOTE:❗ A profile chosen here is saved as a layout for the monitors connected now"
+# Same indicator the other selection menus use. Rows are addressed by index
+# (-format i), so it never has to be parsed back out of a choice.
+MARKER="👉"
 
 # Check if rofi is already running
 if pidof rofi > /dev/null; then
@@ -44,11 +47,28 @@ fi
 
 rows=(); actions=()
 
+# The layout that is running, from the state file the display controller writes:
+# line 1 is the monitor-set fingerprint, line 2 the layout name.
+running_layout() {
+  [ -f "$MP_STATE_DIR/current" ] || return 0
+  sed -n '2p' -- "$MP_STATE_DIR/current" 2>/dev/null || true
+}
+running="$(running_layout)"
+[[ -n "$running" ]] && msg="$msg · running: $running"
+
 # Layouts saved for the monitors in front of us. `list` answers for the current
-# monitor set only, which is the whole point of the new model.
+# monitor set only, which is the whole point of the new model. The running one
+# is marked and its row is pre-selected.
+default_row=0
 while IFS= read -r name; do
   [ -n "$name" ] || continue
-  rows+=("$name"); actions+=("apply:$name")
+  if [[ -n "$running" && "$name" == "$running" ]]; then
+    default_row="${#rows[@]}"
+    rows+=("$MARKER $name")
+  else
+    rows+=("$name")
+  fi
+  actions+=("apply:$name")
 done < <("$dp" list 2>/dev/null || true)
 
 # Legacy .lua profiles, offered as an import.
@@ -65,7 +85,7 @@ if [ "${#rows[@]}" -eq 0 ]; then
 fi
 
 "$SCRIPTSDIR/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
-chosen="$(printf '%s\n' "${rows[@]}" | rofi -i -dmenu -format i -config "$rofi_theme" -mesg "$msg")"
+chosen="$(printf '%s\n' "${rows[@]}" | rofi -i -dmenu -format i -config "$rofi_theme" -mesg "$msg" -selected-row "$default_row")"
 
 # Anything that is not an in-range index means "no choice" - including Escape.
 case "$chosen" in

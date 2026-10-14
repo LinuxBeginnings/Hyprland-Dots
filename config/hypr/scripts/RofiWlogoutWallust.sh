@@ -97,17 +97,38 @@ choose_blur_radius() {
         "✏️   Custom Radius..."
     )
 
+    # Mark the level in effect and pre-select its row. A radius that is not one
+    # of the presets is exactly what "Keep Current" is for, so that row carries
+    # the marker instead of none of them.
+    local MARKER="👉"
+    local default_row=0
+    local -a menu_options=("${blur_options[@]}")
+    case "$BLUR_RADIUS" in
+        0) default_row=1 ;;
+        10) default_row=2 ;;
+        20) default_row=3 ;;
+        35) default_row=4 ;;
+        50) default_row=5 ;;
+        70) default_row=6 ;;
+        *) default_row=0 ;;
+    esac
+    menu_options[$default_row]="$MARKER ${menu_options[$default_row]}"
+
     local blur_choice
-    blur_choice=$(printf '%s\n' "${blur_options[@]}" | rofi -i -dmenu \
+    blur_choice=$(printf '%s\n' "${menu_options[@]}" | rofi -i -dmenu \
         -p "$prompt_title" \
         -mesg "Current blur: ${BLUR_RADIUS}px (0px = crisp wallpaper, 20px = soft, 50px = frosted)" \
-        -selected-row 0 \
+        -selected-row "$default_row" \
         -theme-str "listview { columns: 1; } window { width: 55%; }" \
         -config "$ROFI_CONFIG")
 
     if [[ -z "$blur_choice" ]]; then
         return 1
     fi
+
+    # The levels below are matched on their prefix, so the marker must go before
+    # the choice is read.
+    blur_choice="${blur_choice#"$MARKER "}"
 
     local new_radius="$BLUR_RADIUS"
     if [[ "$blur_choice" =~ "Keep Current" ]]; then

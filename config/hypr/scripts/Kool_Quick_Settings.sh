@@ -389,21 +389,57 @@ rainbow_borders_menu() {
 
   # Map internal mode to friendly display
   local current_display="$current"
+  local active_option=""
   case "$current" in
-  wallust_random) current_display="Wallust Color" ;;
-  rainbow) current_display="Original Rainbow" ;;
-  gradient_flow) current_display="Gradient Flow" ;;
-  low_cpu) current_display="Low CPU Rainbow" ;;
-  disabled) current_display="Disabled" ;;
+  wallust_random)
+    current_display="Wallust Color"
+    active_option="Wallust Color"
+    ;;
+  rainbow)
+    current_display="Original Rainbow"
+    active_option="Original Rainbow"
+    ;;
+  gradient_flow)
+    current_display="Gradient Flow"
+    active_option="Gradient Flow"
+    ;;
+  low_cpu)
+    current_display="Low CPU Rainbow"
+    active_option="Low CPU Rainbow"
+    ;;
+  disabled)
+    current_display="Disabled"
+    active_option="Disable Rainbow Borders"
+    ;;
   esac
 
-  # Build options and prompt
-  local options="Disable Rainbow Borders\nWallust Color\nOriginal Rainbow\nGradient Flow\nLow CPU Rainbow"
+  # Build options and mark the active one
+  local raw_options=(
+    "Disable Rainbow Borders"
+    "Wallust Color"
+    "Original Rainbow"
+    "Gradient Flow"
+    "Low CPU Rainbow"
+  )
+
+  local default_row=0
+  local MARKER="👉"
+  local menu_options=("${raw_options[@]}")
+  for i in "${!menu_options[@]}"; do
+    if [[ "${menu_options[i]}" == "$active_option" ]]; then
+      menu_options[i]="$MARKER ${menu_options[i]}"
+      default_row=$i
+      break
+    fi
+  done
+
   local choice
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
-  choice=$(printf "%b" "$options" | rofi -i -dmenu -config "$rofi_theme" -mesg "Rainbow Borders: current = $current_display")
+  choice=$(printf "%s\n" "${menu_options[@]}" | rofi -i -dmenu -config "$rofi_theme" -mesg "Rainbow Borders: current = $current_display" -selected-row "$default_row")
 
   [[ -z "$choice" ]] && return
+
+  choice="${choice#"$MARKER "}"
 
   case "$choice" in
   "Disable Rainbow Borders")
