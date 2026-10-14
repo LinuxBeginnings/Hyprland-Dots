@@ -54,8 +54,15 @@ local startup_commands = {
   -- stray duplicate daemons - each of which holds its own logind sleep delay
   -- inhibitor and would otherwise add to the suspend path.
   scriptsDir .. "/HypridleStartup.sh",
-  -- LuaAutoReload.sh was retired: Hyprland reloads the Lua config automatically
-  -- when a file is saved, so the inotify/polling watcher was a redundant process.
+  -- Re-read the config when a file it loads is saved.
+  --
+  -- LuaAutoReload.sh was retired on the assumption that Hyprland's built-in
+  -- autoreload covered the whole tree. It does not: Hyprland watches only the
+  -- entrypoint it parsed (hyprland.lua), and every other file this config loads
+  -- arrives through `dofile`, which Hyprland never sees. So saving a
+  -- UserConfigs file applied nothing until the user ran `hyprctl reload`.
+  -- LuaConfigWatch.sh watches the loaded directories and pokes the entrypoint.
+  scriptsDir .. "/LuaConfigWatch.sh",
   scriptsDir .. "/Hyprsunset.sh init",
   -- NOTE: Dropterminal is currently certified only with kitty. Not all terminals behave correctly as a dropdown.
   scriptsDir .. "/Dropterminal.sh --startup kitty",

@@ -114,10 +114,20 @@ Gentoo host before relying on it there.
 
 ### 3.4 Config reload
 
-Hyprland reloads the Lua config automatically when a file is saved. `misc:disable_autoreload`
-defaults to `false`. `hyprctl reload` is the manual equivalent, and `hyprctl configerrors` prints
-everything Hyprland complained about on the last load. **Use `hyprctl configerrors` after every
-change.**
+`misc:disable_autoreload` defaults to `false`, but that only says autoreload is *on*. It does not say
+what is watched. Built-in autoreload covers the one file Hyprland parsed: `hyprland.lua`. Every other
+file the config loads is reached through `dofile`, which Hyprland never sees, so no watch is set on
+it. Measured on 0.56.2, with a `configreloaded>>` listener on `.socket2.sock` as the detector:
+
+- `touch hyprland.lua` -> 1 reload.
+- `touch UserConfigs/user_keybinds.lua` -> 0 reloads. Same for `configs/system_keybinds.lua` and
+  `lua/settings.lua`.
+- `hyprctl reload` -> 1 reload (the control).
+
+`hyprctl reload` is the manual equivalent and works regardless of the setting, and
+`hyprctl configerrors` prints everything Hyprland complained about on the last load. **Use
+`hyprctl configerrors` after every change.** `scripts/LuaConfigWatch.sh` closes the gap for user
+edits: it watches the loaded directories and touches the entrypoint (see LUA-008).
 
 ---
 
@@ -443,12 +453,19 @@ workspace; pressing the bind on a non-scrolling workspace does nothing; script d
 
 ### LUA-008 — Retire `LuaAutoReload.sh`
 
-Depends on: none. Status: **done**.
+Depends on: none. Status: **reverted 2026-10-14** — the premise was wrong, see below.
 
-Hyprland reloads the Lua config automatically on save (see section 3.4), and the local session has
-`misc:disable_autoreload = false`. The watcher is a redundant process: `inotifywait` plus a
-`hyprctl reload` per save, with a 1-second `find`-based polling fallback. The CHANGELOG records
-several rounds of bugs in it (`CHANGELOG.md:438`, `:482`, `:667`).
+The original reasoning: Hyprland reloads the Lua config automatically on save (see section 3.4), and
+the local session has `misc:disable_autoreload = false`, so the watcher is a redundant process:
+`inotifywait` plus a `hyprctl reload` per save, with a 1-second `find`-based polling fallback. The
+CHANGELOG records several rounds of bugs in it (`CHANGELOG.md:438`, `:482`, `:667`).
+
+**Why it was wrong.** `misc:disable_autoreload = false` says autoreload is on; it does not say what
+is watched, and the retirement was decided on that option alone. Built-in autoreload covers only the
+entrypoint Hyprland parsed. Every file under `UserConfigs/`, `configs/` and `lua/` is reached through
+`dofile` and was never watched - measured, see section 3.4. The acceptance criterion below
+("edit-and-save still applies live") was therefore never met; it was also never run.
+`config/hypr/scripts/LuaConfigWatch.sh` replaces the retired watcher.
 
 Steps:
 
@@ -650,6 +667,11 @@ Deleting or porting a script invalidates prose elsewhere. Check and update:
 
 ## 9. Open questions and known risks
 
+- **Built-in autoreload covers only the entrypoint.** Hyprland watches `hyprland.lua` and nothing it
+  `dofile`s, so every file under `lua/`, `configs/` and `UserConfigs/` depends on
+  `scripts/LuaConfigWatch.sh` to be applied on save. A new directory added to
+  `lua/user_overrides.lua` must be added to that script's watch list too, or edits in it will look
+  inert.
 - **Generator drift.** `scripts/migrate-hypr-to-lua.sh` embeds its own copy of the dispatch helper
   (the `system_keybind_lines` list, `:1667-1920`) which still references `LuaSwapWindow.sh` and the
   now-deleted `LuaCycleWindow.sh`, and still lacks the `resizeactive` mapping. **Confirmed
@@ -854,6 +876,26 @@ files changed, verification evidence, follow-ups.
   - Follow-ups: none.
 
 ### LUA-008 — Retire `LuaAutoReload.sh`
+
+- 2026-10-14 — agent `Oz` (run in `Hyprland-Dots`, branch `development`): **reverted**. The
+  retirement was decided from `hyprctl getoption misc:disable_autoreload` alone, which says
+  autoreload is enabled but not what it watches.
+  - Added: `config/hypr/scripts/LuaConfigWatch.sh`.
+  - Changed: `config/hypr/lua/startup.lua` (starts the watcher), `docs/LuaScriptsMigrationPlan.md`
+    (section 3.4 corrected, this item reverted, section 9), `CHANGELOG.md`.
+  - Evidence: built-in autoreload watches only `hyprland.lua`. With a `configreloaded>>` listener on
+    `.socket2.sock`, `touch hyprland.lua` produced 1 reload; `touch UserConfigs/user_keybinds.lua`,
+    `configs/system_keybinds.lua` and `lua/settings.lua` produced 0 each; `hyprctl reload` produced 1
+    as the control.
+  - Verification (Hyprland 0.56.2, inotify-tools 4.23.9.0, live session): a bind added to
+    `UserConfigs/user_keybinds.lua` registered with no manual reload - `hyprctl binds` showed
+    `SUPER ALT + T`, modmask 72, `Launch Warp`, and the bind count went 206 -> 207 - with
+    `hyprctl configerrors` clean. A non-`.lua` save in the same directory caused no reload. A
+    3-write burst caused exactly one reload. `SIGTERM` exited the watcher and removed its pidfile and
+    fifo, so the retired watcher's "did not stop on SIGTERM" defect is not repeated.
+  - Follow-ups: `misc:disable_autoreload = true` falls back to `hyprctl reload`, and a host without
+    `inotify-tools` falls back to polling. Both paths are implemented; only the inotify path was
+    exercised on this host.
 
 - 2026-10-03 — agent `Oz`
   - Changed: `config/hypr/lua/startup.lua` (startup entry removed).

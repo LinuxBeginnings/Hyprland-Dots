@@ -4,6 +4,17 @@
 
 ## Fixed:
 
+- Editing `UserConfigs/*.lua` applies on save, with no `hyprctl reload`
+  - Hyprland's built-in autoreload watches only the entrypoint `hyprland.lua`
+  - Other files the config loads arrive through `dofile`, which it never sees
+  - A saved `UserConfigs` file stayed inert until a manual reload
+  - `scripts/LuaConfigWatch.sh` watches `lua`, `configs` and `UserConfigs` for `*.lua`
+  - On a save it debounces, then touches `hyprland.lua`, the watched path
+  - Saves of non-`.lua` files in those directories are ignored
+  - One instance per user; it exits cleanly on `SIGTERM` and removes its pidfile
+  - Falls back to `hyprctl reload` when `misc:disable_autoreload` is on
+  - Falls back to 1s polling where `inotify-tools` is not installed
+  - A syntax error in a saved file raises a notification
 - Waybar no longer fails to start on boot or after screen lock
   - `startup.lua` chained `WallpaperDaemon.sh` and `WaybarStartup.sh` with `&&`
   - A wallpaper delay or failure blocked Waybar from ever launching
