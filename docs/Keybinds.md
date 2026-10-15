@@ -1,5 +1,7 @@
 # Hyprland Default Keybinds
 Source: `config/hypr/configs/system_keybinds.lua`
+The `SUPER + SHIFT + K` menu reads the live bind list from `lua/keybind_index.lua`, so it lists what
+is active rather than what this file says.
 
 ## Legend
 - `SUPER` = `$mainMod` (Super / Windows key)
@@ -25,7 +27,7 @@ Source: `config/hypr/configs/system_keybinds.lua`
 - `SUPER + ALT + C` — Calculator (`RofiCalc.sh`)
 - `SUPER + SHIFT + M` — Online music & stations (`RofiBeats.sh`)
 - `SUPER + H` — Help / cheat sheet (`KeyHints.sh`)
-- `SUPER + SHIFT + K` — Search keybinds helper (`KeyBinds.sh`)
+- `SUPER + SHIFT + K` — Search keybinds menu (`KeyBinds.sh`, active binds)
 
 ## Appearance / Theme / Wallpaper / Zoom
 - `SUPER + T` — Global theme switcher using Wallust (`ThemeChanger.sh`)

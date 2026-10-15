@@ -138,6 +138,7 @@ Load order, verified from `config/hypr/hyprland.lua` and `config/hypr/lua/user_o
 ```
 hyprland.lua
   -> lua/user_defaults.lua        (sets KOOLDOTS_DEFAULTS)
+  -> lua/keybind_index.lua        (hooks hl.bind, renders the menu list; LUA-016)
   -> lua/animations.lua
   -> lua/user_overrides.lua
        -> configs/system_env.lua
@@ -169,7 +170,9 @@ Key consequences:
   Default Keybinds" entry) preferred `lua/keybinds.lua` whenever it existed, so the Quick Settings
   menu let users edit a file Hyprland never loads. `config/hypr/scripts/KeyBinds.sh` passed it to
   `keybinds_parser.py` as the first input. Both now resolve `configs/system_keybinds.lua` first and
-  keep the old path only as a last-resort fallback for pre-removal installs.
+  keep the old path only as a last-resort fallback for pre-removal installs. `KeyBinds.sh` reads no
+  file at all any more: it renders the active bind list from `lua/keybind_index.lua` (LUA-016), and
+  the parser is gone.
 - **`config/hypr/lua/user_keybinds_helper.lua` IS live** — it backs `UserConfigs/user_keybinds.lua`.
   It carries the same `raw_dispatch_cmd` bug.
 - The generator has its own embedded copy of the dispatch helper
@@ -582,6 +585,33 @@ set of definitions, so behaviour and fixes live in one place.
 Acceptance: the bar starts with no `Unknown module` and no CSS errors, every listed module resolves,
 and two bars can run at once without their listeners fighting (see LUA-012).
 
+### LUA-016 — Replace the keybind menu's parser with a Lua index
+
+Depends on: none. Status: **done.**
+
+`config/hypr/scripts/KeyBinds.sh` piped `configs/system_keybinds.lua`, `UserConfigs/user_overrides.lua`
+and `UserConfigs/user_keybinds.lua` through `config/hypr/scripts/keybinds_parser.py` — 528 lines of
+regex plus a hand-rolled Lua argument splitter — and sent the result to rofi. Reading source text is
+what made it wrong: it printed what the config intended, not what was bound. Measured before the
+change, it emitted 192 lines while the compositor had 205 active binds.
+
+Hyprland's Lua API has no call that lists the bind table (`hl.meta.lua` offers `bind`, `unbind`,
+`define_submap` and `get_current_submap`, and no getter), so the replacement records binds where they
+are registered. `lua/keybind_index.lua` hooks `hl.bind`/`hl.unbind` and renders the list to
+`$XDG_RUNTIME_DIR/kooldots-keybinds.txt`; `KeyBinds.sh` asks the live VM to rewrite that file with
+`hyprctl eval` before every run, so the list is never a reload behind.
+
+Two properties are load-bearing:
+
+- **The `HL.Keybind` handle is never stored.** `unbind` frees it, and reading a freed handle segfaults
+  the compositor — reproduced twice on 0.56.2 by reading `.enabled` after an unbind. Only the chord
+  and the description are copied, at bind time.
+- **The hook is installed with `rawset`.** `hl` is a table, and `rawset` cannot run a metamethod, so a
+  build that protects that table cannot turn the hook into a crash.
+
+Acceptance: the menu lists every active chord; a bind added with `hyprctl eval` appears with no
+reload; an unbind disappears; no `python3` is spawned by the keybind path.
+
 ---
 
 ## 7. Verification playbook
@@ -658,8 +688,9 @@ Deleting or porting a script invalidates prose elsewhere. Check and update:
 - `docs/Keybinds.md` — updated by LUA-002/LUA-005/LUA-006 to name the canonical source file and the
   ported binds, and by LUA-009/LUA-010 to name the in-process `layout_cycle` / `layout_focus` /
   `cycle_window` actions instead of the deleted scripts.
-- `config/hypr/scripts/KeyBinds.sh` and `config/hypr/scripts/Kool_Quick_Settings.sh` — both decide
-  which keybind file to read. Update them whenever the canonical keybind file moves.
+- `config/hypr/scripts/Kool_Quick_Settings.sh` — decides which keybind file to *edit*. Update it
+  whenever the canonical keybind file moves. `config/hypr/scripts/KeyBinds.sh` no longer reads a file
+  at all (LUA-016); it renders the list from `lua/keybind_index.lua`.
 - `CHANGELOG.md` — add a user-visible entry for each removal.
 - `docs/Patching-UserConfigs.md` — if a user-facing config surface changes.
 
@@ -672,6 +703,12 @@ Deleting or porting a script invalidates prose elsewhere. Check and update:
   `scripts/LuaConfigWatch.sh` to be applied on save. A new directory added to
   `lua/user_overrides.lua` must be added to that script's watch list too, or edits in it will look
   inert.
+- **The keybind index is a shadow copy (LUA-016).** Hyprland owns the bind table and the Lua API
+  cannot read it, so `lua/keybind_index.lua` records binds as they are registered. It can only drift
+  where a bind changes outside a config load, which is why `KeyBinds.sh` re-renders through
+  `hyprctl eval` before every run instead of trusting the file. Dropping that refresh makes the
+  keypress fork-free and brings the drift back; rendering `hyprctl binds -j` instead would need no
+  registry and no invalidation story at all, but adds a `jq` dependency this repo does not declare.
 - **Generator drift.** `scripts/migrate-hypr-to-lua.sh` embeds its own copy of the dispatch helper
   (the `system_keybind_lines` list, `:1667-1920`) which still references `LuaSwapWindow.sh` and the
   now-deleted `LuaCycleWindow.sh`, and still lacks the `resizeactive` mapping. **Confirmed
@@ -1112,3 +1149,32 @@ files changed, verification evidence, follow-ups.
     configured ... for output: Virtual-1`; exactly one keyboard listener and two `swaync-client`
     halves; two `socat` readers, each parented to a live listener; stale pidfiles from earlier bars
     cleared.
+
+### LUA-016 — Replace the keybind menu's parser with a Lua index
+
+- 2026-10-15 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
+  - Added: `config/hypr/lua/keybind_index.lua`.
+  - Changed: `config/hypr/hyprland.lua` (loads the module before `user_overrides`, renders the list
+    after `workspaces`), `config/hypr/scripts/KeyBinds.sh`, `docs/Keybinds.md`.
+  - Deleted: `config/hypr/scripts/keybinds_parser.py` (528 lines).
+  - Evidence: `hl.bind` returns an `HL.Keybind` handle exposing `display_key`, `description`, `submap`,
+    `key`, `modmask`, `enabled` and `has_description`, but `hl.meta.lua` has no bind-table getter, so
+    a registry is the only Lua-side source. `hl` is a table, so `rawset` hooks it without a
+    metamethod. `hl.define_submap` bodies run at definition time, so submap binds are recorded at
+    load: the `Bind KB` bind is in the list without that submap ever being entered.
+  - Evidence: reading `.enabled` on a handle after `hl.unbind` removed that bind segfaults Hyprland
+    (reproduced twice on the dev host). The module stores strings only, and says so, so it is not
+    "improved" later into keeping handles.
+  - Verification (Hyprland 0.56.2, live session): `hyprctl reload` left `hyprctl configerrors` clean
+    and no `[WARN] keybind_index` in the log, and wrote 204 lines against 205 active binds. The gap is
+    the second of the two stacked `ALT + Tab` binds in `configs/system_keybinds.lua:748-749`, which any
+    chord-keyed list collapses; the removed parser collapsed it identically, so it is not a
+    regression. Deltas against the old parser's 192 lines: +10 `SUPER + SHIFT + <number>` variants,
+    +2 lid switches, and canonical `XF86…` casing instead of the raw source text's lowercase.
+  - Verification: deleting the list and running
+    `hyprctl eval 'KOOLDOTS_KEYBIND_INDEX:write_cache()'` regenerates it (204 lines), so `eval` does
+    reach the config globals. A live `hl.bind("SUPER + F24", ...)` appears after a refresh (205 lines)
+    and disappears after `hl.unbind("SUPER + F24")` (204), with the session alive and the compositor
+    back to 205 binds.
+  - Follow-ups: the `jq` fallback in `KeyBinds.sh` covers a config whose `hyprland.lua` predates the
+    module, and a build where the hook cannot be installed. It is deliberately not the main path.

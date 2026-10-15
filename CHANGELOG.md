@@ -140,6 +140,13 @@
   - `LidSwitch.sh` asks the same question before signalling a bar
   - Issue: [#158](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/158)
     - Thanks again Angel Spano @jasueh for the info to find issue
+- The keybind search menu was missing binds that were active
+  - `KeyBinds.sh` regexed the keybind files with `keybinds_parser.py`
+  - It printed the source text, so it could not see what the helpers derive
+  - 12 were absent: 10 `SUPER SHIFT + number` variants, 2 lid switches
+  - Media keys read as `xf86audiomute` rather than `XF86AudioMute`
+  - The menu now lists the binds the compositor actually has
+  - So it cannot under-report, and it follows an override or an unbind
 
 ## Added:
 
@@ -245,6 +252,11 @@
 - `scripts/LayoutKeybindDispatch.sh` and `scripts/LuaCycleWindow.sh`
   - Both are replaced by in-process actions in `lua/window_actions.lua`
   - `docs/Keybinds.md` names the in-process actions instead of the scripts
+- `scripts/keybinds_parser.py`
+  - 528 lines of regex that read the keybind files as text
+  - `lua/keybind_index.lua` records every `hl.bind()` in the Lua VM instead
+  - `KeyBinds.sh` asks that module to re-render the list before every run
+  - No `python3`, no file parsing, and no list left behind by a live change
 
 ---
 
