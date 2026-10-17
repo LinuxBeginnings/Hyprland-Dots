@@ -4,6 +4,17 @@
 
 ## Fixed:
 
+- Legacy `hyprctl dispatch` calls no longer silently do nothing
+  - Since Hyprland 0.55, `hyprctl dispatch` is a shorthand for `hl.dispatch(...)`
+  - A dispatcher name plus arguments is parsed as Lua, so `workspace e+1` fails
+  - `waybar/ModulesWorkspaces` scroll handlers use `hl.dsp.focus({ workspace = ... })`
+  - All 7 modules carried the same dead pair, 14 handlers in total
+  - `raw_dispatch_cmd` emitted `hyprctl dispatch <name>`, which could never run
+  - It now warns once per name at config load and returns `hl.dsp.no_op()`
+  - The two copies are `system_keybinds.lua` and `user_keybinds_helper.lua`
+  - `Logout.sh` drops the `exit 1` / `exit 0` / `exit x` variants
+  - `exit` takes no argument in either mode, so they could never succeed
+  - `Logout.sh` spawns hyprshutdown through `hl.dsp.exec_cmd(...)`
 - Editing `UserConfigs/*.lua` applies on save, with no `hyprctl reload`
   - Hyprland's built-in autoreload watches only the entrypoint `hyprland.lua`
   - Other files the config loads arrive through `dofile`, which it never sees

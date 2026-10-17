@@ -29,12 +29,26 @@ local function exec_cmd(cmd)
   return function() hl.exec_cmd(resolved) end
 end
 
--- Legacy dispatcher strings have no Lua equivalent, so they have to go out to
--- hyprctl. Do NOT use hl.dsp.exec_raw here: exec_raw spawns a process, it does
--- not parse a dispatcher, so "resizeactive -50 0" would try to exec a binary
--- named resizeactive and silently do nothing.
+-- Legacy dispatcher names no longer exist. `hyprctl dispatch` is a shorthand
+-- for `hl.dispatch(...)`, so handing it "workspace 2" makes it evaluate
+-- `hl.dispatch(workspace 2)` - a Lua parse error - and the bind silently does
+-- nothing. There is therefore no generic translation from a legacy dispatcher
+-- string, and this fallback can only report the miss. Add an hl.dsp.* handler
+-- above instead of relying on it. The warning is printed once per name, at
+-- config load, so an unhandled dispatcher is visible rather than silent.
+local warned_dispatchers = {}
 local function raw_dispatch_cmd(command)
-  return exec_cmd("hyprctl dispatch " .. tostring(command))
+  local text = tostring(command)
+  local name = text:match("^(%S+)") or text
+  if not warned_dispatchers[name] then
+    warned_dispatchers[name] = true
+    print("[WARN] keybinds: no Lua dispatcher for '" .. name
+      .. "'; the bind will do nothing. Add an hl.dsp.* handler in user_keybinds_helper.lua.")
+  end
+  if dsp and dsp.no_op then
+    return dsp.no_op()
+  end
+  return function() end
 end
 
 local function trim(value)

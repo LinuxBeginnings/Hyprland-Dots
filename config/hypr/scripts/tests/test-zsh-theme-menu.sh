@@ -81,10 +81,18 @@ EOS
 chmod +x "$BIN"/*
 
 # run_menu <queue entry>... - one menu run with those answers in order.
+#
+# ZSH, ZSH_CUSTOM and ZDOTDIR are cleared on purpose. The menu resolves Oh My
+# Zsh from the environment first, so a real ZSH exported in the caller's shell
+# would point it at the host's own Oh My Zsh and replace this fixture's three
+# themes with hundreds. The marker still lands on the right row, so the run
+# looks healthy, but every row index shifts and the -selected-row assertions
+# fail against a row number that only the host's theme list produces.
 run_menu() {
   : >"$ROWS_FILE"; : >"$ROFI_LOG"
   printf '%s\n' "$@" >"$QUEUE"
-  env PATH="$BIN:$PATH" HOME="$HOME_DIR" XDG_CONFIG_HOME="$CFG" \
+  env -u ZSH -u ZSH_CUSTOM -u ZDOTDIR \
+    PATH="$BIN:$PATH" HOME="$HOME_DIR" XDG_CONFIG_HOME="$CFG" \
     timeout 30 bash "$SCRIPT" >"$WORK/out.txt" 2>&1
   return $?
 }
@@ -96,6 +104,7 @@ assert_contains "$ROWS_FILE" '👉 robbyrussell' "the set theme carries the mark
 assert_not_contains "$ROWS_FILE" '👉 agnoster' "an unset theme is left alone"
 assert_contains "$ROFI_LOG" '-selected-row 3' "the marked row is pre-selected"
 assert_contains "$ROFI_LOG" 'Current: robbyrussell' "the message line names it"
+pass_msg
 
 # --- Escape leaves .zshrc alone -------------------------------------------
 it "Escape leaves .zshrc alone"
@@ -115,5 +124,6 @@ write_zshrc random
 run_menu __ESCAPE__
 assert_contains "$ROWS_FILE" '👉 Random' "the Random row carries the marker"
 assert_contains "$ROFI_LOG" '-selected-row 0' "the marked row is pre-selected"
+pass_msg
 
 summary "test-zsh-theme-menu"
