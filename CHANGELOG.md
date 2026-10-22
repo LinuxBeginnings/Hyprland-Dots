@@ -167,7 +167,7 @@
   - `windows` and `windowsOut` at speed 5, on that bezier
   - `border` at speed 5 and `fade` at speed 4, both on `default`
   - `workspaces` at speed 6, `style = "slidefadevert"`
-  - Re-enables `animations:enabled` on load, as the other presets do
+     - https://github.com/43PR/dotfiles
 - Indicator to mark current animation
 - Indicator to mark the current Rainbow Borders mode
   - `Kool_Quick_Settings.sh` marks the mode in effect and pre-selects it
