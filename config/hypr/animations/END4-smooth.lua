@@ -1,5 +1,5 @@
 -- 💫 https://github.com/LinuxBeginnings 💫
--- END-4--1.lua
+-- END4-smooth.lua
 
 hl.config({
   animations = {
@@ -46,27 +46,27 @@ hl.animation({
 hl.animation({
   leaf = "windowsIn",
   enabled = true,
-  speed = 3,
+  speed = 4.90,
   bezier = "emphasizedDecel",
   style = "popin 80%",
 })
 hl.animation({
   leaf = "fadeIn",
   enabled = true,
-  speed = 3,
+  speed = 4.90,
   bezier = "emphasizedDecel",
 })
 hl.animation({
   leaf = "windowsOut",
   enabled = true,
-  speed = 2,
+  speed = 2.9,
   bezier = "emphasizedDecel",
   style = "popin 90%",
 })
 hl.animation({
   leaf = "fadeOut",
   enabled = true,
-  speed = 2,
+  speed = 2.9,
   bezier = "emphasizedDecel",
 })
 hl.animation({
@@ -123,7 +123,7 @@ hl.animation({
 hl.animation({
   leaf = "workspaces",
   enabled = true,
-  speed = 7,
+  speed = 30,
   bezier = "menu_decel",
   style = "slide",
 })
