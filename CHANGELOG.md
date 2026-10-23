@@ -161,13 +161,11 @@
 
 ## Added:
 
+- `END-4-1.lua` animation preset
+  - From current END4 dotfiles
+  - https://github.com/end-4/dots-hyprland
 - `PR43` animation preset
-  - `config/hypr/animations/PR43.lua`, picked from the menu on SUPER SHIFT + A
-  - One `easeOut` bezier, `{ { 0.05, 0.9 }, { 0.1, 1.0 } }`
-  - `windows` and `windowsOut` at speed 5, on that bezier
-  - `border` at speed 5 and `fade` at speed 4, both on `default`
-  - `workspaces` at speed 6, `style = "slidefadevert"`
-     - https://github.com/43PR/dotfiles
+  - https://github.com/43PR/dotfiles
 - Indicator to mark current animation
 - Indicator to mark the current Rainbow Borders mode
   - `Kool_Quick_Settings.sh` marks the mode in effect and pre-selects it
