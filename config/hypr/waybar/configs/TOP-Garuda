@@ -34,6 +34,9 @@
 
 "modules-left": [
 	"custom/menu",
+  "separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
 	// numbers, not the shared circles module
 	"hyprland/workspaces#numbers",
 	"hyprland/window",
