@@ -244,6 +244,15 @@
   - Covers `eDP-1`, `DP-1`..`DP-3`, `HDMI-A-1` and `HDMI-A-2`
   - Apply it from Choose Monitor Profiles, then `SUPER + ALT + W` applies it
   - `preferred` rather than `highres`: the panel's own choice, always usable
+- `waybar/configs/garuda`, `waybar/style/garuda.css`, `waybar/launcher.png`
+  - A Nord top bar ported from a Garuda Linux Waybar
+  - `modules-left` opens with `custom/menu`, the rofi app menu
+  - `modules-right` ends with `custom/power`, the wlogout menu
+  - `custom/power` is the project module, pulled in through `include`
+  - `custom/menu` is mirrored locally to draw the launcher image
+  - It keeps the same rofi action; only `format` differs
+  - `launcher.png` sits at the waybar root, where `url()` resolves
+  - The style inlines its Nord palette, so it ships as one file
 
 ## Updated:
 
