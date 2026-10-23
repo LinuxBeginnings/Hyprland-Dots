@@ -4,6 +4,9 @@
 
 ## Fixed:
 
+- Moved waybar `network#speed` network mgr `nmtui` to Modules
+  - It was per bar and not consistent
+  - Thanks Leonardo Araujo @leolca
 - Legacy `hyprctl dispatch` calls no longer silently do nothing
   - Since Hyprland 0.55, `hyprctl dispatch` is a shorthand for `hl.dispatch(...)`
   - A dispatcher name plus arguments is parsed as Lua, so `workspace e+1` fails
@@ -158,6 +161,11 @@
   - Media keys read as `xf86audiomute` rather than `XF86AudioMute`
   - The menu now lists the binds the compositor actually has
   - So it cannot under-report, and it follows an override or an unbind
+- Waybar's `network#speed` module no longer ignores right-click
+  - The `network` block set `on-click-right`, `network#speed` set none
+  - Waybar looks up `config["network#speed"]`, not the parent module
+  - The instance now runs `WaybarScripts.sh --nmtui`, as `network` does
+  - Issue: [#161](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/161)
 
 ## Added:
 
