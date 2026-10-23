@@ -164,6 +164,10 @@
 - `END-4-1.lua` animation preset
   - From current END4 dotfiles
   - https://github.com/end-4/dots-hyprland
+  - Drops three `expressive*Spatial` curves nothing referenced
+  - Adds `global` and `fade`, which upstream leaves unset
+  - Affects `fadeSwitch`, `fadeShadow`, `fadeGlow`, `fadeDim`, `fadePopups*`
+  - Those now take the preset's timing, not Hyprland's stock values
 - `PR43` animation preset
   - https://github.com/43PR/dotfiles
 - Indicator to mark current animation

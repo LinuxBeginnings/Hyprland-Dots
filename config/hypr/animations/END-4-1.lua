@@ -8,18 +8,6 @@ hl.config({
 })
 
 -- Curves
-hl.curve("expressiveFastSpatial", {
-  type = "bezier",
-  points = { { 0.42, 1.67 }, { 0.21, 0.90 } },
-})
-hl.curve("expressiveSlowSpatial", {
-  type = "bezier",
-  points = { { 0.39, 1.29 }, { 0.35, 0.98 } },
-})
-hl.curve("expressiveDefaultSpatial", {
-  type = "bezier",
-  points = { { 0.38, 1.21 }, { 0.22, 1.00 } },
-})
 hl.curve("emphasizedDecel", {
   type = "bezier",
   points = { { 0.05, 0.7 }, { 0.1, 1 } },
@@ -45,6 +33,15 @@ hl.curve("stall", {
   points = { { 1, -0.1 }, { 0.7, 0.85 } },
 })
 -- Configs
+-- global
+-- Upstream leaves this unset, so unlisted leaves (monitorAdded) inherited
+-- Hyprland's stock timing rather than the values below.
+hl.animation({
+  leaf = "global",
+  enabled = true,
+  speed = 3,
+  bezier = "emphasizedDecel",
+})
 -- windows
 hl.animation({
   leaf = "windowsIn",
@@ -102,6 +99,14 @@ hl.animation({
   style = "popin 94%",
 })
 -- fade
+-- Parent of fadeSwitch/fadeShadow/fadeGlow/fadeDim and the popup fades, which
+-- upstream left at Hyprland's stock timing.
+hl.animation({
+  leaf = "fade",
+  enabled = true,
+  speed = 3,
+  bezier = "emphasizedDecel",
+})
 hl.animation({
   leaf = "fadeLayersIn",
   enabled = true,
