@@ -11,7 +11,7 @@
  * is mirrored below instead, because the Garuda bar draws that slot as an
  * image rather than a glyph.
  *
- * Pair with style/garuda.css.
+ * Pair with style/Garuda.css.
  */
 {
 "include": [
@@ -34,7 +34,8 @@
 
 "modules-left": [
 	"custom/menu",
-	"hyprland/workspaces",
+	// numbers, not the shared circles module
+	"hyprland/workspaces#numbers",
 	"hyprland/window",
 	],
 
@@ -56,7 +57,7 @@
 	],
 
 // Mirrors custom/menu in waybar/ModulesCustom - the same rofi app menu on left
-// click - but with a blank format so style/garuda.css can draw the Garuda
+// click - but with a blank format so style/Garuda.css can draw the Garuda
 // launcher image in the slot. The shared module's glyph would sit on top of
 // that image. Only "format" differs, so keep the actions in step with it.
 "custom/menu": {
