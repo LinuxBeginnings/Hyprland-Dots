@@ -123,7 +123,7 @@ hl.animation({
 hl.animation({
   leaf = "workspaces",
   enabled = true,
-  speed = 30,
+  speed = 10,
   bezier = "menu_decel",
   style = "slide",
 })
