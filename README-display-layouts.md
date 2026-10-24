@@ -79,7 +79,7 @@ layout, the live state wins and nothing is re-applied. Change a mode, reload, an
 it stays.
 
 Because the data model never touches the session, the entire logic is tested
-from JSON fixtures with no monitors attached — **666 automated checks** cover
+from JSON fixtures with no monitors attached — **677 automated checks** cover
 three- and four-monitor desktops, two identical monitors with no serial, a
 rotated monitor, a closed lid, the nwg-displays bridge and the installer patch.
 

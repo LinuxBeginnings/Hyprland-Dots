@@ -281,7 +281,7 @@ alone and let the watcher import the arrangement instead.
 | `scripts/MonitorWatcher.sh` | Watches Hyprland's event socket, and `~/.config/hypr/monitors.conf` so a directly-run `nwg-displays` is imported. One per session. |
 | `scripts/MonitorProfiles.sh` | Quick Settings → **Choose Monitor Profiles**: this system's layouts, plus a one-way import of `Monitor_Profiles/`. |
 | `Monitor_Profiles/Work.lua` | An example profile: one `preferred`/`auto`/`1` rule per output, matched by port. |
-| `scripts/tests/` | The 666-check suite. It is installed with the rest of `config/hypr`, so it is available on an installed system too - run it with `bash ~/.config/hypr/scripts/tests/run-all.sh`. |
+| `scripts/tests/` | The 677-check suite. It is installed with the rest of `config/hypr`, so it is available on an installed system too - run it with `bash ~/.config/hypr/scripts/tests/run-all.sh`. |
 
 Runtime state lives in `$XDG_RUNTIME_DIR/kooldots-display-profiles/`:
 `display-profile.log`, `monitor-watcher.log`, `current` (the fingerprint and the

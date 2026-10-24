@@ -28,6 +28,7 @@ PATCH81="$PATCH_DIR/81-monitor-profiles-readme.sh"
 PATCH82="$PATCH_DIR/82-monitors-lua-reset.sh"
 PATCH83="$PATCH_DIR/83-user-laptops-lid-open.sh"
 PATCH84="$PATCH_DIR/84-user-laptops-single-monitor.sh"
+PATCH85="$PATCH_DIR/85-monitor-profile-refresh-rate.sh"
 WORK="$(mktemp -d)"; trap 'rm -rf -- "$WORK"' EXIT
 
 # The suite is installed with the rest of config/hypr, but the patches it tests
@@ -516,5 +517,79 @@ env KOOLDOTS_CONFIG_HOME="$WORK/lu84-empty" KOOLDOTS_LOG="$WORK/patch84.log" \
   bash "$PATCH84" >/dev/null 2>&1 && pass_msg || fail "must exit 0 with nothing to patch"
 it "the single-monitor patch invents no config tree"
 if [[ -e "$WORK/lu84-empty/hypr" ]]; then fail "it created a config tree"; else pass_msg; fi
+
+# --- patches/85-monitor-profile-refresh-rate.sh -----------------------------
+# Monitor_Profiles/ is restored from the backup on upgrade, so a REWRITTEN
+# profile never reaches an existing install - the backup's copy wins. The shipped
+# high-refresh profile asked for `highrr`, which is the highest refresh rate at
+# ANY resolution: on a 1920x1080@75 panel it picked 1024x768@75.03, dropping the
+# resolution to chase 0.06Hz.
+MP85="$WORK/mp85"
+PROFILE85="$MP85/hypr/Monitor_Profiles/HDMI-A-1-HighRefreshRate.lua"
+
+# The profile v2.3.28 shipped, byte for byte. Only a file that still matches it
+# is replaced; anything else is the user's own profile.
+seed_profile85() {
+  rm -rf "$MP85"
+  mkdir -p "$MP85/hypr/Monitor_Profiles"
+  cat >"$PROFILE85" <<'LUA'
+-- ==================================================
+--  KoolDots (2026)
+--  Project URL: https://github.com/LinuxBeginnings
+--  License: GNU GPLv3
+--  SPDX-License-Identifier: GPL-3.0-or-later
+-- ==================================================
+
+-- HDMI-A-1 High Refresh Rate profile
+
+hl.monitor({
+    output = "HDMI-A-1",
+    mode = "highrr",
+    position = "auto",
+    scale = "1",
+})
+LUA
+}
+
+run_patch85() {
+  env KOOLDOTS_CONFIG_HOME="$MP85" KOOLDOTS_LOG="$WORK/patch85.log" bash "$PATCH85"
+}
+
+seed_profile85
+it "the high-refresh patch runs cleanly on the profile v2.3.28 shipped"
+run_patch85 && pass_msg || fail "the patch exited non-zero"
+
+it "the profile no longer asks for highrr"
+assert_not_contains "$PROFILE85" 'mode = "highrr"' "highrr is still there" && pass_msg
+
+it "the profile asks for one mode by name instead"
+assert_contains "$PROFILE85" 'mode = "1920x1080@75"' "the explicit mode is not there" && pass_msg
+
+assert_eq "the patched profile is byte-identical to the repo's copy" \
+  "$(cat "$SCRIPT_DIR/../Monitor_Profiles/HDMI-A-1-HighRefreshRate.lua")" \
+  "$(cat "$PROFILE85")"
+
+it "a second run changes nothing"
+before="$(cat "$PROFILE85")"
+run_patch85 >/dev/null 2>&1 || fail "the second run exited non-zero"
+assert_eq "byte-identical after a second run" "$before" "$(cat "$PROFILE85")"
+
+it "no temporary file is left beside the profile"
+stray="$(find "$MP85/hypr/Monitor_Profiles" -maxdepth 1 -name '.kooldots-profile.*' 2>/dev/null)"
+if [[ -n $stray ]]; then fail "left behind: $stray"; else pass_msg; fi
+
+it "a profile the user has edited is left alone"
+seed_profile85
+sed -i 's/^    mode = "highrr",$/    mode = "2560x1440@144",/' "$PROFILE85"
+before="$(cat "$PROFILE85")"
+run_patch85 >/dev/null 2>&1 && pass_msg || fail "must exit 0 on a file it does not recognise"
+assert_eq "the file is untouched" "$before" "$(cat "$PROFILE85")"
+
+mkdir -p "$WORK/mp85-empty"
+it "a missing profile is skipped cleanly"
+env KOOLDOTS_CONFIG_HOME="$WORK/mp85-empty" KOOLDOTS_LOG="$WORK/patch85.log" \
+  bash "$PATCH85" >/dev/null 2>&1 && pass_msg || fail "must exit 0 with nothing to patch"
+it "the high-refresh patch invents no config tree"
+if [[ -e "$WORK/mp85-empty/hypr" ]]; then fail "it created a config tree"; else pass_msg; fi
 
 summary "test-display-layouts-patch"

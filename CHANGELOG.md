@@ -14,6 +14,8 @@
   - `mode = "highrr"` is the highest refresh rate at any resolution
   - A 1920x1080@75 panel also advertises 1024x768@75.03, which won
   - The profile now asks for `1920x1080@75` explicitly
+  - `Monitor_Profiles/` is restored from backup, so an install needs a patch
+  - `patches/85-monitor-profile-refresh-rate.sh` replaces it when unedited
 - Disabled monitor broke `nwg-displays` parser
 - Moved waybar `network#speed` network mgr `nmtui` to Modules
   - It was per bar and not consistent
