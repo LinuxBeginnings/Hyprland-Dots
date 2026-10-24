@@ -38,7 +38,10 @@ jq -c '[ .[] | select(.name == "eDP-1") ]' "$F/monitors-dual.json" >"$WORK/lapto
 norm_file() { ds_normalize "$1" >"$WORK/n.json"; printf '%s' "$WORK/n.json"; }
 FP_DUAL="$(ds_fingerprint "$(norm_file "$F/monitors-dual.json")")"
 
-reset_store() { cp "$F/store-v1.json" "$WORK/store.json"; rm -f "$WORK/monitors.lua"; }
+reset_store() {
+  cp "$F/store-v1.json" "$WORK/store.json"
+  rm -f "$WORK/monitors.lua" "$WORK/system-monitors.lua" "$WORK/user-laptops.lua"
+}
 
 # run_dp <all-fixture> <active-fixture> <args...>
 run_dp() {
@@ -46,6 +49,8 @@ run_dp() {
   sandbox_reset_log
   FAKE_MONITORS_ALL="$all" FAKE_MONITORS="$active" \
   DP_STORE_FILE="$WORK/store.json" DP_MONITORS_LUA="$WORK/monitors.lua" \
+  DP_SYSTEM_MONITORS_LUA="$WORK/system-monitors.lua" \
+  DP_USER_LAPTOPS_LUA="$WORK/user-laptops.lua" \
   DP_RUNTIME_DIR="$WORK/run" DP_SKIP_LOCK=1 \
   DP_WAYBAR_CONFIG="$WORK/waybar/config" DP_WAYBAR_STYLE="$WORK/waybar/style.css" \
   DP_VERIFY_ATTEMPTS=2 DP_VERIFY_DELAY=0 FAKE_MONITORS_SEQ="${SEQ:-}" \
@@ -732,5 +737,53 @@ it "reapply with no monitors connected stands down quietly"
 printf '[]\n' >"$WORK/none.json"
 run_dp "$WORK/none.json" "$WORK/none.json" reapply >/dev/null 2>&1 && pass_msg || fail "must exit 0"
 assert_count_re 0 "$CALL_LOG" 'hl\.monitor'
+
+# --- config-newer: a hand edit outranks the recorded layout ------------------
+# MonitorWatcher.sh asks this before it re-applies anything after a config
+# reload. A reload re-runs the Lua config, so a mode edited in
+# UserConfigs/monitors.lua is what is on screen when the event arrives, and
+# replaying the record would put the old mode back about two seconds later,
+# silently - both are valid layouts. The record is compared by mtime against the
+# files that decide monitor modes.
+it "config-newer is false when nothing has been edited since the record"
+reset_store
+run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" -- Home >/dev/null 2>&1
+if run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" config-newer >/dev/null 2>&1
+then fail "a layout this system just wrote was mistaken for a hand edit"; else pass_msg; fi
+
+it "config-newer is true once UserConfigs/monitors.lua is edited"
+reset_store
+run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" -- Home >/dev/null 2>&1
+# An explicit bump, not a sleep: what matters is that the file was written after
+# the record, and this does not depend on the filesystem's timestamp tick.
+touch -d '+1 minute' "$WORK/monitors.lua"
+run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" config-newer >/dev/null 2>&1 \
+  && pass_msg || fail "the edit was not noticed"
+
+it "config-newer is true when the system monitor rules are edited"
+reset_store
+run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" -- Home >/dev/null 2>&1
+printf 'hl.monitor({ output = "", mode = "preferred" })\n' >"$WORK/system-monitors.lua"
+touch -d '+1 minute' "$WORK/system-monitors.lua"
+run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" config-newer >/dev/null 2>&1 \
+  && pass_msg || fail "lua/monitors.lua was not noticed"
+
+it "config-newer is true when the laptop controller is edited"
+reset_store
+run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" -- Home >/dev/null 2>&1
+printf -- '-- user_laptops.lua\n' >"$WORK/user-laptops.lua"
+touch -d '+1 minute' "$WORK/user-laptops.lua"
+run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" config-newer >/dev/null 2>&1 \
+  && pass_msg || fail "user_laptops.lua was not noticed"
+
+it "config-newer is false when there is no record to be stale"
+reset_store
+rm -f "$STATE/current"
+if run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" config-newer >/dev/null 2>&1
+then fail "a missing record read as an edit"; else pass_msg; fi
+
+it "config-newer is classified read-only, so a reload never waits for the lock"
+if sed -n '/^wants_read_only()/,/^}/p' "$SCRIPT" | grep -q 'config-newer'; then pass_msg
+else fail "config-newer would take the display lock on every reload"; fi
 
 summary "test-display-profile"

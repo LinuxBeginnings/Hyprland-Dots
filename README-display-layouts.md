@@ -70,8 +70,16 @@ Only **you** write that file: applying a named layout, or importing a drag from
 file is yours. A saved layout is re-read from the store instead, so leaving the
 file alone loses nothing.
 
+A **reload** does not undo it either. `hyprctl reload` re-runs the Lua config,
+and the watcher answers the resulting `configreloaded` event by re-applying the
+layout that was running — which would put the old arrangement back over an edit
+that has just taken effect. So it asks first: if `UserConfigs/monitors.lua`,
+`lua/monitors.lua` or `UserConfigs/user_laptops.lua` is newer than the recorded
+layout, the live state wins and nothing is re-applied. Change a mode, reload, and
+it stays.
+
 Because the data model never touches the session, the entire logic is tested
-from JSON fixtures with no monitors attached — **548 automated checks** cover
+from JSON fixtures with no monitors attached — **666 automated checks** cover
 three- and four-monitor desktops, two identical monitors with no serial, a
 rotated monitor, a closed lid, the nwg-displays bridge and the installer patch.
 
@@ -87,7 +95,7 @@ rotated monitor, a closed lid, the nwg-displays bridge and the installer patch.
 | `scripts/README-display-profiles.md` | Full operational guide |
 | `UserConfigs/display-layouts.json` | Your saved layouts (ships empty) |
 | `Monitor_Profiles/Work.lua` | An example profile to copy or edit |
-| `scripts/tests/` | 10 suites + 35 fixtures |
+| `scripts/tests/` | 19 suites + 35 fixtures |
 
 **Existing files changed**, each with a fallback so the dots still work without
 this feature: `WaybarStartup.sh` and `Refresh.sh` (ask the controller which
@@ -228,6 +236,8 @@ DisplayProfile.sh capture -- <name>     save the live state under a name
 DisplayProfile.sh set-default -- <name> make it this set's default
 DisplayProfile.sh delete -- <name>      delete a layout
 DisplayProfile.sh label -- <text>       name this monitor set
+DisplayProfile.sh config-newer          exit 0 if a monitor config file is newer
+                                        than the recorded layout
 DisplayProfile.sh import-nwg <file>     apply what nwg-displays wrote
 DisplayProfile.sh --dry-run auto        print the plan, change nothing
 ```

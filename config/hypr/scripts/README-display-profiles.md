@@ -142,6 +142,17 @@ every login and after every monitor event, the file is yours, and a saved layout
 is re-resolved from the store anyway. So editing it by hand is safe; a boot will
 not put its own arrangement back over your edit.
 
+**Neither will a reload.** `hyprctl reload` re-runs the Lua config, and the
+watcher answers the `configreloaded` event by re-applying the layout that was
+running - which would undo an edit that has just taken effect on screen. So it
+asks first: if `UserConfigs/monitors.lua`, `lua/monitors.lua` or
+`UserConfigs/user_laptops.lua` has been written since the recorded layout was,
+the live state is the newer statement of intent and nothing is re-applied.
+Change a mode, reload, and it stays. (`DisplayProfile.sh config-newer` is the
+question it asks; the answer is a comparison of modification times against the
+recorded layout, so a layout this system has just written is never mistaken for
+an edit.)
+
 The file it writes carries a marker line saying it was generated. **Delete that
 marker line to take the file over**: from then on it is treated as yours, it is
 never overwritten, and the lid logic still honours what it says.
@@ -270,7 +281,7 @@ alone and let the watcher import the arrangement instead.
 | `scripts/MonitorWatcher.sh` | Watches Hyprland's event socket, and `~/.config/hypr/monitors.conf` so a directly-run `nwg-displays` is imported. One per session. |
 | `scripts/MonitorProfiles.sh` | Quick Settings → **Choose Monitor Profiles**: this system's layouts, plus a one-way import of `Monitor_Profiles/`. |
 | `Monitor_Profiles/Work.lua` | An example profile: one `preferred`/`auto`/`1` rule per output, matched by port. |
-| `scripts/tests/` | The 548-check suite. It is installed with the rest of `config/hypr`, so it is available on an installed system too - run it with `bash ~/.config/hypr/scripts/tests/run-all.sh`. |
+| `scripts/tests/` | The 666-check suite. It is installed with the rest of `config/hypr`, so it is available on an installed system too - run it with `bash ~/.config/hypr/scripts/tests/run-all.sh`. |
 
 Runtime state lives in `$XDG_RUNTIME_DIR/kooldots-display-profiles/`:
 `display-profile.log`, `monitor-watcher.log`, `current` (the fingerprint and the
@@ -301,6 +312,8 @@ DisplayProfile.sh label -- <text>       name this monitor set
 DisplayProfile.sh list                  layout names for this set
 DisplayProfile.sh monitors-json          path to the normalized monitor list
 DisplayProfile.sh waybar-config          the config path Waybar should run
+DisplayProfile.sh config-newer           exit 0 if a monitor config file is newer
+                                         than the recorded layout
 DisplayProfile.sh import-nwg <file>      apply what nwg-displays wrote
 DisplayProfile.sh --dry-run auto         print the plan, change nothing
 ```

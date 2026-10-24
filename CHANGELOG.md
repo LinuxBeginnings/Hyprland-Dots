@@ -4,6 +4,16 @@
 
 ## Fixed:
 
+- A `monitors.lua` refresh-rate edit survives `hyprctl reload`
+  - `MonitorWatcher.sh` re-applied the recorded layout on `configreloaded`
+  - The record still held the previous mode, so the edit was undone in ~2s
+  - It now asks `DisplayProfile.sh config-newer` and stands down when edited
+  - The check compares mtimes against the recorded layout
+  - `UserConfigs/monitors.lua`, `lua/monitors.lua`, `user_laptops.lua` count
+- `HDMI-A-1-HighRefreshRate` no longer drops to 1024x768
+  - `mode = "highrr"` is the highest refresh rate at any resolution
+  - A 1920x1080@75 panel also advertises 1024x768@75.03, which won
+  - The profile now asks for `1920x1080@75` explicitly
 - Disabled monitor broke `nwg-displays` parser
 - Moved waybar `network#speed` network mgr `nmtui` to Modules
   - It was per bar and not consistent

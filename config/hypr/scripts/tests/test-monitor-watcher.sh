@@ -25,9 +25,20 @@ NWG_CONF="$SANDBOX/nwg-monitors.conf"
 NWG_STAMP="$SANDBOX/kooldots-display-profiles/nwg-import.stamp"
 
 # Fake controller: records each invocation instead of touching the session.
+#
+# Every fake below also has to answer `config-newer`, the one query the watcher
+# makes: a non-zero status is the real answer for "no monitor config file is
+# newer than the recorded layout". A blanket `exit 0` would read as "the monitor
+# configuration was edited" on every reload, and no re-apply would ever happen.
+# FAKE_CONFIG_NEWER=1 flips it, which is how the hand-edited-config tests below
+# are driven.
 cat > "$BIN/DisplayProfile.sh" <<'EOS'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$PROFILE_LOG"
+if [[ ${1:-} == "config-newer" ]]; then
+  [[ -n ${FAKE_CONFIG_NEWER:-} ]] && exit 0
+  exit 1
+fi
 exit 0
 EOS
 chmod +x "$BIN/DisplayProfile.sh"
@@ -171,6 +182,10 @@ it "a long-lived grandchild does not keep the watcher lock held"
 cat > "$BIN/DisplayProfile.sh" <<'EOS'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$PROFILE_LOG"
+if [[ ${1:-} == "config-newer" ]]; then
+  [[ -n ${FAKE_CONFIG_NEWER:-} ]] && exit 0
+  exit 1
+fi
 # emulate waybar: a child that outlives this script
 ( exec sleep 10 ) &
 exit 0
@@ -192,6 +207,10 @@ it "the event stream does not keep the watcher lock held"
 cat > "$BIN/DisplayProfile.sh" <<'EOS'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$PROFILE_LOG"
+if [[ ${1:-} == "config-newer" ]]; then
+  [[ -n ${FAKE_CONFIG_NEWER:-} ]] && exit 0
+  exit 1
+fi
 exit 0
 EOS
 chmod +x "$BIN/DisplayProfile.sh"
@@ -247,6 +266,10 @@ it "an event whose profile change could not be applied is retried, not dropped"
 cat > "$BIN/DisplayProfile.sh" <<'EOS'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$PROFILE_LOG"
+if [[ ${1:-} == "config-newer" ]]; then
+  [[ -n ${FAKE_CONFIG_NEWER:-} ]] && exit 0
+  exit 1
+fi
 # fail the first apply after startup, succeed afterwards
 if [[ $(wc -l < "$PROFILE_LOG") -eq 2 ]]; then exit 1; fi
 exit 0
@@ -264,6 +287,10 @@ assert_contains "$SANDBOX/out.txt" "retry" && pass_msg
 cat > "$BIN/DisplayProfile.sh" <<'EOS'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$PROFILE_LOG"
+if [[ ${1:-} == "config-newer" ]]; then
+  [[ -n ${FAKE_CONFIG_NEWER:-} ]] && exit 0
+  exit 1
+fi
 exit 0
 EOS
 chmod +x "$BIN/DisplayProfile.sh"
@@ -371,6 +398,39 @@ printf '{"monitors":[]}\n' >"$SANDBOX/kooldots-display-profiles/active-layout.js
 st=$(run_watcher events-configreloaded.txt)
 assert_status 0 "$st" "watcher exit"
 [[ $(grep -c '^auto$' "$PROFILE_LOG") -ge 1 ]] || fail "expected an auto call: $(cat "$PROFILE_LOG")"
+rm -f "$SANDBOX/kooldots-display-profiles/active-layout.json" \
+      "$SANDBOX/kooldots-display-profiles/active-layout.fingerprint" \
+      "$SANDBOX/kooldots-display-profiles/current"
+pass_msg
+
+# --- a hand-edited monitor configuration ------------------------------------
+# A reload re-runs the Lua config, so a mode edited in UserConfigs/monitors.lua
+# is what is on screen when the event arrives. Replaying the record would put
+# the old mode back about two seconds later, silently - both are valid layouts.
+# The watcher asks the controller first, so neither branch may fire.
+it "configreloaded does not re-apply a named layout over a hand edit"
+printf 'FP\nWork\n' >"$SANDBOX/kooldots-display-profiles/current"
+st=$(run_watcher events-configreloaded.txt "FAKE_CONFIG_NEWER=1")
+assert_status 0 "$st" "watcher exit"
+assert_contains "$PROFILE_LOG" "config-newer" "the controller was asked first"
+[[ "$(grep -c '^-- Work$' "$PROFILE_LOG" || true)" == "0" ]] \
+  || fail "the recorded layout was applied over the edit: $(tr '\n' '|' <"$PROFILE_LOG")"
+# The startup reconciliation is the only auto allowed: a second one would be
+# the configreloaded path falling back to the set default over the edit.
+[[ "$(grep -c '^auto$' "$PROFILE_LOG" || true)" == "1" ]] \
+  || fail "expected only the startup auto, got: $(tr '\n' '|' <"$PROFILE_LOG")"
+rm -f "$SANDBOX/kooldots-display-profiles/current"
+assert_contains "$SANDBOX/watcher.log" "monitor configuration was edited" \
+  "the reason was logged" && pass_msg
+
+it "configreloaded does not replay a recorded layout over a hand edit"
+printf 'FP\n(auto)\n' >"$SANDBOX/kooldots-display-profiles/current"
+printf 'FP\n' >"$SANDBOX/kooldots-display-profiles/active-layout.fingerprint"
+printf '{"monitors":[]}\n' >"$SANDBOX/kooldots-display-profiles/active-layout.json"
+st=$(run_watcher events-configreloaded.txt "FAKE_CONFIG_NEWER=1")
+assert_status 0 "$st" "watcher exit"
+[[ "$(grep -c '^reapply$' "$PROFILE_LOG" || true)" == "0" ]] \
+  || fail "the recorded layout was replayed over the edit: $(tr '\n' '|' <"$PROFILE_LOG")"
 rm -f "$SANDBOX/kooldots-display-profiles/active-layout.json" \
       "$SANDBOX/kooldots-display-profiles/active-layout.fingerprint" \
       "$SANDBOX/kooldots-display-profiles/current"

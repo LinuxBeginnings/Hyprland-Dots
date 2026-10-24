@@ -18,6 +18,7 @@
 #     DisplayProfile.sh list                  layout names, one per line
 #     DisplayProfile.sh monitors-json          path to the normalized monitors
 #     DisplayProfile.sh waybar-config          path Waybar should run with
+#     DisplayProfile.sh config-newer           has a monitor config file changed?
 #     DisplayProfile.sh import-nwg <file>      apply what nwg-displays wrote
 #     DisplayProfile.sh --dry-run              print the plan, change nothing
 #
@@ -50,6 +51,13 @@ DP_WAYBAR_CONFIG="${DP_WAYBAR_CONFIG:-$config_home/hypr/waybar/config}"
 DP_WAYBAR_STYLE="${DP_WAYBAR_STYLE:-$config_home/hypr/waybar/style.css}"
 DP_STORE_FILE="${DP_STORE_FILE:-$config_home/hypr/UserConfigs/display-layouts.json}"
 DP_MONITORS_LUA="${DP_MONITORS_LUA:-$config_home/hypr/UserConfigs/monitors.lua}"
+# The other two files that decide monitor modes, and are therefore part of "the
+# monitor configuration" for dp_config_newer_than_record below. lua/monitors.lua
+# holds the wildcard and the per-output system rules; user_laptops.lua re-applies
+# the rules in DP_MONITORS_LUA from its own lid logic. A reload re-runs all
+# three, so a write to any of them is the user's latest word on the monitors.
+DP_SYSTEM_MONITORS_LUA="${DP_SYSTEM_MONITORS_LUA:-$config_home/hypr/lua/monitors.lua}"
+DP_USER_LAPTOPS_LUA="${DP_USER_LAPTOPS_LUA:-$config_home/hypr/UserConfigs/user_laptops.lua}"
 # Stamped into every monitors.lua this script generates. It is what makes the
 # file OURS: a monitors.lua with hl.monitor calls and no marker is the user's own
 # configuration (or MonitorProfiles.sh's) and is never overwritten.
@@ -80,9 +88,9 @@ DS_JQ="$DP_JQ"
 
 # --- Output ----------------------------------------------------------------
 usage() {
-  # 9..31 is exactly the comment block above: the range must stop short of
+  # 9..32 is exactly the comment block above: the range must stop short of
   # `set -Eeuo pipefail`, which is a line of shell, not of documentation.
-  sed -n '9,31p' -- "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '9,32p' -- "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 log() {
@@ -498,11 +506,43 @@ dp_workspaces_on() {
 # --- State -----------------------------------------------------------------
 # Two lines: the fingerprint, then the layout name. The menu reads it to show
 # what is running, and the watcher re-applies THIS layout after a config
-# reload rather than jumping back to the set's default.
+# reload rather than jumping back to the set's default - unless a monitor
+# config file has been edited since, which is what dp_config_newer_than_record
+# below answers.
 dp_state_write() {
   [[ $DRY_RUN -eq 1 ]] && return 0
   mkdir -p -- "$STATE_DIR"
   printf '%s\n%s\n' "$1" "$2" >"$STATE_FILE" 2>/dev/null || true
+}
+
+# dp_config_newer_than_record
+#   True when one of the files that decide monitor modes has been written more
+#   recently than the recorded layout. A reload re-runs those files, so what is
+#   on screen afterwards is what they say - and the record, written by the last
+#   apply, is then the older statement of intent. Replaying it would put the
+#   previous arrangement back over the edit, silently, because both are valid
+#   layouts. That is how a refresh rate set in UserConfigs/monitors.lua was
+#   undone about two seconds after the reload that applied it.
+#
+#   Compared by mtime, like the nwg-displays watch in MonitorWatcher.sh. Every
+#   apply writes the Lua config BEFORE dp_state_write runs, so a layout this
+#   system has just written is never mistaken for a hand edit. Where the two do
+#   land in the same filesystem timestamp tick their mtimes are equal, the test
+#   is false, and the record wins - which is the safe direction.
+#
+#   With no record there is nothing that can be stale, so this is false and the
+#   caller resolves afresh. Exposed as the read-only `config-newer` verb, which
+#   is how MonitorWatcher.sh asks - so the definition of "the monitor
+#   configuration" lives here only.
+dp_config_newer_than_record() {
+  [[ -f $STATE_FILE ]] || return 1
+  local f
+  for f in "$DP_MONITORS_LUA" "$DP_SYSTEM_MONITORS_LUA" "$DP_USER_LAPTOPS_LUA"; do
+    if [[ -f $f && $f -nt $STATE_FILE ]]; then
+      return 0
+    fi
+  done
+  return 1
 }
 
 # --- Coexistence -----------------------------------------------------------
@@ -902,7 +942,7 @@ main() {
   case "${1-}" in
     "" | --dry-run)                      verb=auto ;;
     --)                                  shift; verb=layout; name=${1-} ;;
-    auto | reapply | list | monitors-json | waybar-config) verb=$1 ;;
+    auto | reapply | list | monitors-json | waybar-config | config-newer) verb=$1 ;;
     capture | set-default | delete | label)
       verb=$1; shift
       [[ ${1-} == "--" ]] && shift
@@ -930,6 +970,7 @@ main() {
     import-nwg)    dp_import_nwg "$name" ;;
     monitors-json) dp_monitors ;;
     waybar-config) dp_waybar_config_verb ;;
+    config-newer)  dp_config_newer_than_record ;;
     *)             usage; die "unknown verb: $verb" ;;
   esac
 }
@@ -983,7 +1024,7 @@ wants_dry_run() {
 }
 
 wants_read_only() {
-  case "${1-}" in list | monitors-json | waybar-config | -h | --help) return 0 ;; esac
+  case "${1-}" in list | monitors-json | waybar-config | config-newer | -h | --help) return 0 ;; esac
   return 1
 }
 

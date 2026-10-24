@@ -267,8 +267,23 @@ apply_auto() {
 # to re-resolve: re-resolving would silently replace the arrangement the user
 # just made. The controller re-checks the fingerprint itself and falls back to
 # `auto` when the recorded layout is not for the monitors now connected.
+#
+# A HAND EDIT to the monitor configuration outranks the record, and is checked
+# before either branch. The reload that got us here has just re-run
+# lua/monitors.lua, UserConfigs/monitors.lua and user_laptops.lua, so what is on
+# screen now is what those files say; the record was written by the last apply
+# and is the older statement of intent. Replaying it would put the previous
+# arrangement back over the edit - silently, because both are valid layouts.
+# That is how a refresh rate set in UserConfigs/monitors.lua was undone about
+# two seconds after the reload that applied it. The controller answers the
+# question, so the files that count as "the monitor configuration" are listed in
+# one place rather than two.
 apply_current() {
   local name="" recorded="" layout_fp=""
+  if "$MW_PROFILE_SCRIPT" config-newer 9>&-; then
+    log "the monitor configuration was edited; leaving what the reload applied alone"
+    return 0
+  fi
   if [[ -f $MW_STATE_FILE ]]; then
     recorded="$(sed -n '1p' -- "$MW_STATE_FILE" 2>/dev/null || true)"
     name="$(sed -n '2p' -- "$MW_STATE_FILE" 2>/dev/null || true)"
