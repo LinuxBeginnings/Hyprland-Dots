@@ -4,6 +4,7 @@
 
 ## Fixed:
 
+- Disabled monitor broke `nwg-displays` parser
 - Moved waybar `network#speed` network mgr `nmtui` to Modules
   - It was per bar and not consistent
   - Thanks Leonardo Araujo @leolca
