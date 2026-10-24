@@ -107,6 +107,13 @@ ds_name_valid() {
 # ds_validate_layout <layout.json> -> 0, or 1 with one line on stderr.
 #   Called before anything touches the session, so a hand-edited store cannot
 #   black out the screen.
+#
+#   The mode check covers ENABLED monitors only. nwg-displays writes a bare
+#   `monitor=<name>,disable` line with no mode line for a monitor it switches
+#   off, so a parsed layout legitimately carries an empty mode there - and the
+#   apply path sends `disabled = true` and never reads that mode. Demanding one
+#   rejected every clamshell arrangement (laptop panel off, external on) at
+#   import, with "a monitor mode is not WIDTHxHEIGHT@REFRESH".
 ds_validate_layout() {
   local f=$1 reason
   reason="$("$DS_JQ" -r '
@@ -119,8 +126,9 @@ ds_validate_layout() {
       then "a monitor has no identity"
     elif ([ .monitors[] | select((.scale | tonumber? // 0) <= 0) ] | length) > 0
       then "a monitor has a scale of zero or less"
-    elif ([ .monitors[] | select(((.mode // "") | test("^[1-9][0-9]*x[1-9][0-9]*@[0-9]+(\\.[0-9]+)?$")) | not) ] | length) > 0
-      then "a monitor mode is not WIDTHxHEIGHT@REFRESH with non-zero dimensions"
+    elif ([ .monitors[] | select(.enabled == true)
+            | select(((.mode // "") | test("^[1-9][0-9]*x[1-9][0-9]*@[0-9]+(\\.[0-9]+)?$")) | not) ] | length) > 0
+      then "an enabled monitor mode is not WIDTHxHEIGHT@REFRESH with non-zero dimensions"
     elif ([ .monitors[] | select(has("x") and ((.x | type) != "number")) ] | length) > 0
       then "a monitor x is not a number"
     elif ([ .monitors[] | select(has("y") and ((.y | type) != "number")) ] | length) > 0

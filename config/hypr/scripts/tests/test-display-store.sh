@@ -570,6 +570,28 @@ ds_from_nwg_conf "$WORK/nwg-off.conf" "$n_dual" >"$WORK/nwg-off.json"
 if [[ "$(jq -r '.monitors[]|select(.identity|startswith("ASUS"))|.enabled' "$WORK/nwg-off.json")" == "false" ]]; then pass_msg
 else fail "disable line not honoured"; fi
 
+it "a bare disable line with no mode line still imports"
+# nwg writes `monitor=<name>,disable` INSTEAD of a mode line for a monitor it
+# switches off - not both, which is what the test above covers. The parsed entry
+# then has no mode, and that is correct: the apply path sends `disabled = true`
+# and never reads that mode. Requiring one rejected every clamshell arrangement
+# (laptop panel off, external monitor on) at import.
+cat >"$WORK/nwg-off-only.conf" <<'EOS'
+monitor=desc:BOE 0x0630,disable
+monitor=desc:ASUSTek COMPUTER INC VG249Q3A S7LMBS003105,1920x1080@119.88,0x0,1.0
+EOS
+ds_from_nwg_conf "$WORK/nwg-off-only.conf" "$n_dual" >"$WORK/nwg-off-only.json"
+assert_json_eq "$WORK/nwg-off-only.json" '.monitors[]|select(.identity|startswith("BOE"))|.enabled' 'false'
+assert_json_eq "$WORK/nwg-off-only.json" '.monitors[]|select(.identity|startswith("BOE"))|.mode' ''
+assert_json_eq "$WORK/nwg-off-only.json" '.monitors[]|select(.identity|startswith("ASUS"))|.mode' '1920x1080@119.88'
+it "a layout with a disabled monitor and an empty mode validates"
+ds_validate_layout "$WORK/nwg-off-only.json" 2>/dev/null && pass_msg || fail "should validate"
+
+it "an empty mode on an ENABLED monitor is still rejected"
+jq -c '.monitors |= map(if .enabled then .mode = "" else . end)' \
+  "$WORK/nwg-off-only.json" >"$WORK/nwg-off-bad.json"
+if ds_validate_layout "$WORK/nwg-off-bad.json" 2>/dev/null; then fail "must be rejected"; else pass_msg; fi
+
 it "a transform line is applied"
 cat >"$WORK/nwg-rot.conf" <<'EOS'
 monitor=desc:BOE 0x0630,1920x1080@60.03,0x0,1.0
