@@ -1,5 +1,19 @@
 # Changelog — KoolDots
 
+## v2.3.29
+
+## Added:
+
+- `WaybarStartup.sh` records why it started, or why it did not
+  - Every early exit was silent, so a missing bar had no explanation
+  - A lock timeout, an already-running bar and a failed launch looked alike
+  - It now logs the environment, the resolved config and the branch taken
+  - `WAYBAR_STARTUP_LOG` defaults to `$XDG_RUNTIME_DIR/waybar-startup.log`
+  - It logs whether a bar actually appeared, not just that one was launched
+  - Waybar's own stderr now goes to `$XDG_RUNTIME_DIR/waybar.log`
+  - It was sent to `/dev/null`, so a config or CSS error left no trace
+  - `WAYBAR_LOG` still overrides that destination
+
 ## v2.3.28
 
 ## Fixed:
