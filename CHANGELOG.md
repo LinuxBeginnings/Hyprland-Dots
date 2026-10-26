@@ -696,7 +696,7 @@
 
 ---
 
-## v2.3.6.4
+## v2.3.26.4
 
 - Fixed:
   - Missing or incorrect Keybinds
@@ -712,7 +712,7 @@
 
 ---
 
-## v2.3.6.3
+## v2.3.26.3
 
 ## Fixed:
 
@@ -1834,7 +1834,7 @@ Key Changes:
 
 ### 🌇 HyprSunset
 
-- 🔧 Availble from waybar or`SUPER + N`
+- 🔧 Available from waybar or`SUPER + N`
 
 ### 🖱️ Gestures
 
