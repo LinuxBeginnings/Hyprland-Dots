@@ -38,7 +38,11 @@ The user's interactive shell is **zsh** (currently 5.9.2) on ~98% of their syste
 
 - `git fetch --prune` and pull the current branch before editing. Never start work on a stale branch.
 - Stash or commit local edits first, so the pull cannot fail or conflict.
-- Work on `development`. Pull requests target `development`, not `main`.
+- Work on `development` and push there directly.
+- Do not open a pull request for work on `development`, and do not offer to.
+  - `development` reaches `main` only when a release is cut.
+  - A change is finished once it is on `development`.
+  - Pull requests from outside contributors still target `development`.
 - Say which branch and commit the work started from.
 
 ## Remote
@@ -48,6 +52,19 @@ The user's interactive shell is **zsh** (currently 5.9.2) on ~98% of their syste
 - Keep the transport already in use. This repo is SSH, so a corrected URL stays `git@github.com:...`, never `https://`.
 - Do not defer it: GitHub redirects the old path, so nothing fails loudly and every later push repeats the warning.
 - The difference is usually only the case of the org name (`Linuxbeginnings` against `LinuxBeginnings`), but treat whatever URL GitHub names as the one to use.
+
+## Supported distros
+
+The installer and the dotfiles upgrade flow cover these:
+
+- Debian, Arch, Fedora and openSUSE: installer on `main`.
+- Ubuntu: the installer is branched per release, matched on `VERSION_ID`.
+  - Linux Mint and Zorin OS are supported as Ubuntu 24.04 based.
+  - Ubuntu 26.10 is not officially supported and uses the 26.04 branch.
+    - It must warn: `Ubuntu 26.10 not officially supported. Use at own risk`
+- NixOS and Gentoo are not covered.
+  - NixOS is declarative and ships no `update-deps.sh`.
+  - There is no Gentoo installer repository.
 
 ## Changelog
 

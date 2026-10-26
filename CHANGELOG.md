@@ -13,6 +13,8 @@
   - A terminal opens for both, since they use `sudo` and ask questions
   - It asks before removing the temp dir, and keeps it when a step fails
   - It reminds you to update the OS first, and links the Debian Hyprland guide
+  - Linux Mint and Zorin OS are supported as Ubuntu 24.04 based
+  - Ubuntu 26.10 is not supported and uses the 26.04 branch, with a warning
   - NixOS, Gentoo and unknown distros keep the old check-only behaviour
   - `KooLsDotsUpgrade.sh --dry-run` prints the plan and changes nothing
 - `WaybarStartup.sh` records why it started, or why it did not

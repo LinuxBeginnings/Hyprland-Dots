@@ -35,10 +35,10 @@ kdu_os_release_value() {
 }
 
 # kdu_distro_from_osrelease <file> -> debian|ubuntu|arch|fedora|opensuse|nixos|gentoo|unknown
-# Reads the file only, so it is deterministic and testable. Derivatives are
-# resolved through ID_LIKE, which is ordered most specific first: Mint reports
-# "ubuntu debian" and belongs with Ubuntu, Kali reports "debian" and belongs
-# with Debian.
+# Reads the file only, so it is deterministic and testable. Mint and Zorin are
+# named directly and treated as Ubuntu. Other derivatives resolve through
+# ID_LIKE, ordered most specific first: Pop!_OS reports "ubuntu debian" and
+# belongs with Ubuntu, Kali reports "debian" and belongs with Debian.
 kdu_distro_from_osrelease() {
   local file="$1" id like word
   id="$(kdu_os_release_value "$file" ID || true)"
@@ -46,7 +46,7 @@ kdu_distro_from_osrelease() {
 
   case "$id" in
   debian) echo debian; return 0 ;;
-  ubuntu) echo ubuntu; return 0 ;;
+  ubuntu | linuxmint | zorin) echo ubuntu; return 0 ;;
   nixos) echo nixos; return 0 ;;
   gentoo) echo gentoo; return 0 ;;
   arch | archarm | artix | endeavouros | manjaro | cachyos) echo arch; return 0 ;;
@@ -151,6 +151,28 @@ kdu_branch_for_distro() {
   done
 
   echo "main"
+}
+
+# kdu_branch_override <id> <version_id> -> a branch, or empty for no override
+# Mint and Zorin are Ubuntu 24.04 based for now, so they take that branch whatever
+# their own VERSION_ID says. Ubuntu 26.10 predates a branch of its own and still
+# runs the 26.04 installer. Both skip the upstream branch probe.
+kdu_branch_override() {
+  case "${1:-}" in
+  linuxmint | zorin) printf '%s' "24.04" ;;
+  ubuntu)
+    case "${2:-}" in
+    26.10) printf '%s' "26.04" ;;
+    esac
+    ;;
+  esac
+}
+
+# kdu_release_notice <id> <version_id> -> a warning to show, or empty
+kdu_release_notice() {
+  if [ "${1:-}" = "ubuntu" ] && [ "${2:-}" = "26.10" ]; then
+    printf '%s' "Ubuntu 26.10 not officially supported. Use at own risk"
+  fi
 }
 
 # kdu_clone_args <repo> <branch> <dest> -> one git argument per line

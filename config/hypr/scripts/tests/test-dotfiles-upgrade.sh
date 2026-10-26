@@ -78,6 +78,8 @@ DEBIAN_FIXTURE="$(os_release_fixture debian debian '' 13)"
 UBUNTU_FIXTURE="$(os_release_fixture ubuntu ubuntu debian 26.04)"
 NIXOS_FIXTURE="$(os_release_fixture nixos nixos '' 25.11)"
 GENTOO_FIXTURE="$(os_release_fixture gentoo gentoo '' '')"
+MINT_FIXTURE="$(os_release_fixture mint linuxmint 'ubuntu debian' 22.1)"
+UBUNTU_2610_FIXTURE="$(os_release_fixture ubuntu-2610 ubuntu debian 26.10)"
 
 # --- distro detection -------------------------------------------------------
 assert_eq "Debian is debian" debian "$(kdu_distro_from_osrelease "$DEBIAN_FIXTURE")"
@@ -92,8 +94,11 @@ assert_eq "openSUSE Tumbleweed is opensuse" opensuse \
   "$(kdu_distro_from_osrelease "$(os_release_fixture opensuse opensuse-tumbleweed suse '')")"
 assert_eq "Alpine is unknown" unknown \
   "$(kdu_distro_from_osrelease "$(os_release_fixture alpine alpine '' 3.22)")"
-assert_eq "Linux Mint follows ID_LIKE to ubuntu" ubuntu \
-  "$(kdu_distro_from_osrelease "$(os_release_fixture mint linuxmint 'ubuntu debian' 22.1)")"
+assert_eq "Linux Mint is ubuntu" ubuntu "$(kdu_distro_from_osrelease "$MINT_FIXTURE")"
+assert_eq "Zorin OS is ubuntu" ubuntu \
+  "$(kdu_distro_from_osrelease "$(os_release_fixture zorin zorin ubuntu 18)")"
+assert_eq "Pop!_OS follows ID_LIKE to ubuntu" ubuntu \
+  "$(kdu_distro_from_osrelease "$(os_release_fixture pop pop 'ubuntu debian' 24.04)")"
 assert_eq "Kali follows ID_LIKE to debian" debian \
   "$(kdu_distro_from_osrelease "$(os_release_fixture kali kali debian 2026.1)")"
 assert_eq "CachyOS follows ID_LIKE to arch" arch \
@@ -133,6 +138,17 @@ assert_eq "a non-Ubuntu installer always uses main" main \
   "$(kdu_branch_for_distro debian 13 "$UBUNTU_BRANCHES")"
 assert_eq "Debian without a VERSION_ID uses main" main \
   "$(kdu_branch_for_distro debian '' '')"
+
+# Mint and Zorin are Ubuntu 24.04 based; 26.10 still runs the 26.04 installer.
+assert_eq "Mint takes the 24.04 installer branch" 24.04 "$(kdu_branch_override linuxmint 22.1)"
+assert_eq "Zorin takes the 24.04 installer branch" 24.04 "$(kdu_branch_override zorin 18)"
+assert_eq "Ubuntu 26.10 takes the 26.04 installer branch" 26.04 "$(kdu_branch_override ubuntu 26.10)"
+assert_eq "Ubuntu 26.04 needs no override" "" "$(kdu_branch_override ubuntu 26.04)"
+assert_eq "Debian needs no override" "" "$(kdu_branch_override debian 13)"
+assert_eq "Ubuntu 26.10 warns that it is unsupported" \
+  "Ubuntu 26.10 not officially supported. Use at own risk" "$(kdu_release_notice ubuntu 26.10)"
+assert_eq "Ubuntu 26.04 carries no warning" "" "$(kdu_release_notice ubuntu 26.04)"
+assert_eq "Mint carries no warning" "" "$(kdu_release_notice linuxmint 22.1)"
 
 # --- temp directory ---------------------------------------------------------
 TMP_ROOT="$WORK/tmp-root"
@@ -281,6 +297,33 @@ assert_contains "$DRY_UBUNTU" "-b 26.04" "the clone is pinned" && pass_msg
 
 it "the Ubuntu plan asked upstream for its branches"
 if grep -q 'ls-remote' "$CALL_LOG"; then pass_msg; else fail "no branch probe was made"; fi
+
+# --- the fixed branches: Mint, Zorin and 26.10 ------------------------------
+DRY_MINT="$WORK/dry-mint.out"
+: >"$CALL_LOG"
+FAKE_BRANCHES="24.04 26.04 main" KOOLDOTS_OS_RELEASE="$MINT_FIXTURE" \
+  KOOLDOTS_UPGRADE_TMP_ROOT="$WORK/dry-root" \
+  bash "$UPGRADE" --dry-run >"$DRY_MINT" 2>&1
+
+it "Linux Mint is planned against the 24.04 branch"
+assert_contains "$DRY_MINT" "Installer : Ubuntu-Hyprland (branch 24.04)" "24.04 was chosen" && pass_msg
+
+it "Mint pins the clone to 24.04"
+assert_contains "$DRY_MINT" "-b 24.04" "the clone is pinned" && pass_msg
+
+it "a fixed branch needs no upstream probe"
+if grep -q 'ls-remote' "$CALL_LOG"; then fail "a branch probe was made"
+else pass_msg; fi
+
+DRY_2610="$WORK/dry-2610.out"
+KOOLDOTS_OS_RELEASE="$UBUNTU_2610_FIXTURE" KOOLDOTS_UPGRADE_TMP_ROOT="$WORK/dry-root" \
+  bash "$UPGRADE" --dry-run >"$DRY_2610" 2>&1
+
+it "Ubuntu 26.10 is planned against the 26.04 branch"
+assert_contains "$DRY_2610" "Installer : Ubuntu-Hyprland (branch 26.04)" "26.04 was chosen" && pass_msg
+
+it "Ubuntu 26.10 warns that it is not officially supported"
+assert_contains "$DRY_2610" "Ubuntu 26.10 not officially supported. Use at own risk" "the warning" && pass_msg
 
 # --- the entry point --------------------------------------------------------
 it "KooLsDotsUpdate.sh offers the upgrade and launches a terminal"

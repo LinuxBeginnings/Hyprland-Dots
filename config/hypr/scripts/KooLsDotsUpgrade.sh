@@ -153,14 +153,26 @@ if ! kdu_supported_distro "$distro"; then
 fi
 
 repo="$(kdu_repo_for_distro "$distro")"
+distro_id="$(kdu_os_release_value "$OS_RELEASE" ID || true)"
 version_id="$(kdu_os_release_value "$OS_RELEASE" VERSION_ID || true)"
 branch="main"
 if [ "$(kdu_branch_mode_for_distro "$distro")" = "per-release" ]; then
-  branches="$(kdu_remote_branches "$repo" || true)"
-  branch="$(kdu_branch_for_distro "$distro" "$version_id" "$branches")"
-  if [ "$branch" = "main" ]; then
-    log "${WARN} No $repo branch matches ${version_id:-this release}; using main."
+  # Mint, Zorin and 26.10 take a fixed branch, so they need no probe.
+  branch_override="$(kdu_branch_override "$distro_id" "$version_id")"
+  if [ -n "$branch_override" ]; then
+    branch="$branch_override"
+  else
+    branches="$(kdu_remote_branches "$repo" || true)"
+    branch="$(kdu_branch_for_distro "$distro" "$version_id" "$branches")"
+    if [ "$branch" = "main" ]; then
+      log "${WARN} No $repo branch matches ${version_id:-this release}; using main."
+    fi
   fi
+fi
+
+release_notice="$(kdu_release_notice "$distro_id" "$version_id")"
+if [ -n "$release_notice" ]; then
+  log "${WARN} $release_notice"
 fi
 
 # A terminal is only needed for the real run: --dry-run changes nothing.
