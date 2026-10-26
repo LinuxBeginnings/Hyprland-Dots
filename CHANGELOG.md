@@ -25,6 +25,9 @@
   - It was sent to `/dev/null`, so a config or CSS error left no trace
   - `WAYBAR_LOG` still overrides that destination
 
+---- 
+
+
 ## v2.3.28
 
 ## Fixed:
