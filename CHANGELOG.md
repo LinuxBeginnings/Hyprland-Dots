@@ -4,6 +4,7 @@
 
 ## Added:
 
+- Waybar `custom/dot_update` right-click downloads and runs the upgrade
 - `WaybarStartup.sh` records why it started, or why it did not
   - Every early exit was silent, so a missing bar had no explanation
   - A lock timeout, an already-running bar and a failed launch looked alike

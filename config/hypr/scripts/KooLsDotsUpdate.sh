@@ -41,6 +41,81 @@ send_notification() {
   fi
 }
 
+# ---- upgrade entry point ---------------------------------------------------
+UPGRADE_SCRIPT="$config_dir/scripts/KooLsDotsUpgrade.sh"
+LAUNCH_TERMINAL="$config_dir/scripts/LaunchTerminal.sh"
+
+# read_lua_default <key> <file>: value of KOOLDOTS_DEFAULTS.<key>, if set
+read_lua_default() {
+  local key="$1" file="$2"
+  [[ -f "$file" ]] || return 0
+  sed -nE "s/^[[:space:]]*KOOLDOTS_DEFAULTS\.${key}[[:space:]]*=[[:space:]]*[\"']([^\"']*)[\"'].*/\1/p" "$file" | tail -n1
+}
+
+# resolve_term: the preferred terminal, resolved the way WaybarScripts.sh does
+# it - user defaults, then shipped defaults, then $TERMINAL, then kitty.
+resolve_term() {
+  local value=""
+  value="$(read_lua_default term "$config_dir/UserConfigs/user_defaults.lua")"
+  [[ -n "$value" ]] || value="$(read_lua_default term "$config_dir/lua/user_defaults.lua")"
+  [[ -n "$value" ]] || value="${TERMINAL:-}"
+  printf '%s' "${value:-kitty}"
+}
+
+# launch_upgrade_terminal: run KooLsDotsUpgrade.sh in a terminal window.
+# The upgrade needs one: update-deps.sh uses sudo and copy.sh asks questions.
+launch_upgrade_terminal() {
+  if [[ ! -x "$UPGRADE_SCRIPT" ]]; then
+    send_notification "$(get_icon "error.png")" "KooL Hyprland" "Upgrade helper not found at $UPGRADE_SCRIPT." "critical"
+    echo "Error: $UPGRADE_SCRIPT is missing or not executable." >&2
+    return 1
+  fi
+  if [[ -x "$LAUNCH_TERMINAL" ]]; then
+    if "$LAUNCH_TERMINAL" "$(resolve_term)" "$UPGRADE_SCRIPT"; then
+      return 0
+    fi
+    return 1
+  fi
+  local term
+  term="$(resolve_term)"
+  if command -v "$term" >/dev/null 2>&1; then
+    "$term" -- sh -c "$UPGRADE_SCRIPT" >/dev/null 2>&1 &
+    disown 2>/dev/null || true
+    return 0
+  fi
+  send_notification "$(get_icon "error.png")" "KooL Hyprland" "No terminal found to run the upgrade in." "critical"
+  echo "Error: no terminal found to run the upgrade in." >&2
+  return 1
+}
+
+# ---- command line ----------------------------------------------------------
+usage() {
+  cat <<'EOF'
+Usage: KooLsDotsUpdate.sh [--upgrade]
+
+Checks the installed KooL dotfiles version against upstream and, when a newer
+version exists, shows a window with the changelog and an upgrade action.
+
+Options:
+  --upgrade   Skip the check and start the download-and-upgrade flow in a new
+              terminal window: the installer's update-deps.sh, then copy.sh.
+  -h, --help  Show this help and exit.
+EOF
+}
+
+case "${1:-}" in
+--upgrade)
+  if launch_upgrade_terminal; then
+    exit 0
+  fi
+  exit 1
+  ;;
+-h | --help)
+  usage
+  exit 0
+  ;;
+esac
+
 # Check for curl
 if ! command -v curl >/dev/null 2>&1; then
   send_notification "$(get_icon "error.png")" "Error" "curl is required to check for updates." "critical"
@@ -150,16 +225,22 @@ show_update_window() {
       --title="KooL Hyprland Update" \
       --window-icon="$yad_icon" \
       --text="$yad_text" \
+      --button="Upgrade now:3" \
       --button="View Changelogs:2" \
       --button="OK:0" \
       --width=480 \
       --fixed || ret=$?
 
-    if [[ $ret -eq 2 ]]; then
+    case "$ret" in
+    2)
       if command -v xdg-open >/dev/null 2>&1; then
         xdg-open "$CHANGELOG_URL" >/dev/null 2>&1 &
       fi
-    fi
+      ;;
+    3)
+      launch_upgrade_terminal || true
+      ;;
+    esac
     return 0
   fi
 
@@ -172,26 +253,37 @@ show_update_window() {
     rofi_msg+="• Most current version detected:  <b>${new_v}</b>\n\n"
     rofi_msg+="Changelog: ${CHANGELOG_URL}"
 
+    local opt_upgrade="󰁈 Upgrade Now (Installer + Dots)"
     local opt_changelog="🌐 View Changelog (Opens in Browser)"
     local opt_ok=" OK (Close)"
 
     local choice
-    choice=$(printf '%s\n%s\n' "$opt_changelog" "$opt_ok" | rofi -dmenu -i -p "Update Available" -mesg "$rofi_msg" 2>/dev/null || true)
+    choice=$(printf '%s\n%s\n%s\n' "$opt_upgrade" "$opt_changelog" "$opt_ok" | rofi -dmenu -i -p "Update Available" -mesg "$rofi_msg" 2>/dev/null || true)
 
-    if [[ "$choice" == "$opt_changelog" ]]; then
+    case "$choice" in
+    "$opt_upgrade")
+      launch_upgrade_terminal || true
+      ;;
+    "$opt_changelog")
       if command -v xdg-open >/dev/null 2>&1; then
         xdg-open "$CHANGELOG_URL" >/dev/null 2>&1 &
       fi
-    fi
+      ;;
+    esac
     return 0
   fi
 
   # Priority 3: Zenity (if installed)
   if command -v zenity >/dev/null 2>&1; then
-    zenity --info \
+    # zenity cannot show three buttons, so the changelog stays in the text and
+    # the two buttons are Upgrade / Close.
+    if zenity --question \
       --title="KooL Hyprland Update" \
-      --text="Update available for KooL Hyprland Dots!\n\nCurrent installed version: ${cur_v}\nMost current version detected: ${new_v}\n\nChangelog:\n${CHANGELOG_URL}" \
-      --ok-label="OK" 2>/dev/null || true
+      --text="Update available for KooL Hyprland Dots!\n\nCurrent installed version: ${cur_v}\nMost current version detected: ${new_v}\n\nChangelog:\n${CHANGELOG_URL}\n\nUpgrade now? This downloads the installer for your OS and the current Hyprland-Dots, then runs the upgrade in a terminal." \
+      --ok-label="Upgrade now" \
+      --cancel-label="Close" 2>/dev/null; then
+      launch_upgrade_terminal || true
+    fi
     return 0
   fi
 }
