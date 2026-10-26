@@ -1,5 +1,318 @@
 # Changelog — KoolDots
 
+## v2.3.28
+
+## Fixed:
+
+- A `monitors.lua` refresh-rate edit survives `hyprctl reload`
+  - `MonitorWatcher.sh` re-applied the recorded layout on `configreloaded`
+  - The record still held the previous mode, so the edit was undone in ~2s
+  - It now asks `DisplayProfile.sh config-newer` and stands down when edited
+  - The check compares mtimes against the recorded layout
+  - `UserConfigs/monitors.lua`, `lua/monitors.lua`, `user_laptops.lua` count
+- `HDMI-A-1-HighRefreshRate` no longer drops to 1024x768
+  - `mode = "highrr"` is the highest refresh rate at any resolution
+  - A 1920x1080@75 panel also advertises 1024x768@75.03, which won
+  - The profile now asks for `1920x1080@75` explicitly
+  - `Monitor_Profiles/` is restored from backup, so an install needs a patch
+  - `patches/85-monitor-profile-refresh-rate.sh` replaces it when unedited
+- Disabled monitor broke `nwg-displays` parser
+- Moved waybar `network#speed` network mgr `nmtui` to Modules
+  - It was per bar and not consistent
+  - Thanks Leonardo Araujo @leolca
+- Legacy `hyprctl dispatch` calls no longer silently do nothing
+  - Since Hyprland 0.55, `hyprctl dispatch` is a shorthand for `hl.dispatch(...)`
+  - A dispatcher name plus arguments is parsed as Lua, so `workspace e+1` fails
+  - `waybar/ModulesWorkspaces` scroll handlers use `hl.dsp.focus({ workspace = ... })`
+  - All 7 modules carried the same dead pair, 14 handlers in total
+  - `raw_dispatch_cmd` emitted `hyprctl dispatch <name>`, which could never run
+  - It now warns once per name at config load and returns `hl.dsp.no_op()`
+  - The two copies are `system_keybinds.lua` and `user_keybinds_helper.lua`
+  - `Logout.sh` drops the `exit 1` / `exit 0` / `exit x` variants
+  - `exit` takes no argument in either mode, so they could never succeed
+  - `Logout.sh` spawns hyprshutdown through `hl.dsp.exec_cmd(...)`
+- Editing `UserConfigs/*.lua` applies on save, with no `hyprctl reload`
+  - Hyprland's built-in autoreload watches only the entrypoint `hyprland.lua`
+  - Other files the config loads arrive through `dofile`, which it never sees
+  - A saved `UserConfigs` file stayed inert until a manual reload
+  - `scripts/LuaConfigWatch.sh` watches `lua`, `configs` and `UserConfigs` for `*.lua`
+  - On a save it debounces, then touches `hyprland.lua`, the watched path
+  - Saves of non-`.lua` files in those directories are ignored
+  - One instance per user; it exits cleanly on `SIGTERM` and removes its pidfile
+  - Falls back to `hyprctl reload` when `misc:disable_autoreload` is on
+  - Falls back to 1s polling where `inotify-tools` is not installed
+  - A syntax error in a saved file raises a notification
+- Waybar no longer fails to start on boot or after screen lock
+  - `startup.lua` chained `WallpaperDaemon.sh` and `WaybarStartup.sh` with `&&`
+  - A wallpaper delay or failure blocked Waybar from ever launching
+  - `WaybarStartup.sh` used `flock -n`, dropping concurrent restarts
+  - `WallustSwww.sh` sent `SIGUSR2` while Waybar was still initializing
+  - `startup.lua` now launches them as separate startup commands
+  - `WaybarStartup.sh` uses bounded wait on its lock, preserving restarts
+  - `WaybarStartup.sh` discovers and exports `HYPRLAND_INSTANCE_SIGNATURE`
+  - `WallustSwww.sh` skips signalling while Waybar holds the startup lock
+- Duplicate waybars when opening laptop lid
+- Opening the lid turns the laptop panel back on
+  - `user_laptops.lua` replayed the stored `monitors.lua` rule as it was
+  - A rule that omits `disabled` does not switch an output back on
+  - So the panel stayed dark and its workspaces stayed on the external screen
+  - The branch now always sets `disabled = false`, keeping the stored mode
+  - `patches/83-user-laptops-lid-open.sh` fixes existing installs
+- The only screen stays on, at the origin, when nothing else is connected
+  - The no-externals branch replayed the stored `monitors.lua` rule as it was
+  - A rule that omits `disabled` does not switch an output back on
+  - A rule from a monitor set that had more kept its old position
+  - So the only screen could come back dark, or off the origin
+  - The branch now forces `disabled = false` and `position = "0x0"`
+  - A stored `transform` is carried over too, which the branch dropped
+  - `patches/84-user-laptops-single-monitor.sh` fixes existing installs
+- The animation chosen from the menu no longer resets to the defaults
+  - `copy.sh` copies the repo's `UserConfigs` before the migration runs
+  - The shipped comment-only `user_animations.lua` was already in place
+  - The migration kept any existing `user_animations.lua`, placeholder and all
+  - On a hyprlang install the choice lives in `UserAnimations.conf`
+  - `migrate-hypr-to-lua.sh` converts it to `hl.curve`/`hl.animation` Lua
+  - A preset the Animations menu wrote is still left untouched
+- Rofi and wlogout selections no longer reset on an upgrade
+  - `copy_phase2` replaces `hypr/` and `wlogout/` with the repo copies
+  - The rofi `@theme` line and `wlogout/.current_theme` were never restored
+  - `restore_hypr_assets` now carries the active rofi theme into `config.rasi`
+  - `restore_wlogout_selection` re-applies the saved wlogout preset
+  - `RofiWlogoutTheme.sh` reads `.current_theme` back into `CURRENT_PRESET`
+- The restore helpers no longer look in the wrong backup directory
+  - They declared `local BACKUP_DIR`, hiding the cached suffix
+  - `get_backup_dirname` then generated a fresh timestamp per call
+  - A run crossing a minute boundary restored from a path that never existed
+- Monitors no longer default to the largest mode a panel advertises
+  - `ds_generate` took the biggest available mode, not the one in use
+  - A VM's `Virtual-1` was pinned to `5120x2440@50` on every boot
+  - It now keeps the mode already on screen, the panel's own `preferred` choice
+- A boot no longer overwrites `UserConfigs/monitors.lua`
+  - `DisplayProfile.sh auto` rewrote the file on every login, not on an apply
+  - Hand edits were replaced, and the shipped `Virtual-1` rule was overridden
+  - Only an explicit apply or an nwg-displays drag writes it now
+- The shipped wildcard monitor default is `preferred`, not `highres`
+  - `lua/monitors.lua` chained `preferred`/`highrr`/`highres` for `output = ""`
+  - The last matching rule wins, so every output was asked for `highres`
+  - `Monitor_Profiles/default.lua` had the same chain
+- Layout-aware focus binds no longer fork a script per keypress
+  - `SUPER + j`/`k` and `SUPER + arrow` ran `LayoutKeybindDispatch.sh`
+  - It spawned bash, 4-8 `hyprctl` and `jq` processes on every press
+  - Ported to `lua/window_actions.lua` as `layout_cycle`/`layout_focus`
+  - Tries the layout message first, falls back only if focus did not move
+  - Scrolling uses `hl.dsp.layout("focus l/r")`, monocle `cyclenext`/`cycleprev`
+  - Everything else uses `hl.dsp.focus` and `hl.dsp.window.cycle_next`
+- `ALT + Tab` and user `cyclenext` binds now cycle in-process
+  - `LuaCycleWindow.sh` spawned bash, 2 `hyprctl` and a `jq` program per press
+  - Ported to `lua/window_actions.lua` as `cycle_window`, address-sorted order
+  - `dispatch("cyclenext")` in user configs fell through to a dead legacy name
+  - `lua/user_keybinds_helper.lua` now maps it to the in-process action
+- Waybar no longer polls `hyprctl` on a timer
+  - `custom/hypr_layout` ran `HyprLayoutModule.sh` every 2s
+  - That reached `ChangeLayout.sh` and then `hyprctl -j activeworkspace | jq`
+  - `custom/keyboard` ran `KeyboardLayout.sh status` every 1s
+  - It makes four `hyprctl devices -j | jq` calls per run
+  - About 4.5 `hyprctl` + 4.5 `jq` forks per second, for the whole session
+  - Both now subscribe to the Hyprland event socket in `HyprEventWatch.sh`
+  - They re-render only when the state they show actually changes
+  - `HyprLayoutModule.sh` reads the layout over the socket, not `hyprctl`
+- Gesture zoom no longer freezes the compositor
+  - The 3-finger swipe ran `io.popen("hyprctl ...")` on the compositor thread
+  - `io.popen` waits for the child, so the session stalled for the round trip
+  - It also wrote through `hyprctl keyword`, the legacy hyprlang form
+  - Now one in-process `hl.get_config` / `hl.config` pair, clamped to 1.0-16.0
+- Laptop monitor layout no longer shells out from the compositor
+  - `user_laptops.lua` used `io.popen` for the lid-state fallback
+  - `connected_drm_connectors()` ran one `io.popen("ls ...")` per DRM card
+  - Lid state now reads fixed sysfs paths, connectors use plain file reads
+- Layout label refresh now goes through the Hyprland socket
+  - Waybar only re-execs a custom module while the script is not running
+  - Both status modules loop, so `signal: 8` never fired
+  - The label went stale until the next workspace switch
+  - `ChangeLayout.sh` and the layout menu now emit `custom>>kool:layout`
+  - `hypr_emit_event` in `HyprIPC.sh` sends it; the listener re-renders on it
+- `HyprLayoutModule.sh` had lost its `change_layout` path
+  - `set_layout` called an empty variable, so the layout menu set nothing
+- Night light icon updates on change instead of a 3s poll
+  - `custom/nightlight` re-ran bash + pgrep every 3s for a manual label
+  - `Hyprsunset.sh` pushes RTMIN+9 on change and reads its state without `cat`
+  - The module keeps a 60s interval for hyprsunset exiting outside the script
+- Existing installs never received the layout-refresh throttle
+  - `copy.sh` protects `UserConfigs`, so shipped copies kept the old code
+  - `patches/70-user-laptops-refresh-throttle.sh` inserts it in place
+- Two Waybar bars no longer kill each other's status listeners
+  - The guard was keyed by module name only, so a second bar replaced it
+  - Waybar then reported `stopped unexpectedly` and re-ran it every 10s
+  - It is now keyed by the parent bar; a listener exits when its bar does
+- A shut laptop lid no longer switches off its only screen
+  - `user_laptops.lua` disabled the internal panel whenever the lid closed
+  - With no external monitor that left the session with no output at all
+  - The panel now stays on unless another monitor can show the session
+  - `patches/80-display-layouts.sh` applies the same fix to existing installs
+- A killed `MonitorWatcher.sh` no longer strands its own lock
+  - The event stream runs in a process-substitution subshell that outlives it
+  - `9>&-` on the call inside `<(...)` left bash's saved copy of fd 9 open
+  - So the subshell held the flock, and no watcher could start until socat ended
+  - The subshell now closes fd 9 with `exec 9>&-` before it starts the stream
+- Existing installs kept the old `Monitor_Profiles/README`
+  - On upgrade it is restored from the backup, so the shipped copy never lands
+  - `patches/81-monitor-profiles-readme.sh` appends the current notes instead
+  - It appends rather than replaces, so a user's own notes there survive
+- Waybar no longer goes missing after a restart
+  - A bar that was just signalled can linger while it dumps core
+  - `pgrep` kept matching it, so the relaunch thought a bar was already up
+  - It skipped its own launch, so the session had no bar until the next try
+  - `is_waybar_running` now ignores `Z` (exited) and `D` (dumping core)
+  - A stop waits for the bar to leave, and a restart forces the launch
+  - `LidSwitch.sh` asks the same question before signalling a bar
+  - Issue: [#158](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/158)
+    - Thanks again Angel Spano @jasueh for the info to find issue
+- The keybind search menu was missing binds that were active
+  - `KeyBinds.sh` regexed the keybind files with `keybinds_parser.py`
+  - It printed the source text, so it could not see what the helpers derive
+  - 12 were absent: 10 `SUPER SHIFT + number` variants, 2 lid switches
+  - Media keys read as `xf86audiomute` rather than `XF86AudioMute`
+  - The menu now lists the binds the compositor actually has
+  - So it cannot under-report, and it follows an override or an unbind
+- Waybar's `network#speed` module no longer ignores right-click
+  - The `network` block set `on-click-right`, `network#speed` set none
+  - Waybar looks up `config["network#speed"]`, not the parent module
+  - The instance now runs `WaybarScripts.sh --nmtui`, as `network` does
+  - Issue: [#161](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/161)
+
+## Added:
+
+- `END4-smooth.lua` animation preset
+  - From current END4 dotfiles
+  - https://github.com/end-4/dots-hyprland
+  - Drops three `expressive*Spatial` curves nothing referenced
+  - Adds `global` and `fade`, which upstream leaves unset
+  - Affects `fadeSwitch`, `fadeShadow`, `fadeGlow`, `fadeDim`, `fadePopups*`
+  - Those now take the preset's timing, not Hyprland's stock values
+  - Retimed: `windowsIn`/`fadeIn` 4.9, `windowsOut`/`fadeOut` 2.9
+  - `workspaces` 30, so the slide is visibly slower than upstream's 7
+- `PR43` animation preset
+  - https://github.com/43PR/dotfiles
+- Indicator to mark current animation
+- Indicator to mark the current Rainbow Borders mode
+  - `Kool_Quick_Settings.sh` marks the mode in effect and pre-selects it
+  - The marker is stripped before the choice is used as a mode
+- Indicator to mark the current selection in the other pickers
+  - `Kitty_themes.sh`, `Ghostty_themes.sh`, `RofiThemeSelector.sh`
+  - `ChangeStarshipPrompt.sh` and `ZshChangeTheme.sh` had none at all
+  - `ThemeChanger.sh` marked the theme but never pre-selected the row
+  - `select-hyprview-layout.sh`, `MonitorProfiles.sh`, wlogout blur level
+  - The marker is stripped again before a choice is read as a name or path
+- `config/hypr/scripts/tests/test-migrate-animations.sh`
+  - Covers carrying the animation from `UserAnimations.conf` into Lua
+  - 11 checks, from a sandbox `XDG_CONFIG_HOME` with no session
+- `config/hypr/scripts/tests/test-installer-selections.sh`
+  - Covers the rofi `@theme` carry and the wlogout preset restore
+  - 20 checks, from a sandbox `XDG_CONFIG_HOME` with no session
+- `config/hypr/scripts/tests/test-rainbow-borders-menu.sh`
+  - Covers the Rainbow Borders indicator and the marker strip
+  - 11 checks, from a sandbox `XDG_CONFIG_HOME` with no session
+- Marker tests for the four theme pickers
+  - `tests/test-kitty-theme-menu.sh`, `tests/test-ghostty-theme-menu.sh`
+  - `tests/test-starship-prompt-menu.sh`, `tests/test-zsh-theme-menu.sh`
+  - Each asserts the marker never reaches a config, a link or `ZSH_THEME`
+  - 20 checks, from a sandbox `XDG_CONFIG_HOME` with no session
+- `patches/82-monitors-lua-reset.sh` recovers an upgraded install
+  - Removes a `UserConfigs/monitors.lua` that an older version generated
+  - Keeps a `monitors.lua.generated-backup-<date>` copy beside it
+  - Saved layouts live in `display-layouts.json` and are untouched
+  - Runs once, so a layout applied later is never removed
+- Lua syntax validation in Quick Settings (`Kool_Quick_Settings.sh`)
+  - Automatically validates edited `.lua` files with `luac -p` on editor close
+  - Sends desktop notifications for syntax errors, successful check, or if `luac` is not installed
+- `scripts/HyprIPC.sh` and `scripts/HyprEventWatch.sh`
+  - Socket helpers, plus the event listener the two status modules use
+- `patches/60-user-laptops-nonblocking.sh`
+  - Removes the blocking `io.popen` calls from an installed `user_laptops.lua`
+- `patches/70-user-laptops-refresh-throttle.sh`
+  - Adds the layout-refresh throttle to an installed `user_laptops.lua`
+- `waybar/configs/Matt-Legacy-config` and `waybar/style/Matt-bright-style.css`
+  - A top bar layout built on the project module files via `include`
+  - `custom/menu`, `custom/power` and `tray` come from those files
+  - `custom/swaync`, `custom/hint`, `custom/keyboard` are icon/text pairs
+  - Only the text half of a pair runs a script, so listeners cannot collide
+  - The style inlines its gruvbox palette, so it ships as one file
+- Multi-monitor display layouts
+  - A layout belongs to a monitor set, keyed by device, not by port
+  - `SUPER + ALT + D` opens the menu; `SUPER + ALT + W` applies layout `Work`
+  - A layout you apply is written to `UserConfigs/monitors.lua`, which Lua loads
+  - So a layout survives a reload, a restart and a lid event
+  - Per layout: on/off, mode, scale, rotation, position, primary, Waybar bars
+  - `nwg-displays` is bridged, and a run you start yourself is imported too
+  - The watcher watches nwg's own `monitors.conf` and imports it when it changes
+  - A run the menu did not start leaves no pause file, so it is found by name
+  - Lid handling stays in `user_laptops.lua`, which reads the same file
+  - 568 checks run from JSON fixtures with no monitors attached
+- `Monitor Profiles` uses the same layout store
+  - From Quick Settings (`SUPER + SHIFT + E`), lists this set's layouts
+  - `Monitor_Profiles/*.lua` is offered as a one-way import into the store
+- `patches/80-display-layouts.sh` activates the feature on existing installs
+  - `copy.sh` only adds missing `UserConfigs` files, so the edits never landed
+  - It starts `MonitorWatcher.sh` and adds the two display keybinds
+- `config/hypr/scripts/tests/test-lua-syntax.sh`
+  - Parses every `.lua` file under the config with `luac -p`
+  - One syntax error anywhere takes the whole config load down with it
+  - The `UserConfigs` files load through a `pcall`, so that failure is silent
+  - It also catches a stray copy of a broken file left in the config tree
+  - Reports and passes where `luac` is not installed
+- `Monitor_Profiles/Work.lua`, a shipped profile to copy or edit
+  - One `preferred` / `auto` / `1` rule per output, matched by port
+  - Covers `eDP-1`, `DP-1`..`DP-3`, `HDMI-A-1` and `HDMI-A-2`
+  - Apply it from Choose Monitor Profiles, then `SUPER + ALT + W` applies it
+  - `preferred` rather than `highres`: the panel's own choice, always usable
+- `waybar/configs/TOP-Garuda`, `waybar/style/Garuda.css`, `waybar/launcher.png`
+  - A Nord top bar ported from a Garuda Linux Waybar
+  - `modules-left` opens with `custom/menu`, the rofi app menu
+  - Workspace indicators are numbers (`hyprland/workspaces#numbers`)
+  - `modules-right` ends with `custom/power`, the wlogout menu
+  - `custom/power` is the project module, pulled in through `include`
+  - `custom/menu` is mirrored locally to draw the launcher image
+  - It keeps the same rofi action; only `format` differs
+  - `launcher.png` sits at the waybar root, where `url()` resolves
+  - The style inlines its Nord palette, so it ships as one file
+
+## Updated:
+
+- `docs/HOWTO-Upgrade-Dotfiles.md` says what an upgrade keeps
+  - The rofi theme, the wlogout preset and the saved display layouts
+  - The `.es.md` translation is kept in sync
+- Do not add `require("monitors")` to your Hyprland config
+  - `nwg-displays` 0.4.3+ writes a Lua sibling at `~/.config/hypr/monitors.lua`
+  - This config never loads that path, so the sibling stays inert on purpose
+  - Adding the `require` makes it live and it competes with `monitors.lua`
+  - Its own README suggests the line for Hyprland 0.55+; ignore it here
+- The display-layout docs no longer say a direct `nwg-displays` run is lost
+  - `README-display-layouts.md` and the operational guide cover it instead
+- Removed KB default "pc105" from `user_settings.lua`
+- `docs/HOWTO-Change-Keybindgs.md` now covers `dispatch(...)` resolution
+  - Documents the in-process helper mapping and the native `hl.dsp.*` form
+  - Corrects the `["repeat"]` and `dispatch("pin")` examples
+  - Notes that `LayoutKeybindDispatch.sh` and `LuaCycleWindow.sh` are gone
+  - The `.es.md` translation is kept in sync
+
+## Removed:
+
+- The dead lid close/open paths in `scripts/LidSwitch.sh`
+  - Nothing called them: `user_laptops.lua` binds the lid switch itself
+  - Close switched the panel off with no external monitor to show the session
+  - Open replayed a rule without `disabled = false`, so the panel stayed off
+  - `lua/laptop-lid.lua`, the sample that bound them, is now a pointer only
+- `scripts/LayoutKeybindDispatch.sh` and `scripts/LuaCycleWindow.sh`
+  - Both are replaced by in-process actions in `lua/window_actions.lua`
+  - `docs/Keybinds.md` names the in-process actions instead of the scripts
+- `scripts/keybinds_parser.py`
+  - 528 lines of regex that read the keybind files as text
+  - `lua/keybind_index.lua` records every `hl.bind()` in the Lua VM instead
+  - `KeyBinds.sh` asks that module to re-render the list before every run
+  - No `python3`, no file parsing, and no list left behind by a live change
+
+---
+
 ## v2.3.27.7
 
 ## Fixed:
@@ -9,15 +322,36 @@
 - `configs/system_keybinds.lua` was out of sync with the `lua/` template
 - `cursor:no_hardware_cursors` now defaults to 2 (auto) in `lua/settings.lua`
   - NVIDIA and hybrid systems set 1, VMs set 1 in `lib_detect.sh`
+- Keybinds that used legacy dispatcher names silently did nothing
+  - Since 0.55 the old hyprlang dispatcher names are not Lua globals, so `hyprctl dispatch resizeactive -50 0` evaluates to `hl.dispatch(resizeactive -50 0)` and errors, while the `hl.dsp.exec_raw("resizeactive -50 0")` path spawned a process named `resizeactive`, which does not exist - both were silent failures
+  - Affected `SUPER SHIFT + arrow` (resize), `SUPER ALT + arrow` (swap), `SUPER CTRL + F9..F12` (move workspace to monitor), `ALT + Tab` (bring to top), `SUPER CTRL + J/L/H` (group move) and `SUPER + M` (`splitratio`)
+  - Resize and swap now bind native dispatcher objects directly (`hl.dsp.window.resize({ ..., relative = true })` and `hl.dsp.window.swap({ direction })`), the rest get explicit `hl.dsp.*` handlers, and `raw_dispatch_cmd` falls back to `hyprctl dispatch` instead of `hl.dsp.exec_raw` in both `configs/system_keybinds.lua` and `lua/user_keybinds_helper.lua`
+- Hold-to-repeat keybinds never repeated
+  - The Lua bind option is `repeating`; `["repeat"] = true` is silently ignored, so volume, brightness and the resize binds fired once however long the key was held
+- Quick Settings could open a keybind file that Hyprland never loads
+  - `resolve_system_keybinds_file()` in `Kool_Quick_Settings.sh` preferred `lua/keybinds.lua`, an orphaned template that `hyprland.lua` does not load, so "Edit System Default Keybinds" edited a file with no effect; `KeyBinds.sh` also passed it to `keybinds_parser.py` first
+  - Both now resolve `configs/system_keybinds.lua` first, with `UserConfigs/system_keybinds.lua` and then the old template as last-resort fallbacks
 
 ## Added:
 
 - `AGENTS.md` project rules for AI agents
+- `config/hypr/lua/window_actions.lua` - in-process replacements for the `float.all.samesize.lua` and `ScrollCycleColumnWidth.sh` helper scripts, with no `hyprctl` calls and no JSON parsing
+- `docs/LuaScriptsMigrationPlan.md` - the bash-to-Lua migration plan, verified API notes, work queue and agent handoff completion log
 
-## Update: 
-  - To make easier to find I updated descriptions for: 
-     - waybar restart `SUPER ALT R`
-     - Hyprview `SUPER CTRL TAB`
+## Removed:
+
+- Dead keybind helper scripts and the orphaned keybind template
+  - `scripts/ResizeActive.sh`, `scripts/LuaMoveWindowDirectional.sh`, `scripts/LuaFocusWorkspaceRelative.sh`, `scripts/LuaMoveWindowWorkspaceRelative.sh` and `scripts/LuaFullscreenMaximized.sh` had no live callers
+  - `scripts/LuaSwapWindow.sh` (bash + 2 `hyprctl` + a 25-line `jq` overlap test) is replaced by `hl.dsp.window.swap`, which is already a no-op when there is no window in that direction
+  - `scripts/float.all.samesize.lua` shelled out to `hyprctl` four times and carried a hand-rolled JSON decoder; it is now `lua/window_actions.lua` running inside Hyprland's Lua VM
+  - `scripts/LuaAutoReload.sh` is redundant: Hyprland reloads the Lua config automatically when a file is saved
+  - `lua/keybinds.lua` and `lua/keybind_helpers.lua` were never loaded by `hyprland.lua`; they duplicated `configs/system_keybinds.lua` and carried the same legacy-dispatcher bug
+
+## Update:
+
+- To make easier to find I updated descriptions for:
+  - waybar restart `SUPER ALT R`
+  - Hyprview `SUPER CTRL TAB`
 
 ---
 

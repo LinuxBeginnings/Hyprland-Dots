@@ -1094,6 +1094,7 @@ fi
 printf "\n%.0s" {1..1}
 
 restore_hypr_assets "$LOG" "$EXPRESS_MODE"
+restore_wlogout_selection "$LOG"
 printf "\\n%.0s" {1..1}
 
 restore_user_configs "$LOG" "$EXPRESS_MODE" "$INSTALLED_VERSION_AT_START"

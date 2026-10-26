@@ -41,13 +41,25 @@ Los modificadores se especifican como cadenas en mayúsculas, separadas por espa
 1. **`exec_cmd("comando")`**  
    Ejecuta un comando de shell, aplicación de terminal o script personalizado. Admite marcadores predefinidos como `'$term'` (terminal predeterminada) y `'$files'` (administrador de archivos predeterminado).
 2. **`dispatch("despachador", [argumento])`**  
-   Ejecuta una acción integrada del compositor Hyprland (por ejemplo, `killactive`, `togglefloating`, `fullscreen`, `workspace`, `movetoworkspace`).
+   Ejecuta una acción integrada del compositor Hyprland (por ejemplo, `killactive`, `togglefloating`, `fullscreen`, `workspace`, `movetoworkspace`). Consulte la sección siguiente para saber cómo se resuelven los nombres.
+3. **Objetos despachadores nativos**  
+   Cualquier objeto `hl.dsp.*` se puede vincular directamente, por ejemplo `hl.dsp.window.pin()` o `hl.dsp.window.swap({ direction = "left" })`. Use esta forma para todo lo que el asistente no traduzca.
+
+### Cómo se resuelven los nombres de `dispatch(...)`
+
+`dispatch("nombre", argumento)` no lanza ningún proceso. Lo traduce `~/.config/hypr/lua/user_keybinds_helper.lua` a la API nativa de Lua de Hyprland y se ejecuta dentro del compositor, así que un atajo no cuesta ni procesos ni viajes de ida y vuelta a `hyprctl`.
+
+El asistente traduce los nombres que usan las configuraciones incluidas: `killactive`, `fullscreen`, `movefocus`, `cyclenext`, `movewindow`, `workspace`, `movetoworkspace`, `movetoworkspacesilent`, `togglefloating`, `togglespecialworkspace`, `togglegroup`, `changegroupactive`, `pseudo`, `layoutmsg`, `togglesplit`, `resizewindow`, `resizeactive`, `swapwindow`, `bringactivetotop`, `moveintogroup`, `moveoutofgroup` y `movecurrentworkspacetomonitor`.
+
+- **Los nombres heredados de hyprlang ya no son globales de Lua.** Desde Hyprland 0.55 un nombre suelto como `resizeactive` o `cyclenext` ya no se resuelve, así que el asistente traduce cada uno a su equivalente `hl.dsp.*`.
+- **Todo lo no traducido se envía a `hyprctl dispatch`.** Si usa un nombre que el asistente no conoce, se envía tal cual a `hyprctl`. Un nombre heredado ahí no hace nada, así que prefiera la forma nativa `hl.dsp.*`.
+- **El foco y el ciclado de ventanas también son internos.** Los antiguos scripts auxiliares `LayoutKeybindDispatch.sh` (foco según la disposición) y `LuaCycleWindow.sh` (ciclado de ventanas ordenado por `address`) se han eliminado. Su comportamiento ahora vive en `~/.config/hypr/lua/window_actions.lua` y se alcanza mediante `dispatch("cyclenext", ...)` y los atajos incluidos `SUPER + j`/`k` y `SUPER + flechas`. No necesita llamar a esos scripts, y ya no existen.
 
 ### Tabla de opciones del atajo (`[opciones]`)
 Puede pasar una tabla Lua opcional para personalizar el comportamiento del atajo:
 - `description = "Texto"`: Proporciona una descripción legible que se muestra en la hoja de ayuda (`SUPER + H`) y en el menú de búsqueda de atajos (`SUPER + SHIFT + K`).
 - `locked = true`: Permite que el atajo se active incluso cuando la pantalla está bloqueada por Hyprlock (por ejemplo, controles multimedia, volumen, suspensión).
-- `repeating = true` (o `["repeat"] = true`): Ejecuta repetidamente la acción mientras la tecla se mantenga presionada (por ejemplo, ajuste de volumen, brillo, redimensionamiento de ventanas).
+- `repeating = true`: Ejecuta repetidamente la acción mientras la tecla se mantenga presionada (por ejemplo, ajuste de volumen, brillo, redimensionamiento de ventanas). Esta es la única forma correcta — `["repeat"] = true` es ignorado en silencio por `hl.bind`, así que un atajo escrito así se dispara una sola vez por mucho que mantenga la tecla.
 
 ---
 
@@ -180,7 +192,8 @@ unbind("SUPER", "SPACE")
 bind("SUPER", "V", dispatch("togglefloating"), { description = "Alternar ventana flotante" })
 
 -- Anclar ventana flotante para que permanezca visible en todos los espacios de trabajo
-bind("SUPER SHIFT", "P", dispatch("pin"), { description = "Anclar ventana en todos los espacios" })
+-- `pin` no está traducido por el asistente, así que vincule el objeto despachador nativo
+bind("SUPER SHIFT", "P", hl.dsp.window.pin(), { description = "Anclar ventana en todos los espacios" })
 
 -- Alternar pseudo-mosaico (conserva dimensiones originales en mosaico)
 unbind("SUPER", "P")

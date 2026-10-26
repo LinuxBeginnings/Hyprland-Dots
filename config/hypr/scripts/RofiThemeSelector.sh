@@ -13,6 +13,8 @@ ROFI_THEMES_DIR_LOCAL="$HOME/.local/share/rofi/themes"
 ROFI_CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config.rasi"
 ROFI_THEME_FOR_THIS_SCRIPT="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-rofi-theme.rasi" # A separate rofi theme for the picker itself
 IDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"                                     # For notifications
+# Same indicator the other selection menus use. Never part of a theme name.
+MARKER="👉"
 
 # --- Helper Functions ---
 
@@ -118,25 +120,35 @@ while true; do
     exit 1
   fi
 
-  # Prepare theme list for Rofi
+  # One row per theme, with the marker on the theme that is live. The preview
+  # above already wrote it to the config, so the marked row moves with it.
+  current_theme_label="$(basename "${available_theme_names[$current_selection_index]}" .rasi)"
   rofi_input_list=""
-  for theme_name_in_list in "${available_theme_names[@]}"; do
-    rofi_input_list+="$(basename "$theme_name_in_list" .rasi)\n"
+  for i in "${!available_theme_names[@]}"; do
+    theme_label="$(basename "${available_theme_names[$i]}" .rasi)"
+    if [ "$i" -eq "$current_selection_index" ]; then
+      rofi_input_list+="$MARKER $theme_label"$'\n'
+    else
+      rofi_input_list+="$theme_label"$'\n'
+    fi
   done
-  rofi_input_list_trimmed="${rofi_input_list%\\n}"
+  rofi_input_list_trimmed="${rofi_input_list%$'\n'}"
 
   # Launch Rofi and get user's choice
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
-  chosen_index_from_rofi=$(echo -e "$rofi_input_list_trimmed" |
+  chosen_index_from_rofi=$(printf '%s\n' "$rofi_input_list_trimmed" |
     rofi -dmenu -i \
       -format 'i' \
       -p "Rofi Theme" \
-      -mesg "‼️ **note** ‼️ Enter: Preview || Ctrl+S: Apply &amp; Exit || Esc: Cancel" \
+      -mesg "‼️ **note** ‼️ Current: $current_theme_label || Enter: Preview || Ctrl+S: Apply &amp; Exit || Esc: Cancel" \
       -config "$ROFI_THEME_FOR_THIS_SCRIPT" \
       -selected-row "$current_selection_index" \
       -kb-custom-1 "Control+s")
 
   rofi_exit_code=$?
+  # The menu is asked for an index; a marker that reaches the parse would make
+  # the choice look like no choice at all.
+  chosen_index_from_rofi="${chosen_index_from_rofi#"$MARKER "}"
 
   # Handle Rofi's exit code
   if [ $rofi_exit_code -eq 0 ]; then # Enter

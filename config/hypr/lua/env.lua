@@ -9,7 +9,7 @@
 -- - config/hypr/configs/ENVariables.conf
 -- - config/hypr/UserConfigs/ENVariables.conf (active values only)
 
-hl.env("DOTS_VERSION", "2.3.27.7")
+hl.env("DOTS_VERSION", "2.3.28")
 hl.env("GDK_BACKEND", "wayland,x11,*")
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")
 hl.env("CLUTTER_BACKEND", "wayland")
@@ -43,7 +43,7 @@ hl.env("NVD_BACKEND", "direct")
 hl.env("GSK_RENDERER", "ngl")
 
 -- VM / Software rendering fallback (enabled by detector in VM)
--- hl.env("WLR_RENDERER_ALLOW_SOFTWARE", "1")
+hl.env("WLR_RENDERER_ALLOW_SOFTWARE", "1")
 
 -- Fix for missing mime-info database error
 local current_data_dirs = os.getenv("XDG_DATA_DIRS") or ""

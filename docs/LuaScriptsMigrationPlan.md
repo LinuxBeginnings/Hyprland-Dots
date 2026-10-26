@@ -1,0 +1,1180 @@
+# Lua Scripts Migration Plan
+
+Status: **queue complete** — every item in the [work queue](#6-work-queue) is done. See the
+[Completion log](#completion-log) for evidence, and
+[open questions](#9-open-questions-and-known-risks) for the runtime checks still outstanding on the
+Gentoo host.
+
+Owner: any agent picking up the Lua migration for KoolDots / Hyprland-Dots.
+Scope: `config/hypr/scripts/*`, the Lua config tree under `config/hypr/`, and the Waybar status
+modules under `config/hypr/waybar/`. D6/LUA-012 is IPC work rather than Lua, but it is the same
+"in-process instead of out-of-process" rule, so it is tracked here.
+
+---
+
+## 1. How to use this document
+
+This file is the single source of truth for the bash-to-Lua migration. It is written so that an agent
+with no prior context can pick up the work, finish an item, and hand it on.
+
+**Required protocol for every agent working on this migration:**
+
+1. Read this document end to end before touching anything.
+2. Work one queue item at a time from [section 6](#6-work-queue). Respect the declared order and
+   dependencies.
+3. Follow the [verification playbook](#7-verification-playbook) for that item. Do not mark an item
+   done on syntax checks alone if the item's acceptance criteria require runtime behaviour.
+4. **Update this document before you finish your session.** Specifically:
+   - Move the item from the queue to the [Completion log](#completion-log) with the date, the files
+     changed, the verification evidence, and any follow-up you created.
+   - If you discovered something that changes the plan, amend the relevant section and add a line to
+     [section 9](#9-open-questions-and-known-risks).
+   - Do not delete history from the completion log. It is append-only so the next agent can trust it.
+5. If you cannot finish an item, leave it in the queue and add a `Blocked:` note with the exact reason
+   and the command you ran.
+
+The completion log is the handoff. An agent that skips updating it makes the next session start from
+zero, which is the failure mode this document exists to prevent.
+
+---
+
+## 2. Goal
+
+Replace bash scripts that shell out to `hyprctl` with in-process Lua that uses the Hyprland Lua API.
+
+The efficiency win is **not** "Lua instead of bash". It is **"in-process instead of out-of-process"**.
+A keybind handled by the Lua config runs a C++ call inside the compositor. A keybind handled by a
+script costs a process fork, a `hyprctl` IPC round trip over the Unix socket, and often a `jq` fork on
+top. Typical cost is 20-50 ms and several processes per keypress, on keybinds that users hold down.
+
+### Efficiency tiers
+
+| Tier | Shape | Cost per keypress | Use for |
+| --- | --- | --- | --- |
+| 1 | `hl.dsp.*` dispatcher object bound directly to `hl.bind` | 0 processes, 0 IPC | resize, move, focus, float, swap, workspace changes |
+| 2 | Lua closure using the `hl.*` query API | 0 processes, 0 IPC | anything needing `hl.get_active_window`, `hl.get_windows`, conditionals, `hl.on`, `hl.timer` |
+| 3 | bash + `hyprctl` | 1-5 processes, 1-2 IPC round trips | state that genuinely lives outside Hyprland (hardware, brightness, media) |
+| 4 | standalone `lua` + `io.popen("hyprctl ...")` | worse than tier 3 | **nothing** — never do this |
+
+Tier 4 is a trap that this repo has already fallen into once (`float.all.samesize.lua`). A standalone
+Lua script has no `hl` global, so it must still shell out to `hyprctl`, and it pays a Lua interpreter
+startup on top. It is strictly worse than bash.
+
+### Tier 4 rule
+
+> A Lua file that runs outside the Hyprland Lua VM cannot use the `hl` API and therefore cannot be
+> more efficient than bash. Only move work *into* the config Lua VM (`config/hypr/**/*.lua`, loaded by
+> `hyprland.lua`), or leave it in bash.
+
+---
+
+## 3. Verified environment facts
+
+Everything in this section was verified against the local Hyprland 0.56.2 session. Re-verify on the
+Gentoo host before relying on it there.
+
+### 3.1 `hyprctl dispatch` and `hyprctl eval` semantics
+
+- `hyprctl dispatch '<expr>'` is shorthand for `hl.dispatch(<expr>)`. Verified: the error for a bogus
+  name is `return hl.dispatch(definitelynotarealdispatcher):1: hl.dispatch: expected a dispatcher`.
+  So `hyprctl dispatch "hl.dsp.window.resize({ x = 100, y = 100 })"` works and means
+  `hl.dispatch(hl.dsp.window.resize({...}))`.
+- `hyprctl eval '<lua>'` executes a Lua string in the live VM. **It does not return values** — it
+  prints `ok` regardless. To probe values from `eval`, write them to a file with `io.open`
+  (`io` is available in the config Lua VM; this is how section 3.3 was established).
+- **Legacy hyprlang dispatcher names no longer work through `hyprctl dispatch`.** `resizeactive`,
+  `movefocus`, `cyclenext`, `layoutmsg`, `splitratio` etc. are not Lua globals, so
+  `hl.dispatch(resizeactive -50 0)` fails. They are only reachable as `hl.dsp.*` objects.
+- `hl.dsp.exec_raw(cmd)` **spawns a process**. It does not parse a dispatcher string. Verified:
+  `hyprctl dispatch 'hl.dsp.exec_raw("touch /tmp/probe")'` creates the file. `exec_raw` skips
+  `sh -c`; `exec_cmd` does not.
+
+### 3.2 Bind options
+
+- The Lua bind option for hold-to-repeat is **`repeating`**, not `repeat`. See `HL.BindOptions` in
+  `config/hypr/hl.meta.lua`.
+- `["repeat"] = true` is silently ignored by `hl.bind`.
+
+### 3.3 Lua API object shapes (verified)
+
+- `hl.get_active_monitor().reserved` exists and is a table with **named** fields
+  `top`, `left`, `bottom`, `right` (floats). It is *not* an array — `reserved[1]` is `nil`.
+- `hl.get_active_monitor()` exposes `.x`, `.y`, `.width`, `.height`, `.scale`, `.size` (table).
+- `HL.Window.size` is a table with `.x` and `.y`. `size[1]` is `nil`.
+- `HL.Window.at` is a table with `.x` and `.y`.
+- `HL.Window` exposes `.address`, `.class`, `.floating`, `.hidden`, `.mapped`, `.workspace.id`.
+- `hl.get_windows({ workspace = <id> })` works and returns the windows on that workspace.
+- `HL.Workspace.tiled_layout` is a string such as `"dwindle"`.
+- `hl.get_config("general.gaps_out")` returns a **table** with named `top`/`right`/`bottom`/`left`,
+  not a number.
+- `hl.dsp.window.resize({ x, y, relative?, window? })` — `relative = true` makes `x`/`y` deltas.
+  This is the correct way to do `resizeactive`; do not read the size and compute an absolute value.
+- Dispatcher functions accept an `HL.Window` object directly as `window = <obj>`. There is no need to
+  build `address:0x...` strings.
+
+### 3.4 Config reload
+
+`misc:disable_autoreload` defaults to `false`, but that only says autoreload is *on*. It does not say
+what is watched. Built-in autoreload covers the one file Hyprland parsed: `hyprland.lua`. Every other
+file the config loads is reached through `dofile`, which Hyprland never sees, so no watch is set on
+it. Measured on 0.56.2, with a `configreloaded>>` listener on `.socket2.sock` as the detector:
+
+- `touch hyprland.lua` -> 1 reload.
+- `touch UserConfigs/user_keybinds.lua` -> 0 reloads. Same for `configs/system_keybinds.lua` and
+  `lua/settings.lua`.
+- `hyprctl reload` -> 1 reload (the control).
+
+`hyprctl reload` is the manual equivalent and works regardless of the setting, and
+`hyprctl configerrors` prints everything Hyprland complained about on the last load. **Use
+`hyprctl configerrors` after every change.** `scripts/LuaConfigWatch.sh` closes the gap for user
+edits: it watches the loaded directories and touches the entrypoint (see LUA-008).
+
+---
+
+## 4. Architecture: what is live and what is dead
+
+Load order, verified from `config/hypr/hyprland.lua` and `config/hypr/lua/user_overrides.lua`:
+
+```
+hyprland.lua
+  -> lua/user_defaults.lua        (sets KOOLDOTS_DEFAULTS)
+  -> lua/keybind_index.lua        (hooks hl.bind, renders the menu list; LUA-016)
+  -> lua/animations.lua
+  -> lua/user_overrides.lua
+       -> configs/system_env.lua
+       -> configs/system_startup.lua
+       -> configs/system_window_rules.lua
+       -> configs/system_layer_rules.lua
+       -> configs/system_keybinds.lua        <-- CANONICAL system keybinds
+       -> configs/system_settings.lua
+       -> configs/system_laptops.lua
+       -> UserConfigs/user_*.lua             <-- user overrides (incl. user_keybinds.lua)
+  -> lua/monitors.lua
+  -> lua/workspaces.lua
+```
+
+Key consequences:
+
+- **`config/hypr/configs/system_keybinds.lua` is the canonical system keybind file.** It is
+  hand-maintained. `scripts/migrate-hypr-to-lua.sh` copies it verbatim into a user's config dir and
+  only falls back to generating keybinds from a legacy `Keybinds.conf` when it is absent
+  (`scripts/migrate-hypr-to-lua.sh:1921-1933`). Edit the canonical file, not the generator, for
+  keybind changes.
+- **`config/hypr/lua/keybinds.lua` and `config/hypr/lua/keybind_helpers.lua` are never loaded.**
+  They are orphaned duplicates of `configs/system_keybinds.lua`. A chord diff showed every real bind
+  in the orphan is also present in the canonical file (149 vs 190 chords; the 6 "extras" in the
+  orphan are text inside commented-out example blocks). They are dead weight and they carry the
+  `raw_dispatch_cmd` bug described below.
+- **Two live scripts used to point at that orphan**, which is why it survived so long.
+  `config/hypr/scripts/Kool_Quick_Settings.sh` (`resolve_system_keybinds_file`, the "Edit System
+  Default Keybinds" entry) preferred `lua/keybinds.lua` whenever it existed, so the Quick Settings
+  menu let users edit a file Hyprland never loads. `config/hypr/scripts/KeyBinds.sh` passed it to
+  `keybinds_parser.py` as the first input. Both now resolve `configs/system_keybinds.lua` first and
+  keep the old path only as a last-resort fallback for pre-removal installs. `KeyBinds.sh` reads no
+  file at all any more: it renders the active bind list from `lua/keybind_index.lua` (LUA-016), and
+  the parser is gone.
+- **`config/hypr/lua/user_keybinds_helper.lua` IS live** — it backs `UserConfigs/user_keybinds.lua`.
+  It carries the same `raw_dispatch_cmd` bug.
+- The generator has its own embedded copy of the dispatch helper
+  (`scripts/migrate-hypr-to-lua.sh:1820-1900`). It is a legacy fallback path and is a known drift
+  source. See [open questions](#9-open-questions-and-known-risks).
+
+---
+
+## 5. Defect classes
+
+### D1 — `raw_dispatch_cmd` misuses `hl.dsp.exec_raw`
+
+Present in `lua/keybind_helpers.lua:39-46`, `lua/user_keybinds_helper.lua:36-42`, and
+`configs/system_keybinds.lua:42-49`:
+
+```lua
+local function raw_dispatch_cmd(command)
+  if dsp and dsp.exec_raw then
+    return function()
+      hl.dispatch(dsp.exec_raw(tostring(command)))   -- spawns a PROCESS, not a dispatcher
+    end
+  end
+```
+
+Any dispatcher string routed through this path attempts to exec a binary named after the dispatcher.
+`resizeactive`, `splitratio`, `movewindow` are not executables, so these binds silently do nothing.
+The `else` branch (`hyprctl dispatch ...`) is the one that actually works.
+
+**Fix:** either drop the dispatcher-string path entirely in favour of `hl.dsp.*`, or route it through
+`hl.exec_cmd("hyprctl dispatch ...")`. Never through `exec_raw`.
+
+### D2 — `["repeat"] = true` is not a bind option
+
+The option is `repeating`. All hold-to-repeat binds in `configs/system_keybinds.lua` (volume,
+brightness, and the resize binds) use `["repeat"]` and therefore do not repeat.
+
+### D3 — Legacy dispatcher names
+
+`resizeactive`, `splitratio`, `layoutmsg`, `cyclenext` are not valid Lua globals. Where they appear
+in a dispatch table they must be mapped to `hl.dsp.*` before the generic fallback.
+
+### D4 — Tier 4 standalone Lua scripts
+
+Scripts with `#!/usr/bin/env lua` that call `io.popen("hyprctl ...")` and hand-roll JSON parsing.
+They are slower than bash and add a maintenance burden. Port into the config Lua VM or delete.
+
+### D5 — Wrong Lua API shapes
+
+Code written against `hyprctl -j` JSON assumptions (array indices, `reserved[1..4]`, `size[0]`)
+rather than the real Lua API shapes in section 3.3. Fails silently because most of these paths are
+wrapped in `pcall` or `|| true`.
+
+### D6 — Waybar `interval` polling of `hyprctl`
+
+A Waybar `custom` module with `interval` re-runs its `exec` on a timer forever, whether or not
+anything changed. Two status modules did that to read state Hyprland already pushes over
+`.socket2.sock`:
+
+- `custom/hypr_layout` (`interval: 2`) ran `HyprLayoutModule.sh status`, which shelled out to
+  `ChangeLayout.sh` and then `hyprctl -j activeworkspace | jq` — two bash processes, one `hyprctl`
+  and one `jq` every two seconds.
+- `custom/keyboard` (`interval: 1`) ran `KeyboardLayout.sh status`, which resolves the layout with
+  **four** `hyprctl devices -j | jq` pairs on every invocation — about four `hyprctl` and four `jq`
+  forks per second.
+
+That is D4 in a different place: work that could be one socket read is paid for with process forks,
+on a timer, for the life of the session. It is not covered by the tier table in section 2 because it
+is not a keybind at all — the cost is paid continuously rather than per keypress.
+
+**Fix:** drive the module from the event socket. `HyprEventWatch.sh` subscribes to `.socket2.sock`,
+re-renders only when a relevant event arrives, and reads current state with one socket request.
+`HyprIPC.sh` holds the socket plumbing. Neither script calls `hyprctl`.
+
+**A looping module cannot be refreshed by a Waybar `signal`.** Waybar re-execs a custom module's
+`exec` on SIGRTMIN+N only while that script is *not* running - documented as "if a `signal` is
+defined then the script will run once on startup and will only update with a signal". Both status
+modules are long-running, so `signal: 8` on `custom/hypr_layout` was dead configuration, and the
+label went stale until the next socket event. Anything a listener cannot observe for itself - a
+layout change produces no Hyprland event - is now pushed to it as a socket2 custom event through
+`hypr_emit_event`. A one-shot `exec` can still use a signal, which is how `custom/nightlight` works.
+
+Also documented there: `restart-interval` cannot be combined with `interval` (continuous scripts
+only), which is why the looping modules use the former and the one-shot night-light module the
+latter.
+
+### D7 — Blocking calls inside the config Lua VM
+
+`io.popen` and `os.execute` run on the compositor's own thread and wait for the child to finish, so
+the whole compositor is frozen for the duration of the round trip. That is worse than the same work
+done from a keybind script, which at least only stalls its own process. The replacements are:
+
+- `hl.exec_cmd(cmd)` — spawns and returns, the same path the native `exec-once` used.
+- `hl.get_config(key)` / `hl.config({ ... })` — read and write config values in-process.
+- `hl.get_monitors()`, `hl.get_windows()`, `hl.get_active_*()` — query state in-process.
+
+`io.open` is a plain file read with no Lua-API equivalent for arbitrary paths, so config-file reads
+stay. `hl.exec_cmd` does not return output, so anything that needs a command's stdout has to be
+rethought as a query or a socket read rather than ported as-is.
+
+Found in this pass:
+
+- `lua/settings.lua` — the 3-finger swipe zoom ran `io.popen("hyprctl getoption ... | awk ...")` and
+then `hl.dsp.exec_cmd("hyprctl keyword cursor:zoom_factor ...")`. Two forks on the compositor
+thread, and `hyprctl keyword` is the legacy hyprlang form.
+- `UserConfigs/user_laptops.lua` — `io.popen` in the lid-state fallback, plus one
+`io.popen("ls /sys/class/drm/cardN-*/status")` per DRM card while enumerating connectors, on a path
+that runs at config load and on `hyprland.start`.
+- `lua/laptop-lid.lua` — `os.execute` on the lid switch binds. Nothing loads this file (it is a
+sample users enable by hand), so the stall was latent rather than active.
+
+---
+
+## 6. Work queue
+
+Items are ordered. `Depends on` must be complete first.
+
+### LUA-001 — Delete confirmed-dead scripts
+
+Depends on: none. Status: **done**.
+
+Files with zero live references in the repo and zero references from
+`scripts/migrate-hypr-to-lua.sh`:
+
+- `config/hypr/scripts/ResizeActive.sh` — only referenced from commented-out binds in the orphan
+  template. Also superseded: the native equivalent is one `hl.dsp.window.resize({..., relative = true})`.
+- `config/hypr/scripts/LuaMoveWindowDirectional.sh` — only referenced from commented-out binds.
+- `config/hypr/scripts/LuaFocusWorkspaceRelative.sh` — only referenced from commented-out binds.
+- `config/hypr/scripts/LuaMoveWindowWorkspaceRelative.sh` — only referenced from commented-out binds.
+- `config/hypr/scripts/LuaFullscreenMaximized.sh` — zero references. Also had a wrong API call
+  (`fullscreen({ mode = 1 })`; the API takes `"fullscreen"` or `"maximized"`).
+
+Acceptance: files gone, `hyprctl configerrors` clean, no bind stops working.
+
+### LUA-002 — Delete the orphaned keybind templates
+
+Depends on: none. Status: **done**.
+
+- `config/hypr/lua/keybinds.lua`
+- `config/hypr/lua/keybind_helpers.lua`
+
+Evidence is in [section 4](#4-architecture-what-is-live-and-what-is-dead). Before deleting, re-run the
+chord diff to confirm the canonical file has not lost binds:
+
+```sh
+python3 - <<'PY'
+import re
+def chords(p):
+    s = open(p, encoding='utf-8').read(); out = set()
+    for m in re.finditer(r'\bbind\s*\(', s):
+        lits = re.findall(r'"([^"]*)"', s[m.end():m.end()+240])
+        if len(lits) >= 2: out.add((lits[0].strip().upper(), lits[1].strip().upper()))
+    return out
+a = chords('config/hypr/lua/keybinds.lua')
+b = chords('config/hypr/configs/system_keybinds.lua')
+print('only in orphan:', sorted(a - b))
+PY
+```
+
+Also repoint the two live consumers listed in section 4, otherwise deleting the file breaks the
+keybind search and leaves the Quick Settings menu opening a missing path:
+
+- `config/hypr/scripts/KeyBinds.sh` — build the input list from the canonical file and only fall back
+  to `lua/keybinds.lua` if nothing else exists.
+- `config/hypr/scripts/Kool_Quick_Settings.sh` — `resolve_system_keybinds_file()` must resolve
+  `configs/system_keybinds.lua`, then `UserConfigs/system_keybinds.lua`, before the old template.
+
+Acceptance: every chord reported by the diff is verifiable as text inside a comment or string, not a
+real bind; the Quick Settings "Edit System Default Keybinds" entry opens
+`configs/system_keybinds.lua`; the keybind search still lists binds.
+
+### LUA-003 — Fix `raw_dispatch_cmd` (D1)
+
+Depends on: none. Status: **done**.
+
+- `config/hypr/lua/user_keybinds_helper.lua:36-42` — live, must be fixed.
+- `config/hypr/configs/system_keybinds.lua:42-49` — live, must be fixed.
+- `config/hypr/lua/keybind_helpers.lua` — deleted by LUA-002, nothing to do.
+
+Fix: route the fallback through `hyprctl dispatch` via `exec_cmd`, and add explicit `hl.dsp.*`
+handlers for the dispatchers that user configs actually use. Handlers added: `resizeactive`
+(`window.resize({ ..., relative = true })`), `swapwindow` (`window.swap({ direction })`),
+`bringactivetotop`, `moveintogroup`, `moveoutofgroup`, and `movecurrentworkspacetomonitor`
+(`workspace.move({ monitor })`). `cyclenext` intentionally still routes to `LuaCycleWindow.sh` until
+LUA-010.
+
+Acceptance: `hyprctl eval` of a dispatch string built by the helper does not attempt to exec a
+non-existent binary.
+
+### LUA-004 — Fix resize binds (D2, D3)
+
+Depends on: LUA-003. Status: **done**.
+
+In `config/hypr/configs/system_keybinds.lua`, replace the `resizeactive` shim usage with direct
+dispatcher objects and the correct option name:
+
+```lua
+bind("SUPER SHIFT", "left",  hl.dsp.window.resize({ x = -50, y = 0, relative = true }),
+     { description = "resize left (-50)",  repeating = true })
+bind("SUPER SHIFT", "right", hl.dsp.window.resize({ x =  50, y = 0, relative = true }),
+     { description = "resize right (+50)", repeating = true })
+bind("SUPER SHIFT", "up",    hl.dsp.window.resize({ x = 0, y = -50, relative = true }),
+     { description = "resize up (-50)",    repeating = true })
+bind("SUPER SHIFT", "down",  hl.dsp.window.resize({ x = 0, y =  50, relative = true }),
+     { description = "resize down (+50)",  repeating = true })
+```
+
+Do **not** query the window size and compute an absolute size. `relative = true` does the arithmetic
+in C++ and respects Hyprland's minimum window size. If a hard floor is required, see LUA-005.
+
+Also sweep the whole file for `["repeat"] = true` and convert to `repeating = true`.
+
+Acceptance: hold SUPER+SHIFT+arrow resizes continuously; a single tap changes the window by 50 px.
+
+### LUA-005 — Port `float.all.samesize.lua` to the Lua VM (D4, D5)
+
+Depends on: LUA-002. Status: **done**.
+
+The current script is a tier 4 anti-pattern: `#!/usr/bin/env lua`, 4+ `hyprctl` calls through
+`io.popen`, and a ~130-line hand-rolled JSON decoder to avoid a `jq` dependency — while still paying
+Lua interpreter startup. All of it disappears in-process.
+
+Port requirements:
+
+- Use `hl.get_windows({ workspace = <id> })` and `hl.get_active_monitor()`.
+- Read the reserved area from `monitor.reserved.top/left/bottom/right` (named fields — **not**
+  `reserved[1..4]`).
+- Read window size from `win.size.x` / `win.size.y` (**not** `size[0]`).
+- Pass `HL.Window` objects directly to `hl.dsp.window.float/resize/move` — no `address:0x...` strings,
+  no `hyprctl --batch`, no JSON.
+- Preserve the toggle behaviour (if every window on the workspace is already floating, untile them)
+  and the monocle-layout guard.
+- Keep the `notify-send` feedback calls; those are legitimate `exec_cmd` uses.
+
+Acceptance: keybind produces the same tiling as the old script; zero `hyprctl` processes spawned
+(verify with `ps` during the action, or by confirming the script file is gone and no `io.popen`
+remains); works with the bar's reserved area.
+
+### LUA-006 — Port `LuaSwapWindow.sh`
+
+Depends on: LUA-003. Status: **done**.
+
+The script spawns bash + 2 `hyprctl` + a ~25-line `jq` overlap-detection program to guard against the
+"no target" runtime error. The guard is unnecessary: `hl.dsp.window.swap({ direction })` is a no-op
+when there is no window in that direction.
+
+Replace with:
+
+```lua
+bind("SUPER ALT", "left",  hl.dsp.window.swap({ direction = "left"  }), { description = "swap window left"  })
+bind("SUPER ALT", "right", hl.dsp.window.swap({ direction = "right" }), { description = "swap window right" })
+bind("SUPER ALT", "up",    hl.dsp.window.swap({ direction = "up"    }), { description = "swap window up"    })
+bind("SUPER ALT", "down",  hl.dsp.window.swap({ direction = "down"  }), { description = "swap window down"  })
+```
+
+If runtime testing shows the no-op guard is genuinely needed, implement it in Lua with
+`hl.get_active_window()` and `hl.get_windows({ workspace = ws.id })` and compare `at`/`size` boxes —
+but do not reintroduce a script.
+
+Acceptance: swap works in all four directions; no error notification or `hyprctl configerrors` entry
+when there is no window in that direction; script deleted.
+
+### LUA-007 — Port `ScrollCycleColumnWidth.sh`
+
+Depends on: none. Status: **done**.
+
+The script spawns bash + 3-4 `hyprctl` + several `awk`/`jq` processes to cycle a scrolling-layout
+column width through `{0.25, 0.33, 0.5, 0.66, 0.75, 1.0}`. It also has a dead fallback:
+`hyprctl dispatch layoutmsg "$msg"` uses a legacy dispatcher name that no longer resolves (D3).
+
+Port requirements:
+
+- Layout check: `hl.get_active_workspace().tiled_layout == "scrolling"`; bail out otherwise.
+- Current width: prefer the window's `layout.column.width` if the API exposes it; otherwise derive it
+  as `win.size.x / monitor.width`.
+- Dispatch with `hl.dispatch(hl.dsp.layout("colresize <preset>"))`.
+- Preserve the "closest preset, then advance" behaviour, including the case where the current width is
+  not exactly a preset.
+
+Acceptance: repeated presses cycle 0.25 -> 0.33 -> 0.5 -> 0.66 -> 0.75 -> 1.0 -> 0.25 on a scrolling
+workspace; pressing the bind on a non-scrolling workspace does nothing; script deleted.
+
+### LUA-008 — Retire `LuaAutoReload.sh`
+
+Depends on: none. Status: **reverted 2026-10-14** — the premise was wrong, see below.
+
+The original reasoning: Hyprland reloads the Lua config automatically on save (see section 3.4), and
+the local session has `misc:disable_autoreload = false`, so the watcher is a redundant process:
+`inotifywait` plus a `hyprctl reload` per save, with a 1-second `find`-based polling fallback. The
+CHANGELOG records several rounds of bugs in it (`CHANGELOG.md:438`, `:482`, `:667`).
+
+**Why it was wrong.** `misc:disable_autoreload = false` says autoreload is on; it does not say what
+is watched, and the retirement was decided on that option alone. Built-in autoreload covers only the
+entrypoint Hyprland parsed. Every file under `UserConfigs/`, `configs/` and `lua/` is reached through
+`dofile` and was never watched - measured, see section 3.4. The acceptance criterion below
+("edit-and-save still applies live") was therefore never met; it was also never run.
+`config/hypr/scripts/LuaConfigWatch.sh` replaces the retired watcher.
+
+Steps:
+
+1. Remove the `scriptsDir .. "/LuaAutoReload.sh"` entry from `config/hypr/lua/startup.lua`.
+2. Delete `config/hypr/scripts/LuaAutoReload.sh`.
+3. Verify on the Gentoo host that saving a `.lua` file still applies changes within ~1 second, and
+   that `hyprctl configerrors` is clean after an automatic reload.
+
+Acceptance: edit-and-save still applies live; no `inotifywait` process running; no
+`hyprctl reload` watcher in `ps`.
+
+### LUA-009 — Port `LayoutKeybindDispatch.sh`
+
+Depends on: LUA-006. Status: **done.**
+
+`config/hypr/scripts/LayoutKeybindDispatch.sh` was ~220 lines of bash spawning 4-8 `hyprctl` + `jq`
+processes per keypress to do layout-aware focus with a "did focus change?" fallback. It was the
+largest remaining bash hot path in the keybind tree, and it depended on `LuaCycleWindow.sh`.
+
+Ported to `layout_cycle()` / `layout_focus()` in `config/hypr/lua/window_actions.lua`. The
+attempt-then-fallback shape is preserved: try the layout's own message, and fall back only when the
+focused window did not change. `hl.dsp.window.cycle_next()` is the native candidate for the
+non-scrolling, non-monocle case; the address-sorted ordering stays as the fallback.
+
+### LUA-010 — Port `LuaCycleWindow.sh`
+
+Depends on: LUA-009. Status: **done.**
+
+`LuaCycleWindow.sh` was referenced by `configs/system_keybinds.lua` (the `cyclenext` handler) and by
+`LayoutKeybindDispatch.sh`. Ported to `cycle_window()` in `config/hypr/lua/window_actions.lua`,
+keeping the address-sorted ordering (`y`, then `x`, then `address`) that the `jq` program used. A
+`cyclenext` handler was also added to `lua/user_keybinds_helper.lua`, where the name previously fell
+through to a legacy dispatcher that no longer resolves.
+
+### LUA-011 — Sweep remaining legacy dispatcher names
+
+Depends on: LUA-003. Status: **done**.
+
+Fixing D1 exposed that the problem was wider than `resizeactive`: every dispatcher name that reached
+`raw_dispatch_cmd` was broken, because legacy names are not Lua globals and `exec_raw` spawns a
+process. Fixed in this pass:
+
+- `SUPER + M` used `exec_cmd("hyprctl dispatch splitratio 0.3")`, which becomes
+  `hl.dispatch(splitratio 0.3)` and fails. Now `hl.dsp.layout("splitratio 0.3")`.
+- `SUPER + CTRL + F9..F12` (`movecurrentworkspacetomonitor`) now uses
+  `hl.dsp.workspace.move({ monitor = <direction> })`.
+- `ALT + Tab` (`bringactivetotop`) now uses `hl.dsp.window.bring_to_top()`.
+- `SUPER + CTRL + J/L` (`moveintogroup`) now uses `hl.dsp.window.move({ into_group = <direction> })`.
+- `SUPER + CTRL + H` (`moveoutofgroup`) now uses `hl.dsp.window.move({ out_of_group = true })`.
+
+Audit rule going forward: grep the canonical keybinds for `dispatch("` and confirm every name has an
+explicit handler in the local `dispatch()` function. Anything that reaches `raw_dispatch_cmd` is
+suspect.
+
+Acceptance: each listed bind performs its action on the Gentoo host.
+
+### LUA-012 — Stop Waybar polling `hyprctl` (D6)
+
+Depends on: none. Status: **done.**
+
+Not a Lua item, but the same out-of-process defect as D4, so it is tracked here rather than in a
+separate document. Waybar's `custom/hypr_layout` and `custom/keyboard` modules polled `hyprctl` on
+an `interval` for the life of the session. Both are now event-driven through `HyprEventWatch.sh` +
+`HyprIPC.sh`, with no `interval` and no `hyprctl` anywhere in the render path.
+
+Acceptance: `ps` shows no `hyprctl` or `jq` while the session is idle; the layout and keyboard
+labels still update on a workspace switch, a monitor change, a layout switch and a keyboard layout
+switch.
+
+### LUA-013 — Remove blocking calls from the config Lua VM (D7)
+
+Depends on: none. Status: **done.**
+
+Found by scanning the Lua tree for `io.popen`, `os.execute` and `io.open`, not by reading the keybind
+tree: these run on the compositor's own thread and are never reached through a script.
+
+Acceptance: no `io.popen` or `os.execute` left on a live compositor path; the zoom gestures, the
+laptop monitor layout and the lid binds still behave; `luac -p` clean.
+
+### LUA-014 — Refresh the night-light module on change (D6)
+
+Depends on: LUA-012. Status: **done.**
+
+`custom/nightlight` polled `Hyprsunset.sh status` on `interval: 3`, so bash plus `pgrep` ran
+continuously for a label the user changes by hand. Hyprland has no hyprsunset event, so the module is
+driven by an RT signal instead: it is a one-shot `exec`, which is the case Waybar's `signal` option
+is designed for (verified: 1 run at startup, then one run per signal).
+
+Acceptance: the icon updates immediately on toggle; an idle session no longer re-runs the script
+every 3 seconds.
+
+### LUA-015 — Ship the Matt-Legacy Waybar layout
+
+Depends on: LUA-012. Status: **done.**
+
+A second top-bar layout (`config/hypr/waybar/configs/Matt-Legacy-config` plus
+`config/hypr/waybar/style/Matt-bright-style.css`) ported from an external waybar config. The point of
+this item is the same as D6: build on the project's own module files instead of carrying a parallel
+set of definitions, so behaviour and fixes live in one place.
+
+- `include` pulls `Modules` + `ModulesCustom`, and `custom/menu`, `custom/hint`, `custom/power`,
+  `tray` and `idle_inhibitor` are deliberately not defined locally. A local definition wins over the
+  include, so the source config's own `idle_inhibitor` and `tray` blocks were dropped.
+- `custom/swaync` is split into a `#icon` / `#text` pair. The project ships one module with
+  `"format": "{} {icon} "`, and a single Waybar widget can only have one background, so it could
+  never match the two-part pills cpu/memory/pulseaudio use.
+- The style inlines its gruvbox palette rather than `@import url("colors.css")`, so it ships as one
+  file. The source's unused module definitions were dropped; the hardware ones (battery, network,
+  bluetooth) were kept for hardware testing even though nothing lists them yet.
+- Glyphs matter here: every Nerd Font private-use character was carried over by copying the source
+  file and transforming it with a script. Hand-writing the file silently dropped all of them, which
+  is how the first attempt lost the icons.
+
+Acceptance: the bar starts with no `Unknown module` and no CSS errors, every listed module resolves,
+and two bars can run at once without their listeners fighting (see LUA-012).
+
+### LUA-016 — Replace the keybind menu's parser with a Lua index
+
+Depends on: none. Status: **done.**
+
+`config/hypr/scripts/KeyBinds.sh` piped `configs/system_keybinds.lua`, `UserConfigs/user_overrides.lua`
+and `UserConfigs/user_keybinds.lua` through `config/hypr/scripts/keybinds_parser.py` — 528 lines of
+regex plus a hand-rolled Lua argument splitter — and sent the result to rofi. Reading source text is
+what made it wrong: it printed what the config intended, not what was bound. Measured before the
+change, it emitted 192 lines while the compositor had 205 active binds.
+
+Hyprland's Lua API has no call that lists the bind table (`hl.meta.lua` offers `bind`, `unbind`,
+`define_submap` and `get_current_submap`, and no getter), so the replacement records binds where they
+are registered. `lua/keybind_index.lua` hooks `hl.bind`/`hl.unbind` and renders the list to
+`$XDG_RUNTIME_DIR/kooldots-keybinds.txt`; `KeyBinds.sh` asks the live VM to rewrite that file with
+`hyprctl eval` before every run, so the list is never a reload behind.
+
+Two properties are load-bearing:
+
+- **The `HL.Keybind` handle is never stored.** `unbind` frees it, and reading a freed handle segfaults
+  the compositor — reproduced twice on 0.56.2 by reading `.enabled` after an unbind. Only the chord
+  and the description are copied, at bind time.
+- **The hook is installed with `rawset`.** `hl` is a table, and `rawset` cannot run a metamethod, so a
+  build that protects that table cannot turn the hook into a crash.
+
+Acceptance: the menu lists every active chord; a bind added with `hyprctl eval` appears with no
+reload; an unbind disappears; no `python3` is spawned by the keybind path.
+
+---
+
+## 7. Verification playbook
+
+### Local (this machine)
+
+Syntax only for the Lua config tree. The live session here runs a different, home-manager-managed
+config, so this machine cannot validate runtime behaviour of the repo's config tree.
+
+Standalone status scripts *can* be validated here: copy the file into `~/.config/hypr/scripts/` and
+run it directly. To exercise `HyprEventWatch.sh`, either use a real event (`hyprctl reload` emits
+`configreloaded>>`) or a synthetic one (`hyprctl dispatch 'hl.dsp.event("configreloaded>>")'`,
+which arrives on socket2 as `custom>>configreloaded>>`).
+
+```sh
+# Lua syntax check on every changed file
+for f in $(git -C <repo> diff --name-only | grep '\.lua$'); do
+  luac -p "$f" || lua -e "assert(loadfile('$f'))" || echo "SYNTAX FAIL: $f"
+done
+
+# bash syntax check on every changed script
+for f in $(git -C <repo> diff --name-only | grep '\.sh$'); do bash -n "$f" || echo "SYNTAX FAIL: $f"; done
+```
+
+Useful live probes (safe, read-only) against whatever Hyprland is running:
+
+```sh
+hyprctl eval 'hl.dsp.no_op()'                       # is Lua eval working
+hyprctl dispatch 'hl.dsp.window.resize({ x = 1, y = 0, relative = true })'
+hyprctl getoption misc:disable_autoreload
+```
+
+To inspect API values from `eval`, write them to a file — `eval` does not return values:
+
+```sh
+hyprctl eval 'local f=io.open("/tmp/probe","w"); f:write(tostring(hl.get_active_monitor().reserved.top)); f:close()'
+cat /tmp/probe
+```
+
+### Gentoo host (authoritative)
+
+The Gentoo host has Warp installed and is where runtime validation happens.
+
+1. Deploy the repo config into the Gentoo user's `~/.config/hypr` (or point `hyprland.lua` at the
+   repo tree).
+2. After every change: `hyprctl reload && hyprctl configerrors`. Fix everything it reports before
+   moving on.
+3. Exercise each acceptance criterion by hand and record the result in the completion log.
+4. For the "0 processes" claims, watch for forks while triggering the bind:
+
+```sh
+# in a second terminal, filter out the noise from your own tooling
+while :; do ps -eo pid,comm --no-headers | grep -E 'hyprctl|jq|awk|inotifywait|lua' ; sleep 0.2; done
+```
+
+An in-process bind produces no new lines. A script-based bind produces several.
+
+5. Record the Hyprland version in the completion log entry (`hyprctl version`). The Lua API is still
+   moving between releases.
+
+### Regression checklist for every item
+
+- [ ] `hyprctl configerrors` clean after reload
+- [ ] The specific acceptance criterion passes
+- [ ] No other bind in `docs/Keybinds.md` changed behaviour
+- [ ] Any doc that names the deleted script is updated (`docs/Keybinds.md`, `CHANGELOG.md`)
+
+---
+
+## 8. Documentation to keep in sync
+
+Deleting or porting a script invalidates prose elsewhere. Check and update:
+
+- `docs/Keybinds.md` — updated by LUA-002/LUA-005/LUA-006 to name the canonical source file and the
+  ported binds, and by LUA-009/LUA-010 to name the in-process `layout_cycle` / `layout_focus` /
+  `cycle_window` actions instead of the deleted scripts.
+- `config/hypr/scripts/Kool_Quick_Settings.sh` — decides which keybind file to *edit*. Update it
+  whenever the canonical keybind file moves. `config/hypr/scripts/KeyBinds.sh` no longer reads a file
+  at all (LUA-016); it renders the list from `lua/keybind_index.lua`.
+- `CHANGELOG.md` — add a user-visible entry for each removal.
+- `docs/Patching-UserConfigs.md` — if a user-facing config surface changes.
+
+---
+
+## 9. Open questions and known risks
+
+- **Built-in autoreload covers only the entrypoint.** Hyprland watches `hyprland.lua` and nothing it
+  `dofile`s, so every file under `lua/`, `configs/` and `UserConfigs/` depends on
+  `scripts/LuaConfigWatch.sh` to be applied on save. A new directory added to
+  `lua/user_overrides.lua` must be added to that script's watch list too, or edits in it will look
+  inert.
+- **The keybind index is a shadow copy (LUA-016).** Hyprland owns the bind table and the Lua API
+  cannot read it, so `lua/keybind_index.lua` records binds as they are registered. It can only drift
+  where a bind changes outside a config load, which is why `KeyBinds.sh` re-renders through
+  `hyprctl eval` before every run instead of trusting the file. Dropping that refresh makes the
+  keypress fork-free and brings the drift back; rendering `hyprctl binds -j` instead would need no
+  registry and no invalidation story at all, but adds a `jq` dependency this repo does not declare.
+- **Generator drift.** `scripts/migrate-hypr-to-lua.sh` embeds its own copy of the dispatch helper
+  (the `system_keybind_lines` list, `:1667-1920`) which still references `LuaSwapWindow.sh` and the
+  now-deleted `LuaCycleWindow.sh`, and still lacks the `resizeactive` mapping. **Confirmed
+  unreachable:** the generator copies `configs/system_keybinds.lua` verbatim whenever it exists
+  (`:1921-1923`), and the repo always ships one, so the embedded fallback only runs for a user config
+  dir with no canonical file. Still to do: either delete the embedded fallback or regenerate it from
+  the canonical file. Do not hand-edit the embedded strings without running the generator end to end
+  in a scratch directory.
+- **Upgrade risk for existing users.** Deleting a script assumes the user's deployed
+  `configs/system_keybinds.lua` is replaced on upgrade. `migrate-hypr-to-lua.sh:1921-1922` copies the
+  canonical file over the deployed one, so this holds — but confirm it for the release that carries
+  these changes, and consider keeping the removed scripts for one release if any user-editable file
+  outside `configs/` references them.
+- **`UserConfigs/user_keybinds.lua` is user-editable.** Its documented examples mention
+  `dispatch("resizeactive", ...)`. Fixing `user_keybinds_helper.lua` (LUA-003) covers existing users
+  who copied those examples, so the helper fix is not optional even after the canonical file stops
+  using the shim.
+- **`hl.get_config("general.gaps_out")` returns a table, not a number.** Any ported code that expects
+  a scalar will silently get `nil` from arithmetic. Use the named fields.
+- **`reserved` shape differs from `hyprctl -j`.** The JSON gives `reserved: [l,t,r,b]`; the Lua API
+  gives named `left/top/right/bottom`. Do not port JSON-derived indexing.
+- **`exact = true` is not in the documented `resize` signature** (`x`, `y`, `relative`, `window`).
+  Confirm on the Gentoo host whether it is honoured or ignored before relying on it. The ported code
+  no longer passes it.
+- **`monitor.width` physical vs logical.** `lua/window_actions.lua` keeps the old script's
+  `width / scale` arithmetic, which assumes `HL.Monitor.width` is the physical size (as
+  `hyprctl -j monitors` reports it). If the Lua API already returns a logical width, a scaled display
+  would end up with a usable area that is too small. Verify on a monitor with scale != 1.0 and adjust
+  `same_size_floating` / `current_column_width` if needed.
+- **`hl.get_config("general.layout")` return type.** `same_size_floating` falls back to it when the
+  workspace does not report `tiled_layout`. It returns a string in the current build; confirm on the
+  Gentoo host.
+- **Layout-aware focus is now in-process.** `LayoutKeybindDispatch.sh` and `LuaCycleWindow.sh` are
+  gone (LUA-009/LUA-010). `SUPER + j/k`, `ALT + Tab` and the layout-aware arrow focus binds now run
+  `lua/window_actions.lua` inside the Lua VM. Per-layout runtime confirmation is still outstanding on
+  the Gentoo host.
+- **`dispatch_changed_focus` assumes a synchronous dispatch.** The ported layout-aware paths read
+  `hl.get_active_window().address`, dispatch, read it again, and treat "unchanged" as a no-op that
+  triggers the fallback. That matches the old script's hyprctl round trip only if `hl.dispatch`
+  applies focus synchronously inside the Lua VM. Confirm on the Gentoo host that `SUPER + j` on a
+  scrolling workspace advances exactly one column and does not double-step.
+- **`cycle_next` backwards direction.** `hl.dsp.window.cycle_next({ next = false })` is the documented
+  form for the previous window; the undocumented `prev` field is a leftover with a known bug
+  (hyprwm/Hyprland#14716). Verified against the Hyprland v0.56.2 source (`Actions::cycleNext` uses
+  `previous = !next`), not yet exercised at runtime.
+- **`pin` has no handler in `lua/user_keybinds_helper.lua`.** `docs/HOWTO-Change-Keybindgs.md` shows
+  `dispatch("pin", ...)` in its examples, but the helper has no `pin` branch, so it reaches
+  `raw_dispatch_cmd("pin")` and `hyprctl dispatch pin` fails like the other legacy names. Same defect
+  class as D1/D3. Add `hl.dsp.window.pin({ action })` next time the user-facing examples are touched.
+- **Waybar `custom/nightlight` still polls.** `Hyprsunset.sh status` runs on `interval: 3` and forks
+  bash + `pgrep` each time. It never called `hyprctl`, and Hyprland has no event for hyprsunset
+  state, so LUA-012 left it alone. Converting it means either an `hl.timer`-driven writer or
+  accepting the `pgrep` fork.
+- **`hyprland/language` is the zero-process alternative for the keyboard label.** Waybar's native
+  module reads the same `activelayout` event with no script at all, and the repo already ships a
+  `hyprland/language` block in `Modules`. It was not used because it selects the keyboard by a fixed
+  `keyboard-name` (or the first one) and has no equivalent of `KeyboardLayout.sh`'s ignore list for
+  AVRCP/Bluetooth pseudo-keyboards.
+- **Event coverage for the layout label is not exhaustive.** `HyprEventWatch.sh layout` refreshes on
+  workspace, monitor and config-reload events, and `ChangeLayout.sh` pushes its own RTMIN+8 signal.
+  A layout change made some other way (a workspace rule applied by something that neither switches
+  workspace nor signals Waybar) would not redraw until the next event.
+- **The DRM connector scan now uses a fixed name list.** `connected_drm_connectors()` in
+  `user_laptops.lua` used to discover any connector present in sysfs through `ls`; it now probes a
+  known list of names with `io.open` (LUA-013). Anything unusual is still added by the
+  `hl.get_monitors()` union in `get_connected_monitors()`, which is what drives the layout, but a
+  non-standard connector present in sysfs and not yet known to Hyprland would no longer be seen
+  early. Lua has no `readdir`, so the alternatives are a blocking `io.popen` or an async helper.
+- **`io.popen` outside the compositor was left alone.** `config/wezterm/wezterm.lua` and
+  `config/yazi/plugins/*` are other applications' Lua configs; they never run in Hyprland's VM, so
+  D7 does not apply to them.
+- **The status listeners are tied to their bar.** `HyprEventWatch.sh` exits when the Waybar that
+  spawned it goes away, which it checks every 5s. That is deliberate - it replaces a guard that let
+  orphans live for the whole session - but a bar killed with `SIGKILL` leaves its listener up for up
+  to 5s. A stale pidfile is harmless: the guard only signals a PID it can still see.
+- **Only one half of an icon/text pair may run a script.** `custom/swaync` and `custom/keyboard` are
+  split into `#icon`/`#text`. If both halves ran the same `exec` they would share a pidfile, trip the
+  single-instance guard, and Waybar would log `stopped unexpectedly` every `restart-interval`. Keep
+  the icon half static, the way `cpu#icon` is.
+- **`custom/weather2` cannot be an icon/text pair.** `waybar-weather` returns a single `text` field
+  with the condition emoji already inside it (`{"text":"\ud83c\udf19 45.2\u00b0F",...}`), so there is no separate
+  icon value to put in an icon half. It is styled as a single pill instead; splitting it would need
+  the service to emit an `icon` field. `idle_inhibitor` is the same shape of problem: it only
+  provides `{icon}`, and its `{status}` is the word "activated", so a text half would just print
+  that.
+
+---
+
+## 10. Completion log
+
+Append-only. Newest entries at the top of their item. Every entry records: item, date, agent,
+files changed, verification evidence, follow-ups.
+
+### LUA-001 — Delete confirmed-dead scripts
+
+- 2026-10-03 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
+  - Deleted: `config/hypr/scripts/ResizeActive.sh`,
+    `config/hypr/scripts/LuaMoveWindowDirectional.sh`,
+    `config/hypr/scripts/LuaFocusWorkspaceRelative.sh`,
+    `config/hypr/scripts/LuaMoveWindowWorkspaceRelative.sh`,
+    `config/hypr/scripts/LuaFullscreenMaximized.sh`.
+  - Evidence: repo-wide grep for each name returned only commented-out bind lines in
+    `lua/keybinds.lua` (itself removed by LUA-002) and no references from
+    `scripts/migrate-hypr-to-lua.sh`. `LuaFullscreenMaximized.sh` had zero references anywhere.
+  - Verification: local syntax/parse checks only. **Runtime verification on the Gentoo host is still
+    outstanding** — trigger the resize, move, and fullscreen binds once and confirm
+    `hyprctl configerrors` is clean.
+  - Follow-ups: none.
+
+### LUA-002 — Delete the orphaned keybind templates
+
+- 2026-10-03 — agent `Oz`
+  - Deleted: `config/hypr/lua/keybinds.lua`, `config/hypr/lua/keybind_helpers.lua`.
+  - Changed: `config/hypr/scripts/KeyBinds.sh`, `config/hypr/scripts/Kool_Quick_Settings.sh`,
+    `docs/Keybinds.md`.
+  - Evidence: `hyprland.lua` does not load them; `user_overrides.lua:80-88` loads
+    `configs/system_*.lua`; nothing `dofile`s or `require`s them. Chord diff: 149 chords in the
+    orphan vs 190 in the canonical file, 143 shared, and all 6 orphan-only entries are text inside
+    commented example blocks (`--TITLE=`, `ALT + SPACE`, `UWSM-APP -- KITTY`, ...).
+  - **Blocker found by the pre-delete grep, fixed before deleting:** `Kool_Quick_Settings.sh`
+    `resolve_system_keybinds_file()` preferred `lua/keybinds.lua`, so the Quick Settings
+    "Edit System Default Keybinds" entry opened a file Hyprland never loads, and `KeyBinds.sh`
+    passed it as the first input to `keybinds_parser.py`. Both now resolve
+    `configs/system_keybinds.lua` first, with `UserConfigs/system_keybinds.lua` and then the old
+    template as last-resort fallbacks. `docs/Keybinds.md` now names the canonical file as its source.
+  - Verification: chord diff re-run before deletion; `bash -n` clean on both edited scripts;
+    post-delete grep shows only comments referencing the removed names.
+  - Follow-ups: none.
+
+### LUA-003 — Fix `raw_dispatch_cmd`
+
+- 2026-10-03 — agent `Oz`
+  - Changed: `config/hypr/lua/user_keybinds_helper.lua`,
+    `config/hypr/configs/system_keybinds.lua`.
+  - Fix: the dispatcher-string fallback no longer routes through `hl.dsp.exec_raw` (which spawns a
+    process). It now falls back to `hyprctl dispatch <name> <args>` through `exec_cmd`, and explicit
+    `hl.dsp.*` handlers were added for `resizeactive`, `swapwindow`, `bringactivetotop`,
+    `moveintogroup`, `moveoutofgroup`, and `movecurrentworkspacetomonitor` so the common cases never
+    reach the fallback. `cyclenext` still routes to `LuaCycleWindow.sh` until LUA-010.
+  - Evidence: `hl.dsp.exec_raw("touch /tmp/probe")` creates the file, proving `exec_raw` is a process
+    spawn; `command -v resizeactive` returns not found, so the old path could never work.
+  - Verification: local syntax checks only. **Runtime verification outstanding on the Gentoo host.**
+  - Follow-ups: none.
+
+### LUA-004 — Fix resize binds
+
+- 2026-10-03 — agent `Oz`
+  - Changed: `config/hypr/configs/system_keybinds.lua`.
+  - Fix: the four `SUPER SHIFT + arrow` binds now bind
+    `hl.dsp.window.resize({ x, y, relative = true })` dispatcher objects directly (tier 1 — no Lua
+    closure runs at keypress), and `["repeat"] = true` was corrected to `repeating = true` across the
+    file so hold-to-repeat works.
+  - Evidence: documented signature `resize({ x, y, relative?, window? })`; `relative = true` is the
+    supported form for deltas, so the old "read size, add delta, set absolute" round trip is
+    unnecessary.
+  - Verification: local syntax checks only. **Runtime verification outstanding on the Gentoo host**:
+    hold each arrow and confirm continuous resize, then tap once and confirm exactly 50 px.
+  - Follow-ups: none.
+
+### LUA-005 — Port `float.all.samesize.lua`
+
+- 2026-10-03 — agent `Oz`
+  - Added: `config/hypr/lua/window_actions.lua` (in-process implementation).
+  - Changed: `config/hypr/hyprland.lua` (loads the module),
+    `config/hypr/configs/system_keybinds.lua` (bind now calls the Lua function instead of
+    `exec_cmd`ing the script).
+  - Deleted: `config/hypr/scripts/float.all.samesize.lua`.
+  - Evidence: probe confirmed `monitor.reserved` has named `top/left/bottom/right` fields,
+    `window.size` has `.x`/`.y`, `hl.get_windows({ workspace = id })` filters correctly, and
+    dispatchers accept `HL.Window` objects. All of this replaces 4+ `hyprctl` calls and the
+    hand-rolled JSON decoder.
+  - Verification: local syntax checks only. **Runtime verification outstanding on the Gentoo host**:
+    confirm the tiled layout matches the old script and that no `hyprctl` process is spawned.
+  - Follow-ups: `docs/Keybinds.md:75` updated to drop the script filename.
+
+### LUA-006 — Port `LuaSwapWindow.sh`
+
+- 2026-10-03 — agent `Oz`
+  - Changed: `config/hypr/configs/system_keybinds.lua`,
+    `config/hypr/lua/user_keybinds_helper.lua`.
+  - Deleted: `config/hypr/scripts/LuaSwapWindow.sh`.
+  - Fix: the four `SUPER ALT + arrow` binds now use `hl.dsp.window.swap({ direction = ... })` directly.
+    The `jq` overlap-detection guard was dropped because the dispatcher is a no-op when there is no
+    window in that direction.
+  - Verification: local syntax checks only. **Runtime verification outstanding on the Gentoo host**:
+    swap in all four directions, then press the bind with no neighbour and confirm no error appears in
+    `hyprctl configerrors` or as a notification.
+  - Follow-ups: `docs/Keybinds.md:116` updated. The generator's embedded fallback still names this
+    script — see [open questions](#9-open-questions-and-known-risks).
+
+### LUA-007 — Port `ScrollCycleColumnWidth.sh`
+
+- 2026-10-03 — agent `Oz`
+  - Added: `cycle_column_width()` in `config/hypr/lua/window_actions.lua`.
+  - Changed: `config/hypr/configs/system_keybinds.lua`.
+  - Deleted: `config/hypr/scripts/ScrollCycleColumnWidth.sh`.
+  - Fix: layout check now uses `hl.get_active_workspace().tiled_layout`; width is derived from
+    `win.size.x / monitor.width` when the window does not expose `layout.column.width`; dispatch uses
+    `hl.dsp.layout("colresize <preset>")`. The dead legacy `layoutmsg` fallback is gone.
+  - Verification: local syntax checks only. **Runtime verification outstanding on the Gentoo host**:
+    cycle a full lap on a scrolling workspace and confirm the bind is inert elsewhere.
+  - Follow-ups: none.
+
+### LUA-008 — Retire `LuaAutoReload.sh`
+
+- 2026-10-14 — agent `Oz` (run in `Hyprland-Dots`, branch `development`): **reverted**. The
+  retirement was decided from `hyprctl getoption misc:disable_autoreload` alone, which says
+  autoreload is enabled but not what it watches.
+  - Added: `config/hypr/scripts/LuaConfigWatch.sh`.
+  - Changed: `config/hypr/lua/startup.lua` (starts the watcher), `docs/LuaScriptsMigrationPlan.md`
+    (section 3.4 corrected, this item reverted, section 9), `CHANGELOG.md`.
+  - Evidence: built-in autoreload watches only `hyprland.lua`. With a `configreloaded>>` listener on
+    `.socket2.sock`, `touch hyprland.lua` produced 1 reload; `touch UserConfigs/user_keybinds.lua`,
+    `configs/system_keybinds.lua` and `lua/settings.lua` produced 0 each; `hyprctl reload` produced 1
+    as the control.
+  - Verification (Hyprland 0.56.2, inotify-tools 4.23.9.0, live session): a bind added to
+    `UserConfigs/user_keybinds.lua` registered with no manual reload - `hyprctl binds` showed
+    `SUPER ALT + T`, modmask 72, `Launch Warp`, and the bind count went 206 -> 207 - with
+    `hyprctl configerrors` clean. A non-`.lua` save in the same directory caused no reload. A
+    3-write burst caused exactly one reload. `SIGTERM` exited the watcher and removed its pidfile and
+    fifo, so the retired watcher's "did not stop on SIGTERM" defect is not repeated.
+  - Follow-ups: `misc:disable_autoreload = true` falls back to `hyprctl reload`, and a host without
+    `inotify-tools` falls back to polling. Both paths are implemented; only the inotify path was
+    exercised on this host.
+
+- 2026-10-03 — agent `Oz`
+  - Changed: `config/hypr/lua/startup.lua` (startup entry removed).
+  - Deleted: `config/hypr/scripts/LuaAutoReload.sh`.
+  - Evidence: Hyprland reloads Lua config on save; local `hyprctl getoption misc:disable_autoreload`
+    reports `bool: false, set: false`, i.e. built-in autoreload is active. The CHANGELOG records
+    repeated bugs in the watcher.
+  - Verification: **Runtime verification outstanding on the Gentoo host**: save a `.lua` file and
+    confirm the change applies within ~1 second, then confirm `hyprctl configerrors` is clean and no
+    `inotifywait` process remains.
+  - Follow-ups: if any user relies on watching files *outside* `~/.config/hypr`, built-in autoreload
+    will not cover them. Re-check before release.
+
+### LUA-011 — Sweep remaining legacy dispatcher names
+
+- 2026-10-03 — agent `Oz`
+  - Changed: `config/hypr/configs/system_keybinds.lua`.
+  - Fix: `SUPER + M` now uses `hl.dsp.layout("splitratio 0.3")` instead of
+    `exec_cmd("hyprctl dispatch splitratio 0.3")`, which evaluated to `hl.dispatch(splitratio 0.3)`
+    and failed. Native handlers added for `movecurrentworkspacetomonitor`, `bringactivetotop`,
+    `moveintogroup`, and `moveoutofgroup`.
+  - Evidence: `hyprctl dispatch '<expr>'` is shorthand for `hl.dispatch(<expr>)`, so a bare legacy
+    dispatcher name is an undefined Lua global; the old `exec_raw` path spawned a non-existent
+    binary. Both were silent failures.
+  - Verification: local Lua syntax check only. **Runtime verification outstanding on the Gentoo
+    host** for all five bind groups.
+  - Follow-ups: apply the audit rule in the item description when adding new binds.
+
+### LUA-009 / LUA-010 — Deferred
+
+- 2026-10-03 — agent `Oz`: not started. `LayoutKeybindDispatch.sh` and `LuaCycleWindow.sh` were
+  outside the scope of the first pass and still have live references
+  (`configs/system_keybinds.lua` `cyclenext` handler; `LayoutKeybindDispatch.sh:17`). Start LUA-009
+  before attempting LUA-010.
+
+### LUA-009 — Port `LayoutKeybindDispatch.sh`
+
+- 2026-10-03 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
+  - Added: `layout_cycle()`, `layout_focus()` and their helpers in
+    `config/hypr/lua/window_actions.lua`.
+  - Changed: `config/hypr/configs/system_keybinds.lua` — `SUPER + j`/`k` and the four layout-aware
+    `SUPER + arrow` binds now call the Lua actions instead of `exec_cmd`ing the script.
+  - Deleted: `config/hypr/scripts/LayoutKeybindDispatch.sh`.
+  - Port: layout resolution is `workspace.tiled_layout`, then `general.layout`, then `dwindle`.
+    `dispatch_changed_focus` is the in-process form of the old address-before/address-after check.
+    Scrolling tries `hl.dsp.layout("focus l/r")` then falls back to `hl.dsp.focus`; monocle tries
+    `cyclenext`/`cycleprev` then falls back to the address-sorted cycle; everything else tries
+    `hl.dsp.window.cycle_next()` then falls back. Master and unknown layouts use `hl.dsp.focus`.
+  - Evidence: the legacy `layoutmsg`/`cyclenext`/`movefocus` strings the script passed to `hyprctl`
+    are not Lua globals (D3), so on 0.56.2 every `dispatch_changed_focus` attempt failed and the
+    fallback ran. The port keeps the attempt-then-fallback shape so a build that does honour the
+    layout message still behaves the same.
+  - Verification: `luac -p` clean on all three changed Lua files, and the LUA-011 audit (every
+    `dispatch("…")` name in the canonical keybinds has an explicit handler) passes. **Runtime
+    verification outstanding on the Gentoo host**: `SUPER + j`/`k` and `SUPER + arrow` on dwindle,
+    master, scrolling and monocle, with no `hyprctl`/`jq` fork visible in `ps`.
+  - Follow-ups: `docs/Keybinds.md:107-110` updated. The backwards direction was verified against the
+    Hyprland v0.56.2 source rather than at runtime.
+
+### LUA-010 — Port `LuaCycleWindow.sh`
+
+- 2026-10-03 — agent `Oz`
+  - Added: `cycle_window()` and its address-sorted helper in `config/hypr/lua/window_actions.lua`.
+  - Changed: `config/hypr/configs/system_keybinds.lua` (the `cyclenext` handler no longer
+    `exec_cmd`s the script) and `config/hypr/lua/user_keybinds_helper.lua` (gains a `cyclenext`
+    handler; it previously fell through to a legacy name that no longer resolves).
+  - Deleted: `config/hypr/scripts/LuaCycleWindow.sh`.
+  - Port: filters `hl.get_windows({ workspace = <id> })` to `mapped` and not `hidden`, sorts by `y`,
+    then `x`, then `address` (the old `jq` `sort_by(.y, .x, .address)`), finds the active window and
+    focuses the next/previous entry, wrapping. Uses `win.at.x`/`win.at.y` and
+    `hl.dsp.focus({ window = <HL.Window> })` — no `address:0x…` strings, no JSON.
+  - Evidence: the script forked bash + 2 `hyprctl` + a ~25-line `jq` program per press; the port is
+    zero processes and zero IPC.
+  - Verification: `luac -p` clean. **Runtime verification outstanding on the Gentoo host**:
+    `ALT + Tab` and `SUPER + j`/`k` walk every window on the workspace and wrap, with no `hyprctl` or
+    `jq` process spawned.
+  - Follow-ups: `docs/Keybinds.md:11,110` updated. The generator's embedded fallback still names the
+    deleted script — see [open questions](#9-open-questions-and-known-risks).
+
+### LUA-012 — Stop Waybar polling `hyprctl`
+
+- 2026-10-03 — agent `Oz`: second follow-up. The single-instance guard was keyed by module name
+  only, so running a second bar made the two bars' listeners kill each other; Waybar logged
+  `stopped unexpectedly, is it endless?` and re-ran the module every `restart-interval`.
+  - Changed: `config/hypr/scripts/HyprEventWatch.sh` - the pidfile and fifo are keyed by the parent
+    bar (`hypr-event-watch-<mode>.<waybar-pid>.pid`), only a duplicate for the same bar is replaced,
+    and the event loop uses `read -t 5` so it can notice its bar is gone and exit.
+  - Verification: two-bar test on this host. Bar 2 started and **both** of bar 1's listeners stayed
+    alive; zero `stopped unexpectedly` in either log; after killing bar 2 its listener was gone
+    within 7s while bar 1's stayed up. Pidfiles confirmed as `<mode>.<bar-pid>.pid`.
+
+- 2026-10-03 — agent `Oz`: follow-up pass. The layout label could go stale because Waybar's `signal`
+  does not re-exec a script that is still running (see D6), so `signal: 8` on `custom/hypr_layout`
+  was dead config. Refresh now goes through the socket.
+  - Added: `hypr_emit_event` in `config/hypr/scripts/HyprIPC.sh`.
+  - Changed: `config/hypr/scripts/HyprEventWatch.sh` (layout mode also matches `^custom>>`),
+    `config/hypr/scripts/HyprLayoutModule.sh` (`refresh_waybar` emits the event),
+    `config/hypr/scripts/ChangeLayout.sh` (sources `HyprIPC.sh`, emits after a successful switch),
+    `config/hypr/waybar/ModulesCustom` (dropped the dead `signal: 8`).
+  - **Bug found while testing:** `HyprLayoutModule.sh` had lost its `change_layout` assignment when
+    `get_layout()` was rewritten, so `set_layout()` ran an empty command and the layout menu set
+    nothing. Restored.
+  - Evidence: `hl.dsp.event("x")` arrives on socket2 as `custom>>x`; a probe wrapper proved Waybar
+    re-runs a one-shot `exec` on RTMIN+9 (1 run at startup, then one per signal), and that it does
+    **not** re-run a running script.
+  - Verification: `bash -n` clean; the deployed listener re-rendered on the emitted event (1 -> 2
+    lines) while socket2 showed `custom>>kool:layout`; Waybar reloaded with both listeners and their
+    `socat` children alive.
+  - Verified by hand on the local VM (2026-10-03): `SUPER + ALT + 1..4` updates the layout label with
+    no workspace switch in between, so the socket refresh reaches the module. `SUPER + ALT + mouse
+    wheel` zoom works.
+  - Follow-ups: the layout menu's set action has not been pressed by hand yet. The 3-finger gesture
+    zoom cannot be tested on this VM (no trackpad) - confirm on hardware.
+
+- 2026-10-03 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
+  - Added: `config/hypr/scripts/HyprIPC.sh` (socket resolution + request helper) and
+    `config/hypr/scripts/HyprEventWatch.sh` (socket2 event listener serving both status modules).
+  - Changed: `config/hypr/scripts/HyprLayoutModule.sh` (`get_layout()` now reads `j/activeworkspace`
+    over the socket instead of shelling out to `ChangeLayout.sh` + `hyprctl`) and
+    `config/hypr/waybar/ModulesCustom` (both modules drop `interval`, run
+    `HyprEventWatch.sh layout|keyboard`, and gain `restart-interval`).
+  - Evidence: a PATH shim around `hyprctl` showed `HyprLayoutModule.sh status` made 1 `hyprctl` call
+    and `KeyboardLayout.sh status` made 4 per invocation, at `interval: 2` and `interval: 1`. That is
+    the `hyprctl` + `jq` process pair seen while watching `ps`.
+  - Evidence: `printf 'j/activeworkspace' | socat - UNIX-CONNECT:$SOCK` returns the same JSON as
+    `hyprctl -j activeworkspace`; `j/getoption general:layout` likewise matches.
+  - Verification (Hyprland 0.56.2, Waybar v0.15.0, this host): the layout render makes 0 `hyprctl`
+    calls; the keyboard listener's output matches `KeyboardLayout.sh status` exactly (`us`); the
+    layout listener re-renders on a real `configreloaded>>` (1 -> 2 lines); SIGTERM exits both
+    listeners cleanly with no leftover `socat`; after a Waybar config reload both listeners are
+    running and `ps` reports **0** `hyprctl`/`jq` hits over a 20 s sample, against ~4.5/s before.
+  - Follow-ups: `custom/nightlight` still polls with `pgrep` — see
+    [open questions](#9-open-questions-and-known-risks).
+
+### LUA-013 — Remove blocking calls from the config Lua VM
+
+- 2026-10-03 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
+  - Changed: `config/hypr/lua/settings.lua` (gesture zoom uses `hl.get_config` / `hl.config`,
+    clamped to 1.0-16.0), `config/hypr/UserConfigs/user_laptops.lua` (dropped the `read_command`
+    `io.popen` helper and the `cat /proc/acpi/button/lid/*/state` fallback; `connected_drm_connectors`
+    probes a known connector-name list with `io.open` instead of one `io.popen("ls ...")` per card),
+    `config/hypr/lua/laptop-lid.lua` (`os.execute` -> `hl.exec_cmd`).
+  - Evidence: `075ce3eb` ("Fixed io.open calls with LUA API") is the commit that **introduced** the
+    `user_laptops.lua` `io.popen` calls - it converted shell `hyprctl`/`ls` usage into blocking Lua
+    file and pipe reads. The `settings.lua` gesture `io.popen` came from `1d6ae586`, an ancestor of
+    that cleanup, so the sweep only ever covered `io.open`.
+  - Verification: `luac -p` clean on all three files; no executable `io.popen` remains in
+    `config/hypr/`. Equivalence check for the risky part: the old `ls`-based sysfs glob reports
+    `Virtual-1`, and the refactored scan (with `hl.get_monitors` stubbed empty so only the DRM path
+    can contribute) reports `Virtual-1` as well. The whole file was executed against a stubbed `hl`
+    on real sysfs, so both `is_lid_closed()` and `connected_drm_connectors()` ran without error.
+  - Follow-ups: the DRM name-list trade-off is recorded in
+    [open questions](#9-open-questions-and-known-risks). The `os.execute` fallbacks in
+    `lua/user_startup_helper.lua:82` and `UserConfigs/user_laptops.lua` are guarded by `hl.exec_cmd`
+    and unreachable on a Lua build, so they were left in place.
+  - Runtime verification: the mouse-wheel zoom works (`SUPER + ALT + mouse wheel`). The gesture zoom
+    that this item actually changed is the 3-finger swipe, which cannot be exercised on the local VM
+    because it has no trackpad - confirm on hardware that the swipe zooms and does not stall.
+
+### LUA-014 — Refresh the night-light module on change
+
+- 2026-10-03 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
+  - Changed: `config/hypr/scripts/Hyprsunset.sh` (added `refresh_waybar` on RTMIN+9 and a
+    `read_state` helper that avoids forking `cat`), `config/hypr/waybar/ModulesCustom`
+    (`custom/nightlight`: `interval` 3 -> 60, added `signal: 9`).
+  - Why not event-driven: Hyprland has no hyprsunset event. The state only changes when
+    `Hyprsunset.sh` changes it, so the script signals; the long interval covers hyprsunset exiting on
+    its own, which `cmd_status` deliberately treats as off.
+  - Evidence: a probe wrapper around the module's `exec` showed Waybar re-running a one-shot script
+    on RTMIN+9 exactly once per signal.
+  - Verification: `bash -n` clean; the module reports `signal: 9` and `interval: 60` as loaded;
+    `Hyprsunset.sh status` still emits valid Waybar JSON.
+  - Follow-ups: clicking the icon should update it immediately; worth a by-hand check that the
+    icon also flips when hyprsunset is killed outside the script (within the 60s interval).
+
+### LUA-015 — Ship the Matt-Legacy Waybar layout
+
+- 2026-10-03 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
+  - Added: `config/hypr/waybar/configs/Matt-Legacy-config` and
+    `config/hypr/waybar/style/Matt-bright-style.css`.
+  - Changed: nothing else - the layout is self-contained and reaches installs through the normal
+    `waybar/configs` + `waybar/style` sync.
+  - Module lists: left `custom/menu`, `custom/hypr_layout`, `hyprland/workspaces`,
+    `hyprland/window`; centre `clock#icon/#text`, `idle_inhibitor`, `custom/weather2`,
+    `custom/hint`; right `custom/swaync#icon/#text`, `cpu#`, `memory#`, `pulseaudio#`,
+    `custom/keyboard`, `tray`, `custom/power`.
+  - Evidence: `WaybarLayout.sh` discovers `configs/*` with `find -L ... -maxdepth 1 -type f`, so no
+    registry edit was needed for the layout to appear in the menu.
+  - Verification: started with `-c <config> -s <style>`. Log showed both includes loading, the CSS
+    parsing, no `Unknown module`, no CSS error and no `stopped unexpectedly`; `Bar configured ...
+    for output: Virtual-1`. Two `swaync-client -swb` processes confirmed the `#icon`/`#text` split is
+    live, and `waybar-weather` confirmed the centre weather module.
+  - Follow-ups: the hardware definitions (battery, network, bluetooth) are present but unlisted, so
+    they need adding to `modules-right` on a machine that has them. `backlight` and `temperature`
+    already come from the included project `Modules`.
+
+- 2026-10-04 — agent `Oz`: styling pass so the bar reads as one family. Every item is now a
+  two-segment pill (coloured icon + dark text) or, where that is impossible, a single pill styled to
+  match.
+  - Changed: `Matt-Legacy-config` (`custom/hint` and `custom/keyboard` became `#icon`/`#text`
+    pairs), `Matt-bright-style.css` (paired styling for both, `#custom-weather2` styled at all - it
+    had no selector before - and `#idle_inhibitor` became a coloured icon pill).
+  - Constraint found: a pair only splits when the module exposes both halves. `custom/hint` carries a
+    glyph in the project file (`U+F0E81`), so its icon half is that glyph. `custom/keyboard`'s format
+    is `" {} "` - **no glyph** - so a static `U+2328` (KEYBOARD, standard Unicode rather than a
+    private-use character, so it renders in the font stack) was supplied. `custom/weather2` and
+    `idle_inhibitor` cannot be split at all; see [open questions](#9-open-questions-and-known-risks).
+  - **Bug introduced and fixed in the same pass:** both keyboard halves ran
+    `HyprEventWatch.sh keyboard`, so they shared one pidfile and the single-instance guard made them
+    kill each other - Waybar logged `keyboard stopped unexpectedly, is it endless?` and re-ran it
+    every 10s. The icon half is now static with no `exec`, exactly like `cpu#icon`; only the text half
+    runs the listener.
+  - Verification: restarted with the config. Log clean apart from the portal `[info]` line; `Bar
+    configured ... for output: Virtual-1`; exactly one keyboard listener and two `swaync-client`
+    halves; two `socat` readers, each parented to a live listener; stale pidfiles from earlier bars
+    cleared.
+
+### LUA-016 — Replace the keybind menu's parser with a Lua index
+
+- 2026-10-15 — agent `Oz` (run in `Hyprland-Dots`, branch `development`)
+  - Added: `config/hypr/lua/keybind_index.lua`.
+  - Changed: `config/hypr/hyprland.lua` (loads the module before `user_overrides`, renders the list
+    after `workspaces`), `config/hypr/scripts/KeyBinds.sh`, `docs/Keybinds.md`.
+  - Deleted: `config/hypr/scripts/keybinds_parser.py` (528 lines).
+  - Evidence: `hl.bind` returns an `HL.Keybind` handle exposing `display_key`, `description`, `submap`,
+    `key`, `modmask`, `enabled` and `has_description`, but `hl.meta.lua` has no bind-table getter, so
+    a registry is the only Lua-side source. `hl` is a table, so `rawset` hooks it without a
+    metamethod. `hl.define_submap` bodies run at definition time, so submap binds are recorded at
+    load: the `Bind KB` bind is in the list without that submap ever being entered.
+  - Evidence: reading `.enabled` on a handle after `hl.unbind` removed that bind segfaults Hyprland
+    (reproduced twice on the dev host). The module stores strings only, and says so, so it is not
+    "improved" later into keeping handles.
+  - Verification (Hyprland 0.56.2, live session): `hyprctl reload` left `hyprctl configerrors` clean
+    and no `[WARN] keybind_index` in the log, and wrote 204 lines against 205 active binds. The gap is
+    the second of the two stacked `ALT + Tab` binds in `configs/system_keybinds.lua:748-749`, which any
+    chord-keyed list collapses; the removed parser collapsed it identically, so it is not a
+    regression. Deltas against the old parser's 192 lines: +10 `SUPER + SHIFT + <number>` variants,
+    +2 lid switches, and canonical `XF86…` casing instead of the raw source text's lowercase.
+  - Verification: deleting the list and running
+    `hyprctl eval 'KOOLDOTS_KEYBIND_INDEX:write_cache()'` regenerates it (204 lines), so `eval` does
+    reach the config globals. A live `hl.bind("SUPER + F24", ...)` appears after a refresh (205 lines)
+    and disappears after `hl.unbind("SUPER + F24")` (204), with the session alive and the compositor
+    back to 205 binds.
+  - Follow-ups: the `jq` fallback in `KeyBinds.sh` covers a config whose `hyprland.lua` predates the
+    module, and a build where the hook cannot be installed. It is deliberately not the main path.

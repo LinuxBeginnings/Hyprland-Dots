@@ -16,6 +16,10 @@ set -euo pipefail
 # Customize via env vars:
 #   HYPRSUNSET_TEMP   default 4500 (K)
 #   HYPRSUNSET_ICON_MODE  sunset|blue  (default: sunset)
+#
+# Waybar: the `custom/nightlight` module re-renders on RTMIN+9, which this
+# script sends whenever the state changes. It also keeps a long safety interval
+# for the case where hyprsunset exits on its own, outside this script.
 
 STATE_FILE="$HOME/.cache/.hyprsunset_state"
 TARGET_TEMP="${HYPRSUNSET_TEMP:-4500}"
@@ -38,6 +42,21 @@ stop_hyprsunset() {
       sleep 0.1
     fi
   fi
+}
+
+# Read the persisted state without forking `cat`. Waybar re-runs this script on
+# a timer and on every RTMIN+9, so the cheap path matters.
+STATE=""
+read_state() {
+  STATE=""
+  read -r STATE <"$STATE_FILE" 2>/dev/null || true
+  [[ -n "$STATE" ]] || STATE=off
+}
+
+# Tell Waybar the night-light state changed, so the icon updates now instead of
+# waiting for the next interval. Signal 8 belongs to custom/hypr_layout.
+refresh_waybar() {
+  pkill -RTMIN+9 waybar 2>/dev/null || true
 }
 
 # Render icons using pango markup to allow colorization
@@ -76,6 +95,7 @@ cmd_on() {
   fi
   echo on > "$STATE_FILE"
   notify-send -u low "Hyprsunset: Enabled" "${TARGET_TEMP}K" || true
+  refresh_waybar
 }
 
 cmd_off() {
@@ -96,11 +116,13 @@ cmd_off() {
   fi
   echo off > "$STATE_FILE"
   notify-send -u low "Hyprsunset: Disabled" || true
+  refresh_waybar
 }
 
 cmd_toggle() {
   ensure_state
-  state="$(cat "$STATE_FILE" 2>/dev/null || echo off)"
+  read_state
+  state="$STATE"
 
   if [[ "$state" == "on" ]]; then
     cmd_off
@@ -116,7 +138,8 @@ cmd_toggle() {
 
 cmd_status() {
   ensure_state
-  state="$(cat "$STATE_FILE" 2>/dev/null || echo off)"
+  read_state
+  state="$STATE"
 
   # Active only when state file is on AND process is running
   if [[ "$state" == "on" ]] && pgrep -x hyprsunset >/dev/null 2>&1; then
@@ -139,7 +162,8 @@ cmd_status() {
 
 cmd_init() {
   ensure_state
-  state="$(cat "$STATE_FILE" 2>/dev/null || echo off)"
+  read_state
+  state="$STATE"
 
   if [[ "$state" == "on" ]]; then
     if command -v hyprsunset >/dev/null 2>&1; then
@@ -158,6 +182,10 @@ cmd_init() {
       stop_hyprsunset
     fi
   fi
+
+  # A stale process may have been stopped above, so the shown state can change
+  # at login even though the state file did not.
+  refresh_waybar
 }
 
 case "${1:-}" in

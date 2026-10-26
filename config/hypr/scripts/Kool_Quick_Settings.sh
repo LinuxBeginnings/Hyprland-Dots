@@ -89,6 +89,42 @@ show_info() {
   fi
 }
 
+check_lua_syntax() {
+  local target_file="$1"
+  [[ -n "$target_file" && "$target_file" == *.lua ]] || return 0
+  local filename
+  filename="$(basename "$target_file")"
+
+  if ! command -v luac >/dev/null 2>&1; then
+    if [[ -f "$iDIR/note.png" ]]; then
+      notify-send -u normal -t 5000 -i "$iDIR/note.png" "Lua Syntax Check" "luac not found can't run syntax check on $filename"
+    else
+      notify-send -u normal -t 5000 "Lua Syntax Check" "luac not found can't run syntax check on $filename"
+    fi
+    return 0
+  fi
+
+  local err_out
+  if err_out=$(luac -p "$target_file" 2>&1); then
+    if [[ -f "$iDIR/note.png" ]]; then
+      notify-send -u low -t 3000 -i "$iDIR/note.png" "Lua Syntax Check" "Syntax check passed for $filename"
+    else
+      notify-send -u low -t 3000 "Lua Syntax Check" "Syntax check passed for $filename"
+    fi
+  else
+    if [[ -f "$iDIR/error.png" ]]; then
+      notify-send -u critical -t 8000 -i "$iDIR/error.png" "Lua Syntax Error" "Failed syntax check on $filename:\n$err_out"
+    else
+      notify-send -u critical -t 8000 "Lua Syntax Error" "Failed syntax check on $filename:\n$err_out"
+    fi
+  fi
+}
+
+if [[ "${1:-}" == "--check-lua" ]]; then
+  check_lua_syntax "${2:-}"
+  exit 0
+fi
+
 get_context_monitor_name() {
   if ! command -v hyprctl >/dev/null 2>&1; then
     return 1
@@ -145,12 +181,18 @@ resolve_system_lua_file() {
 }
 
 resolve_system_keybinds_file() {
-  local lua_keybinds="$hypr_dir/lua/keybinds.lua"
-  local legacy_system_lua="$configs/system_keybinds.lua"
-  if [[ -f "$lua_keybinds" || ! -f "$legacy_system_lua" ]]; then
-    printf '%s' "$lua_keybinds"
-  else
+  # configs/system_keybinds.lua is the file Hyprland loads. The old
+  # lua/keybinds.lua template is NOT loaded, so it must never be offered for
+  # editing unless it is genuinely all that exists on an older install.
+  local canonical_system_lua="$configs/system_keybinds.lua"
+  local legacy_system_lua="$UserConfigs/system_keybinds.lua"
+  local old_template_lua="$hypr_dir/lua/keybinds.lua"
+  if [[ -f "$canonical_system_lua" ]]; then
+    printf '%s' "$canonical_system_lua"
+  elif [[ -f "$legacy_system_lua" ]]; then
     printf '%s' "$legacy_system_lua"
+  else
+    printf '%s' "$old_template_lua"
   fi
 }
 rainbow_mode_file() {
@@ -347,21 +389,57 @@ rainbow_borders_menu() {
 
   # Map internal mode to friendly display
   local current_display="$current"
+  local active_option=""
   case "$current" in
-  wallust_random) current_display="Wallust Color" ;;
-  rainbow) current_display="Original Rainbow" ;;
-  gradient_flow) current_display="Gradient Flow" ;;
-  low_cpu) current_display="Low CPU Rainbow" ;;
-  disabled) current_display="Disabled" ;;
+  wallust_random)
+    current_display="Wallust Color"
+    active_option="Wallust Color"
+    ;;
+  rainbow)
+    current_display="Original Rainbow"
+    active_option="Original Rainbow"
+    ;;
+  gradient_flow)
+    current_display="Gradient Flow"
+    active_option="Gradient Flow"
+    ;;
+  low_cpu)
+    current_display="Low CPU Rainbow"
+    active_option="Low CPU Rainbow"
+    ;;
+  disabled)
+    current_display="Disabled"
+    active_option="Disable Rainbow Borders"
+    ;;
   esac
 
-  # Build options and prompt
-  local options="Disable Rainbow Borders\nWallust Color\nOriginal Rainbow\nGradient Flow\nLow CPU Rainbow"
+  # Build options and mark the active one
+  local raw_options=(
+    "Disable Rainbow Borders"
+    "Wallust Color"
+    "Original Rainbow"
+    "Gradient Flow"
+    "Low CPU Rainbow"
+  )
+
+  local default_row=0
+  local MARKER="👉"
+  local menu_options=("${raw_options[@]}")
+  for i in "${!menu_options[@]}"; do
+    if [[ "${menu_options[i]}" == "$active_option" ]]; then
+      menu_options[i]="$MARKER ${menu_options[i]}"
+      default_row=$i
+      break
+    fi
+  done
+
   local choice
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
-  choice=$(printf "%b" "$options" | rofi -i -dmenu -config "$rofi_theme" -mesg "Rainbow Borders: current = $current_display")
+  choice=$(printf "%s\n" "${menu_options[@]}" | rofi -i -dmenu -config "$rofi_theme" -mesg "Rainbow Borders: current = $current_display" -selected-row "$default_row")
 
   [[ -z "$choice" ]] && return
+
+  choice="${choice#"$MARKER "}"
 
   case "$choice" in
   "Disable Rainbow Borders")
@@ -431,6 +509,7 @@ handle_choice() {
   local choice="$1"
   local quick_settings_monitor="$2"
   local file=""
+  local qs_state_dir="" qs_discard="" qs_nwg_pid=""
 
   case "$choice" in
   "Manage User Defaults" | "Configure User Defaults" | "Set User Defaults")
@@ -503,12 +582,41 @@ handle_choice() {
   "Edit User Monitor config")
     file="$user_monitors_lua"
     ;;
-  "Configure Workspace Rules (nwg-displays)")
+  "Arrange Monitors (nwg-displays)")
     if ! command -v nwg-displays &>/dev/null; then
       notify-send -i "$iDIR/error.png" "E-R-R-O-R" "Install nwg-displays first"
       return
     fi
-    nwg-displays
+    # nwg-displays writes a hyprlang monitors.conf that this Lua config never
+    # reads, and it applies its own arrangement with `hyprctl reload` - which
+    # re-runs the Lua config and puts the STORED layout back on screen. So it is
+    # pointed at a discard path in the runtime state directory, and what it wrote
+    # is imported afterwards: that both applies the drag and persists it to
+    # UserConfigs/monitors.lua, which the Lua config DOES read.
+    #
+    # The path keeps its .conf suffix on purpose: nwg derives the Lua sibling it
+    # also writes from it (removesuffix(".conf") + ".lua"), and a path that does
+    # not end in .conf makes it fall back to ~/.config/hypr/monitors.lua instead.
+    qs_state_dir="${XDG_RUNTIME_DIR:-/tmp}/kooldots-display-profiles"
+    qs_discard="$qs_state_dir/nwg-monitors.discard.conf"
+    mkdir -p -- "$qs_state_dir"
+    rm -f -- "$qs_discard" "$qs_state_dir/nwg-monitors.discard.lua"
+    # Pause BEFORE the GUI starts, with our own PID: nwg's reload emits monitor
+    # events, and the watcher would re-apply the stored layout over the drag.
+    # Writing the pause file after the fork would leave that window open.
+    printf '%s\n' "$$" > "$qs_state_dir/pause"
+    nwg-displays -m "$qs_discard" 9>&- &
+    qs_nwg_pid=$!
+    printf '%s\n' "$qs_nwg_pid" > "$qs_state_dir/pause"
+    wait "$qs_nwg_pid" || true
+    rm -f -- "$qs_state_dir/pause"
+    if [[ -s $qs_discard ]] && grep -q '^[[:space:]]*monitor=' "$qs_discard" 2>/dev/null; then
+      "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/DisplayProfile.sh" import-nwg "$qs_discard" \
+        >/dev/null 2>&1 || true
+    fi
+    rm -f -- "$qs_discard" "$qs_state_dir/nwg-monitors.discard.lua"
+    notify-send -i "$iDIR/ja.png" "Monitors" \
+      "To keep this arrangement: SUPER+ALT+D then 'Save current state as...'"
     ;;
   "GTK Settings (nwg-look)")
     if ! command -v nwg-look &>/dev/null; then
@@ -557,21 +665,28 @@ handle_choice() {
     selected_cmd=("${edit_cmd[@]}")
     [[ ${#visual_cmd[@]} -gt 0 ]] && selected_cmd=("${visual_cmd[@]}")
 
-    if is_tui_editor "${selected_cmd[@]}"; then
-      if [[ -x "$scriptsDir/LaunchTerminal.sh" ]]; then
-        "$scriptsDir/LaunchTerminal.sh" "$term" "${selected_cmd[*]} '$file'" >/dev/null 2>&1 &
-      elif command -v kitty >/dev/null 2>&1; then
-        kitty "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
-      elif command -v ghostty >/dev/null 2>&1; then
-        ghostty -e "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
-      elif command -v alacritty >/dev/null 2>&1; then
-        alacritty -e "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
-      elif command -v "${term_cmd[0]}" >/dev/null 2>&1; then
-        "${term_cmd[@]}" -e "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
+    (
+      if is_tui_editor "${selected_cmd[@]}"; then
+        if [[ -x "$scriptsDir/LaunchTerminal.sh" ]]; then
+          "$scriptsDir/LaunchTerminal.sh" "$term" "${selected_cmd[*]} '$file'; '$scriptsDir/Kool_Quick_Settings.sh' --check-lua '$file'"
+        elif command -v kitty >/dev/null 2>&1; then
+          kitty "${selected_cmd[@]}" "$file"
+          check_lua_syntax "$file"
+        elif command -v ghostty >/dev/null 2>&1; then
+          ghostty -e "${selected_cmd[@]}" "$file"
+          check_lua_syntax "$file"
+        elif command -v alacritty >/dev/null 2>&1; then
+          alacritty -e "${selected_cmd[@]}" "$file"
+          check_lua_syntax "$file"
+        elif command -v "${term_cmd[0]}" >/dev/null 2>&1; then
+          "${term_cmd[@]}" -e "${selected_cmd[@]}" "$file"
+          check_lua_syntax "$file"
+        fi
+      else
+        "${selected_cmd[@]}" "$file"
+        check_lua_syntax "$file"
       fi
-    else
-      "${selected_cmd[@]}" "$file" >/dev/null 2>&1 &
-    fi
+    ) >/dev/null 2>&1 &
   fi
 }
 
@@ -656,7 +771,7 @@ Choose Kitty Terminal Theme
 Choose Ghostty Terminal Theme
 Choose Wlogout Theme
 Choose Wlogout Wallpaper
-Configure Workspace Rules (nwg-displays)
+Arrange Monitors (nwg-displays)
 GTK Settings (nwg-look)
 QT Apps Settings (qt6ct)
 QT Apps Settings (qt5ct)
@@ -697,7 +812,7 @@ show_main_menu() {
   printf '%b\n' "[[ User Settings ]]\x00meta\x1fManage User Defaults Edit User Defaults Edit User Keybinds Edit User ENV variables Edit User Startup Apps overlay Edit User Window Rules overlay Edit User Layer Rules overlay Edit User Settings Edit User Decorations Edit User Animations Edit User Laptop Settings Edit User Monitor config Select Hyprview Layout"
   printf '%b\n' "[[ System Settings ]]\x00meta\x1fEdit System Default Keybinds Edit System Default Startup Apps Edit System Default Window Rules Edit System Default Layer Rules Edit System Default Settings"
   printf '%b\n' "[[ Toggle Options ]]\x00meta\x1fToggle Waybar Weather units C F Toggle Waybar Clock 12H 24H Toggle Game Mode"
-  printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Choose Wlogout Theme Choose Wlogout Wallpaper Configure Workspace Rules nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Rainbow Borders Mode"
+  printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Choose Wlogout Theme Choose Wlogout Wallpaper Arrange Monitors nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Rainbow Borders Mode"
   printf '%s\n' "[ Quick Links]"
   printf '%s\n' "Manage User Defaults"
   printf '%s\n' "Set User Keybinds"
@@ -730,7 +845,7 @@ show_main_menu() {
   printf '%s\n' "Choose Ghostty Terminal Theme"
   printf '%s\n' "Choose Wlogout Theme"
   printf '%s\n' "Choose Wlogout Wallpaper"
-  printf '%s\n' "Configure Workspace Rules (nwg-displays)"
+  printf '%s\n' "Arrange Monitors (nwg-displays)"
   printf '%s\n' "GTK Settings (nwg-look)"
   printf '%s\n' "QT Apps Settings (qt6ct)"
   printf '%s\n' "QT Apps Settings (qt5ct)"

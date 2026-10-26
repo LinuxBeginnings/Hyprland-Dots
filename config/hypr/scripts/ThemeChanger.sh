@@ -207,7 +207,26 @@ apply_hypr_border_fallback() {
 set +e
 "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 current_global_theme="$(read_global_theme)"
-choice="$(build_menu_options "$current_global_theme" | rofi -dmenu -i -p 'Select Global Theme' -config "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config.rasi")"
+menu_options="$(build_menu_options "$current_global_theme")"
+
+# Pre-select the marked row. The marker is the only statement of which theme is
+# active - it is what build_menu_options decided from the cache - so the row is
+# found in the list rather than recomputed here and left to drift.
+default_row=0
+row=0
+while IFS= read -r option_line; do
+  if [[ "$option_line" == "$MARKER "* ]]; then
+    default_row=$row
+    break
+  fi
+  row=$((row + 1))
+done <<<"$menu_options"
+
+if [[ -n "$menu_options" ]]; then
+  choice="$(printf '%s\n' "$menu_options" | rofi -dmenu -i -p 'Select Global Theme' -config "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config.rasi" -selected-row "$default_row")"
+else
+  choice=""
+fi
 prompt_status=$?
 set -e
 

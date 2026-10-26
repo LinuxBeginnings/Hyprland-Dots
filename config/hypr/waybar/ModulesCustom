@@ -108,18 +108,24 @@
 	"on-click": "$HOME/.config/hypr/scripts/Hypridle.sh toggle",
 	"on-click-right": "$HOME/.config/hypr/scripts/LockScreen.sh"
 },
-
+// Event-driven: HyprEventWatch.sh subscribes to the Hyprland event socket and
+// prints a new line only when what it shows actually changed. There is no
+// `interval`, so an idle session forks nothing at all. `restart-interval`
+// re-arms the listener if it ever exits.
 "custom/keyboard": {
-	"exec": "$HOME/.config/hypr/scripts/KeyboardLayout.sh status",
-	"interval": 1,
-	"format": " {}",
+	"exec": "$HOME/.config/hypr/scripts/HyprEventWatch.sh keyboard",
+	"restart-interval": 10,
+	"format": " {} ",
 	"on-click": "$HOME/.config/hypr/scripts/KeyboardLayout.sh switch",
 },
 "custom/hypr_layout": {
-	"exec": "$HOME/.config/hypr/scripts/HyprLayoutModule.sh status",
+	"exec": "$HOME/.config/hypr/scripts/HyprEventWatch.sh layout",
 	"return-type": "json",
-	"interval": 2,
-	"signal": 8,
+	// Looping script, so no `interval` and no `signal`: Waybar will not re-exec a
+	// script that is still running, so an RT signal here would be dead config.
+	// It re-renders itself from socket2, including the `custom>>kool:layout`
+	// event ChangeLayout.sh emits.
+	"restart-interval": 10,
 	"format": "{}",
 	"on-click": "$HOME/.config/hypr/scripts/HyprLayoutModule.sh menu",
 	"on-click-right": "$HOME/.config/hypr/scripts/HyprLayoutModule.sh next",
@@ -140,7 +146,12 @@
 "custom/nightlight": {
 	"return-type": "json",
 	"exec": "$HOME/.config/hypr/scripts/Hyprsunset.sh status",
-	"interval": 3,
+	// Hyprsunset.sh pushes RTMIN+9 when it changes state, so the icon updates
+	// immediately. The long interval is only a safety net for hyprsunset dying
+	// outside the script; it was interval 3, which re-ran bash + pgrep
+	// constantly for a label that only changes when the user acts.
+	"signal": 9,
+	"interval": 60,
 	"format": "{text}",
 	"min-length": 2,
 	"on-click": "$HOME/.config/hypr/scripts/Hyprsunset.sh toggle",

@@ -1,0 +1,17 @@
+/* fake layout whose bar already pins an output ARRAY */
+[{
+"include": [ "$HOME/.config/hypr/waybar/Modules" ],
+"layer": "top",
+"output": [
+  "eDP-1",
+  "DP-2"
+],
+"position": "top",
+"modules-left": ["clock"]
+},
+{
+"include": [ "$HOME/.config/hypr/waybar/Modules" ],
+"layer": "top",
+"position": "bottom",
+"modules-left": ["cpu"]
+}]

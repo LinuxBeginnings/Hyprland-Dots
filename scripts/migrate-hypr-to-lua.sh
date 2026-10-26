@@ -461,6 +461,110 @@ def has_active_hyprlang_content_py(path):
         return False
     return False
 
+def lua_has_active_content(path):
+    """True when a Lua file holds at least one statement.
+
+    The shipped UserConfigs templates are comment-only, and copy.sh restores
+    them before this migration runs, so "the file exists" is not evidence that
+    the user put anything in it.
+    """
+    if path is None or not path.exists():
+        return False
+    try:
+        for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            line = raw.strip()
+            if line and not line.startswith("--"):
+                return True
+    except Exception:
+        return False
+    return False
+
+NUMBER_RE = re.compile(r"^-?\d+(\.\d+)?$")
+ANIMATION_TRUE_WORDS = {"true", "yes", "on", "1", "enable", "enabled"}
+
+def parse_animations(path):
+    """Read the animation settings out of a hyprlang file.
+
+    Returns (enabled, curves, animations), where curves is a list of
+    (name, x1, y1, x2, y2) and animations a list of
+    (leaf, enabled, speed, curve, style-or-None). A line Hyprland itself would
+    reject is skipped rather than emitted as invalid Lua.
+    """
+    enabled = True
+    curves = []
+    animations = []
+    if path is None or not path.exists():
+        return enabled, curves, animations
+
+    in_block = False
+    for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = strip_comment(raw)
+        if not line:
+            continue
+        if line.endswith("{"):
+            in_block = line[:-1].strip() == "animations"
+            continue
+        if line == "}":
+            in_block = False
+            continue
+
+        key, separator, value = line.partition("=")
+        if not separator:
+            continue
+        key = key.strip()
+        value = value.strip()
+
+        if key == "enabled" and in_block:
+            enabled = value.lower() in ANIMATION_TRUE_WORDS
+        elif key == "bezier":
+            parts = [part.strip() for part in value.split(",")]
+            if len(parts) == 5 and parts[0] and all(NUMBER_RE.match(part) for part in parts[1:]):
+                curves.append((parts[0], parts[1], parts[2], parts[3], parts[4]))
+        elif key == "animation":
+            parts = [part.strip() for part in value.split(",")]
+            if len(parts) >= 4 and parts[0] and NUMBER_RE.match(parts[2]):
+                style = ", ".join(part for part in parts[4:] if part)
+                animations.append((
+                    parts[0],
+                    parts[1].lower() in ANIMATION_TRUE_WORDS,
+                    parts[2],
+                    parts[3],
+                    style or None,
+                ))
+    return enabled, curves, animations
+
+def emit_animations_lua(enabled, curves, animations):
+    """Render parsed hyprlang animations as the Lua the config loads."""
+    lines = [
+        "-- Converted from UserAnimations.conf, the animation preset that was",
+        "-- chosen before the Hyprland Lua config took over.",
+        "",
+        "hl.config({",
+        "  animations = {",
+        f"    enabled = {'true' if enabled else 'false'},",
+        "  },",
+        "})",
+    ]
+    if curves:
+        lines.append("")
+    for name, x1, y1, x2, y2 in curves:
+        lines.append(
+            f'hl.curve({lua_string(name)}, {{ type = "bezier", points = {{ {{ {x1}, {y1} }}, {{ {x2}, {y2} }} }} }})'
+        )
+    if animations:
+        lines.append("")
+    for leaf, animation_enabled, speed, curve, style in animations:
+        options = [
+            f"leaf = {lua_string(leaf)}",
+            f"enabled = {'true' if animation_enabled else 'false'}",
+            f"speed = {speed}",
+            f"bezier = {lua_string(curve)}",
+        ]
+        if style:
+            options.append(f"style = {lua_string(style)}")
+        lines.append(f"hl.animation({{ {', '.join(options)} }})")
+    return lines
+
 def split_items(value):
     return [item.strip() for item in value.split(",") if item.strip()]
 
@@ -2286,6 +2390,26 @@ for name, source in [
     ("animations", animations_path),
     ("laptops", laptops_path),
 ]:
+    if (
+        name == "animations"
+        and files_out[name].exists()
+        and not lua_has_active_content(files_out[name])
+        and has_active_hyprlang_content_py(source)
+    ):
+        # copy.sh copies the repo's UserConfigs and then restores the user's own
+        # files, so a comment-only user_animations.lua at this point is the
+        # shipped placeholder, not a file the user wrote. On a hyprlang install
+        # the animation chosen from the Animations menu is still in
+        # UserAnimations.conf, so convert that: keeping the placeholder would
+        # drop the selection and lua/animations.lua would apply its defaults.
+        # A real preset (what Animations.sh copies) has active content and is
+        # preserved by the check below.
+        animations_enabled, animation_curves, animation_entries = parse_animations(source)
+        if animation_curves or animation_entries or not animations_enabled:
+            print(f"[INFO] Carrying the animations chosen in {source.name} into {files_out[name]}")
+            write_file(files_out[name], emit_animations_lua(
+                animations_enabled, animation_curves, animation_entries))
+            continue
     if files_out[name].exists():
         print(f"[INFO] Preserving existing custom Lua {name} file: {files_out[name]}")
         continue

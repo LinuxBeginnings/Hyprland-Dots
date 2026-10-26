@@ -115,3 +115,26 @@ if not submap then
     .. "Copy config/hypr/lua/submap_helper.lua to ~/.config/hypr/lua/ to enable them.")
 end
 
+-- =============================================================================
+-- DISPLAY LAYOUTS
+-- =============================================================================
+-- SUPER+ALT+D opens the layout menu for the monitor set in front of you.
+-- SUPER+ALT+W applies a layout named Work directly, which is also the fallback
+-- for when rofi will not start. Both combos were free: SUPER+ALT+H and
+-- SUPER+ALT+P are taken by "horizontal scroll right" and the KB-passthrough
+-- submap.
+bind(
+  "SUPER ALT",
+  "D",
+  exec_cmd("$HOME/.config/hypr/scripts/DisplayProfileMenu.sh"),
+  { description = "Display layouts: menu for this monitor set" }
+)
+bind(
+  "SUPER ALT",
+  "W",
+  -- A bare layout name is the controller's "apply this layout" verb, passed
+  -- after -- so a name that looks like an option stays data. Create a layout
+  -- called Work (menu -> Edit parameters) and this key applies it.
+  exec_cmd("$HOME/.config/hypr/scripts/DisplayProfile.sh -- Work"),
+  { description = "Display layouts: apply the layout named Work" }
+)

@@ -30,7 +30,7 @@ end
 --      for up to 12s before it touches anything. Waiting on `hyprctl -j
 --      monitors` until it reports a monitor replaces the ad-hoc `sleep N` that
 --      startup commands needed to work around this.
-local READINESS = [[runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; export XDG_RUNTIME_DIR="$runtime"; i=0; while [ "$i" -lt 60 ]; do if [ -n "${WAYLAND_DISPLAY:-}" ] && [ -S "$runtime/$WAYLAND_DISPLAY" ]; then break; fi; for sock in "$runtime"/wayland-[0-9]*; do [ -S "$sock" ] || continue; case "$(basename "$sock")" in *awww*) continue ;; esac; export WAYLAND_DISPLAY="$(basename "$sock")"; break; done; i=$((i + 1)); sleep 0.1; done; if command -v hyprctl >/dev/null 2>&1; then i=0; while [ "$i" -lt 100 ]; do hyprctl -j monitors 2>/dev/null | grep -q '"name"' && break; i=$((i + 1)); sleep 0.1; done; fi]]
+local READINESS = [[runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}; export XDG_RUNTIME_DIR="$runtime"; if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then for sig in "$runtime"/hypr/*/; do [ -S "${sig}.socket.sock" ] || continue; export HYPRLAND_INSTANCE_SIGNATURE="$(basename "$sig")"; break; done; fi; i=0; while [ "$i" -lt 60 ]; do if [ -n "${WAYLAND_DISPLAY:-}" ] && [ -S "$runtime/$WAYLAND_DISPLAY" ]; then break; fi; for sock in "$runtime"/wayland-[0-9]*; do [ -S "$sock" ] || continue; case "$(basename "$sock")" in *awww*) continue ;; esac; export WAYLAND_DISPLAY="$(basename "$sock")"; break; done; i=$((i + 1)); sleep 0.1; done; if command -v hyprctl >/dev/null 2>&1; then i=0; while [ "$i" -lt 100 ]; do hyprctl -j monitors 2>/dev/null | grep -q '"name"' && break; i=$((i + 1)); sleep 0.1; done; fi]]
 
 local function exec_once(cmd, opts)
   -- Why this wrapper exists:

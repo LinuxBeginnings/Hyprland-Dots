@@ -92,6 +92,12 @@ local startup_commands = {
   -- "kdeconnect-app",
   -- "blueman-applet",
   -- "$HOME/.config/hypr/UserScripts/RainbowBorders.sh",
+
+  -- Monitor management: one watcher per session. It reconciles the saved layout
+  -- on startup and after every monitor event, and it is the only thing that
+  -- calls DisplayProfile.sh - so do NOT add DisplayProfile.sh here as well, or
+  -- two controllers would apply layouts at the same time.
+  "$HOME/.config/hypr/scripts/MonitorWatcher.sh",
 }
 
 local function run_startup_commands()
@@ -105,3 +111,12 @@ if hl and hl.on then
 else
   run_startup_commands()
 end
+
+-- Laptop lid: user_laptops.lua owns clamshell behaviour and binds the lid
+-- switch itself, from the same UserConfigs/monitors.lua this system writes. So
+-- nothing is bound here: a second handler for one switch means whichever runs
+-- last wins, and which that is is not defined.
+--
+-- DisplayProfile.sh still honours the lid when it applies a layout (it switches
+-- the internal panel off only while an external monitor is on), so a layout
+-- applied with the lid shut does not light the panel back up.

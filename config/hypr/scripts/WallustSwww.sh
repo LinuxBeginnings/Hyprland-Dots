@@ -104,6 +104,28 @@ reload_running_waybar_colors() {
     return 0
   fi
 
+  # If WaybarStartup.sh holds the startup lock, Waybar is currently being started
+  # or restarted and will read the fresh colors directly on launch. Signalling it
+  # mid-initialisation drops or crashes the bar.
+  local runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+  local lock_file="${runtime_dir}/waybar-startup-${UID:-$(id -u)}.lock"
+  if command -v flock >/dev/null 2>&1 && [ -f "$lock_file" ]; then
+    if ! flock -n "$lock_file" true 2>/dev/null; then
+      return 0
+    fi
+  fi
+
+  # A newly launched bar (< 3s elapsed) is still initializing modules/tray items
+  # and already reads the newly generated colors on launch. Sending SIGUSR2 to a
+  # bar mid-initialization causes GTK/SNI registration crashes.
+  local pid etime
+  for pid in $(pgrep -x waybar 2>/dev/null) $(pgrep -x '.waybar-wrapped' 2>/dev/null); do
+    etime="$(ps -o etimes= -p "$pid" 2>/dev/null | tr -d '[:space:]')"
+    if [ -n "$etime" ] && [ "$etime" -lt 3 ] 2>/dev/null; then
+      return 0
+    fi
+  done
+
   # Prefer the IPC command; fall back to the reload signal when waybar-msg is
   # absent or IPC is disabled.
   if command -v waybar-msg >/dev/null 2>&1 && waybar-msg cmd reload >/dev/null 2>&1; then

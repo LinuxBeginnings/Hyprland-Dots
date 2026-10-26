@@ -49,3 +49,19 @@
     ```
 
   | Note: This method on occasion can generate `git` merge errors. Method above always works
+
+## What an upgrade keeps
+
+An upgrade replaces the repo-managed config with the copy from the repo, then
+puts your own choices back on top. These survive:
+
+- the rofi theme from the theme selector - the `@theme` line in
+  `hypr/rofi/config.rasi`
+- the wlogout preset from the wlogout picker - `wlogout/.current_theme`,
+  including a saved `user_backup`
+- your saved display layouts - `UserConfigs/display-layouts.json`
+- everything in `UserConfigs/`, `UserScripts/` and `Monitor_Profiles/`
+- `hyprlock.conf`, `hypridle.conf` and `wallpaper_effects/`
+
+Anything you hand-edit inside a repo-managed file that the installer rewrites is
+still replaced. Keep personal changes in the directories listed above.

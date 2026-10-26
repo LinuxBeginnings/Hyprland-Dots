@@ -13,6 +13,12 @@ persist_layout_script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/PersistWor
 layouts=(master dwindle scrolling monocle)
 quiet_mode=0
 
+# hypr_emit_event tells the event-driven Waybar layout module that a change
+# happened. It has no interval poll, so without this the label would only
+# refresh on the next socket event.
+# shellcheck source=HyprIPC.sh
+. "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/HyprIPC.sh"
+
 normalize_layout() {
   case "$1" in
   master | dwindle | scrolling | monocle)
@@ -194,6 +200,7 @@ set_layout() {
   actual="$(wait_for_layout "$target")"
   if [[ "$actual" == "$target" ]]; then
     persist_current_workspace_layout "$target"
+    hypr_emit_event "kool:layout"
     if [[ "$quiet_mode" -eq 0 ]]; then
       notify-send -e -u low -i "$notif" " ${actual^} Layout · WS ${workspace_label}${monitor_name:+ @ ${monitor_name}}"
     fi

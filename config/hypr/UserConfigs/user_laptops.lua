@@ -18,6 +18,16 @@
 --   or when the lid is opened.
 -- * Listens to hotplug events (monitor.added, monitor.removed) and lid switch events.
 
+-- This file stays ENABLED. The display-layout system
+-- (scripts/MonitorWatcher.sh + scripts/DisplayProfile.sh) writes its resolved
+-- layout to UserConfigs/monitors.lua, which is exactly the file this one reads
+-- below - so the two agree instead of fighting. Disabling this file would also
+-- not have helped: UserConfigs is never overwritten on upgrade, so an existing
+-- install would have kept the old copy and both controllers would still run.
+--
+-- Lid/clamshell behaviour lives here, and only here: it binds the lid switch,
+-- so nothing else should.
+
 local FALLBACK_INTERNAL = "eDP-1"
 
 local function read_file(path)
@@ -30,15 +40,14 @@ local function read_file(path)
   return content
 end
 
-local function read_command(command)
-  local pipe = io.popen(command, "r")
-  if not pipe then
-    return ""
-  end
-  local output = pipe:read("*a") or ""
-  pipe:close()
-  return output
-end
+-- Lid state lives in a handful of fixed sysfs paths, so they can be read
+-- directly. The old fallback ran `cat /proc/acpi/button/lid/*/state` through
+-- io.popen, which blocks the compositor's Lua VM for the whole fork.
+local LID_STATE_PATHS = {
+  "/proc/acpi/button/lid/LID/state",
+  "/proc/acpi/button/lid/LID0/state",
+  "/proc/acpi/button/lid/LID1/state",
+}
 
 local function is_internal(name)
   return name ~= nil
@@ -46,40 +55,46 @@ local function is_internal(name)
 end
 
 local function is_lid_closed()
-  -- Try fast direct file reads without spawning subshells
-  for _, path in ipairs({ "/proc/acpi/button/lid/LID0/state", "/proc/acpi/button/lid/LID/state" }) do
+  for _, path in ipairs(LID_STATE_PATHS) do
     local content = read_file(path)
     if content then
       return content:find("closed", 1, true) ~= nil
     end
   end
-  local state = read_command("cat /proc/acpi/button/lid/*/state 2>/dev/null")
-  return state:find("closed", 1, true) ~= nil
+  return false
 end
+
+-- Connector names Linux DRM uses, in reporting order.
+--
+-- Enumerating sysfs with `ls` needed one blocking io.popen fork per card. The
+-- known names are probed with io.open instead, which is a plain file read, and
+-- get_connected_monitors() still adds every monitor Hyprland itself reports.
+local DRM_CONNECTOR_NAMES = {
+  "eDP-1", "eDP-2",
+  "LVDS-1", "LVDS-2",
+  "DSI-1", "DSI-2",
+  "DP-1", "DP-2", "DP-3", "DP-4",
+  "DP-1-1", "DP-2-1", "DP-3-1",
+  "HDMI-A-1", "HDMI-A-2", "HDMI-A-3",
+  "HDMI-B-1",
+  "DVI-D-1", "DVI-I-1",
+  "VGA-1",
+  "Virtual-1", "Virtual-2",
+}
 
 -- Gather all physically connected DRM connectors from sysfs
 local function connected_drm_connectors()
   local connectors = {}
-  -- Direct check for cards 0 to 4 without running a complex bash loop
+
   for card = 0, 4 do
-    local p = io.popen("ls /sys/class/drm/card" .. card .. "-*/status 2>/dev/null", "r")
-    if p then
-      for path in p:lines() do
-        local f = io.open(path, "r")
-        if f then
-          local status = f:read("*l") or ""
-          f:close()
-          if status:match("^connected") then
-            local name = path:match("card%d+%-(.+)%/status$")
-            if name then
-              connectors[#connectors + 1] = name
-            end
-          end
-        end
+    for _, name in ipairs(DRM_CONNECTOR_NAMES) do
+      local status = read_file("/sys/class/drm/card" .. card .. "-" .. name .. "/status")
+      if status and status:match("^connected") then
+        connectors[#connectors + 1] = name
       end
-      p:close()
     end
   end
+
   return connectors
 end
 
@@ -238,19 +253,24 @@ local function apply_laptop_monitor_layout(trigger_refresh)
       -- Clamshell / Docked mode: lid is closed, disable internal panel
       hl.monitor({ output = internal, disabled = true })
     else
-      -- Lid is open: apply internal display configuration from monitors.lua
+      -- Lid is open: the internal panel has to come back ON, so `disabled = false`
+      -- is forced rather than replayed. In the Lua monitor API a rule that omits
+      -- `disabled` leaves the output off, and the rules in monitors.lua (and the
+      -- shipped Monitor_Profiles) do omit it - replaying one verbatim is what
+      -- left the panel dark after a lid open. Mode, position, scale and
+      -- transform still come from the stored rule.
       local int_cfg = get_monitor_config(internal)
-      if int_cfg then
-        hl.monitor(int_cfg)
-      else
-        hl.monitor({
-          output = internal,
-          disabled = false,
-          mode = default_fallback.mode or "preferred",
-          position = default_fallback.position or "auto",
-          scale = default_fallback.scale or "auto",
-        })
+      local int_on = {
+        output = internal,
+        disabled = false,
+        mode = (int_cfg and int_cfg.mode) or default_fallback.mode or "preferred",
+        position = (int_cfg and int_cfg.position) or default_fallback.position or "auto",
+        scale = (int_cfg and int_cfg.scale) or default_fallback.scale or "auto",
+      }
+      if int_cfg and int_cfg.transform then
+        int_on.transform = int_cfg.transform
       end
+      hl.monitor(int_on)
     end
 
     -- Apply configurations for external displays from monitors.lua
@@ -270,21 +290,24 @@ local function apply_laptop_monitor_layout(trigger_refresh)
       end
     end
   else
-    -- No external displays connected: internal panel must be enabled (unless lid is closed)
+    -- No external displays connected, so the internal panel is the ONLY screen.
+    -- It stays on whatever the lid is doing: a closed lid with nothing else to
+    -- show the session must not blank the panel, or the laptop goes dark with no
+    -- way back. Mode and scale are still taken from the stored config, but its
+    -- on/off state and position are overridden - a single monitor belongs at the
+    -- origin, and the stored config may belong to a monitor set that had more.
     local int_cfg = get_monitor_config(internal)
-    if lid_closed then
-      hl.monitor({ output = internal, disabled = true })
-    elseif int_cfg then
-      hl.monitor(int_cfg)
-    else
-      hl.monitor({
-        output = internal,
-        disabled = false,
-        mode = default_fallback.mode or "preferred",
-        position = "0x0",
-        scale = default_fallback.scale or "auto",
-      })
+    local int_on = {
+      output = internal,
+      disabled = false,
+      mode = (int_cfg and int_cfg.mode) or default_fallback.mode or "preferred",
+      position = "0x0",
+      scale = (int_cfg and int_cfg.scale) or default_fallback.scale or "auto",
+    }
+    if int_cfg and int_cfg.transform then
+      int_on.transform = int_cfg.transform
     end
+    hl.monitor(int_on)
   end
 
   if trigger_refresh then

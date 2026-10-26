@@ -8,6 +8,12 @@
 # Backup helper utilities shared by copy.sh (and future scripts).
 
 # Create a unique backup directory name with month, day, hours, and minutes.
+#
+# The name is CACHED: the first call fixes it for the rest of the run, so every
+# backup and every later restore agree on one suffix. A caller must therefore
+# NOT shadow the variable with `local BACKUP_DIR` before calling - that hides
+# the cached value, a fresh timestamp is generated instead, and a restore then
+# looks in a directory that does not exist.
 get_backup_dirname() {
   if [ -n "${BACKUP_DIR:-}" ]; then
     echo "$BACKUP_DIR"

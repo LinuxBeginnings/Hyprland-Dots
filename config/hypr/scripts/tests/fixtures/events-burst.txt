@@ -1,0 +1,8 @@
+workspace>>1
+activewindow>>kitty,zsh
+monitoradded>>DP-2
+monitoraddedv2>>1,DP-2,ASUS VG249Q3A
+monitoradded>>DP-2
+monitoradded>>DP-2
+monitoradded>>DP-2
+openwindow>>abc,1,kitty,zsh

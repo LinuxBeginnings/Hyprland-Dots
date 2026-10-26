@@ -1,0 +1,2 @@
+workspace>>1
+monitorremoved>>DP-2

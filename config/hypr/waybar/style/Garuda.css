@@ -1,0 +1,156 @@
+/* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
+/* GARUDA: Nord-flavoured top bar, ported from a Garuda Linux Waybar.
+ * Pair with configs/TOP-Garuda.
+ *
+ * The palette is inlined so this ships as one file.
+ *   Polar Night  #2e3440 #3b4252 #434c5e #4c566a
+ *   Snow Storm   #d8dee9 #e5e9f0 #eceff4
+ *   Frost        #8fbcbb #88c0d0 #81a1c1 #5e81ac
+ *   Aurora       #bf616a #d08770 #ebcb8b #a3be8c #b48ead
+ */
+
+* {
+    color: #eceff4;
+    border: 0;
+    border-radius: 0;
+    padding: 0 0;
+    font-family: "Symbols Nerd Font Mono";
+    font-size: 15px;
+    margin-right: 5px;
+    margin-left: 5px;
+    padding-bottom: 2px;
+}
+
+window#waybar {
+    background: rgba(0, 0, 0, 0.65);
+    border-radius: 20px;
+}
+
+#workspaces button {
+    padding: 2px 0;
+    border-bottom: 2px solid #d8dee9;
+    color: #eceff4;
+    margin-top: 2px;
+}
+
+#workspaces button.active {
+    border-color: #81a1c1;
+}
+
+#clock,
+#battery,
+#cpu,
+#memory,
+#idle_inhibitor,
+#temperature,
+#backlight,
+#network,
+#pulseaudio,
+#tray,
+#window,
+#custom-menu,
+#custom-power {
+    padding: 0 3px;
+    border-bottom: 2px solid #d8dee9;
+}
+
+/* -----------------------------------------------------------------------------
+ * Module styles
+ * -------------------------------------------------------------------------- */
+
+#clock {
+    color: #a3be8c;
+}
+
+#backlight {
+    color: #ebcb8b;
+}
+
+#battery {
+    color: #d8dee9;
+}
+
+#battery.charging {
+    color: #81a1c1;
+}
+
+@keyframes blink {
+    to {
+        color: #4c566a;
+        background-color: #eceff4;
+    }
+}
+
+#battery.critical:not(.charging) {
+    background: #bf616a;
+    color: #eceff4;
+    animation-name: blink;
+    animation-duration: 0.5s;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+}
+
+#cpu {
+    color: #a3be8c;
+}
+
+#memory {
+    color: #d3869b;
+}
+
+#temperature {
+    color: #8fbcbb;
+}
+
+#temperature.critical {
+    color: #bf616a;
+}
+
+#network {
+    color: #a3be8c;
+}
+
+#network.disabled,
+#network.disconnected {
+    color: #bf616a;
+}
+
+#pulseaudio {
+    color: #b48ead;
+}
+
+#pulseaudio.muted {
+    color: #e20548;
+}
+
+#idle_inhibitor {
+    color: #ebcb8b;
+}
+
+#tray {
+    border-style: hidden;
+}
+
+/* Left launcher: the rofi app menu (custom/menu), drawn as the Garuda
+ * launcher image. launcher.png sits at the waybar root, because the active
+ * sheet is the style.css symlink there, which is the base for url() paths. */
+#custom-menu {
+    font-size: 20px;
+    background-image: url("launcher.png");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    border-style: hidden;
+}
+
+/* Right power: the project's wlogout menu (custom/power) */
+#custom-power {
+    border-style: hidden;
+    margin-top: 2px;
+}
+
+#window {
+    border-style: hidden;
+    margin-top: 1px;
+}

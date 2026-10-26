@@ -5,16 +5,22 @@
 -- #  SPDX-License-Identifier: GPL-3.0-or-later
 -- # ==================================================
 --
--- Sample code to handle disbling eDP-1 when lid closed
--- Code written by @star on TheBlacDon's discord server
--- Thank you
+-- Deliberately inert: no binds, no rules.
 --
--- Lid close: remove laptop panel from layout
-hl.bind("switch:on:Lid Switch", function()
-  os.execute("$HOME/.config/hypr/scripts/LidSwitch.sh close")
-end)
-
--- Lid open: restore laptop panel
-hl.bind("switch:off:Lid Switch", function()
-  os.execute("$HOME/.config/hypr/scripts/LidSwitch.sh open")
-end)
+-- Lid handling lives in UserConfigs/user_laptops.lua, which hyprland.lua loads
+-- through lua/user_overrides.lua. That file binds switch:on:Lid Switch and
+-- switch:off:Lid Switch itself, reads the lid state from
+-- /proc/acpi/button/lid/*/state, and decides the internal panel's on/off from
+-- both - against the same UserConfigs/monitors.lua that DisplayProfile.sh
+-- writes, so the two agree instead of fighting.
+--
+-- This file used to bind the same switch to `LidSwitch.sh close/open`, from the
+-- original sample by @star on TheBlackDon's discord server. Those handlers are
+-- gone, and the bindings with them, because both were wrong: close switched the
+-- panel off even with no external monitor to show the session - a shut laptop
+-- then had no screen at all - and open replayed a stored rule that omitted
+-- `disabled`, which does not switch an output back on. A second binding for one
+-- switch also means whichever runs last wins, and which that is is not defined.
+--
+-- So this path is a pointer, not a rule set: do not bind the lid switch here,
+-- and do not load this file. Add laptop rules to lua/laptops.lua instead.

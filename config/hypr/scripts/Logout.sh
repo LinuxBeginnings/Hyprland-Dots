@@ -99,15 +99,15 @@ if [ -n "$LOGINCTL_BIN" ] && [ -n "${XDG_SESSION_ID:-}" ]; then
     fi
 fi
 
-# Primary exit path: tell Hyprland to exit cleanly
+# Primary exit path: tell Hyprland to exit cleanly.
+#
+# In a Lua config `hyprctl dispatch` is a shorthand for `hl.dispatch(...)`, so
+# the dispatcher has to be given as a Lua expression: a bare `dispatch exit` is
+# parsed as Lua and fails. The Lua form is tried first, and the bare form is
+# kept only for a hyprlang-mode Hyprland, where it is the valid one. The old
+# `exit 1` / `exit 0` / `exit x` variants are gone: `exit` takes no argument in
+# either mode, so they could never have succeeded.
 if [ -n "$HYPRCTL_BIN" ]; then
-    if run_logged "hyprctl-dispatch-exit" "$HYPRCTL_BIN" dispatch exit; then
-        if logout_completed; then
-            exit 0
-        fi
-        log_msg "hyprctl dispatch exit returned but Hyprland is still running"
-    fi
-
     if run_logged "hyprctl-dispatch-lua-exit" "$HYPRCTL_BIN" dispatch 'hl.dsp.exit()'; then
         if logout_completed; then
             exit 0
@@ -115,25 +115,11 @@ if [ -n "$HYPRCTL_BIN" ]; then
         log_msg "hyprctl dispatch 'hl.dsp.exit()' returned but Hyprland is still running"
     fi
 
-    if run_logged "hyprctl-dispatch-exit-1" "$HYPRCTL_BIN" dispatch exit 1; then
+    if run_logged "hyprctl-dispatch-exit" "$HYPRCTL_BIN" dispatch exit; then
         if logout_completed; then
             exit 0
         fi
-        log_msg "hyprctl dispatch exit 1 returned but Hyprland is still running"
-    fi
-
-    if run_logged "hyprctl-dispatch-exit-0" "$HYPRCTL_BIN" dispatch exit 0; then
-        if logout_completed; then
-            exit 0
-        fi
-        log_msg "hyprctl dispatch exit 0 returned but Hyprland is still running"
-    fi
-
-    if run_logged "hyprctl-dispatch-exit-x" "$HYPRCTL_BIN" dispatch exit x; then
-        if logout_completed; then
-            exit 0
-        fi
-        log_msg "hyprctl dispatch exit x returned but Hyprland is still running"
+        log_msg "hyprctl dispatch exit returned but Hyprland is still running"
     fi
 fi
 
@@ -164,11 +150,11 @@ if [ -n "$LOGINCTL_BIN" ] && [ -n "${XDG_SESSION_ID:-}" ]; then
     fi
 fi
 
-# Fallback: ask Hyprland to spawn hyprshutdown via a normal dispatch exec call.
+# Fallback: ask Hyprland to spawn hyprshutdown through the Lua exec dispatcher.
 if [ -n "$HYPRCTL_BIN" ] && [ -n "$HYPRSHUTDOWN_BIN" ]; then
     if run_logged \
         "hyprctl-dispatch-exec-hyprshutdown" \
-        "$HYPRCTL_BIN" dispatch exec "hyprshutdown --no-fork"; then
+        "$HYPRCTL_BIN" dispatch 'hl.dsp.exec_cmd("hyprshutdown --no-fork")'; then
         if logout_completed; then
             exit 0
         fi

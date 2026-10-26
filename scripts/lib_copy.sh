@@ -89,7 +89,6 @@ copy_phase1() {
   local rofi_dir="${XDG_CONFIG_HOME:-$HOME/.config}/rofi"
   if [ -d "$rofi_dir" ]; then
     if [ -n "$(ls -A "$rofi_dir" 2>/dev/null)" ]; then
-      local BACKUP_DIR
       BACKUP_DIR=$(get_backup_dirname)
       mv "$rofi_dir" "$rofi_dir-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
       echo -e "${NOTE:-[NOTE]} - Backed up rofi to $rofi_dir-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
@@ -384,7 +383,6 @@ copy_phase2() {
   local hypr_wallust_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust"
   if [ -d "$wallust_dir" ]; then
     if [ -n "$(ls -A "$wallust_dir" 2>/dev/null)" ]; then
-      local BACKUP_DIR
       BACKUP_DIR=$(get_backup_dirname)
       mv "$wallust_dir" "$wallust_dir-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
       echo -e "${NOTE:-[NOTE]} - Backed up wallust to $wallust_dir-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
@@ -579,7 +577,11 @@ ensure_lua_keybinds() {
           echo "${ERROR:-[ERROR]} - Failed to sync system file: ${YELLOW:-}$rel_path${RESET:-}" 2>&1 | tee -a "$log"
         fi
       fi
-    done < <(find "$src_dir" -maxdepth 1 -type f -name '*.lua' -print0)
+    # display-layouts.json rides along with the Lua templates: it is a
+    # UserConfigs file like the rest, and UserConfigs are only ever ADDED when
+    # missing, so a user's saved display layouts are never overwritten.
+    done < <(find "$src_dir" -maxdepth 1 -type f \
+                  \( -name '*.lua' -o -name 'display-layouts.json' \) -print0)
   done
 
   # Sync root-level lua metadata and config files if present
@@ -617,6 +619,47 @@ ensure_lua_keybinds() {
   fi
 }
 
+# Carry the active rofi theme selection from a backup config.rasi into the
+# freshly copied one.
+#
+# RofiThemeSelector.sh records the choice by appending `@theme "<path>"` to
+# config.rasi and commenting the previous line out, so the selection lives in a
+# file the installer replaces. That file is deliberately NOT restored wholesale:
+# it also carries the `@import` lines a newer release may add. Only the one
+# active `@theme` line is moved across.
+_carry_rofi_theme_selection() {
+  local new_config="$1" backup_config="$2" log="${3:-/dev/null}"
+  local active name tmp
+
+  [ -f "$new_config" ] || return 0
+  [ -f "$backup_config" ] || return 0
+
+  # The active theme is the LAST uncommented @theme line; a commented-out one
+  # starts with `//` and is not matched here.
+  active="$(grep -E '^[[:space:]]*@theme[[:space:]]' "$backup_config" 2>/dev/null | tail -n1 || true)"
+  [ -n "$active" ] || return 0
+
+  if [ "$(grep -E '^[[:space:]]*@theme[[:space:]]' "$new_config" 2>/dev/null | tail -n1 || true)" = "$active" ]; then
+    return 0
+  fi
+
+  tmp="$(mktemp)" || return 1
+  if awk -v line="$active" '
+        !/^[[:space:]]*@theme[[:space:]]/ { print }
+        END { print ""; print line }
+      ' "$new_config" >"$tmp"; then
+    cat "$tmp" >"$new_config"
+    rm -f "$tmp"
+    name="${active#*\"}"
+    name="${name%\"}"
+    name="$(basename "$name" .rasi)"
+    echo "${OK:-[OK]} - Preserved the rofi theme selection: ${MAGENTA:-}$name${RESET:-}" 2>&1 | tee -a "$log"
+    return 0
+  fi
+  rm -f "$tmp"
+  return 1
+}
+
 # Restore Animations and Monitor Profiles plus key hypr files from backup
 restore_hypr_assets() {
   local log="$1"
@@ -624,7 +667,8 @@ restore_hypr_assets() {
   local base="${DOTFILES_DIR:-.}"
 
   local HYPR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
-  local BACKUP_DIR
+  # Not `local`: see the note on get_backup_dirname. Shadowing the variable makes
+  # this look for a backup suffix that no backup was created with.
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_HYPR_PATH="$HYPR_DIR-backup-$BACKUP_DIR"
 
@@ -726,6 +770,11 @@ restore_hypr_assets() {
           echo "${OK:-[OK]} - Restored custom rofi file: ${MAGENTA:-}$rname${RESET:-}" 2>&1 | tee -a "$log"
         fi
       done
+
+      # 3. Carry the active theme selection into the freshly copied config.rasi.
+      #    The file itself is the repo's, so a newer release's imports survive;
+      #    only the @theme line the theme picker wrote is moved across.
+      _carry_rofi_theme_selection "$HYPR_DIR/rofi/config.rasi" "$BACKUP_ROFI_DIR/config.rasi" "$log"
     fi
 
     # Keep monitor/workspace state across upgrades, including express mode.
@@ -758,13 +807,68 @@ restore_hypr_assets() {
   fi
 }
 
+# Restore the user's wlogout theme selection after copy_phase2 has replaced
+# ~/.config/wlogout with the repo copy.
+#
+# RofiWlogoutTheme.sh records the choice in .current_theme and applies it by
+# copying that theme's style.css, layout and icons over the active ones. Both
+# the record and the applied files live under the directory the installer
+# replaces, so without this an upgrade silently reverts wlogout to the default
+# theme. The repo copy stays the base - a newer release may ship new presets -
+# and the saved selection is re-applied on top of it.
+restore_wlogout_selection() {
+  local log="${1:-/dev/null}"
+  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local WLOGOUT_DIR="$cfg_home/wlogout"
+  # Not `local`: see the note on get_backup_dirname.
+  BACKUP_DIR="$(get_backup_dirname)"
+  local backup="$WLOGOUT_DIR-backup-$BACKUP_DIR"
+
+  [ -d "$WLOGOUT_DIR" ] || return 0
+  [ -d "$backup" ] || return 0
+
+  # A saved custom config and the blur preference are the user's, not the
+  # repo's, and both live under the directory that was just replaced.
+  if [ -d "$backup/themes/user_backup" ]; then
+    mkdir -p "$WLOGOUT_DIR/themes"
+    cp -rf "$backup/themes/user_backup" "$WLOGOUT_DIR/themes/" 2>&1 | tee -a "$log" || true
+    echo "${OK:-[OK]} - Preserved the saved wlogout config (user_backup)." 2>&1 | tee -a "$log"
+  fi
+  if [ -f "$backup/.blur_radius" ]; then
+    cp -f "$backup/.blur_radius" "$WLOGOUT_DIR/.blur_radius" 2>&1 | tee -a "$log" || true
+  fi
+
+  local theme=""
+  if [ -f "$backup/.current_theme" ]; then
+    theme="$(head -n1 "$backup/.current_theme" 2>/dev/null | tr -d '[:space:]')"
+  fi
+  if [ -z "$theme" ] || [ "$theme" = "default" ]; then
+    return 0
+  fi
+
+  local applier="$cfg_home/hypr/scripts/RofiWlogoutTheme.sh"
+  if [ ! -f "$applier" ]; then
+    echo "${WARN:-[WARN]} - $applier is missing; wlogout is back on the default theme." 2>&1 | tee -a "$log"
+    return 0
+  fi
+
+  local rc=0
+  bash "$applier" --set "$theme" --silent >>"$log" 2>&1 || rc=$?
+  if [ "$rc" -eq 0 ]; then
+    echo "${OK:-[OK]} - Re-applied the wlogout theme: ${MAGENTA:-}$theme${RESET:-}" 2>&1 | tee -a "$log"
+  else
+    echo "${WARN:-[WARN]} - Could not re-apply the wlogout theme '$theme'; it is back on the default." 2>&1 | tee -a "$log"
+  fi
+  return 0
+}
+
 restore_user_configs() {
   local log="$1"
   local express_mode="$2"
   local old_version="$3"
 
   local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
-  local BACKUP_DIR
+  # Not `local`: see the note on get_backup_dirname.
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_DIR_PATH="$DIRPATH-backup-$BACKUP_DIR/UserConfigs"
 
@@ -810,7 +914,7 @@ restore_user_scripts() {
   local express_mode="$2"
 
   local DIRSHPATH="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
-  local BACKUP_DIR
+  # Not `local`: see the note on get_backup_dirname.
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_DIR_PATH_S="$DIRSHPATH-backup-$BACKUP_DIR/UserScripts"
 
@@ -860,7 +964,7 @@ restore_terminal_configs() {
   local express_mode="$2"
 
   local GHOSTTY_DIR="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}/ghostty"
-  local BACKUP_DIR
+  # Not `local`: see the note on get_backup_dirname.
   BACKUP_DIR=$(get_backup_dirname)
   local GHOSTTY_BACKUP="$GHOSTTY_DIR-backup-$BACKUP_DIR"
 
@@ -888,7 +992,7 @@ restore_hypr_files() {
   local express_mode="$2"
 
   local DIRPATH="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
-  local BACKUP_DIR
+  # Not `local`: see the note on get_backup_dirname.
   BACKUP_DIR=$(get_backup_dirname)
   local BACKUP_DIR_PATH_F="$DIRPATH-backup-$BACKUP_DIR"
   local FILES_2_RESTORE=("hyprlock.conf" "hypridle.conf")

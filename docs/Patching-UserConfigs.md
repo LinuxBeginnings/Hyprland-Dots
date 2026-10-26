@@ -65,6 +65,17 @@ line in `swaync/style.css` and in the Waybar styles after Waybar moved to
 `~/.config/hypr/waybar`, repairing the legacy path (and the missing `;`) while
 leaving every other line - and both already-correct import forms - untouched.
 
+`patches/80-display-layouts.sh` is the other end of the scale: it activates the
+multi-monitor display-layout feature on an install that already has the shipped
+`UserConfigs` files. It starts `MonitorWatcher.sh` from
+`UserConfigs/user_startup.lua` (only when the `startup_commands` table is found
+on a line of its own, because appending to the end of the file would put the
+command outside the table), appends the two display keybinds to
+`UserConfigs/user_keybinds.lua`, and stops `UserConfigs/user_laptops.lua`
+switching the internal panel off when it is the only screen left.
+`scripts/tests/test-display-layouts-patch.sh` runs it twice and asserts the
+second run changes nothing.
+
 ## Adding a patch
 
 1. Create `patches/NN-short-description.sh` with the contract above.

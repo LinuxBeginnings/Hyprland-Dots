@@ -1,0 +1,74 @@
+/* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
+
+// ### GARUDA - Top ### //
+/* Nord-flavoured top bar ported from a Garuda Linux Waybar.
+ *
+ * The module order follows that bar, but two slots are the project's own
+ * modules so they keep KooL behaviour instead of the Garuda originals:
+ *   - modules-left opens with custom/menu  -> rofi app menu (was nwg-drawer)
+ *   - modules-right ends with custom/power -> wlogout menu  (was nwgbar)
+ * custom/power comes from waybar/ModulesCustom through "include". custom/menu
+ * is mirrored below instead, because the Garuda bar draws that slot as an
+ * image rather than a glyph.
+ *
+ * Pair with style/Garuda.css.
+ */
+{
+"include": [
+  "$HOME/.config/hypr/waybar/Modules",
+  "$HOME/.config/hypr/waybar/ModulesWorkspaces",
+  "$HOME/.config/hypr/waybar/ModulesCustom",
+  "$HOME/.config/hypr/waybar/UserModules",
+  ],
+"layer": "top",
+"exclusive": true,
+"passthrough": false,
+"position": "top",
+"height": 40,
+"spacing": 0,
+"fixed-center": true,
+"ipc": true,
+"margin-top": 3,
+"margin-left": 8,
+"margin-right": 8,
+
+"modules-left": [
+	"custom/menu",
+  "separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
+	// numbers, not the shared circles module
+	"hyprland/workspaces#numbers",
+	"hyprland/window",
+	],
+
+"modules-center": [
+	"clock",
+	],
+
+"modules-right": [
+	"backlight",
+	"temperature",
+	"cpu",
+	"memory",
+	"battery",
+	"pulseaudio",
+	"network",
+	"tray",
+	"idle_inhibitor",
+	"custom/power",
+	],
+
+// Mirrors custom/menu in waybar/ModulesCustom - the same rofi app menu on left
+// click - but with a blank format so style/Garuda.css can draw the Garuda
+// launcher image in the slot. The shared module's glyph would sit on top of
+// that image. Only "format" differs, so keep the actions in step with it.
+"custom/menu": {
+	"format": "    ",
+	"on-click": "rofi_dir=\"$HOME/.config/hypr/rofi\"; [ ! -d \"$rofi_dir\" ] && rofi_dir=\"$HOME/.config/rofi\"; pkill rofi || true; $HOME/.config/hypr/scripts/RofiFocusedWallpaperLink.sh >/dev/null 2>&1 || true; rofi -show drun -modi run,drun,filebrowser,window -config \"$rofi_dir/config.rasi\"",
+	"on-click-middle": "$HOME/.config/hypr/UserScripts/WallpaperSelect.sh",
+	"on-click-right": "$HOME/.config/hypr/scripts/WaybarLayout.sh",
+	"tooltip": true,
+	"tooltip-format": "Left Click: Rofi Menu\nMiddle Click: Wallpaper Menu\nRight Click: Waybar Layout Menu",
+	},
+}
