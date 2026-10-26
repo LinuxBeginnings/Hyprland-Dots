@@ -4,7 +4,17 @@
 
 ## Added:
 
-- Waybar `custom/dot_update` right-click downloads and runs the upgrade
+- Waybar's dots update check can now download and run the upgrade
+  - Right-click `custom/dot_update`, or pick `Upgrade now` in its window
+  - It clones the installer for your OS and `Hyprland-Dots` into a temp dir
+  - Both land in a random `kooldots-upgrade-*` directory under `$HOME`
+  - It runs the installer's `install-scripts/update-deps.sh` first
+  - Then `copy.sh --tty --express-upgrade` for the dots
+  - A terminal opens for both, since they use `sudo` and ask questions
+  - It asks before removing the temp dir, and keeps it when a step fails
+  - It reminds you to update the OS first, and links the Debian Hyprland guide
+  - NixOS, Gentoo and unknown distros keep the old check-only behaviour
+  - `KooLsDotsUpgrade.sh --dry-run` prints the plan and changes nothing
 - `WaybarStartup.sh` records why it started, or why it did not
   - Every early exit was silent, so a missing bar had no explanation
   - A lock timeout, an already-running bar and a failed launch looked alike
