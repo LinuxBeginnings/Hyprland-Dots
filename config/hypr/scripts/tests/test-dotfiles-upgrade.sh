@@ -64,12 +64,14 @@ chmod +x "$BIN"/*
 export PATH="$BIN:$PATH"
 
 # --- os-release fixtures ----------------------------------------------------
-os_release_fixture() { # <name> <id> <id_like> <version_id>
-  local file="$WORK/os-release-$1"
+# The fifth argument is the quote character to wrap the values in, and is empty
+# for the unquoted form.
+os_release_fixture() { # <name> <id> <id_like> <version_id> [quote]
+  local file="$WORK/os-release-$1" quote="${5:-}"
   {
-    printf 'ID=%s\n' "$2"
-    [ -n "$3" ] && printf 'ID_LIKE="%s"\n' "$3"
-    [ -n "$4" ] && printf 'VERSION_ID="%s"\n' "$4"
+    printf 'ID=%s%s%s\n' "$quote" "$2" "$quote"
+    [ -n "$3" ] && printf 'ID_LIKE=%s%s%s\n' "$quote" "$3" "$quote"
+    [ -n "$4" ] && printf 'VERSION_ID=%s%s%s\n' "$quote" "$4" "$quote"
   } >"$file"
   printf '%s' "$file"
 }
@@ -77,7 +79,9 @@ os_release_fixture() { # <name> <id> <id_like> <version_id>
 DEBIAN_FIXTURE="$(os_release_fixture debian debian '' 13)"
 UBUNTU_FIXTURE="$(os_release_fixture ubuntu ubuntu debian 26.04)"
 NIXOS_FIXTURE="$(os_release_fixture nixos nixos '' 25.11)"
-GENTOO_FIXTURE="$(os_release_fixture gentoo gentoo '' '')"
+# Gentoo's real /etc/os-release wraps every value in single quotes, so the
+# fixture does too: the quoted form is what made detection read 'gentoo'.
+GENTOO_FIXTURE="$(os_release_fixture gentoo gentoo '' 2.18 "'")"
 MINT_FIXTURE="$(os_release_fixture mint linuxmint 'ubuntu debian' 22.1)"
 UBUNTU_2610_FIXTURE="$(os_release_fixture ubuntu-2610 ubuntu debian 26.10)"
 
@@ -107,6 +111,10 @@ assert_eq "a missing os-release is unknown" unknown \
   "$(kdu_distro_from_osrelease "$WORK/no-such-os-release")"
 assert_eq "quoted values lose their quotes" "Debian GNU/Linux" \
   "$(printf 'NAME="Debian GNU/Linux"\nID=debian\n' >"$WORK/os-release-names" && kdu_os_release_value "$WORK/os-release-names" NAME)"
+assert_eq "single-quoted values lose their quotes" gentoo \
+  "$(kdu_os_release_value "$GENTOO_FIXTURE" ID)"
+assert_eq "a single-quoted ID_LIKE still resolves" ubuntu \
+  "$(kdu_distro_from_osrelease "$(os_release_fixture quoted-like foo 'ubuntu debian' '' "'")")"
 
 # --- installer and branch ---------------------------------------------------
 assert_eq "Debian uses the Debian installer" Debian-Hyprland "$(kdu_repo_for_distro debian)"
@@ -304,9 +312,13 @@ elif [ -e "$WORK/dry-root" ]; then fail "$WORK/dry-root was created"
 else pass_msg; fi
 
 it "Gentoo takes the same dotfiles-only path"
+# Gentoo quotes its os-release values, so this also covers the detection that
+# used to fail and drop Gentoo into the unsupported branch.
 gentoo_out="$(KOOLDOTS_OS_RELEASE="$GENTOO_FIXTURE" bash "$UPGRADE" --dry-run 2>&1)"
 assert_contains "$gentoo_out" "Only the Hyprland-Dots can be updated" "the dotfiles-only notice" &&
-  assert_not_contains "$gentoo_out" "install-scripts/update-deps.sh" "the dependency step" && pass_msg
+  assert_contains "$gentoo_out" "Installer : none (dotfiles only)" "the installer line" &&
+  assert_not_contains "$gentoo_out" "install-scripts/update-deps.sh" "the dependency step" &&
+  assert_not_contains "$gentoo_out" "Automatic upgrade is not available" "the unsupported notice" && pass_msg
 
 it "the dotfiles-only prompt defaults to yes"
 if grep -qF 'Continue with the dotfiles-only upgrade? [Y/n]' "$UPGRADE"; then pass_msg

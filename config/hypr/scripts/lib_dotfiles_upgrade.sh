@@ -32,10 +32,14 @@ kdu_running_as_root() {
 }
 
 # kdu_os_release_value <file> <KEY> -> the value, quotes stripped
+# Either quote style is stripped, because both are in the wild: Gentoo writes
+# `ID='gentoo'`, and the double-quoted form is what the spec shows. Stripping
+# only one left the value with its quotes, so ID read as 'gentoo' and the distro
+# fell through to unknown.
 kdu_os_release_value() {
   local file="$1" key="$2"
   [ -f "$file" ] || return 1
-  sed -nE "s/^[[:space:]]*${key}=//p" "$file" | tail -n1 | sed -E 's/^"//; s/"$//'
+  sed -nE "s/^[[:space:]]*${key}=//p" "$file" | tail -n1 | sed -E "s/^['\"]//; s/['\"]\$//"
 }
 
 # kdu_distro_from_osrelease <file> -> debian|ubuntu|arch|fedora|opensuse|nixos|gentoo|unknown

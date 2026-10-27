@@ -9,6 +9,12 @@
   - `KooLsDotsUpgrade.sh` ran `git --depth=1 <url> <dest>`, which git rejected
   - It aborted with `Could not clone Debian-Hyprland.` before downloading
   - The argument list now starts with `clone`, so the plan matches the run
+- Gentoo is detected again, so the dots upgrade runs there
+  - `/etc/os-release` quotes its values with single quotes on Gentoo
+  - `kdu_os_release_value` stripped only double quotes
+  - `ID` read as `'gentoo'`, so detection fell through to `unknown`
+  - The upgrade then refused with `Automatic upgrade is not available`
+  - Either quote style is stripped, and Gentoo takes the dotfiles-only path
 
 ## Added:
 

@@ -157,7 +157,7 @@ distro="$(kdu_distro_detect "$OS_RELEASE")"
 if ! kdu_supported_distro "$distro"; then
   if ! kdu_dotfiles_only_distro "$distro"; then
     log "${WARN} Automatic upgrade is not available for this OS (${distro})."
-    log "${INFO} NixOS and Gentoo are not covered, and neither is any other distro."
+    log "${INFO} NixOS and Gentoo update the dots alone; this OS is not covered."
     log "${INFO} Upgrade the dotfiles by hand: docs/HOWTO-Upgrade-Dotfiles.md"
     notify normal "KooL Dots upgrade" "Automatic upgrade is not available for this OS."
     exit 0
