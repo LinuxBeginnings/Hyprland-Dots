@@ -23,7 +23,11 @@
   - It reminds you to update the OS first, and links the Debian Hyprland guide
   - Linux Mint and Zorin OS are supported as Ubuntu 24.04 based
   - Ubuntu 26.10 is not supported and uses the 26.04 branch, with a warning
-  - NixOS, Gentoo and unknown distros keep the old check-only behaviour
+  - On NixOS and Gentoo only the dots are updated, after a `[Y/n]` prompt
+    - Neither has an installer to clone or an `update-deps.sh` to run
+    - The window offers `Upgrade Dots only` and links `Packages Required`
+    - Install the packages the dots need yourself before upgrading
+  - An unrecognised distro still gets the check-only message
   - `KooLsDotsUpgrade.sh --dry-run` prints the plan and changes nothing
 - `WaybarStartup.sh` records why it started, or why it did not
   - Every early exit was silent, so a missing bar had no explanation

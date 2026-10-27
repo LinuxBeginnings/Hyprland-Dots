@@ -10,6 +10,9 @@
 # install-scripts/update-deps.sh, then runs copy.sh --tty --express-upgrade.
 # At the end it asks before removing the downloaded files.
 #
+# NixOS and Gentoo have no installer to clone and no update-deps.sh, so there
+# only the Hyprland-Dots are downloaded and copied, after a prompt.
+#
 # It needs a terminal: update-deps.sh uses sudo and copy.sh asks questions.
 # KooLsDotsUpdate.sh opens one and calls this script, so it is normally not run
 # by hand.
@@ -43,6 +46,9 @@ OS_RELEASE="${KOOLDOTS_OS_RELEASE:-/etc/os-release}"
 DRY_RUN=0
 KEEP_TEMP=0
 FORCE=0
+# Set when the OS has no installer: only the dots are upgraded. See
+# kdu_dotfiles_only_distro.
+DOTFILES_ONLY=0
 
 # Set some colors for output messages
 if tput sgr0 >/dev/null 2>&1; then
@@ -84,6 +90,10 @@ Usage: $SCRIPT_NAME [options]
 Downloads the distro installer for this OS and the current Hyprland-Dots into a
 temp directory under \$HOME, runs the installer's install-scripts/update-deps.sh,
 then runs copy.sh --tty --express-upgrade. A terminal is required.
+
+NixOS and Gentoo have no installer to clone and no update-deps.sh to run, so
+there only the Hyprland-Dots are downloaded and copied, after a prompt. The
+packages the dots need are the user's own step.
 
 Options:
   --dry-run    Show the advisory, the resolved installer and branch, the temp
@@ -145,40 +155,60 @@ fi
 # ---- which installer does this OS need -------------------------------------
 distro="$(kdu_distro_detect "$OS_RELEASE")"
 if ! kdu_supported_distro "$distro"; then
-  log "${WARN} Automatic upgrade is not available for this OS (${distro})."
-  log "${INFO} NixOS and Gentoo are not covered, and neither is any other distro."
-  log "${INFO} Upgrade the dotfiles by hand: docs/HOWTO-Upgrade-Dotfiles.md"
-  notify normal "KooL Dots upgrade" "Automatic upgrade is not available for this OS."
-  exit 0
+  if ! kdu_dotfiles_only_distro "$distro"; then
+    log "${WARN} Automatic upgrade is not available for this OS (${distro})."
+    log "${INFO} NixOS and Gentoo are not covered, and neither is any other distro."
+    log "${INFO} Upgrade the dotfiles by hand: docs/HOWTO-Upgrade-Dotfiles.md"
+    notify normal "KooL Dots upgrade" "Automatic upgrade is not available for this OS."
+    exit 0
+  fi
+  # No installer exists for this OS, but copy.sh only needs the packages to be
+  # in place already, so the dots alone can still be upgraded.
+  DOTFILES_ONLY=1
+  log "${WARN} Automatic dependency handling is not available for this OS (${distro})."
+  log "${INFO} Only the Hyprland-Dots can be updated for ${distro}."
+  log "${INFO} There is no installer to clone and no update-deps.sh to run, so the"
+  log "${INFO} packages the dots need are yours to install or update first."
+  log "${INFO} Current dependencies: ${KDU_PACKAGES_WIKI_URL}"
+  notify normal "KooL Dots upgrade" "Only the Hyprland-Dots can be updated on ${distro}."
 fi
 
-repo="$(kdu_repo_for_distro "$distro")"
-distro_id="$(kdu_os_release_value "$OS_RELEASE" ID || true)"
-version_id="$(kdu_os_release_value "$OS_RELEASE" VERSION_ID || true)"
+# Empty for a dotfiles-only run: there is no installer repo or branch to name.
+repo=""
 branch="main"
-if [ "$(kdu_branch_mode_for_distro "$distro")" = "per-release" ]; then
-  # Mint, Zorin and 26.10 take a fixed branch, so they need no probe.
-  branch_override="$(kdu_branch_override "$distro_id" "$version_id")"
-  if [ -n "$branch_override" ]; then
-    branch="$branch_override"
-  else
-    branches="$(kdu_remote_branches "$repo" || true)"
-    branch="$(kdu_branch_for_distro "$distro" "$version_id" "$branches")"
-    if [ "$branch" = "main" ]; then
-      log "${WARN} No $repo branch matches ${version_id:-this release}; using main."
+if [ "$DOTFILES_ONLY" -eq 0 ]; then
+  repo="$(kdu_repo_for_distro "$distro")"
+  distro_id="$(kdu_os_release_value "$OS_RELEASE" ID || true)"
+  version_id="$(kdu_os_release_value "$OS_RELEASE" VERSION_ID || true)"
+  branch="main"
+  if [ "$(kdu_branch_mode_for_distro "$distro")" = "per-release" ]; then
+    # Mint, Zorin and 26.10 take a fixed branch, so they need no probe.
+    branch_override="$(kdu_branch_override "$distro_id" "$version_id")"
+    if [ -n "$branch_override" ]; then
+      branch="$branch_override"
+    else
+      branches="$(kdu_remote_branches "$repo" || true)"
+      branch="$(kdu_branch_for_distro "$distro" "$version_id" "$branches")"
+      if [ "$branch" = "main" ]; then
+        log "${WARN} No $repo branch matches ${version_id:-this release}; using main."
+      fi
     fi
   fi
-fi
 
-release_notice="$(kdu_release_notice "$distro_id" "$version_id")"
-if [ -n "$release_notice" ]; then
-  log "${WARN} $release_notice"
+  release_notice="$(kdu_release_notice "$distro_id" "$version_id")"
+  if [ -n "$release_notice" ]; then
+    log "${WARN} $release_notice"
+  fi
 fi
 
 # A terminal is only needed for the real run: --dry-run changes nothing.
 if [ "$DRY_RUN" -eq 0 ]; then
   if [ ! -t 0 ] || [ ! -t 1 ]; then
-    log "${ERROR} A terminal is required: update-deps.sh needs sudo and copy.sh asks questions."
+    if [ "$DOTFILES_ONLY" -eq 1 ]; then
+      log "${ERROR} A terminal is required: copy.sh asks questions."
+    else
+      log "${ERROR} A terminal is required: update-deps.sh needs sudo and copy.sh asks questions."
+    fi
     notify critical "KooL Dots upgrade" "A terminal is required. Run $SCRIPT_NAME from a terminal."
     exit 1
   fi
@@ -206,12 +236,32 @@ if [ "$distro" = "debian" ]; then
   log "    How to upgrade Hyprland:"
   log "    ${KDU_DEBIAN_GUIDE_URL}"
 fi
+if [ "$DOTFILES_ONLY" -eq 1 ]; then
+  log "  - The packages the dots need are installed: this run does not touch them."
+  log "    ${KDU_PACKAGES_WIKI_URL}"
+fi
 log ""
 
 if [ "$DRY_RUN" -eq 1 ]; then
   tmp_root="${KOOLDOTS_UPGRADE_TMP_ROOT:-$HOME}"
   TEMPDIR="$(kdu_tempdir_label "$tmp_root")"
   log "${INFO} --dry-run: nothing is downloaded and nothing is changed."
+  if [ "$DOTFILES_ONLY" -eq 1 ]; then
+    log "${INFO} Installer : none (dotfiles only)"
+    log "${INFO} Temp dir  : $TEMPDIR"
+    log "${INFO} Then      : $TEMPDIR/Hyprland-Dots"
+    log ""
+    log "${INFO} Commands, in order:"
+    clone_args=()
+    while IFS= read -r arg; do clone_args+=("$arg"); done < <(kdu_clone_args "Hyprland-Dots" "main" "$TEMPDIR/Hyprland-Dots")
+    log "  1. git $(show_cmd "${clone_args[@]}")"
+    log "  2. $(kdu_copy_cmd "$TEMPDIR")"
+    log ""
+    log "${INFO} The dependency step is skipped: install the packages yourself."
+    log "${INFO} ${KDU_PACKAGES_WIKI_URL}"
+    log "${INFO} Afterwards it asks before removing $TEMPDIR."
+    exit 0
+  fi
   log "${INFO} Installer : $repo (branch $branch)"
   log "${INFO} Temp dir  : $TEMPDIR"
   log "${INFO} Then      : $TEMPDIR/$repo and $TEMPDIR/Hyprland-Dots"
@@ -252,15 +302,28 @@ if [ "$FORCE" -eq 0 ]; then
   fi
 fi
 
-printf '%s' "${CAT} Download the installer and upgrade now? [y/N]: "
-read -r answer || answer=""
-case "${answer,,}" in
-y | yes) ;;
-*)
-  log "${INFO} Aborted at your request. Nothing was changed."
-  exit 0
-  ;;
-esac
+if [ "$DOTFILES_ONLY" -eq 1 ]; then
+  # Defaults to yes: nothing is installed and copy.sh backs up before it copies.
+  printf '%s' "${CAT} Continue with the dotfiles-only upgrade? [Y/n]: "
+  read -r answer || answer=""
+  case "${answer,,}" in
+  "" | y | yes) ;;
+  *)
+    log "${INFO} Aborted at your request. Nothing was changed."
+    exit 0
+    ;;
+  esac
+else
+  printf '%s' "${CAT} Download the installer and upgrade now? [y/N]: "
+  read -r answer || answer=""
+  case "${answer,,}" in
+  y | yes) ;;
+  *)
+    log "${INFO} Aborted at your request. Nothing was changed."
+    exit 0
+    ;;
+  esac
+fi
 
 # ---- temp directory --------------------------------------------------------
 tmp_root="${KOOLDOTS_UPGRADE_TMP_ROOT:-$HOME}"
@@ -278,11 +341,13 @@ clone_repo() { # <repo> <branch> <dest>
   git "${args[@]}"
 }
 
-if ! clone_repo "$repo" "$branch" "$TEMPDIR/$repo"; then
-  log "${ERROR} Could not clone $repo. Check your network connection."
-  notify critical "KooL Dots upgrade" "Could not clone $repo."
-  rm -rf -- "$TEMPDIR"
-  exit 1
+if [ "$DOTFILES_ONLY" -eq 0 ]; then
+  if ! clone_repo "$repo" "$branch" "$TEMPDIR/$repo"; then
+    log "${ERROR} Could not clone $repo. Check your network connection."
+    notify critical "KooL Dots upgrade" "Could not clone $repo."
+    rm -rf -- "$TEMPDIR"
+    exit 1
+  fi
 fi
 if ! clone_repo "Hyprland-Dots" "main" "$TEMPDIR/Hyprland-Dots"; then
   log "${ERROR} Could not clone Hyprland-Dots. Check your network connection."
@@ -293,7 +358,13 @@ fi
 
 # ---- dependencies ----------------------------------------------------------
 deps_ok=1
-if [ ! -f "$TEMPDIR/$repo/install-scripts/update-deps.sh" ]; then
+if [ "$DOTFILES_ONLY" -eq 1 ]; then
+  # There is no installer, so no update-deps.sh. The packages are the user's
+  # own step; copy.sh is happy as long as they are present.
+  log "${NOTE} Skipping the dependency step: there is no installer for this OS."
+  log "${INFO} Install or update the packages the dots need yourself:"
+  log "${INFO} ${KDU_PACKAGES_WIKI_URL}"
+elif [ ! -f "$TEMPDIR/$repo/install-scripts/update-deps.sh" ]; then
   log "${WARN} $repo has no install-scripts/update-deps.sh; skipping the dependency step."
   deps_ok=0
 else
@@ -326,15 +397,24 @@ log ""
 if [ "$deps_ok" -eq 0 ]; then
   log "${NOTE} The dependency step did not finish cleanly; check its log before rebooting."
 fi
+if [ "$DOTFILES_ONLY" -eq 1 ]; then
+  log "${NOTE} The dependencies were not touched: this OS has no installer to run."
+  log "${INFO} Install or update the packages the dots need yourself:"
+  log "${INFO} ${KDU_PACKAGES_WIKI_URL}"
+fi
 if [ "$copy_status" -eq 0 ]; then
   log "${OK} Dotfiles upgrade finished."
-  log "${INFO} Installer logs: $TEMPDIR/$repo/Install-Logs/"
+  if [ "$DOTFILES_ONLY" -eq 0 ]; then
+    log "${INFO} Installer logs: $TEMPDIR/$repo/Install-Logs/"
+  fi
   log "${INFO} Copy logs:      $TEMPDIR/Hyprland-Dots/Copy-Logs/"
   log "${NOTE} Reboot when convenient so the session picks up the new config."
   notify normal "KooL Dots upgrade" "Upgrade finished. Reboot when convenient."
 else
   log "${WARN} copy.sh exited with status $copy_status. Check the output above."
-  log "${INFO} Installer logs: $TEMPDIR/$repo/Install-Logs/"
+  if [ "$DOTFILES_ONLY" -eq 0 ]; then
+    log "${INFO} Installer logs: $TEMPDIR/$repo/Install-Logs/"
+  fi
   log "${INFO} Copy logs:      $TEMPDIR/Hyprland-Dots/Copy-Logs/"
   notify critical "KooL Dots upgrade" "copy.sh reported a problem (exit $copy_status)."
 fi

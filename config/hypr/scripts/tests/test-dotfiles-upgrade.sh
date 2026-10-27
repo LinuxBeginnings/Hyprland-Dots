@@ -122,6 +122,20 @@ for key in nixos gentoo unknown; do
 done
 if [ "$unsupported" -eq 0 ]; then pass_msg; else fail "an unsupported distro was accepted"; fi
 
+it "NixOS and Gentoo can still upgrade the dots alone"
+not_dotfiles_only=0
+for key in nixos gentoo; do
+  kdu_dotfiles_only_distro "$key" || not_dotfiles_only=1
+done
+if [ "$not_dotfiles_only" -eq 0 ]; then pass_msg; else fail "a dotfiles-only distro was rejected"; fi
+
+it "a distro with an installer is never dotfiles-only"
+wrongly_only=0
+for key in debian ubuntu arch fedora opensuse unknown ''; do
+  kdu_dotfiles_only_distro "$key" && wrongly_only=1
+done
+if [ "$wrongly_only" -eq 0 ]; then pass_msg; else fail "a distro with an installer was treated as dotfiles-only"; fi
+
 # The real upstream branch list, as of the Ubuntu-Hyprland repository.
 UBUNTU_BRANCHES="24.04 24.04-development 25.10 26.04 26.04-development main"
 assert_eq "Ubuntu 26.04 takes the 26.04 branch" 26.04 \
@@ -255,11 +269,59 @@ else fail "expected a terminal refusal, got rc=$tty_rc: $tty_out"; fi
 it "--help exits 0"
 if bash "$UPGRADE" --help | grep -q '^Usage:'; then pass_msg; else fail "--help did not print usage"; fi
 
-it "an unsupported OS exits cleanly with guidance"
-unsupported_out="$(KOOLDOTS_OS_RELEASE="$NIXOS_FIXTURE" bash "$UPGRADE" --dry-run 2>&1)"
-unsupported_rc=$?
-if [ "$unsupported_rc" -eq 0 ] && [[ "$unsupported_out" == *"not available for this OS"* ]]; then pass_msg
-else fail "expected a clean unsupported exit, got rc=$unsupported_rc: $unsupported_out"; fi
+# --- the dots alone, on NixOS and Gentoo ------------------------------------
+# There is no installer to clone and no update-deps.sh to run, so the plan is
+# one clone and copy.sh, and the OS is told so before anything happens.
+DRY_NIXOS="$WORK/dry-nixos.out"
+: >"$CALL_LOG"
+KOOLDOTS_OS_RELEASE="$NIXOS_FIXTURE" KOOLDOTS_UPGRADE_TMP_ROOT="$WORK/dry-root" \
+  bash "$UPGRADE" --dry-run >"$DRY_NIXOS" 2>&1
+nixos_rc=$?
+assert_eq "the NixOS --dry-run exits 0" 0 "$nixos_rc"
+
+it "NixOS is told that only the Hyprland-Dots can be updated"
+assert_contains "$DRY_NIXOS" "Only the Hyprland-Dots can be updated" "the dotfiles-only notice" && pass_msg
+
+it "NixOS is pointed at the Packages Required wiki page"
+assert_contains "$DRY_NIXOS" "$KDU_PACKAGES_WIKI_URL" "the wiki URL" && pass_msg
+
+it "the NixOS plan names no installer"
+assert_contains "$DRY_NIXOS" "Installer : none (dotfiles only)" "the installer line" && pass_msg
+
+# The notice names update-deps.sh in prose, so the check is for the command
+# line the plan would print, which is the only thing that would actually run it.
+it "the NixOS plan drops the dependency step and the installer clone"
+if assert_not_contains "$DRY_NIXOS" "install-scripts/update-deps.sh" "the dependency step" &&
+  assert_not_contains "$DRY_NIXOS" "Debian-Hyprland.git" "an installer clone"; then pass_msg; fi
+
+it "the NixOS plan still clones the dots and runs copy.sh"
+assert_contains "$DRY_NIXOS" "Hyprland-Dots.git" "the dotfiles clone" &&
+  assert_contains "$DRY_NIXOS" "copy.sh --tty --express-upgrade" "the dotfiles step" && pass_msg
+
+it "the NixOS plan is dry: no clone, no temp directory"
+if grep -q '^git clone' "$CALL_LOG"; then fail "a clone was attempted: $(grep '^git clone' "$CALL_LOG")"
+elif [ -e "$WORK/dry-root" ]; then fail "$WORK/dry-root was created"
+else pass_msg; fi
+
+it "Gentoo takes the same dotfiles-only path"
+gentoo_out="$(KOOLDOTS_OS_RELEASE="$GENTOO_FIXTURE" bash "$UPGRADE" --dry-run 2>&1)"
+assert_contains "$gentoo_out" "Only the Hyprland-Dots can be updated" "the dotfiles-only notice" &&
+  assert_not_contains "$gentoo_out" "install-scripts/update-deps.sh" "the dependency step" && pass_msg
+
+it "the dotfiles-only prompt defaults to yes"
+if grep -qF 'Continue with the dotfiles-only upgrade? [Y/n]' "$UPGRADE"; then pass_msg
+else fail "the dotfiles-only [Y/n] prompt is missing"; fi
+
+it "the dotfiles-only run consults the packages wiki"
+if grep -qF 'KDU_PACKAGES_WIKI_URL' "$UPGRADE"; then pass_msg
+else fail "KooLsDotsUpgrade.sh never names the packages wiki"; fi
+
+it "an unrecognised distro keeps the old check-only notice"
+unknown_out="$(KOOLDOTS_OS_RELEASE="$(os_release_fixture alpine alpine '' 3.22)" bash "$UPGRADE" --dry-run 2>&1)"
+unknown_rc=$?
+if [ "$unknown_rc" -eq 0 ] && [[ "$unknown_out" == *"not available for this OS"* ]] &&
+  [[ "$unknown_out" != *"Only the Hyprland-Dots can be updated"* ]]; then pass_msg
+else fail "expected the old unsupported notice, got rc=$unknown_rc: $unknown_out"; fi
 
 # --- the whole plan, on Debian ---------------------------------------------
 DRY_OUT="$WORK/dry-debian.out"
@@ -344,6 +406,12 @@ if grep -q -- '--upgrade' "$SCRIPT_DIR/KooLsDotsUpdate.sh" &&
   grep -q 'launch_upgrade_terminal' "$SCRIPT_DIR/KooLsDotsUpdate.sh" &&
   grep -q 'LaunchTerminal.sh' "$SCRIPT_DIR/KooLsDotsUpdate.sh"; then pass_msg
 else fail "the upgrade action is not wired into KooLsDotsUpdate.sh"; fi
+
+it "the update window stops advertising the installer on NixOS and Gentoo"
+if grep -q 'DOTFILES_ONLY' "$SCRIPT_DIR/KooLsDotsUpdate.sh" &&
+  grep -q 'KDU_PACKAGES_WIKI_URL' "$SCRIPT_DIR/KooLsDotsUpdate.sh" &&
+  grep -q 'Upgrade Dots only' "$SCRIPT_DIR/KooLsDotsUpdate.sh"; then pass_msg
+else fail "KooLsDotsUpdate.sh still offers an installer run on NixOS/Gentoo"; fi
 
 it "the Waybar module right-click starts the upgrade"
 if grep -q 'KooLsDotsUpdate.sh --upgrade' "$SCRIPT_DIR/../waybar/ModulesCustom"; then pass_msg

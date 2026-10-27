@@ -32,7 +32,8 @@ Flow:
    - Arch (`pacman`) → `Arch-Hyprland`, `main`
    - Fedora (`dnf`) → `Fedora-Hyprland`, `main`
    - openSUSE (`zypper`) → `OpenSUSE-Hyprland`, `main`
-   - NixOS, Gentoo and anything unmatched → unsupported: print guidance, keep the existing notify-only behaviour, exit 0 without cloning
+   - NixOS and Gentoo → no installer exists, so only the dots are upgraded: print the notice, point at the wiki's `Packages Required` page, prompt `[Y/n]`, then clone `Hyprland-Dots` alone and skip the dependency step
+   - Anything unmatched → unsupported: print guidance, keep the existing notify-only behaviour, exit 0 without cloning
 3. Create the temp tree. A randomly generated directory in the user's home, `TEMPDIR="$(mktemp -d "${KOOLDOTS_UPGRADE_TMP_ROOT:-$HOME}/kooldots-upgrade-XXXXXX")"`, with each repo cloned into its own directory inside it: `$TEMPDIR/<Distro>-Hyprland/` (for example `$TEMPDIR/Debian-Hyprland/`) and `$TEMPDIR/Hyprland-Dots/`. The two paths in the request therefore resolve as `$TEMPDIR/<Distro>-Hyprland/install-scripts/update-deps.sh` and `$TEMPDIR/Hyprland-Dots/copy.sh`.
 4. Clone both repos `--depth=1` from `https://github.com/LinuxBeginnings/<repo>.git`, passing `-b <branch>` for the installer when the branch is not `main`. Fail fast: if either clone fails, remove `$TEMPDIR` and exit non-zero without touching the installed system.
 5. Run `bash "$TEMPDIR/<Distro>-Hyprland/install-scripts/update-deps.sh"`, tee'd to `$TEMPDIR/kooldots-upgrade.log`. This installs and updates the dependencies the new dots need and uses `sudo`, which is why the whole flow needs a terminal.
@@ -88,6 +89,7 @@ If any module is `outdated`, print the full report and prompt: upgrade the Hyprl
 - If the user declines, continue to `copy.sh` and note the Hyprland `0.55` minimum the dots require.
 ## Support matrix
 - Phase 1 works on Debian, Ubuntu, Arch, Fedora and openSUSE, since each of those has an installer with `update-deps.sh`.
+- NixOS and Gentoo have no installer, so Phase 1 upgrades the dots alone there, after a prompt. The packages stay the user's step.
 - Phase 2's OS update covers the same five distros and excludes NixOS and Gentoo.
 - Phase 2's Hyprland stack gate is Debian-only. It keys off the presence of `hypr-tags.env` and `update-hyprland.sh` in the cloned installer, so another installer can adopt it later without changes here.
 - Anything unmatched: report unsupported and keep the existing notify-only behaviour.

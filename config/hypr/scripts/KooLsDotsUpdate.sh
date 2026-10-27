@@ -19,6 +19,20 @@ REMOTE_ENV_URL="https://raw.githubusercontent.com/LinuxBeginnings/Hyprland-Dots/
 REMOTE_API_CONTENTS="https://api.github.com/repos/LinuxBeginnings/Hyprland-Dots/contents/config/hypr"
 REMOTE_TREE_URL="https://github.com/LinuxBeginnings/Hyprland-Dots/tree/main/config/hypr"
 
+# ---- does this OS have an installer at all ---------------------------------
+# NixOS and Gentoo have no installer to clone and no install-scripts/update-deps.sh,
+# so the window must not advertise an installer run there. The same helper the
+# upgrade script uses decides it.
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./lib_dotfiles_upgrade.sh
+. "$SCRIPTS_DIR/lib_dotfiles_upgrade.sh"
+
+# Set when only the Hyprland-Dots can be updated on this OS.
+DOTFILES_ONLY=0
+if kdu_dotfiles_only_distro "$(kdu_distro_detect "${KOOLDOTS_OS_RELEASE:-/etc/os-release}")"; then
+  DOTFILES_ONLY=1
+fi
+
 # Resolve notification icon
 get_icon() {
   local preferred="$1"
@@ -218,6 +232,14 @@ show_update_window() {
     local yad_text="<b><big>KooL Hyprland Dots Update Available!</big></b>\n\n"
     yad_text+="<b>Current installed version:</b> ${cur_v}\n"
     yad_text+="<b>Most current version detected:</b> ${new_v}\n\n"
+
+    local yad_upgrade="Upgrade now"
+    if [[ "$DOTFILES_ONLY" -eq 1 ]]; then
+      yad_upgrade="Upgrade Dots only"
+      yad_text+="<b>This OS has no installer:</b> only the Hyprland-Dots can be updated.\n"
+      yad_text+="<b>Dependencies:</b> <a href=\"${KDU_PACKAGES_WIKI_URL}\">Packages Required</a>\n\n"
+    fi
+
     yad_text+="<b>Changelog:</b>\n<a href=\"${CHANGELOG_URL}\">${CHANGELOG_URL}</a>\n"
 
     local ret=0
@@ -225,7 +247,7 @@ show_update_window() {
       --title="KooL Hyprland Update" \
       --window-icon="$yad_icon" \
       --text="$yad_text" \
-      --button="Upgrade now:3" \
+      --button="${yad_upgrade}:3" \
       --button="View Changelogs:2" \
       --button="OK:0" \
       --width=480 \
@@ -254,6 +276,11 @@ show_update_window() {
     rofi_msg+="Changelog: ${CHANGELOG_URL}"
 
     local opt_upgrade="󰁈 Upgrade Now (Installer + Dots)"
+    if [[ "$DOTFILES_ONLY" -eq 1 ]]; then
+      opt_upgrade="󰁈 Upgrade Dots Only (No Installer)"
+      rofi_msg+="\nThis OS has no installer: only the Hyprland-Dots can be updated.\n"
+      rofi_msg+="Dependencies: ${KDU_PACKAGES_WIKI_URL}"
+    fi
     local opt_changelog="🌐 View Changelog (Opens in Browser)"
     local opt_ok=" OK (Close)"
 
@@ -277,10 +304,18 @@ show_update_window() {
   if command -v zenity >/dev/null 2>&1; then
     # zenity cannot show three buttons, so the changelog stays in the text and
     # the two buttons are Upgrade / Close.
+    local zenity_text="Update available for KooL Hyprland Dots!\n\nCurrent installed version: ${cur_v}\nMost current version detected: ${new_v}\n\nChangelog:\n${CHANGELOG_URL}\n\n"
+    local zenity_ok="Upgrade now"
+    if [[ "$DOTFILES_ONLY" -eq 1 ]]; then
+      zenity_ok="Upgrade Dots only"
+      zenity_text+="This OS has no installer: only the Hyprland-Dots can be updated. Install the packages the dots need first:\n${KDU_PACKAGES_WIKI_URL}"
+    else
+      zenity_text+="Upgrade now? This downloads the installer for your OS and the current Hyprland-Dots, then runs the upgrade in a terminal."
+    fi
     if zenity --question \
       --title="KooL Hyprland Update" \
-      --text="Update available for KooL Hyprland Dots!\n\nCurrent installed version: ${cur_v}\nMost current version detected: ${new_v}\n\nChangelog:\n${CHANGELOG_URL}\n\nUpgrade now? This downloads the installer for your OS and the current Hyprland-Dots, then runs the upgrade in a terminal." \
-      --ok-label="Upgrade now" \
+      --text="$zenity_text" \
+      --ok-label="$zenity_ok" \
       --cancel-label="Close" 2>/dev/null; then
       launch_upgrade_terminal || true
     fi

@@ -20,6 +20,10 @@
 # The upgrade guide linked from the preflight advisory on Debian.
 KDU_DEBIAN_GUIDE_URL="https://github.com/LinuxBeginnings/Debian-Hyprland/blob/main/Debian-Hyprland-Install-Upgrade.md"
 
+# Where the dotfiles-only distros are told to get their packages. There is no
+# installer to run update-deps.sh for them, so the wiki is the dependency list.
+KDU_PACKAGES_WIKI_URL="https://github.com/LinuxBeginnings/Hyprland-Dots/wiki/Packages_Required"
+
 # kdu_running_as_root -> 0 when the effective uid is 0.
 # KOOLDOTS_UPGRADE_UID is a test seam: it lets the suite exercise the refusal
 # without becoming root. It can only ever make the script refuse more.
@@ -110,6 +114,18 @@ kdu_branch_mode_for_distro() {
 # kdu_supported_distro <key> -> 0 when the flow can upgrade this OS
 kdu_supported_distro() {
   kdu_repo_for_distro "${1:-}" >/dev/null 2>&1
+}
+
+# kdu_dotfiles_only_distro <key> -> 0 when only the dots can be upgraded
+# NixOS is declarative and ships no update-deps.sh, and there is no Gentoo
+# installer repo, so both skip the installer and the dependency step. The list
+# is explicit rather than "everything unsupported": an unrecognised distro keeps
+# the old check-only notice instead.
+kdu_dotfiles_only_distro() {
+  case "${1:-}" in
+  nixos | gentoo) return 0 ;;
+  *) return 1 ;;
+  esac
 }
 
 # kdu_repo_url <repo> -> the clone URL

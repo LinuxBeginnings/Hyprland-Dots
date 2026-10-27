@@ -12,6 +12,22 @@
 - Before you start, make sure your OS is up to date
   - On Debian, if Hyprland is built from source, make sure it is current too
     - [Debian-Hyprland: install and upgrade](https://github.com/LinuxBeginnings/Debian-Hyprland/blob/main/Debian-Hyprland-Install-Upgrade.md)
+  - On NixOS and Gentoo only the dots are updated, so the packages are yours
+    - [NixOS and Gentoo: dotfiles only](#nixos-and-gentoo-dotfiles-only)
+
+## NixOS and Gentoo: dotfiles only
+
+- Neither distro has an installer to clone, so only the dots are updated
+  - Gentoo has no installer repository, and NixOS is declarative
+  - There is no `install-scripts/update-deps.sh` to run on either
+- The Waybar icon still works, and the window says so
+  - The upgrade action is labelled `Upgrade Dots only`
+  - It runs `./copy.sh --tty --express-upgrade` and nothing else
+  - The terminal asks `Continue with the dotfiles-only upgrade? [Y/n]` first
+- Install or update the packages the dots need yourself first
+  - [Packages Required](https://github.com/LinuxBeginnings/Hyprland-Dots/wiki/Packages_Required)
+  - Nothing in the upgrade installs or updates a package for you
+- `copy.sh` still backs up before it copies, and still asks its questions
 
 ## Upgrading by hand
 
