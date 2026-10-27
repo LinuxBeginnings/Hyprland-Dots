@@ -178,13 +178,26 @@ assert_eq "the clone URL is the LinuxBeginnings repository" \
   "https://github.com/LinuxBeginnings/Debian-Hyprland.git" \
   "$(kdu_repo_url Debian-Hyprland)"
 
+it "the clone argument list carries the clone subcommand"
+if [ "$(kdu_clone_args Debian-Hyprland main "$WORK/t/Debian-Hyprland" | head -n1)" = "clone" ]; then
+  pass_msg
+else fail "the first argument is not 'clone'; git would be called with no subcommand"; fi
+
 it "a main-branch clone is not pinned with -b"
 if kdu_clone_args Debian-Hyprland main "$WORK/t/Debian-Hyprland" | grep -qx -- '-b'; then
   fail "a -b was passed for main"
 else pass_msg; fi
 
+assert_eq "a main-branch clone is a complete git command line" \
+  "clone
+--depth=1
+https://github.com/LinuxBeginnings/Debian-Hyprland.git
+$WORK/t/Debian-Hyprland" \
+  "$(kdu_clone_args Debian-Hyprland main "$WORK/t/Debian-Hyprland")"
+
 assert_eq "a release branch clone pins the branch" \
-  "--depth=1
+  "clone
+--depth=1
 -b
 26.04
 https://github.com/LinuxBeginnings/Ubuntu-Hyprland.git

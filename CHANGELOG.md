@@ -2,6 +2,14 @@
 
 ## v2.3.29
 
+## Fixed:
+
+- The dots upgrade no longer stops at the first clone
+  - `kdu_clone_args` listed the clone options but not the `clone` subcommand
+  - `KooLsDotsUpgrade.sh` ran `git --depth=1 <url> <dest>`, which git rejected
+  - It aborted with `Could not clone Debian-Hyprland.` before downloading
+  - The argument list now starts with `clone`, so the plan matches the run
+
 ## Added:
 
 - Waybar's dots update check can now download and run the upgrade

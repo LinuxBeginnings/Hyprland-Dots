@@ -176,9 +176,12 @@ kdu_release_notice() {
 }
 
 # kdu_clone_args <repo> <branch> <dest> -> one git argument per line
+# The `clone` subcommand is the first line, so the list is a complete git command
+# line: the dry-run display and the real invocation are then the same command.
+# Without it, git is handed --depth=1 as a top-level option and refuses to run.
 kdu_clone_args() {
   local repo="$1" branch="$2" dest="$3"
-  printf '%s\n' "--depth=1"
+  printf '%s\n' "clone" "--depth=1"
   if [ -n "$branch" ] && [ "$branch" != "main" ]; then
     printf '%s\n' "-b" "$branch"
   fi
