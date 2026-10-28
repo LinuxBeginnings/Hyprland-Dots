@@ -37,6 +37,16 @@
   - It also survived `SIGTERM`, leaving a loop that kept rewriting
   - Restore reads the 0.57 `gradient data:` line and adds the `0x` prefix
   - That line prints bare hex, which the colour parser rejected
+- The config is no longer reloaded every ~2 seconds
+  - `DisplayProfile.sh` rewrites `UserConfigs/monitors.lua` on every apply
+  - The `configreloaded` that follows made `MonitorWatcher.sh` re-apply
+  - It re-applied the named layout, rewriting the same bytes with a new mtime
+  - `LuaConfigWatch.sh` reloaded for that mtime, so the two looped
+  - It now hashes every watched file and skips a write that changed nothing
+  - A real save, a new file and a deletion still reload
+  - The baseline is seeded at startup, so restoring it is ignored too
+  - The polling fallback applies the same check
+  - Measured: 3 `configreloaded` per 6s before, 0 after
 
 ## Added:
 

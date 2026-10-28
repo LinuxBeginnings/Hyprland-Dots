@@ -74,6 +74,12 @@ local startup_commands = {
   -- general:col.active_border, so this entry only matters for a login where no
   -- wallpaper resolves and the wallpaper pass never runs.
   scriptsDir .. "/RainbowBordersStartup.sh",
+  -- Re-apply that mode after a config reload. The config never sets
+  -- general:col.active_border (lua/decorations.lua is a template and is
+  -- deliberately not loaded), so a reload reset the border to the default and
+  -- the mode was lost until the next wallpaper change. Started
+  -- unconditionally: a mode can be selected from Quick Settings at any point.
+  scriptsDir .. "/RainbowBordersReloadWatch.sh",
 }
 
 local function run_startup_commands()

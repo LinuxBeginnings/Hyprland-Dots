@@ -41,6 +41,13 @@
 #   retired watcher ignored SIGTERM on its polling path.
 # * Saves are debounced. An editor that writes a file several times in a row, or
 #   a save that arrives as create-then-rename, produces one reload.
+# * A write that leaves the bytes unchanged is not a save and does not reload.
+#   DisplayProfile.sh rewrites UserConfigs/monitors.lua on every apply, and the
+#   `configreloaded` that follows makes MonitorWatcher re-apply a named layout,
+#   which rewrites the same bytes again with a new mtime. Reloading for that
+#   re-enters MonitorWatcher through `configreloaded`, so the session reloaded
+#   every ~2s. Only the content can tell such a write from a real save, so the
+#   content of each watched file is cached and compared before the reload.
 # * No `set -e`: a transient failure (inotify limit reached, a watched directory
 #   removed mid-session) must not end the watcher for the rest of the session.
 
@@ -53,6 +60,8 @@ runtime_dir="${XDG_RUNTIME_DIR:-/tmp}"
 pidfile="$runtime_dir/kooldots-lua-config-watch.pid"
 fifo="$runtime_dir/kooldots-lua-config-watch.fifo"
 log="$runtime_dir/kooldots-lua-config-watch.log"
+# Per-file content hashes, so a rewrite that changed nothing is not a change.
+hash_dir="$runtime_dir/kooldots-lua-config-watch.hashes"
 
 # Exactly the directories lua/user_overrides.lua loads from. The config home
 # itself is not watched, so the trigger file below can never feed back in.
@@ -125,6 +134,55 @@ check_syntax() {
   notify_problem "Lua syntax error" "$(basename "$file") was skipped - check the Hyprland log"
 }
 
+# --- content cache ----------------------------------------------------------
+# A write that leaves the bytes as they were is not a save, and reloading for it
+# is what closed the loop with MonitorWatcher: DisplayProfile.sh rewrites
+# UserConfigs/monitors.lua on every apply, and the `configreloaded` that follows
+# makes MonitorWatcher re-apply a named layout, which rewrites the same bytes
+# again. Every rewrite carries a fresh mtime, so only the content can tell it
+# from a real save. One hash file per watched path, keyed by the path itself.
+hash_file() {
+  local file="$1"
+  [ -f "$file" ] || return 1
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum -- "$file" 2>/dev/null | cut -d' ' -f1
+  else
+    cksum -- "$file" 2>/dev/null | tr ' ' '-'
+  fi
+}
+
+cache_file() {
+  local key
+  key="$(printf '%s' "$1" | cksum | awk '{ print $1 "-" $2 }')"
+  printf '%s/%s' "$hash_dir" "$key"
+}
+
+# content_changed <path>
+#   0: the bytes differ from the last ones seen, so this is a real save
+#   1: the bytes are identical, so there is nothing to reload for
+#   A missing or unreadable file is a change: a deletion must still reload.
+content_changed() {
+  local file="$1" hash cache cached
+  hash="$(hash_file "$file")" || return 0
+  [ -n "$hash" ] || return 0
+  cache="$(cache_file "$file")"
+  cached="$(cat -- "$cache" 2>/dev/null || true)"
+  [ "$hash" = "$cached" ] && return 1
+  printf '%s' "$hash" >"$cache" 2>/dev/null || true
+  return 0
+}
+
+# seed_hashes: adopt what is on disk at startup as the baseline, so a rewrite
+# that restores the content this session began with is ignored too.
+seed_hashes() {
+  local file
+  mkdir -p -- "$hash_dir" 2>/dev/null || return 0
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    hash_file "$file" >"$(cache_file "$file")" 2>/dev/null || true
+  done < <(find "${watch_dirs[@]}" -type f -name '*.lua' 2>/dev/null)
+}
+
 record_change() {
   local file="$1" existing
   [ -n "$file" ] || return 0
@@ -135,13 +193,24 @@ record_change() {
 }
 
 apply_changes() {
-  local file names=""
+  local file names="" skipped=0
   for file in ${changed_files[@]+"${changed_files[@]}"}; do
+    if ! content_changed "$file"; then
+      skipped=$((skipped + 1))
+      continue
+    fi
     check_syntax "$file"
     names="${names}${names:+, }$(basename "$file")"
   done
+  if [ -z "$names" ]; then
+    # Every write in this batch left the bytes as they were: that is
+    # DisplayProfile.sh rewriting UserConfigs/monitors.lua after a reload, and
+    # reloading for it would re-enter MonitorWatcher and loop.
+    [ "$skipped" -gt 0 ] && log_line "ignored: ${skipped} unchanged file(s)"
+    return 0
+  fi
   trigger_reload
-  log_line "reload after: ${names:-change}"
+  log_line "reload after: $names"
 }
 
 # Coalesce a burst: keep draining until the event stream is quiet for $debounce,
@@ -196,9 +265,10 @@ snapshot() {
 }
 
 # Fallback for a system without inotify-tools. Slower and it can only report
-# "something changed", but it keeps the same contract.
+# "something changed", but it keeps the same contract - the content check
+# included, so a rewrite that changed nothing does not reload here either.
 watch_with_polling() {
-  local previous current
+  local previous current file
   previous="$(snapshot)"
   while :; do
     # `sleep & wait` rather than a bare `sleep`: bash runs the signal handler as
@@ -207,7 +277,17 @@ watch_with_polling() {
     current="$(snapshot)"
     [ "$current" = "$previous" ] && continue
     previous="$current"
+    # An mtime moved, so something was written; only the content decides
+    # whether that was a save worth reloading for.
     changed_files=()
+    while IFS= read -r file; do
+      [ -n "$file" ] || continue
+      content_changed "$file" && record_change "$file"
+    done < <(find "${watch_dirs[@]}" -type f -name '*.lua' 2>/dev/null)
+    if [ "${#changed_files[@]}" -eq 0 ]; then
+      log_line "ignored: content unchanged (polling)"
+      continue
+    fi
     trigger_reload
     log_line "reload after: change (polling)"
   done
@@ -229,11 +309,15 @@ printf '%d' "$$" >"$pidfile"
 cleanup() {
   [ -n "$watcher_pid" ] && kill "$watcher_pid" 2>/dev/null
   rm -f "$pidfile" "$fifo"
+  # Only ever this watcher's own cache directory.
+  [ "${hash_dir##*/}" = "kooldots-lua-config-watch.hashes" ] && rm -rf -- "$hash_dir"
 }
 trap cleanup EXIT
 trap 'exit 143' INT TERM
 
 : >"$log"
+seed_hashes
+
 if [ "$use_entrypoint" = 1 ]; then
   log_line "watching ${watch_dirs[*]} (trigger: touch $(basename "$entrypoint"))"
 else
