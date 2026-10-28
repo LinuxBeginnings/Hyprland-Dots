@@ -143,6 +143,11 @@
   - `gaps_out` is absolute pixels, unlike the old `0.8` factor
   - Raise `gaps_out` on a display larger than 1080p
   - `special:scratchpad` needs no rule: the dropdown terminal is floating
+- The gaps and border example in `user_settings.lua`
+  - It showed `gaps_in`, `gaps_out` and `border_size` under `general`
+  - `user_decorations.lua` loads later and sets all three
+  - So the example never applied, and read as the place to edit them
+  - The comment now points at `UserConfigs/user_decorations.lua`
 
 ---- 
 

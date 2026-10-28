@@ -54,15 +54,9 @@ hl.config({
 --   },
 -- })
 
--- Example:
--- hl.config({
---   general = {
---     gaps_in = 4,
---     gaps_out = 8,
---     border_size = 1,
---   },
--- })
---
+-- Window gaps, border size and the other `general`/`decoration` keys live in
+-- UserConfigs/user_decorations.lua, which is loaded after this file. A
+-- `general` table here would be overwritten when that file is applied.
 
 -- Disable cursor being centered when swap workspaces
 --
