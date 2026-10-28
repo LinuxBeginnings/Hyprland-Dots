@@ -66,6 +66,24 @@ The installer and the dotfiles upgrade flow cover these:
   - NixOS is declarative and ships no `update-deps.sh`.
   - There is no Gentoo installer repository.
 
+## Hyprland 0.57
+
+The dots target Hyprland 0.57, which configures through a Lua manager. The hyprlang parser and its `hyprctl keyword` write path are gone.
+
+- Config is Lua: `hl.config()`, `hl.get_config()`, `hl.dsp.*`, `hl.curve`, `hl.animation`, loaded from `hyprland.lua` through `dofile`.
+- Write config at runtime with `hyprctl eval`, never `hyprctl keyword`.
+  - `eval` runs the string in Hyprland's embedded Lua state and answers exactly `ok`.
+  - `keyword` is no longer a registered command, yet `hyprctl keyword <opt> <value>` still exits 0 while answering `unknown request`.
+  - Exit status alone therefore reads a rejected write as a success, which is how Rainbow Borders silently stopped applying the border.
+  - Only the exact reply `ok` counts as a successful write.
+  - Keep a `keyword` fallback only for builds older than 0.57.
+  - `RainbowBorders-low-cpu.sh` and `RainbowBorders.bak.sh` are the reference: build the `hl.config()` string, `eval` it, require `ok`.
+- `hyprctl getoption` prints a gradient as `gradient data: <c1> <c2> ... <N>deg`, with bare hex and no `0x` prefix.
+  - Re-add `0x` before handing such a value back to a colour parser.
+- `hyprctl dispatch` is a shorthand for `hl.dispatch(...)`; a dispatcher name plus arguments is parsed as Lua.
+  - Use the `hl.dsp.*` helpers instead of legacy dispatcher strings.
+- New in 0.57: `decoration:wobble`, off by default, and `quirks:skip_non_kms_dmabuf_formats`.
+
 ## Changelog
 
 `CHANGELOG.md` is the source of truth for user-facing changes. The same text is pasted into Discord and GitHub tagged-release notes, so line breaks must be intentional.
