@@ -653,6 +653,7 @@ handle_choice() {
   "Toggle Waybar Weather units"* | "Toggle Waybar Weather units (C/F)") "$scriptsDir/Toggle-weather-waybar-units.sh" ;;
   "Toggle Waybar Clock (12H/24H)") "$scriptsDir/ToggleWaybarTime.sh" ;;
   "Toggle Game Mode") "$scriptsDir/GameMode.sh" ;;
+  "Toggle Window Wobble"*) "$scriptsDir/ToggleWobble.sh" ;;
   "Rainbow Borders Mode") rainbow_borders_menu ;;
   *) return ;;
   esac
@@ -715,6 +716,20 @@ get_weather_units_label() {
   fi
 }
 
+get_wobble_label() {
+  # Delegated to the toggle script so the wobble parsing lives in exactly one
+  # place. --status is read-only and has no side effects, so it is safe to call
+  # every time a menu is drawn.
+  local script="$scriptsDir/ToggleWobble.sh"
+  local label=""
+
+  if [[ -x "$script" ]]; then
+    label="$("$script" --status 2>/dev/null)"
+  fi
+
+  printf '%s\n' "${label:-Unknown}"
+}
+
 show_category_menu() {
   local category="$1"
   local quick_settings_monitor="$2"
@@ -754,11 +769,14 @@ EOF
   "[[ Toggle Options ]]")
     local weather_label
     weather_label="$(get_weather_units_label)"
+    local wobble_label
+    wobble_label="$(get_wobble_label)"
     options=$(
       cat <<EOF
 Toggle Waybar Weather units [Current: $weather_label]
 Toggle Waybar Clock (12H/24H)
 Toggle Game Mode
+Toggle Window Wobble [Current: $wobble_label]
 EOF
     )
     ;;
@@ -808,10 +826,12 @@ EOF
 show_main_menu() {
   local weather_label
   weather_label="$(get_weather_units_label)"
+  local wobble_label
+  wobble_label="$(get_wobble_label)"
   printf '%s\n' "[ Settings ]"
   printf '%b\n' "[[ User Settings ]]\x00meta\x1fManage User Defaults Edit User Defaults Edit User Keybinds Edit User ENV variables Edit User Startup Apps overlay Edit User Window Rules overlay Edit User Layer Rules overlay Edit User Settings Edit User Decorations Edit User Animations Edit User Laptop Settings Edit User Monitor config Select Hyprview Layout"
   printf '%b\n' "[[ System Settings ]]\x00meta\x1fEdit System Default Keybinds Edit System Default Startup Apps Edit System Default Window Rules Edit System Default Layer Rules Edit System Default Settings"
-  printf '%b\n' "[[ Toggle Options ]]\x00meta\x1fToggle Waybar Weather units C F Toggle Waybar Clock 12H 24H Toggle Game Mode"
+  printf '%b\n' "[[ Toggle Options ]]\x00meta\x1fToggle Waybar Weather units C F Toggle Waybar Clock 12H 24H Toggle Game Mode Toggle Window Wobble On Off"
   printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Choose Wlogout Theme Choose Wlogout Wallpaper Arrange Monitors nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Rainbow Borders Mode"
   printf '%s\n' "[ Quick Links]"
   printf '%s\n' "Manage User Defaults"
@@ -839,6 +859,7 @@ show_main_menu() {
   printf '%s\n' "Toggle Waybar Weather units [Current: $weather_label]"
   printf '%s\n' "Toggle Waybar Clock (12H/24H)"
   printf '%s\n' "Toggle Game Mode"
+  printf '%s\n' "Toggle Window Wobble [Current: $wobble_label]"
   printf '%s\n' "Change Starship Prompt"
   printf '%s\n' "Set SDDM Wallpaper"
   printf '%s\n' "Choose Kitty Terminal Theme"

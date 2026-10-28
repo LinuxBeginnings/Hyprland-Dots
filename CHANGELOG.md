@@ -52,6 +52,16 @@
   - Waybar's own stderr now goes to `$XDG_RUNTIME_DIR/waybar.log`
   - It was sent to `/dev/null`, so a config or CSS error left no trace
   - `WAYBAR_LOG` still overrides that destination
+- Window wobble can be toggled from `SUPER SHIFT X` or quick settings
+  - Hyprland 0.57 added `decoration:wobble`, and it ships disabled
+  - `scripts/ToggleWobble.sh` flips it and reloads
+  - The toggle is persistent: it rewrites `UserConfigs/user_decorations.lua`
+  - The wobble table there also holds the physics, so one place to tune
+  - `ToggleWobble.sh` refuses to write below Hyprland 0.57
+  - Older compositors get a notification naming the version required
+  - `Kool_Quick_Settings.sh` lists it under `[[ Toggle Options ]]`
+  - `system_keybinds.lua` binds `SUPER SHIFT X`
+  - `ToggleWobble.sh --status` prints `On`/`Off`/`Unsupported`
 
 ---- 
 
