@@ -16,9 +16,18 @@
 # Hyprland 0.57 removed the legacy "keyword" socket command, and hyprctl still
 # exits 0 while answering "unknown request", so eval is the primary path and
 # keyword is only a fallback for builds that have no eval command.
+#
+# The gradient angle is a diagonal on purpose. This is a one-shot write, so an
+# axis-aligned angle leaves the two edges parallel to it a single flat colour:
+# at 270deg the long top and bottom edges were one colour each, which reads as
+# a solid border rather than a rainbow. A diagonal puts part of the spectrum
+# on all four edges. 0 and 90 are the flat-edge cases, 45 and 135 the diagonals.
 
 # Possible values: "wallust_random", "rainbow", "gradient_flow"
 EFFECT_TYPE="gradient_flow"
+
+# Gradient angle in degrees. Default 45 (diagonal).
+RB_ANGLE="${RB_ANGLE:-45}"
 
 WALLUST_COLORS_SOURCE="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
 
@@ -138,7 +147,7 @@ function get_color() {
 set_gradient_border() {
   local option="$1"
   shift
-  local angle="270"
+  local angle="$RB_ANGLE"
   local -a colors=()
   local arg c lua_colors expr out rc kw_out kw_rc
 
@@ -196,10 +205,10 @@ set_gradient_border() {
 set_gradient_border general:col.active_border \
   "$(get_color 0)" "$(get_color 1)" "$(get_color 2)" "$(get_color 3)" "$(get_color 4)" \
   "$(get_color 5)" "$(get_color 6)" "$(get_color 7)" "$(get_color 8)" "$(get_color 9)" \
-  270deg
+  "${RB_ANGLE}deg"
 
 # border effect for INACTIVE windows (optional)
 # set_gradient_border general:col.inactive_border \
 #   "$(get_color 0)" "$(get_color 1)" "$(get_color 2)" "$(get_color 3)" "$(get_color 4)" \
 #   "$(get_color 5)" "$(get_color 6)" "$(get_color 7)" "$(get_color 8)" "$(get_color 9)" \
-#   270deg
+#   "${RB_ANGLE}deg"

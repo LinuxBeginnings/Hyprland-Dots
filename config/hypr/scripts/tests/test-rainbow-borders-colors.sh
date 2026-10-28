@@ -81,6 +81,9 @@ run_effect gradient_flow
 assert_contains "$EVAL_LOG" '0xff00000f' "the glow colour (color15) came from the palette"
 assert_contains "$EVAL_LOG" '0xff00000a' "the base colour (color10) came from the palette"
 assert_not_contains "$EVAL_LOG" '0xffff0000' "the rainbow palette was not used"
+# A one-shot gradient at 0, 90, 180 or 270 leaves two edges a single flat
+# colour, which reads as a solid border. The default has to be a diagonal.
+assert_contains "$EVAL_LOG" 'angle = 45' "the default angle is a diagonal"
 
 it "wallust_random reads the rgb(RRGGBB) palette"
 write_conf rgb_hex

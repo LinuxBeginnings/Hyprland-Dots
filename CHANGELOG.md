@@ -56,6 +56,13 @@
   - So both modes rendered the same border as `Original Rainbow`
   - The parser now also reads `rgb(RRGGBB)` and `rgba(RRGGBBAA)`
   - That is the form `lua/user_decorations_helper.lua` already parsed
+- `Original Rainbow`, `Wallust Color` and `Gradient Flow` read as a gradient
+  - `RainbowBorders.bak.sh` wrote the gradient at a fixed `270deg`
+  - A one-shot gradient at an axis-aligned angle is flat on two edges
+  - At `270deg` the long top and bottom edges were one colour each
+  - A 1px `border_size` made that read as a solid hairline border
+  - The angle is now a `45deg` diagonal, so all four edges carry colour
+  - `RB_ANGLE` overrides it; `0` and `90` are the flat-edge cases
 
 ## Added:
 
