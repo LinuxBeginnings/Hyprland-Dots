@@ -112,6 +112,19 @@
   - Disable, Wallust Color, Original Rainbow, Gradient Flow, Low CPU Rainbow
   - It calls the same menu function, so the mode marker is shared
   - Both entry points show the same current mode and apply the same way
+- `Wallust Color` and `Gradient Flow` animate, like `Low CPU Rainbow`
+  - `RainbowBorders.bak.sh` wrote one frame and exited
+  - `gradient_flow` advanced its glow only at the end of a run
+  - Every run was a fresh process, so the glow stayed at stop 0
+  - Half the border was the one base colour, which read as solid
+  - `Wallust Color` picked each of its ten stops independently at random
+  - The scrambled order averaged out to a mid-tone on a thin border
+  - The script is a loop now; `--once` still writes a single frame
+  - `Wallust Color` slides a ten-colour window along the palette
+  - `Gradient Flow` moves the glow one stop per frame
+  - `Original Rainbow` rotates the gradient angle
+  - Both loops hold a PID lock, so each start stops the other
+  - `RainbowBordersStartup.sh` and Quick Settings stop it on a mode change
 
 ---- 
 

@@ -257,6 +257,25 @@ stop_lowcpu_rainbow() {
   pkill -f 'RainbowBorders-low-cpu\.sh' >/dev/null 2>&1 || true
 }
 
+# The classic script animates too, and both loops write
+# general:col.active_border, so switching effects has to stop the one that is
+# running. The classic script holds a PID lock, so a new instance would
+# otherwise exit on it and the effect would never change.
+stop_classic_rainbow() {
+  local lockfile="${RB_CLASSIC_LOCKFILE:-/tmp/hypr-rainbowborders-classic.lock}"
+  local oldpid=""
+  if [[ -f "$lockfile" ]]; then
+    oldpid="$(cat "$lockfile" 2>/dev/null || true)"
+    if [[ -n "${oldpid:-}" ]] && kill -0 "$oldpid" 2>/dev/null; then
+      kill "$oldpid" >/dev/null 2>&1 || true
+      sleep 0.1
+      kill -0 "$oldpid" 2>/dev/null && kill -9 "$oldpid" >/dev/null 2>&1 || true
+    fi
+    rm -f "$lockfile" >/dev/null 2>&1 || true
+  fi
+  pkill -f 'RainbowBorders\.sh' >/dev/null 2>&1 || true
+}
+
 start_lowcpu_rainbow() {
   local lowcpu_script="$UserScripts/RainbowBorders-low-cpu.sh"
   if [[ ! -x "$lowcpu_script" ]]; then
@@ -268,8 +287,10 @@ start_lowcpu_rainbow() {
     show_info "RainbowBorders-low-cpu.sh not found in $UserScripts."
     return 1
   fi
+  # Only one loop may own the border; keep the classic script disabled too so
+  # Refresh won't overwrite this one.
+  stop_classic_rainbow
   stop_lowcpu_rainbow
-  # Animated loop; keep classic one-shot script disabled so Refresh won't overwrite.
   "$lowcpu_script" >/dev/null 2>&1 &
   return 0
 }
@@ -351,6 +372,7 @@ toggle_rainbow_borders() {
     fi
   else
     stop_lowcpu_rainbow
+    stop_classic_rainbow
     disable_classic_rainbow || true
     rainbow_write_mode "disabled"
     status="disabled"
@@ -444,6 +466,7 @@ rainbow_borders_menu() {
   case "$choice" in
   "Disable Rainbow Borders")
     stop_lowcpu_rainbow
+    stop_classic_rainbow
     disable_classic_rainbow || true
     rainbow_write_mode "disabled"
     current="disabled"
@@ -460,6 +483,7 @@ rainbow_borders_menu() {
     esac
 
     stop_lowcpu_rainbow
+    stop_classic_rainbow
     if ! ensure_classic_rainbow_enabled; then
       show_info "RainbowBorders script not found in $UserScripts."
       return
