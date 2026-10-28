@@ -135,6 +135,7 @@
 
 ## Removed:
 
+- Hard coded keybard `pc105` from `config/hypr/lua/settings.lua`
 - Deprecated `dwindle.special_scale_factor` setting
   - `hyprctl deprecated-config` flags it on Hyprland 0.57
   - The special workspace is inset with a workspace rule instead

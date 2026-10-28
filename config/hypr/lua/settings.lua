@@ -61,7 +61,7 @@ hl.config({
   input = {
     kb_layout = "us",
     kb_variant = "",
-    kb_model = "pc105",
+    kb_model = "",
     kb_options = "",
     kb_rules = "",
     repeat_rate = 50,
@@ -126,8 +126,7 @@ local ZOOM_MIN = 1.0
 local ZOOM_MAX = 16.0
 
 local function zoom_factor()
-  local factor = hl and hl.get_config
-    and (hl.get_config("cursor.zoom_factor") or hl.get_config("cursor:zoom_factor"))
+  local factor = hl and hl.get_config and (hl.get_config("cursor.zoom_factor") or hl.get_config("cursor:zoom_factor"))
 
   if type(factor) ~= "number" then
     factor = ZOOM_MIN
@@ -251,7 +250,7 @@ hl.config({
 hl.config({
   cursor = {
     sync_gsettings_theme = true,
-    no_hardware_cursors =       1,
+    no_hardware_cursors = 1,
     enable_hyprcursor = true,
     warp_on_change_workspace = 2,
     no_warps = true,
