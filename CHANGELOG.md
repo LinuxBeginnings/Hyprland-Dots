@@ -125,6 +125,24 @@
   - `Original Rainbow` rotates the gradient angle
   - Both loops hold a PID lock, so each start stops the other
   - `RainbowBordersStartup.sh` and Quick Settings stop it on a mode change
+- `hl.meta.lua` refreshed to the stub Hyprland 0.57.0 ships
+  - It is generated upstream by `meta/generateLuaStubs.py`
+  - The installed copy is `/usr/share/hypr/stubs/hl.meta.lua`
+  - The vendored copy was 1252 lines; the shipped stub is 2015
+  - Editors flagged `decoration.wobble.*`, which the dots already set
+  - New `HL.ConfigOpt` tree types `hl.config({ ... })` as well
+  - Refresh with `cp` from that path, then add the trailing newline
+
+## Removed:
+
+- Deprecated `dwindle.special_scale_factor` setting
+  - `hyprctl deprecated-config` flags it on Hyprland 0.57
+  - The special workspace is inset with a workspace rule instead
+  - The rule is a system default in `lua/workspaces.lua`, so updates carry it
+  - Override it with a rule in `UserConfigs/workspaces.lua`
+  - `gaps_out` is absolute pixels, unlike the old `0.8` factor
+  - Raise `gaps_out` on a display larger than 1080p
+  - `special:scratchpad` needs no rule: the dropdown terminal is floating
 
 ---- 
 

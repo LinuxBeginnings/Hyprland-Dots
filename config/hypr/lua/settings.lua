@@ -20,7 +20,9 @@ hl.config({
     default_split_ratio = 1.0,
     split_bias = 0,
     precise_mouse_move = false,
-    special_scale_factor = 0.8,
+    -- `special_scale_factor` is deprecated on Hyprland 0.57 and is flagged by
+    -- `hyprctl deprecated-config`. The special workspace is inset with a
+    -- workspace rule instead; see lua/workspaces.lua.
   },
 })
 
