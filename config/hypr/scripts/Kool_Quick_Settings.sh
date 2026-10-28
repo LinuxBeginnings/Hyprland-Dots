@@ -910,4 +910,13 @@ if pidof rofi >/dev/null; then
   pkill rofi
 fi
 
+# Direct entry point for the Rainbow Borders mode menu (SUPER SHIFT B), so the
+# menu is one keypress away instead of main menu -> [[ Misc ]]. It calls the
+# same rainbow_borders_menu the main menu reaches, so the mode marker and the
+# apply path cannot drift between the two entry points.
+if [[ "${1:-}" == "--rainbow-borders" ]]; then
+  rainbow_borders_menu
+  exit 0
+fi
+
 main

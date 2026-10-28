@@ -532,8 +532,8 @@ bind(
 bind(
   "SUPER SHIFT",
   "B",
-  exec_cmd("$HOME/.config/hypr/UserScripts/RainbowBorders-low-cpu.sh  --run-once"),
-  { description = "Set static Rainbow Border" }
+  exec_cmd("$HOME/.config/hypr/scripts/Kool_Quick_Settings.sh --rainbow-borders"),
+  { description = "Rainbow Borders mode menu" }
 )
 bind(
   "SUPER SHIFT",

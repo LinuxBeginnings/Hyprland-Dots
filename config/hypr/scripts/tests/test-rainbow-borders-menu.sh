@@ -95,6 +95,13 @@ cat >"$BIN/pgrep" <<'EOS'
 #!/usr/bin/env bash
 exit 1
 EOS
+# pkill is faked for the same reason: the menu stops the low-cpu loop with
+# `pkill -f 'RainbowBorders-low-cpu\.sh'`, which would otherwise match the
+# session's own animated border and kill it while the tests run.
+cat >"$BIN/pkill" <<'EOS'
+#!/usr/bin/env bash
+exit 0
+EOS
 chmod +x "$BIN"/*
 
 # run_menu <submenu-answer|__ESCAPE__> - one run: main menu, then the submenu.
@@ -104,6 +111,16 @@ run_menu() {
   printf 'Rainbow Borders Mode\n%s\n' "$1" >"$QUEUE"
   env PATH="$BIN:$PATH" XDG_CONFIG_HOME="$CFG" RB_LOCKFILE="$WORK/rb.lock" \
     timeout 30 bash "$SCRIPT" >"$WORK/out.txt" 2>&1
+  return $?
+}
+
+# run_direct <submenu-answer|__ESCAPE__> - the same run through the entry point
+# SUPER SHIFT B uses, where the Rainbow Borders submenu is the first menu drawn.
+run_direct() {
+  : >"$ROWS_FILE"; : >"$ROFI_LOG"; : >"$NOTIFY_LOG"
+  printf '%s\n' "$1" >"$QUEUE"
+  env PATH="$BIN:$PATH" XDG_CONFIG_HOME="$CFG" RB_LOCKFILE="$WORK/rb.lock" \
+    timeout 30 bash "$SCRIPT" --rainbow-borders >"$WORK/out.txt" 2>&1
   return $?
 }
 
@@ -167,5 +184,28 @@ printf 'rainbow\n' >"$MODE_FILE"
 run_menu __ESCAPE__
 assert_eq "the mode file is untouched" 'rainbow' "$(cat "$MODE_FILE")"
 assert_contains "$CLASSIC" 'EFFECT_TYPE="gradient_flow"' "the script effect is untouched"
+
+# --- the direct entry point SUPER SHIFT B uses -------------------------------
+it "the direct entry point draws the submenu and not the main menu"
+make_classic
+make_lowcpu
+printf 'low_cpu\n' >"$MODE_FILE"
+run_direct __ESCAPE__
+assert_contains "$ROWS_FILE" '👉 Low CPU Rainbow' "the submenu is the first menu shown"
+assert_not_contains "$ROWS_FILE" '[ Settings ]' "the main menu is skipped"
+assert_eq "exactly one menu was drawn" '1' "$(grep -c '^rofi ' "$ROFI_LOG")"
+
+it "a mode chosen from the direct entry point is recorded"
+make_classic
+printf 'rainbow\n' >"$MODE_FILE"
+run_direct 'Wallust Color'
+assert_eq "the mode file was updated" 'wallust_random' "$(cat "$MODE_FILE")"
+assert_contains "$CLASSIC" 'EFFECT_TYPE="wallust_random"' "the script effect was updated"
+
+it "Escape at the direct entry point changes nothing"
+make_classic
+printf 'rainbow\n' >"$MODE_FILE"
+run_direct __ESCAPE__
+assert_eq "the mode file is untouched" 'rainbow' "$(cat "$MODE_FILE")"
 
 summary "test-rainbow-borders-menu"

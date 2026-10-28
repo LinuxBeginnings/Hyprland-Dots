@@ -87,6 +87,16 @@
   - `system_keybinds.lua` binds `SUPER SHIFT X`
   - `ToggleWobble.sh --status` prints `On`/`Off`/`Unsupported`
 
+## Updated:
+
+- `SUPER SHIFT B` opens the Rainbow Borders mode menu
+  - It ran `RainbowBorders-low-cpu.sh --run-once`, one fixed gradient
+  - The menu was two levels into Quick Settings, so it was rarely reached
+  - `Kool_Quick_Settings.sh --rainbow-borders` opens that submenu directly
+  - Disable, Wallust Color, Original Rainbow, Gradient Flow, Low CPU Rainbow
+  - It calls the same menu function, so the mode marker is shared
+  - Both entry points show the same current mode and apply the same way
+
 ---- 
 
 
