@@ -11,9 +11,11 @@
 # Enable / choose mode via Quick Settings (SUPER SHIFT + E → Rainbow Borders Mode).
 # That renames this file to RainbowBorders.sh.
 #
-# Under Hyprland Lua config mode, hyprctl keyword is rejected
-# ("keyword can't work with non-legacy parsers"). This script falls back to:
+# Under Hyprland Lua config mode the border is written with hyprctl eval:
 #   hyprctl eval 'hl.config({ general = { col = { active_border = { colors = {...}, angle = N } } } })'
+# Hyprland 0.57 removed the legacy "keyword" socket command, and hyprctl still
+# exits 0 while answering "unknown request", so eval is the primary path and
+# keyword is only a fallback for builds that have no eval command.
 
 # Possible values: "wallust_random", "rainbow", "gradient_flow"
 EFFECT_TYPE="gradient_flow"
@@ -122,14 +124,14 @@ function get_color() {
   fi
 }
 
-# Set a gradient border option for both legacy hyprlang and Lua config modes.
+# Set a gradient border option through Hyprland's Lua state.
 # Usage: set_gradient_border general:col.active_border color0 color1 ... [angledeg]
 set_gradient_border() {
   local option="$1"
   shift
   local angle="270"
   local -a colors=()
-  local arg c lua_colors expr out
+  local arg c lua_colors expr out rc kw_out kw_rc
 
   for arg in "$@"; do
     if [[ "$arg" =~ ^([0-9]+)deg$ ]]; then
@@ -141,16 +143,6 @@ set_gradient_border() {
 
   ((${#colors[@]} > 0)) || return 1
 
-  # Legacy conf mode.
-  # Note: under Lua config mode hyprctl may exit 0 while still printing
-  # "keyword can't work with non-legacy parsers", so check output too.
-  out="$(hyprctl keyword "$option" "${colors[@]}" "${angle}deg" 2>&1)"
-  rc=$?
-  if [[ $rc -eq 0 && "$out" != *"non-legacy parsers"* && "$out" != *"Use eval"* && "$out" != *"error"* && "$out" != *"invalid"* ]]; then
-    return 0
-  fi
-
-  # Lua config mode rejects keyword; use hl.config via eval.
   lua_colors=""
   for c in "${colors[@]}"; do
     [[ -n "$lua_colors" ]] && lua_colors+=", "
@@ -165,19 +157,29 @@ set_gradient_border() {
     expr="hl.config({ general = { col = { inactive_border = { colors = { ${lua_colors} }, angle = ${angle} } } } })"
     ;;
   *)
-    printf '[RainbowBorders] unsupported option for Lua fallback: %s\n' "$option" >&2
-    printf '[RainbowBorders] keyword error: %s\n' "$out" >&2
+    printf '[RainbowBorders] unsupported option: %s\n' "$option" >&2
     return 1
     ;;
   esac
 
-  if out="$(hyprctl eval "$expr" 2>&1)"; then
+  # Lua config mode. eval answers exactly "ok" on success, so an unregistered
+  # command ("unknown request", still exit 0) is not mistaken for a write.
+  out="$(hyprctl eval "$expr" 2>&1)"
+  rc=$?
+  if [[ $rc -eq 0 && "$out" == "ok" ]]; then
+    return 0
+  fi
+
+  # Legacy conf mode, for Hyprland builds without the eval command.
+  kw_out="$(hyprctl keyword "$option" "${colors[@]}" "${angle}deg" 2>&1)"
+  kw_rc=$?
+  if [[ $kw_rc -eq 0 && "$kw_out" != *"unknown request"* && "$kw_out" != *"non-legacy parsers"* && "$kw_out" != *"Use eval"* && "$kw_out" != *"error"* && "$kw_out" != *"invalid"* ]]; then
     return 0
   fi
 
   printf '[RainbowBorders] failed to set %s\n' "$option" >&2
-  printf '[RainbowBorders] keyword error: %s\n' "$out" >&2
   printf '[RainbowBorders] eval error: %s\n' "$out" >&2
+  printf '[RainbowBorders] keyword error: %s\n' "$kw_out" >&2
   return 1
 }
 

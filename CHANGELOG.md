@@ -23,6 +23,20 @@
   - `ID` read as `'gentoo'`, so detection fell through to `unknown`
   - The upgrade then refused with `Automatic upgrade is not available`
   - Either quote style is stripped, and Gentoo takes the dotfiles-only path
+- Rainbow Borders applies the border again on Hyprland 0.57
+  - 0.57 removed the legacy `keyword` socket command
+  - `hyprctl keyword` still exits 0, answering `unknown request`
+  - Both scripts read that as a successful write, so nothing was applied
+  - `RainbowBorders-low-cpu.sh` now writes every tick with `hyprctl eval`
+  - `RainbowBorders.bak.sh` does the same for the one-shot write
+  - `hl.config()` runs in Hyprland's Lua state, which answers exactly `ok`
+  - A rejected command is no longer mistaken for a write that worked
+  - `keyword` stays as a fallback for builds with no `eval` command
+  - The animated loop exits on `SIGTERM`/`INT` after restoring
+  - Without the exit it resumed and overwrote the restored border
+  - It also survived `SIGTERM`, leaving a loop that kept rewriting
+  - Restore reads the 0.57 `gradient data:` line and adds the `0x` prefix
+  - That line prints bare hex, which the colour parser rejected
 
 ## Added:
 
