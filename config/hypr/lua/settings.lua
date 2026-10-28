@@ -235,6 +235,17 @@ hl.config({
   },
 })
 
+-- Advertise the renderer's full dmabuf format list, not just the formats the
+-- display can scan out. The default (true) narrows the list to the display's
+-- scanout set; on virtio-gpu that is XRGB8888 only, so clients that need an
+-- alpha config find no matching EGLConfig. kitty (GLFW asks for
+-- EGL_ALPHA_SIZE 8) then fails with "EGL: No EGLConfigs returned".
+hl.config({
+  quirks = {
+    skip_non_kms_dmabuf_formats = false,
+  },
+})
+
 hl.config({
   cursor = {
     sync_gsettings_theme = true,

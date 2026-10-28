@@ -4,6 +4,14 @@
 
 ## Fixed:
 
+- Clients that need an alpha buffer can start again, e.g. `kitty` on a VM
+  - `quirks:skip_non_kms_dmabuf_formats` defaults to `true`
+  - It narrows advertised renderer dmabuf formats to the display's scanout set
+  - On `virtio-gpu` that left only `XRGB8888`, so no alpha `EGLConfig` existed
+  - `kitty` failed with `EGL: No EGLConfigs returned`
+  - GLFW asks for `EGL_ALPHA_SIZE 8`, which no offered config had
+  - `lua/settings.lua` now sets `skip_non_kms_dmabuf_formats = false`
+  - Existing installs get it from the refreshed system config, no patch needed
 - The dots upgrade no longer stops at the first clone
   - `kdu_clone_args` listed the clone options but not the `clone` subcommand
   - `KooLsDotsUpgrade.sh` ran `git --depth=1 <url> <dest>`, which git rejected
