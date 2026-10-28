@@ -26,7 +26,11 @@ WALLUST_COLORS=()
 
 # ---------- LOAD WALLUST COLORS ----------
 if [[ "$EFFECT_TYPE" == "wallust_random" || "$EFFECT_TYPE" == "gradient_flow" ]]; then
-  # Accept either hex (0xffRRGGBB) or rgb(r,g,b) and normalize to 0xffRRGGBB
+  # Normalize whatever the palette file holds to 0xffRRGGBB. Wallust itself
+  # writes `rgb(RRGGBB)` - six hex digits, no commas - which is the form
+  # lua/user_decorations_helper.lua parses. A parser that only knew 0x...,
+  # #RRGGBB and rgb(r,g,b) matched nothing here, so every wallust mode fell
+  # through to the plain rainbow below and looked identical to Original Rainbow.
   mapfile -t WALLUST_COLORS < <(
     grep -E '^\$color[0-9]+' "$WALLUST_COLORS_SOURCE" | awk '
         function hex2(s){ return (length(s)==6 ? "0xff"s : ""); }
@@ -37,11 +41,16 @@ if [[ "$EFFECT_TYPE" == "wallust_random" || "$EFFECT_TYPE" == "gradient_flow" ]]
             if (match($0, /rgb\(([0-9]+),[ ]*([0-9]+),[ ]*([0-9]+)\)/, m)) {
                 print rgb2(m[1], m[2], m[3]); next
             }
+            # rgb(RRGGBB) / rgba(RRGGBBAA): bare hex, no commas, no marker.
+            if (match($0, /rgba?\(([0-9a-fA-F]{6})[0-9a-fA-F]{0,2}\)/, m)) {
+                print "0xff" m[1]; next
+            }
         }'
   )
 
   if ((${#WALLUST_COLORS[@]} == 0)); then
-    # If wallust colors can't be loaded, fall back to random_hex
+    # Still nothing: keep the old fallback rather than hand an empty gradient
+    # to Hyprland, which rejects it and leaves the border unchanged.
     EFFECT_TYPE="rainbow"
   fi
 fi

@@ -47,6 +47,15 @@
   - The baseline is seeded at startup, so restoring it is ignored too
   - The polling fallback applies the same check
   - Measured: 3 `configreloaded` per 6s before, 0 after
+- `Wallust Color` and `Gradient Flow` use the wallpaper palette again
+  - `RainbowBorders.bak.sh` read the palette with an awk parser
+  - It accepted `0x…`, `#RRGGBB` and `rgb(r,g,b)`
+  - Wallust writes `rgb(RRGGBB)`, six hex digits and no commas
+  - Nothing matched, so `WALLUST_COLORS` came out empty
+  - The script then silently fell back to the plain rainbow palette
+  - So both modes rendered the same border as `Original Rainbow`
+  - The parser now also reads `rgb(RRGGBB)` and `rgba(RRGGBBAA)`
+  - That is the form `lua/user_decorations_helper.lua` already parsed
 
 ## Added:
 
