@@ -29,6 +29,10 @@ RUNTIME_CONFIG="$CONFIG_HOME/ghostty/config"
 USER_THEMES_DIR="$CONFIG_HOME/ghostty/themes"
 WALLUST_INCLUDE="$CONFIG_HOME/ghostty/wallust.conf"
 LOGFILE="${XDG_RUNTIME_DIR:-/tmp}/ghostty-theme-guard.log"
+# Signals the terminal, never a CLI invocation of it - this script runs
+# `ghostty +list-themes` itself and would otherwise kill its own call.
+# shellcheck source=/dev/null
+. "$CONFIG_HOME/hypr/scripts/TerminalSignal.sh"
 
 NOTIFY=0
 case "${1:-}" in
@@ -213,7 +217,7 @@ main() {
       mkdir -p "$(dirname "$RUNTIME_CONFIG")" 2>/dev/null || true
       cp -f "$MANAGED_CONFIG" "$RUNTIME_CONFIG" 2>/dev/null || true
     fi
-    have pkill && pkill -SIGUSR2 -x ghostty >/dev/null 2>&1 || true
+    signal_terminal_app ghostty SIGUSR2 >/dev/null 2>&1 || true
     notify_user "Ghostty colors restored" "Configured theme was not installed; using wallpaper/default colors."
   fi
 

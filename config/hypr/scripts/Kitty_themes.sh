@@ -17,6 +17,10 @@ wallust_refresh_script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustSw
 debug_log="${XDG_CACHE_HOME:-$HOME/.cache}/kooldots-kitty-themes.log"
 # Same indicator the other selection menus use. Never part of a theme name.
 MARKER="👉"
+# Signals the terminal, never a CLI invocation of it - `kitty +kitten` and
+# `kitty @` share the process name with the terminal.
+# shellcheck source=/dev/null
+. "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/TerminalSignal.sh"
 
 ensure_managed_kitty_config() {
   if [ -f "$user_kitty_config" ] && [ -r "$user_kitty_config" ]; then
@@ -114,7 +118,7 @@ apply_kitty_theme_to_config() {
     "$wallust_refresh_script" >/dev/null 2>&1 &
     log_debug "wallust_refresh_background_started"
   fi
-  if pidof kitty >/dev/null 2>&1; then
+  if terminal_app_pids kitty >/dev/null 2>&1; then
     if command -v kitty >/dev/null 2>&1; then
       (kitty @ load-config >/dev/null 2>&1 || true) &
     fi
@@ -123,11 +127,7 @@ apply_kitty_theme_to_config() {
         kitty @ set-colors --all --configured "$theme_file_path_to_apply" >/dev/null 2>&1 || true
       ) &
     fi
-    for pid_kitty in $(pidof kitty); do
-      if [ -n "$pid_kitty" ]; then
-        kill -SIGUSR1 "$pid_kitty"
-      fi
-    done
+    signal_terminal_app kitty SIGUSR1 >/dev/null 2>&1 || true
   fi
   return 0
 }
@@ -228,7 +228,7 @@ while true; do
         if command -v kitty >/dev/null 2>&1; then
           (kitty @ load-config >/dev/null 2>&1 || true) &
         fi
-        for pid_kitty in $(pidof kitty); do if [ -n "$pid_kitty" ]; then kill -SIGUSR1 "$pid_kitty"; fi; done
+        signal_terminal_app kitty SIGUSR1 >/dev/null 2>&1 || true
         notify_user "$iDIR/error.png" "Preview Error" "Failed to apply $theme_to_preview_now. Reverted."
         exit 1
       fi
@@ -243,7 +243,7 @@ while true; do
     if command -v kitty >/dev/null 2>&1; then
       (kitty @ load-config >/dev/null 2>&1 || true) &
     fi
-    for pid_kitty in $(pidof kitty); do if [ -n "$pid_kitty" ]; then kill -SIGUSR1 "$pid_kitty"; fi; done
+    signal_terminal_app kitty SIGUSR1 >/dev/null 2>&1 || true
     break
   elif [ $rofi_exit_code -ge 10 ] && [ $rofi_exit_code -le 28 ]; then # custom keybindings
     resolve_theme_selection "$chosen_selection_from_rofi" || true
@@ -258,9 +258,9 @@ while true; do
     if command -v kitty >/dev/null 2>&1; then
       kitty @ load-config >/dev/null 2>&1 || true
     fi
-    for pid_kitty in $(pidof kitty); do if [ -n "$pid_kitty" ]; then kill -SIGUSR1 "$pid_kitty"; fi; done
+    signal_terminal_app kitty SIGUSR1 >/dev/null 2>&1 || true
     break
   fi
-done
+ done
 
 exit 0

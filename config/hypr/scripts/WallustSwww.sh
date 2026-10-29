@@ -16,6 +16,9 @@ wallust_kitty_args=()
 if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustConfig.sh" ]; then
   . "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustConfig.sh"
 fi
+# Signals the terminal, never a CLI invocation of it.
+# shellcheck source=/dev/null
+. "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/TerminalSignal.sh"
 have_notify() { command -v notify-send >/dev/null 2>&1; }
 wallust_log="${XDG_CACHE_HOME:-$HOME/.cache}/wallust/wallust-swww.log"
 mkdir -p "$(dirname "$wallust_log")"
@@ -406,11 +409,7 @@ fi
   # Use SIGUSR1 directly to avoid extra latency from kitty remote-control calls.
   kitty_wallust_theme="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/kitty-themes/01-Wallust.conf"
   if [ -s "$kitty_wallust_theme" ]; then
-    if pidof kitty >/dev/null 2>&1; then
-      for pid in $(pidof kitty); do
-        kill -SIGUSR1 "$pid" 2>/dev/null || true
-      done
-    fi
+    signal_terminal_app kitty SIGUSR1 >/dev/null 2>&1 || true
   fi
 
   # Normalize Ghostty palette syntax in case ':' was used by older files
@@ -423,9 +422,7 @@ fi
     [ -s "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" ] && break
     sleep 0.1
   done
-  if pidof ghostty >/dev/null; then
-    for pid in $(pidof ghostty); do kill -SIGUSR2 "$pid" 2>/dev/null || true; done
-  fi
+  signal_terminal_app ghostty SIGUSR2 >/dev/null 2>&1 || true
   # Hyprland reload/keyword updates are applied above to avoid delayed color/gap updates.
 ) >/dev/null 2>&1 &
 
