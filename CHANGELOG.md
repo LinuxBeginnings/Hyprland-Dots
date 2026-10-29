@@ -236,6 +236,11 @@
   - `user_decorations.lua` loads later and sets all three
   - So the example never applied, and read as the place to edit them
   - The comment now points at `UserConfigs/user_decorations.lua`
+- The `dots-tui` installer binaries
+  - `dots-tui` and `dots-tui-ubuntu-2404` were a packed Python TUI, 18MB
+  - Nothing in the dots called them, in config, scripts, keybinds or docs
+  - It had fallen well behind the current config layout
+  - A replacement install/upgrade TUI is planned
 
 ---- 
 
