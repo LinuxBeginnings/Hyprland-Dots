@@ -1417,9 +1417,6 @@ if [ "$EXPRESS_MODE" -eq 1 ]; then
   echo "${NOTE} Express upgrade selected: skipping wallust run entirely." 2>&1 | tee -a "$LOG"
 elif [ "$RUN_MODE" != "install" ] && [ "${KOOLDOTS_RUNTIME_THEME_RESTORED:-0}" -eq 1 ]; then
   echo "${NOTE} Preserved existing Wallust/global theme colors from pre-upgrade state; skipping wallust regeneration." 2>&1 | tee -a "$LOG"
-elif palette_source_is_butterpal && butterpal_palette_from_image "$wallpaper"; then
-  echo "${NOTE} Generating the palette with butterpal." 2>&1 | tee -a "$LOG"
-  wallust_cs_from_palette "${wallust_args[@]}" 2>&1 | tee -a "$LOG"
 else
   wallust "${wallust_args[@]}" run -s "$wallpaper" 2>&1 | tee -a "$LOG"
 fi

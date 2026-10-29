@@ -63,12 +63,6 @@
   - A 1px `border_size` made that read as a solid hairline border
   - The angle is now a `45deg` diagonal, so all four edges carry colour
   - `RB_ANGLE` overrides it; `0` and `90` are the flat-edge cases
-- Quickshell's generated palette holds valid colours again
-  - `templates/qml_color.json` prefixed two values with its own `#`
-  - Wallust writes `#RRGGBB`, so those lines rendered `##RRGGBB`
-  - `accentSecondary` and `borderSecondary` were both invalid colours
-  - The stray `#` is gone; every other value already used `{{colorN}}`
-  - Written on every wallpaper change, so it reached every install
 
 ## Added:
 
@@ -108,22 +102,6 @@
   - `Kool_Quick_Settings.sh` lists it under `[[ Toggle Options ]]`
   - `system_keybinds.lua` binds `SUPER SHIFT X`
   - `ToggleWobble.sh --status` prints `On`/`Off`/`Unsupported`
-- The wallpaper palette can come from `butterpal` instead of `wallust`
-  - `butterpal` prints 24 named colours; wallust still renders the templates
-  - Its colours are written in wallust's cache format and fed to `wallust cs`
-  - So every template and target keeps working, and the two swap cleanly
-  - `WallustConfig.sh` holds the mapping and the source resolution
-  - `WallustSwww.sh` and `copy.sh` both use it
-  - Named themes (`wallust theme`) stay wallust's, which has no equivalent
-  - Falls back to `wallust run` when butterpal produces no palette
-  - `KOOLDOTS_PALETTE_SOURCE` or `state/hypr/palette_source` picks the source
-  - Without either, butterpal wins when installed, else wallust
-  - `KOOLDOTS_PALETTE_ROLES` is `accent` (default) or `ansi`
-  - `accent` fills `color12` from butterpal's `primary`, and so on
-  - `ansi` maps butterpal's 16 terminal colours straight through
-  - Quick Settings lists `Choose Palette Source` under `[[ Misc ]]`
-  - It marks the current source and regenerates on a change
-  - `ButterpalWallust.sh` renders on demand and takes `--dry-run`
 
 ## Updated:
 
