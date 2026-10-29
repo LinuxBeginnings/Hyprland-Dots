@@ -81,6 +81,12 @@
   - `GhosttyThemeGuard.sh` and `Kitty_themes.sh` use it too
   - The list is read in about 65ms, so the window was short but real
   - `tests/test-terminal-signal.sh` covers the skip
+- `Refresh.sh` brings Waybar back on NixOS
+  - It handed `/bin/bash` to `systemd-run` and to `setsid`
+  - NixOS ships no `/bin/bash`, so the bar was never relaunched
+  - Both now use `"$BASH"`, the bash already running the script
+  - That is absolute, so systemd's own `PATH` does not matter
+  - `tests/test-shebangs.sh` checks the rule repo-wide
 
 ## Added:
 
