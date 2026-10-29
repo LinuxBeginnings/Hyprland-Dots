@@ -18,6 +18,9 @@
  @define-color color9 {{color9}};
  @define-color color10 {{color10}};
  @define-color color11 {{color11}};
+ /* color12 is the accent the Wallust-* styles read, 37 times. It carries the
+    palette's own color12: wallust puts its accent there, and WallustConfig.sh
+    moves butterpal's accent pick into the same slot. */
  @define-color color12 {{color12}};
  @define-color color13 {{color13}};
  @define-color color14 {{color14}};

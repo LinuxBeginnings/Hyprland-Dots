@@ -34,6 +34,20 @@ The user's interactive shell is **zsh** (currently 5.9.2) on ~98% of their syste
 - Prefer tools that parse their own input (`find`, `grep -r`, `awk`, `jq`) over shell loops and globs.
 - If output is empty, a single blob, or a suspiciously short list, suspect a shell mismatch before concluding the system is in that state.
 
+## Script shebangs
+
+Every script in this repository starts with `#!/usr/bin/env bash`.
+
+- Never `#!/bin/bash` and never `#!/bin/sh`.
+  - NixOS has no `/bin/bash`, only `/nix/store/.../bin/bash`.
+  - `/usr/bin/env` is the one path it does provide, so `env bash` is the portable form.
+  - The installer does not cover NixOS, but the scripts are run there.
+- The rule covers an interpreter named inside a script, not just the shebang.
+  - `systemd-run` and `setsid` resolve their command against a different `PATH`, so name the interpreter absolutely there.
+  - `"$BASH"` is the bash already running the script, and the right thing to pass. Not `bash`, not `/bin/bash`.
+- Python scripts use `#!/usr/bin/env python3` for the same reason.
+- `config/hypr/scripts/tests/test-shebangs.sh` enforces all of this.
+
 ## Branch hygiene
 
 - `git fetch --prune` and pull the current branch before editing. Never start work on a stale branch.
@@ -65,6 +79,7 @@ The installer and the dotfiles upgrade flow cover these:
 - NixOS and Gentoo are not covered.
   - NixOS is declarative and ships no `update-deps.sh`.
   - There is no Gentoo installer repository.
+  - The scripts still have to run on NixOS. See Script shebangs.
 
 ## Hyprland 0.57
 

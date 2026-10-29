@@ -81,6 +81,12 @@
   - `GhosttyThemeGuard.sh` and `Kitty_themes.sh` use it too
   - The list is read in about 65ms, so the window was short but real
   - `tests/test-terminal-signal.sh` covers the skip
+- `Refresh.sh` brings Waybar back on NixOS
+  - It handed `/bin/bash` to `systemd-run` and to `setsid`
+  - NixOS ships no `/bin/bash`, so the bar was never relaunched
+  - Both now use `"$BASH"`, the bash already running the script
+  - That is absolute, so systemd's own `PATH` does not matter
+  - `tests/test-shebangs.sh` checks the rule repo-wide
 
 ## Added:
 
@@ -120,6 +126,22 @@
   - `Kool_Quick_Settings.sh` lists it under `[[ Toggle Options ]]`
   - `system_keybinds.lua` binds `SUPER SHIFT X`
   - `ToggleWobble.sh --status` prints `On`/`Off`/`Unsupported`
+- The wallpaper palette can come from `butterpal` instead of `wallust`
+  - `butterpal --json` emits a pywal colorscheme, which `wallust cs` reads
+  - So wallust still renders every template and the two swap cleanly
+  - `WallustConfig.sh` holds the source resolution and the scheme path
+  - `WallustSwww.sh` and `copy.sh` both use it
+  - Named themes (`wallust theme`) stay wallust's, which has no equivalent
+  - Falls back to `wallust run` when butterpal produces no scheme
+  - butterpal reads PNG, JPEG, BMP and GIF; WebP and video take that fallback
+  - `KOOLDOTS_PALETTE_SOURCE` or `state/hypr/palette_source` picks the source
+  - Without either, butterpal wins when installed, else wallust
+  - Quick Settings lists `Choose Palette Source` under `[[ Misc ]]`
+  - It marks the current source and regenerates on a change
+  - Picking Butterpal with butterpal missing notifies and changes nothing
+  - The state file would otherwise claim a source that cannot run
+  - `ButterpalWallust.sh --source butterpal` refuses the same way
+  - `ButterpalWallust.sh` renders on demand and takes `--dry-run`
 
 ## Updated:
 
@@ -156,6 +178,22 @@
   - So the file was written on every wallpaper change and read by nothing
   - That is why the Ghostty reload signal went unnoticed for so long
   - The header now names the `config-file` line that turns the include on
+- The wallpaper accent is the palette's `color12`, for both sources
+  - `color12` is the accent the borders, menus and bar read
+  - wallust already puts its accent in that slot
+  - butterpal keeps `color12` ANSI blue and puts its accent in `cursor`
+  - `WallustConfig.sh` moves that accent into `color12` before rendering
+  - So the templates stay on `{{color12}}` and serve both sources
+  - An earlier attempt pointed the templates at `{{cursor}}` instead
+  - wallust's cursor is a warm tone, so a blue wallpaper came out pink
+  - Rofi's selection is no longer rebuilt from `color12`/`color13`
+  - Under butterpal, terminal slot 12 is the accent, as wallust did before
+- Ghostty's wallpaper colours need a Ghostty reload, not a signal
+  - `WallustSwww.sh` sends `SIGUSR2`, which Ghostty receives and acts on
+  - On 1.4.0 that reload does not repaint a surface that is already open
+  - Writing the palette into the main config fails the same way
+  - So the colours appear only after Ghostty's own reload or a restart
+  - The signal stays: it is right for builds that do apply it
 
 ## Removed:
 
