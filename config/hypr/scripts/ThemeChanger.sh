@@ -334,12 +334,12 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
 
   # Small cushion before refresh to mirror wallpaper flow
   sleep 0.2
-  # Normalize Rofi selection colors to use the palette's accent (cursor)
+  # Normalize Rofi selection colors to use the palette's accent (color12)
   rofi_colors="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
   if [ -f "$rofi_colors" ]; then
-    # The accent is what the template wrote to active-background, which is the
-    # palette's cursor slot. Reading color13/color12 here would put the ANSI
-    # palette back over the accent.
+    # The accent is what the template wrote to active-background, which carries
+    # color12: wallust puts its accent there and WallustConfig.sh moves
+    # butterpal's there. Reading color13 here would put an ANSI hue back over it.
     accent_hex=$(sed -n 's/^\s*active-background:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
     if [ -n "$accent_hex" ]; then
       sed -i -E "s|^(\s*selected-normal-background:\s*).*$|\1$accent_hex;|" "$rofi_colors"

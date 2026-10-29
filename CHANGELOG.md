@@ -169,18 +169,16 @@
   - So the file was written on every wallpaper change and read by nothing
   - That is why the Ghostty reload signal went unnoticed for so long
   - The header now names the `config-file` line that turns the include on
-- The wallpaper accent now comes from the palette's cursor slot
-  - `color12` was the accent for borders, rofi selection and the bar
-  - butterpal keeps `color12` ANSI blue so terminal output stays readable
-  - Its accent pick goes to `cursor`, so those roles now read `{{cursor}}`
-  - `colors-hyprland.conf` carries it in `$color12`, which the borders read
-  - `colors-rofi.rasi` and `colors-nwg-dock.css` use `{{cursor}}` directly
-  - `colors-waybar.css` puts it in `@color12`/`@color13`, not `@foreground`
-  - Those two are what the Wallust styles read, 37 and 29 times
-  - `@foreground` is used 16 times and `@cursor` not at all
-  - Without that the bar kept painting the ANSI palette and never moved
-  - Terminal palettes keep `color12`, so ANSI output stays blue
+- The wallpaper accent is the palette's `color12`, for both sources
+  - `color12` is the accent the borders, menus and bar read
+  - wallust already puts its accent in that slot
+  - butterpal keeps `color12` ANSI blue and puts its accent in `cursor`
+  - `WallustConfig.sh` moves that accent into `color12` before rendering
+  - So the templates stay on `{{color12}}` and serve both sources
+  - An earlier attempt pointed the templates at `{{cursor}}` instead
+  - wallust's cursor is a warm tone, so a blue wallpaper came out pink
   - Rofi's selection is no longer rebuilt from `color12`/`color13`
+  - Under butterpal, terminal slot 12 is the accent, as wallust did before
 - Ghostty's wallpaper colours need a Ghostty reload, not a signal
   - `WallustSwww.sh` sends `SIGUSR2`, which Ghostty receives and acts on
   - On 1.4.0 that reload does not repaint a surface that is already open

@@ -202,6 +202,16 @@ butterpal_palette_from_image() {
   grep -q '"special"' "$json" || return 1
   grep -q '"colors"' "$json" || return 1
 
+  # The dots read color12 as their accent - borders, menus, bar. wallust puts
+  # its accent in that slot, but butterpal keeps color12 ANSI blue for terminal
+  # readability and puts its accent in cursor. Move it across here, so the
+  # templates stay on color12 and neither source needs a template of its own.
+  local accent
+  accent="$(sed -n 's/.*"cursor":"\(#[0-9a-fA-F]\{6\}\)".*/\1/p' "$json" | head -n1)"
+  if [ -n "$accent" ]; then
+    sed -i "s/\"color12\":\"#[0-9a-fA-F]\{6\}\"/\"color12\":\"$accent\"/" "$json"
+  fi
+
   butterpal_palette_json="$json"
   return 0
 }
