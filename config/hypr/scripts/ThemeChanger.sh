@@ -12,6 +12,9 @@ wallust_args=()
 if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustConfig.sh" ]; then
   . "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustConfig.sh"
 fi
+# Signals the terminal, never a CLI invocation of it.
+# shellcheck source=/dev/null
+. "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/TerminalSignal.sh"
 
 # SPDX-FileCopyrightText: 2025-present Ahum Maitra theahummaitra@gmail.com
 #
@@ -365,14 +368,10 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
   fi
 
   # Ask kitty to reload its config so the new 01-Wallust.conf is picked up
-  if pidof kitty >/dev/null; then
-    for pid in $(pidof kitty); do kill -SIGUSR1 "$pid" 2>/dev/null || true; done
-  fi
+  signal_terminal_app kitty SIGUSR1 >/dev/null 2>&1 || true
 
   # Ask ghostty to reload its config so the updated wallust.conf is applied
-  if pidof ghostty >/dev/null; then
-    for pid in $(pidof ghostty); do kill -SIGUSR2 "$pid" 2>/dev/null || true; done
-  fi
+  signal_terminal_app ghostty SIGUSR2 >/dev/null 2>&1 || true
 else
   have_notify && notify-send -u critical -a ThemeChanger \
     -h string:x-dunst-stack-tag:themechanger \

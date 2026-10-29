@@ -69,6 +69,18 @@
   - `accentSecondary` and `borderSecondary` were both invalid colours
   - The stray `#` is gone; every other value already used `{{colorN}}`
   - Written on every wallpaper change, so it reached every install
+- A wallpaper change no longer kills Ghostty's own theme list
+  - `Ghostty_themes.sh` and `GhosttyThemeGuard.sh` run `ghostty +list-themes`
+  - `pidof ghostty` matched that run as well as the running terminal
+  - The reload signal went to both, so the list came back empty or short
+  - The guard read that as the theme not being installed
+  - It then commented the theme out and fell back to wallpaper colours
+  - `TerminalSignal.sh` resolves the application and skips CLI invocations
+  - A ghostty subcommand is a `+` argument; kitty adds `@` for remote control
+  - `WallustSwww.sh`, `ThemeChanger.sh`, `Ghostty_themes.sh` use it
+  - `GhosttyThemeGuard.sh` and `Kitty_themes.sh` use it too
+  - The list is read in about 65ms, so the window was short but real
+  - `tests/test-terminal-signal.sh` covers the skip
 
 ## Added:
 
@@ -154,6 +166,12 @@
   - Editors flagged `decoration.wobble.*`, which the dots already set
   - New `HL.ConfigOpt` tree types `hl.config({ ... })` as well
   - Refresh with `cp` from that path, then add the trailing newline
+- `colors-ghostty.conf` no longer claims it is always included
+  - It said the file "is included by `~/.config/ghostty/config` when present"
+  - Both shipped configs ship that line commented, with a theme active
+  - So the file was written on every wallpaper change and read by nothing
+  - That is why the Ghostty reload signal went unnoticed for so long
+  - The header now names the `config-file` line that turns the include on
 
 ## Removed:
 

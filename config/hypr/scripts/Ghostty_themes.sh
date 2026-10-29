@@ -20,6 +20,9 @@ default_option_label="Default - no color"
 # read as a theme name.
 MARKER="👉"
 wallust_refresh_script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustSwww.sh"
+# Signals the terminal, never a CLI invocation of it.
+# shellcheck source=/dev/null
+. "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/TerminalSignal.sh"
 
 notify_user() {
   local icon="$1"
@@ -35,9 +38,12 @@ notify_user() {
 
 refresh_wallpaper_theme() {
   if [[ -x "$wallust_refresh_script" ]]; then
+    # WallustSwww.sh renders the palette and signals the terminal itself, so
+    # there is nothing to signal here.
     "$wallust_refresh_script" >/dev/null 2>&1 || true
+    return
   fi
-  pkill -SIGUSR2 ghostty >/dev/null 2>&1 || true
+  signal_terminal_app ghostty SIGUSR2 >/dev/null 2>&1 || true
 }
 ensure_managed_ghostty_config() {
   if [[ -f "$user_ghostty_config" && -r "$user_ghostty_config" ]]; then
@@ -264,7 +270,7 @@ END {
     exit 1
   fi
 
-  pkill -SIGUSR2 ghostty >/dev/null 2>&1 || true
+  signal_terminal_app ghostty SIGUSR2 >/dev/null 2>&1 || true
   notify_user "$iDIR/ja.png" "Ghostty Theme Applied" "$default_option_label"
   exit 0
 fi
@@ -326,7 +332,7 @@ if ! sync_runtime_ghostty_config; then
   exit 1
 fi
 
-pkill -SIGUSR2 ghostty >/dev/null 2>&1 || true
+signal_terminal_app ghostty SIGUSR2 >/dev/null 2>&1 || true
 
 notify_user "$iDIR/ja.png" "Ghostty Theme Applied" "$selected_theme"
 
