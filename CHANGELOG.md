@@ -63,6 +63,12 @@
   - A 1px `border_size` made that read as a solid hairline border
   - The angle is now a `45deg` diagonal, so all four edges carry colour
   - `RB_ANGLE` overrides it; `0` and `90` are the flat-edge cases
+- Quickshell's generated palette holds valid colours again
+  - `templates/qml_color.json` prefixed two values with its own `#`
+  - Wallust writes `#RRGGBB`, so those lines rendered `##RRGGBB`
+  - `accentSecondary` and `borderSecondary` were both invalid colours
+  - The stray `#` is gone; every other value already used `{{colorN}}`
+  - Written on every wallpaper change, so it reached every install
 
 ## Added:
 
