@@ -114,9 +114,11 @@ if [ "$dry_run" -eq 1 ]; then
     printf 'to `wallust run` in the real flow.\n' >&2
     exit 1
   fi
-  # The accent the dots read is the scheme's cursor, not its ANSI color12.
-  printf 'accent (cursor) %s\n' \
-    "$(sed -n 's/.*"cursor":"\(#[0-9a-fA-F]*\)".*/\1/p' "$butterpal_palette_json" | head -n1)"
+  # color12 is the accent the dots read, and butterpal_palette_from_image has
+  # already moved butterpal's accent pick into it, so this is what the borders
+  # and menus will get.
+  printf 'accent (color12) %s\n' \
+    "$(sed -n 's/.*"color12":"\(#[0-9a-fA-F]*\)".*/\1/p' "$butterpal_palette_json" | head -n1)"
   printf 'background      %s\n' \
     "$(sed -n 's/.*"background":"\(#[0-9a-fA-F]*\)".*/\1/p' "$butterpal_palette_json" | head -n1)"
   printf 'foreground      %s\n\n' \

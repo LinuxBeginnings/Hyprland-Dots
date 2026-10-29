@@ -160,17 +160,20 @@ wallust_resolve_palette_source() {
 # Sets butterpal_palette_json and returns 0.
 #
 # butterpal emits a pywal colorscheme, which is a format wallust decodes
-# directly, so nothing is mapped here:
+# directly, so only the accent slot is adjusted before it is passed on:
 #
 #   {"wallpaper": "...",
 #    "special": {"background": "#...", "foreground": "#...",
 #                "cursor": "#..."},
 #    "colors": {"color0": "#...", ... "color15": "#..."}}
 #
-# `special.cursor` is butterpal's accent pick, and that is what the dots'
-# border and menu templates read as {{cursor}}. `colors.color12` stays the
-# ANSI blue on purpose, so terminal output keeps its meaning; the accent is
-# deliberately not taken from there.
+# `special.cursor` is butterpal's accent pick. The dots read color12 as their
+# accent - borders, menus, bar - and wallust puts its accent in that slot, so
+# butterpal's is moved there too and the templates stay on {{color12}}.
+#
+# That replaces butterpal's own ANSI blue at color12. Slot 12 follows the
+# wallpaper under wallust as well, so the dots match wallust's behaviour
+# rather than keeping a fixed blue.
 #
 # Returns 1 when no scheme can be produced - butterpal missing, an unreadable
 # image, an unsupported format, unexpected output - so the caller can fall back
