@@ -583,7 +583,7 @@ palette_source_menu() {
   [[ "$selected" == "$current" ]] && return
 
   if [[ "$selected" == "butterpal" ]] && ! command -v butterpal >/dev/null 2>&1; then
-    show_info "butterpal is not installed, so the palette would fall back to wallust."
+    show_info "butterpal is not installed, so the palette source was left unchanged."
     return
   fi
 

@@ -83,8 +83,16 @@ if [ -n "$set_source" ]; then
     exit 2
     ;;
   esac
+  # Refuse the switch rather than writing a source that cannot run. The
+  # resolver would fall back to wallust, but the state file would then say
+  # butterpal and the menu would mark the wrong row.
   if [ "$set_source" = "butterpal" ] && ! command -v butterpal >/dev/null 2>&1; then
-    printf 'ButterpalWallust.sh: butterpal is not installed; it would fall back to wallust.\n' >&2
+    msg="butterpal is not installed, so the palette source was left unchanged."
+    printf 'ButterpalWallust.sh: %s\n' "$msg" >&2
+    if command -v notify-send >/dev/null 2>&1; then
+      notify-send -u normal -a "Wallpaper Palette" "Palette source" "$msg" >/dev/null 2>&1 || true
+    fi
+    exit 1
   fi
   state_file="$(wallust_palette_source_file)"
   mkdir -p "$(dirname "$state_file")"

@@ -132,6 +132,9 @@
   - Without either, butterpal wins when installed, else wallust
   - Quick Settings lists `Choose Palette Source` under `[[ Misc ]]`
   - It marks the current source and regenerates on a change
+  - Picking Butterpal with butterpal missing notifies and changes nothing
+  - The state file would otherwise claim a source that cannot run
+  - `ButterpalWallust.sh --source butterpal` refuses the same way
   - `ButterpalWallust.sh` renders on demand and takes `--dry-run`
 
 ## Updated:
