@@ -112,9 +112,6 @@ wallust_prepare_args() {
 #   1. KOOLDOTS_PALETTE_SOURCE=butterpal|wallust   (environment, wins)
 #   2. ${XDG_STATE_HOME:-$HOME/.local/state}/hypr/palette_source
 #   3. butterpal when installed, otherwise wallust
-#
-# KOOLDOTS_PALETTE_ROLES picks how butterpal's colours fill the dots' accent
-# slots: "accent" (default) or "ansi". See butterpal_palette_from_image.
 # ---------------------------------------------------------------------------
 
 wallust_palette_source_file() {
@@ -159,74 +156,51 @@ wallust_resolve_palette_source() {
 
 # butterpal_palette_from_image <image>
 #
-# Runs butterpal, maps its 24 colours onto wallust's variables and writes them
-# in wallust's cache format. Sets butterpal_palette_json and returns 0.
+# Runs `butterpal --json` and leaves the scheme where `wallust cs` reads it.
+# Sets butterpal_palette_json and returns 0.
 #
-# Returns 1 when no palette can be produced - butterpal missing, an unreadable
-# image, unexpected output - so the caller can fall back to `wallust run`.
+# butterpal emits a pywal colorscheme, which is a format wallust decodes
+# directly, so nothing is mapped here:
 #
-# butterpal prints, one per line:
-#   1 background  2 second background  3 text   4 border
-#   5 primary     6 secondary          7 alert  8 disabled
-#   9..24 the 16 terminal colours, color0 through color15
+#   {"wallpaper": "...",
+#    "special": {"background": "#...", "foreground": "#...",
+#                "cursor": "#..."},
+#    "colors": {"color0": "#...", ... "color15": "#..."}}
+#
+# `special.cursor` is butterpal's accent pick, and that is what the dots'
+# border and menu templates read as {{cursor}}. `colors.color12` stays the
+# ANSI blue on purpose, so terminal output keeps its meaning; the accent is
+# deliberately not taken from there.
+#
+# Returns 1 when no scheme can be produced - butterpal missing, an unreadable
+# image, an unsupported format, unexpected output - so the caller can fall back
+# to `wallust run`.
+#
+# butterpal reads PNG, JPEG, BMP and GIF. WebP and video wallpapers are not
+# supported and take that fallback.
 butterpal_palette_from_image() {
   local image="$1"
-  local roles="${KOOLDOTS_PALETTE_ROLES:-accent}"
-  local dir json out i c
-  local -a pal=()
-  local -A term=()
+  local dir json
 
   if [ -z "$image" ] || [ ! -f "$image" ]; then
     return 1
   fi
   command -v butterpal >/dev/null 2>&1 || return 1
 
-  mapfile -t pal < <(butterpal "$image" 2>/dev/null)
-  [ "${#pal[@]}" -eq 24 ] || return 1
-
-  # A missing or malformed slot would render a template with an empty colour.
-  for c in "${pal[@]}"; do
-    case "$c" in
-    \#[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]) ;;
-    *) return 1 ;;
-    esac
-  done
-
-  # butterpal slot 9 is color0, so the terminal colours are offset by 8.
-  i=0
-  while [ "$i" -lt 16 ]; do
-    term["color$i"]="${pal[$((i + 8))]}"
-    i=$((i + 1))
-  done
-
-  if [ "$roles" = "accent" ]; then
-    # The dots' templates treat color12 as the wallpaper accent (borders,
-    # active selection, waybar foreground), color13 as the urgent/secondary
-    # accent, color10 as the inactive border and color11 as the alternate
-    # active background. butterpal's terminal slots hold ANSI hues there, so
-    # its named colours are used instead.
-    term[color12]="${pal[4]}" # primary
-    term[color13]="${pal[5]}" # secondary
-    term[color11]="${pal[3]}" # border
-    term[color10]="${pal[7]}" # disabled
-  fi
-
-  # cursor has no butterpal slot. wallust aliases it to a foreground variant,
-  # and "text" is the closest named role.
-  out="$(printf '{\n  "cursor": "%s",\n  "background": "%s",\n  "foreground": "%s",' \
-    "${pal[2]}" "${pal[0]}" "${pal[2]}")"
-  i=0
-  while [ "$i" -lt 16 ]; do
-    out+="$(printf '\n  "color%d": "%s",' "$i" "${term[color$i]}")"
-    i=$((i + 1))
-  done
-  out="${out%?}" # the trailing comma after color15 is not valid JSON
-  out+="$(printf '\n}')"
-
   dir="${XDG_CACHE_HOME:-$HOME/.cache}/butterpal"
   json="$dir/palette.json"
   mkdir -p "$dir" 2>/dev/null || return 1
-  printf '%s\n' "$out" > "$json" 2>/dev/null || return 1
+
+  if ! butterpal --json "$image" >"$json" 2>/dev/null; then
+    rm -f "$json"
+    return 1
+  fi
+
+  # A scheme missing either section would render a template with an empty
+  # colour, so treat it as no palette and let wallust run instead.
+  [ -s "$json" ] || return 1
+  grep -q '"special"' "$json" || return 1
+  grep -q '"colors"' "$json" || return 1
 
   butterpal_palette_json="$json"
   return 0
@@ -234,12 +208,12 @@ butterpal_palette_from_image() {
 
 # wallust_cs_from_palette <config args...>
 #
-# Renders every template in the given wallust config from the palette
+# Renders every template in the given wallust config from the scheme
 # butterpal_palette_from_image wrote. -s matches the `wallust run -s` the repo
 # already uses: skip terminal sequences, only regenerate files.
 wallust_cs_from_palette() {
   [ -s "${butterpal_palette_json:-}" ] || return 1
-  wallust cs "$@" -s -f wallust "$butterpal_palette_json"
+  wallust cs "$@" -s -f pywal "$butterpal_palette_json"
 }
 
 wallust_prepare_args

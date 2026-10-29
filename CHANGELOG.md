@@ -121,18 +121,15 @@
   - `system_keybinds.lua` binds `SUPER SHIFT X`
   - `ToggleWobble.sh --status` prints `On`/`Off`/`Unsupported`
 - The wallpaper palette can come from `butterpal` instead of `wallust`
-  - `butterpal` prints 24 named colours; wallust still renders the templates
-  - Its colours are written in wallust's cache format and fed to `wallust cs`
-  - So every template and target keeps working, and the two swap cleanly
-  - `WallustConfig.sh` holds the mapping and the source resolution
+  - `butterpal --json` emits a pywal colorscheme, which `wallust cs` reads
+  - So wallust still renders every template and the two swap cleanly
+  - `WallustConfig.sh` holds the source resolution and the scheme path
   - `WallustSwww.sh` and `copy.sh` both use it
   - Named themes (`wallust theme`) stay wallust's, which has no equivalent
-  - Falls back to `wallust run` when butterpal produces no palette
+  - Falls back to `wallust run` when butterpal produces no scheme
+  - butterpal reads PNG, JPEG, BMP and GIF; WebP and video take that fallback
   - `KOOLDOTS_PALETTE_SOURCE` or `state/hypr/palette_source` picks the source
   - Without either, butterpal wins when installed, else wallust
-  - `KOOLDOTS_PALETTE_ROLES` is `accent` (default) or `ansi`
-  - `accent` fills `color12` from butterpal's `primary`, and so on
-  - `ansi` maps butterpal's 16 terminal colours straight through
   - Quick Settings lists `Choose Palette Source` under `[[ Misc ]]`
   - It marks the current source and regenerates on a change
   - `ButterpalWallust.sh` renders on demand and takes `--dry-run`
@@ -172,6 +169,14 @@
   - So the file was written on every wallpaper change and read by nothing
   - That is why the Ghostty reload signal went unnoticed for so long
   - The header now names the `config-file` line that turns the include on
+- The wallpaper accent now comes from the palette's cursor slot
+  - `color12` was the accent for borders, rofi selection and the bar
+  - butterpal keeps `color12` ANSI blue so terminal output stays readable
+  - Its accent pick goes to `cursor`, so those roles now read `{{cursor}}`
+  - `colors-hyprland.conf` carries it in `$color12`, which the borders read
+  - `colors-rofi.rasi`, `colors-waybar.css` and `colors-nwg-dock.css` too
+  - Terminal palettes keep `color12`, so ANSI output stays blue
+  - Rofi's selection is no longer rebuilt from `color12`/`color13`
 
 ## Removed:
 

@@ -1,7 +1,7 @@
 /* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */  
  /* wallust template - colors-waybar */
 
- @define-color foreground {{color12}};
+ @define-color foreground {{cursor}};
  @define-color background {{background}};
  @define-color background-alt rgba({{background | rgb}},0.25);
  @define-color cursor {{cursor}};
