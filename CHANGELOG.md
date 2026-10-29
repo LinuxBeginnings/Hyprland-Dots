@@ -87,6 +87,17 @@
   - Both now use `"$BASH"`, the bash already running the script
   - That is absolute, so systemd's own `PATH` does not matter
   - `tests/test-shebangs.sh` checks the rule repo-wide
+- The Ghostty theme menu lists the installed themes again
+  - It keeps only themes `ghostty +list-themes` reports
+  - Ghostty 1.4.0 tags the bundled set `(resources)`
+  - The filter stripped only `(user)` and `(builtin)`
+  - So the exact match missed and every built-in read as missing
+  - The menu offered only themes present as user theme files
+  - From a terminal it looked full: the resources path is set there
+  - Under rofi that path is unset, so the list came up nearly empty
+  - Any lowercase tag in parentheses is stripped now
+  - `GhosttyThemeGuard.sh` had the same filter and is fixed too
+  - A theme commented twice no longer produces two identical rows
 
 ## Added:
 

@@ -12,6 +12,12 @@
 #   This menu reads its choices back as text - the labels and the theme names
 #   are compared after rofi returns - so the strip is what keeps a marked row
 #   from being read as a theme called "👉 Nord".
+#
+#   It also covers the source tag Ghostty puts on each name from +list-themes.
+#   Ghostty 1.4.0 tags the bundled collection "(resources)"; an earlier filter
+#   stripped only "(user)" and "(builtin)", so the exact match missed and every
+#   built-in theme was read as missing. The menu then offered only the themes
+#   that happened to be files in the user theme directory.
 # No `set -e`: the assertion helpers return non-zero on failure, and exiting on
 # the first one would hide every later check in the run.
 set -uo pipefail
@@ -71,9 +77,13 @@ exit 0
 EOS
 
 # Hermetic: the real ghostty's own theme list must not leak into the run, and
-# nothing may signal a running terminal.
+# nothing may signal a running terminal. +list-themes is the path under test,
+# so the fake prints the same tagged shape the real one does.
 cat >"$BIN/ghostty" <<'EOS'
 #!/usr/bin/env bash
+if [[ "${1:-}" == "+list-themes" && -n "${FAKE_GHOSTTY_THEMES:-}" ]]; then
+  printf '%s\n' "$FAKE_GHOSTTY_THEMES"
+fi
 exit 0
 EOS
 cat >"$BIN/pkill" <<'EOS'
@@ -86,7 +96,11 @@ chmod +x "$BIN"/*
 run_menu() {
   : >"$ROWS_FILE"; : >"$ROFI_LOG"; : >"$NOTIFY_LOG"
   printf '%s\n' "$@" >"$QUEUE"
-  env PATH="$BIN:$PATH" XDG_CONFIG_HOME="$CFG" \
+  # -u GHOSTTY_RESOURCES_DIR: with it set, a theme resolves through the
+  # resources path and the +list-themes check is never reached, so the tag
+  # case below would pass without testing anything.
+  env -u GHOSTTY_RESOURCES_DIR PATH="$BIN:$PATH" XDG_CONFIG_HOME="$CFG" \
+    FAKE_GHOSTTY_THEMES="${FAKE_GHOSTTY_THEMES:-}" \
     timeout 30 bash "$SCRIPT" >"$WORK/out.txt" 2>&1
   return $?
 }
@@ -110,6 +124,17 @@ it "the marker is stripped before the choice is read as a theme name"
 run_menu '0:👉 Nord'
 assert_contains "$CONFIG" 'theme = Nord' "the chosen theme was applied"
 assert_not_contains "$CONFIG" '👉' "the marker was not written into the config"
+
+# --- a theme known only from +list-themes is still offered ----------------
+# No file for Aura, so only the +list-themes path can make it available.
+it "a theme advertised only through +list-themes is offered"
+printf 'theme = Dracula\n#theme = Aura\n' >"$CONFIG"
+rm -f "$CFG/ghostty/themes/Aura"
+FAKE_GHOSTTY_THEMES='Aura (resources)'
+run_menu __ESCAPE__
+assert_contains "$ROWS_FILE" 'Aura' "the tagged name is recognised"
+assert_not_contains "$ROWS_FILE" '(resources)' "the tag is not shown as part of the name"
+FAKE_GHOSTTY_THEMES=''
 
 # --- a marked label is still a label ---------------------------------------
 it "a marked label is still read as the label it is"

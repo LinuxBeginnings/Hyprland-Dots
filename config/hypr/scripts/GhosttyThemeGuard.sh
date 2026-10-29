@@ -40,7 +40,11 @@ case "${1:-}" in
 esac
 [ "${GHOSTTY_THEME_GUARD_NOTIFY:-0}" = "1" ] && NOTIFY=1
 
-# Theme names advertised by Ghostty itself (strips the "(user)"/"(builtin)" tag).
+# Theme names advertised by Ghostty itself. Ghostty tags each one with where
+# it came from - "(resources)" for the bundled collection on 1.4.0, "(user)"
+# and "(builtin)" elsewhere - and every tag is a lowercase word in parens.
+# The tag has to come off or the exact match below never hits, which is how a
+# theme that is installed and resolvable gets read as missing.
 THEME_LIST=""
 
 log() {
@@ -59,7 +63,7 @@ notify_user() {
 
 load_theme_list() {
   have ghostty || return 0
-  THEME_LIST="$(ghostty +list-themes 2>/dev/null | sed -E 's/[[:space:]]+\((user|builtin)\)[[:space:]]*$//')"
+  THEME_LIST="$(ghostty +list-themes 2>/dev/null | sed -E 's/[[:space:]]+\([a-z][a-z-]*\)[[:space:]]*$//')"
 }
 
 # theme_available <name> -> 0 when Ghostty can resolve the theme

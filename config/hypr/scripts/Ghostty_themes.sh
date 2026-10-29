@@ -121,7 +121,11 @@ original_theme_count=${#available_theme_names[@]}
 ghostty_themes_dir="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/themes"
 ghostty_theme_list=""
 if command -v ghostty >/dev/null 2>&1; then
-  ghostty_theme_list="$(ghostty +list-themes 2>/dev/null | sed -E 's/[[:space:]]+\((user|builtin)\)[[:space:]]*$//')"
+  # Ghostty tags each name with where it came from: "(resources)" for the
+  # bundled collection on 1.4.0, "(user)" and "(builtin)" elsewhere. The tag
+  # is always a lowercase word in parentheses, and it has to come off or the
+  # exact-match below never hits and every built-in theme looks missing.
+  ghostty_theme_list="$(ghostty +list-themes 2>/dev/null | sed -E 's/[[:space:]]+\([a-z][a-z-]*\)[[:space:]]*$//')"
 fi
 theme_is_available() {
   local name="$1"
@@ -137,9 +141,18 @@ theme_is_available() {
 }
 filtered_theme_names=()
 for _theme in "${available_theme_names[@]}"; do
-  if theme_is_available "$_theme"; then
-    filtered_theme_names+=("$_theme")
-  fi
+  theme_is_available "$_theme" || continue
+  # The same name can appear twice: this script comments the active theme, and
+  # the template may already carry that line commented. One row is enough.
+  _dup=0
+  for _seen in "${filtered_theme_names[@]}"; do
+    if [[ "$_seen" == "$_theme" ]]; then
+      _dup=1
+      break
+    fi
+  done
+  [[ "$_dup" -eq 1 ]] && continue
+  filtered_theme_names+=("$_theme")
 done
 available_theme_names=("${filtered_theme_names[@]}")
 
