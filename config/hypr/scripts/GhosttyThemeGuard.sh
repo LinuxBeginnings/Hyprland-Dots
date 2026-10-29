@@ -27,7 +27,7 @@ CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 MANAGED_CONFIG="$CONFIG_HOME/hypr/UserConfigs/ghostty.conf"
 RUNTIME_CONFIG="$CONFIG_HOME/ghostty/config"
 USER_THEMES_DIR="$CONFIG_HOME/ghostty/themes"
-WALLUST_INCLUDE="$CONFIG_HOME/ghostty/wallust.conf"
+WALLUST_INCLUDE="$CONFIG_HOME/hypr/UserConfigs/ghostty-themes/01-Wallust.conf"
 LOGFILE="${XDG_RUNTIME_DIR:-/tmp}/ghostty-theme-guard.log"
 # Signals the terminal, never a CLI invocation of it - this script runs
 # `ghostty +list-themes` itself and would otherwise kill its own call.

@@ -205,6 +205,20 @@
   - Writing the palette into the main config fails the same way
   - So the colours appear only after Ghostty's own reload or a restart
   - The signal stays: it is right for builds that do apply it
+- The Ghostty palette lives under `UserConfigs` now
+  - It was written to `~/.config/ghostty/wallust.conf`
+  - Kitty's palette has always been in `UserConfigs/kitty-themes/`
+  - So it moves to `UserConfigs/ghostty-themes/01-Wallust.conf`
+  - That directory is protected, so another tool cannot overwrite it
+  - `patches/22-ghostty-wallust-target.sh` moves it on an upgrade
+  - The patch rewrites the include in both configs, keeping its state
+  - It is idempotent and skips a fresh install
+- The two shipped Ghostty configs no longer disagree
+  - `config/ghostty/config` shipped `font-family = "Iosevkeley Mono"`
+  - `UserConfigs/ghostty.conf` shipped `JetBrainsMono Nerd Font Mono`
+  - The runtime template carried a name `21-ghostty-font.sh` exists to fix
+  - Which font was in effect depended on what ran last
+  - They are identical now, and a test keeps them that way
 
 ## Removed:
 

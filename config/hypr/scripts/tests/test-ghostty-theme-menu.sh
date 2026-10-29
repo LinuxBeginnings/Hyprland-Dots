@@ -144,4 +144,21 @@ assert_contains "$ROFI_LOG" '-selected-row 1' "the default entry is the marked r
 assert_not_contains "$NOTIFY_LOG" '👉' "the marker was not reported as a theme"
 assert_not_contains "$CONFIG" '👉' "the marker was not written into the config"
 
+# --- the shipped runtime config mirrors the managed one ---------------------
+# copy.sh installs config/ghostty/config as ~/.config/ghostty/config, while
+# UserConfigs/ghostty.conf is protected and only added when missing. The two
+# drifting apart means a fresh install and an upgraded one end up with
+# different fonts: they shipped different blocks once, and the runtime one
+# carried the non-standard "Iosevkeley Mono" that patch 21 exists to correct.
+repo_root="$(cd -- "$HERE/../../.." && pwd)"
+if [ -f "$repo_root/copy.sh" ]; then
+  it "the shipped ghostty configs are identical"
+  if cmp -s "$repo_root/config/hypr/UserConfigs/ghostty.conf" \
+    "$repo_root/config/ghostty/config"; then
+    pass_msg
+  else
+    fail "config/ghostty/config and UserConfigs/ghostty.conf have drifted"
+  fi
+fi
+
 summary "test-ghostty-theme-menu"

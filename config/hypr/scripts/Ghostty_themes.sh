@@ -13,7 +13,7 @@ config_file="$user_ghostty_config"
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
 rofi_theme_primary="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-ghostty-theme.rasi"
 rofi_theme_fallback="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-edit.rasi"
-wallust_include_path="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf"
+wallust_include_path="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/ghostty-themes/01-Wallust.conf"
 wallust_option_label="Set by wallpaper"
 default_option_label="Default - no color"
 # Same indicator the other selection menus use. Stripped again before a row is

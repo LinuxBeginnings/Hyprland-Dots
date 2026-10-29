@@ -47,7 +47,7 @@ waybar.template = 'colors-waybar.css'
 waybar.target = '~/.config/hypr/waybar/wallust/colors-waybar.css'
 
 ghostty.template = 'colors-ghostty.conf'
-ghostty.target = '~/.config/ghostty/wallust.conf'
+ghostty.target = '~/.config/hypr/UserConfigs/ghostty-themes/01-Wallust.conf'
 
 quickshell.template = 'qml_color.json'
 quickshell.target = '~/.config/quickshell/qml_color.json'

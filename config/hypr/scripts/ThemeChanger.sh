@@ -276,7 +276,8 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
 
   # Wait until template targets exist, are newer than start_ts, and are stable (size/mtime stops changing)
   # Ensure Ghostty and GTK-3.0 directories exist so Wallust can write targets even if not yet created
-  mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0" || true
+  mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/ghostty-themes" \
+    "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0" || true
 
   targets=(
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/wallust/colors-waybar.css"
@@ -285,7 +286,7 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
   )
 
   # Normalize Ghostty palette syntax in case upstream templates or older targets used ':'
-  ghostty_conf="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf"
+  ghostty_conf="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/ghostty-themes/01-Wallust.conf"
   if [ -f "$ghostty_conf" ]; then
     sed -i -E 's/^(\s*palette\s*=\s*)([0-9]{1,2}):/\1\2=/' "$ghostty_conf" 2>/dev/null || true
   fi

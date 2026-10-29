@@ -263,8 +263,13 @@ ln -sf "$wallpaper_path" "$rofi_link" || true
 mkdir -p "$(dirname "$wallpaper_current")"
 cp -f "$wallpaper_path" "$wallpaper_current" || true
 
-# Ensure Ghostty directory exists so Wallust can write targets even if not yet created
-mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" || true
+# The Ghostty palette lives under UserConfigs, so another tool cannot
+# overwrite it. Same shape as the kitty palette next to it.
+ghostty_palette_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/ghostty-themes"
+ghostty_palette="$ghostty_palette_dir/01-Wallust.conf"
+# Ensure the directory exists so Wallust can write its target even if it has
+# not been created yet.
+mkdir -p "$ghostty_palette_dir" || true
 wait_for_templates() {
   shift
   local files=("$@")
@@ -441,8 +446,8 @@ fi
   fi
 
   # Normalize Ghostty palette syntax in case ':' was used by older files
-  if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" ]; then
-    sed -i -E 's/^(\s*palette\s*=\s*)([0-9]{1,2}):/\1\2=/' "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" 2>/dev/null || true
+  if [ -f "$ghostty_palette" ]; then
+    sed -i -E 's/^(\s*palette\s*=\s*)([0-9]{1,2}):/\1\2=/' "$ghostty_palette" 2>/dev/null || true
   fi
 
   # Light wait for the Ghostty palette file, then ask Ghostty to reload.
@@ -452,7 +457,7 @@ fi
   # is still sent: it is correct for builds that do apply it, and harmless
   # otherwise.
   for _ in 1 2 3; do
-    [ -s "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" ] && break
+    [ -s "$ghostty_palette" ] && break
     sleep 0.1
   done
   signal_terminal_app ghostty SIGUSR2 >/dev/null 2>&1 || true
