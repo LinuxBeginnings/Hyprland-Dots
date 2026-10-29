@@ -9,9 +9,9 @@
     "borderPrimary": "{{color7}}",
     "shadowColor": "#000000",
     "accentPrimary": "{{color7}}",
-    "accentSecondary": "#{{color7}}",
+    "accentSecondary": "{{color7}}",
     "selectionBackground": "{{color7}}",
     "accentPrimaryText": "#FFFFFF",
     "selectionText": "#F2DCF3",
-    "borderSecondary": "#{{color5}}"
+    "borderSecondary": "{{color5}}"
 }

@@ -292,18 +292,29 @@ for target in "${wallust_targets[@]}"; do
 done
 
 global_theme="$(read_global_theme)"
+palette_rc=0
 if [ -n "$global_theme" ]; then
-  if ! wallust "${wallust_args[@]}" theme -- "$global_theme" >"$wallust_log" 2>&1; then
-    have_notify && notify-send -u critical -a WallustSwww \
-      "Wallust failed" "See: $wallust_log"
-    exit 1
+  # butterpal has no equivalent of wallust's named themes, so this path stays
+  # wallust's whichever palette source is configured.
+  wallust "${wallust_args[@]}" theme -- "$global_theme" >"$wallust_log" 2>&1 || palette_rc=$?
+elif palette_source_is_butterpal; then
+  if butterpal_palette_from_image "$wallpaper_path"; then
+    wallust_cs_from_palette "${wallust_args[@]}" >"$wallust_log" 2>&1 || palette_rc=$?
+  else
+    # butterpal produced nothing for this image. wallust's own extraction is
+    # still better than leaving the previous wallpaper's colours in place.
+    printf 'ButterpalWallust: no palette from butterpal for %s; using wallust extraction\n' \
+      "$wallpaper_path" >"$wallust_log"
+    wallust "${wallust_args[@]}" run -s "$wallpaper_path" >>"$wallust_log" 2>&1 || palette_rc=$?
   fi
 else
-  if ! wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1; then
-    have_notify && notify-send -u critical -a WallustSwww \
-      "Wallust failed" "See: $wallust_log"
-    exit 1
-  fi
+  wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1 || palette_rc=$?
+fi
+
+if [ "$palette_rc" -ne 0 ]; then
+  have_notify && notify-send -u critical -a WallustSwww \
+    "Wallust failed" "See: $wallust_log"
+  exit 1
 fi
 if ! wait_for_templates "$start_ts" "${wallust_targets[@]}"; then
   have_notify && notify-send -u critical -a WallustSwww \
@@ -335,6 +346,21 @@ fi
 # Run kitty-only wallust config to keep terminal palette separate
 run_wallust_with_config() {
   local cfg="$1"
+
+  # butterpal: the palette was already extracted in the main pass, so only this
+  # config's templates need rendering from it. Skipped when the main pass used
+  # a named theme, which leaves no butterpal palette behind.
+  if palette_source_is_butterpal && [ -s "${butterpal_palette_json:-}" ]; then
+    if [ "${#wallust_kitty_args[@]}" -gt 0 ]; then
+      wallust_cs_from_palette "${wallust_kitty_args[@]}" || true
+      return
+    fi
+    if [ -f "$cfg" ] && [ -n "$wallust_templates_dir" ]; then
+      wallust_cs_from_palette -C "$cfg" --templates-dir "$wallust_templates_dir" || true
+      return
+    fi
+  fi
+
   # Wallust v4: prefer config-file flag via WallustConfig.sh
   if [ "${#wallust_kitty_args[@]}" -gt 0 ]; then
     wallust "${wallust_kitty_args[@]}" run -s "$wallpaper_path" || true

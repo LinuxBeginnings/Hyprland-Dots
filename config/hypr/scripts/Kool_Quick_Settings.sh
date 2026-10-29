@@ -529,6 +529,77 @@ rainbow_borders_menu() {
   # No notifications; mode is shown in the menu
 }
 
+# Submenu to choose which tool extracts the wallpaper palette.
+# (butterpal, wallust)
+palette_source_menu() {
+  local state_file refresh_script current
+  state_file="$(palette_source_state_file)"
+  refresh_script="$scriptsDir/WallustSwww.sh"
+  current="$(palette_source_current)"
+
+  # Map the resolved source onto the friendly label and the row to mark.
+  local current_display="Butterpal"
+  local active_option="Butterpal"
+  case "$current" in
+  wallust)
+    current_display="Wallust"
+    active_option="Wallust"
+    ;;
+  esac
+
+  # Build options and mark the active one
+  local raw_options=(
+    "Butterpal"
+    "Wallust"
+  )
+
+  local default_row=0
+  local MARKER="👉"
+  local menu_options=("${raw_options[@]}")
+  for i in "${!menu_options[@]}"; do
+    if [[ "${menu_options[i]}" == "$active_option" ]]; then
+      menu_options[i]="$MARKER ${menu_options[i]}"
+      default_row=$i
+      break
+    fi
+  done
+
+  local choice
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
+  choice=$(printf "%s\n" "${menu_options[@]}" | rofi -i -dmenu -config "$rofi_theme" -mesg "Wallpaper Palette: current = $current_display" -selected-row "$default_row")
+
+  [[ -z "$choice" ]] && return
+
+  choice="${choice#"$MARKER "}"
+
+  local selected=""
+  case "$choice" in
+  "Butterpal") selected="butterpal" ;;
+  "Wallust") selected="wallust" ;;
+  *) return ;;
+  esac
+
+  # Nothing to do when the row already in effect is picked again.
+  [[ "$selected" == "$current" ]] && return
+
+  if [[ "$selected" == "butterpal" ]] && ! command -v butterpal >/dev/null 2>&1; then
+    show_info "butterpal is not installed, so the palette would fall back to wallust."
+    return
+  fi
+
+  mkdir -p "$(dirname "$state_file")"
+  printf '%s\n' "$selected" >"$state_file"
+
+  # Regenerate and reload so the change is visible at once. WallustSwww.sh
+  # owns the render and the Waybar/cava/border reloads, so this is the same
+  # path a wallpaper change takes.
+  if [[ -x "$refresh_script" ]]; then
+    "$refresh_script" >/dev/null 2>&1 &
+  fi
+
+  # No notifications; source is shown in the menu
+}
+
 handle_choice() {
   local choice="$1"
   local quick_settings_monitor="$2"
@@ -674,6 +745,7 @@ handle_choice() {
   "Choose Monitor Profiles") "$scriptsDir/MonitorProfiles.sh" ;;
   "Choose Rofi Themes") "$scriptsDir/RofiThemeSelector.sh" ;;
   "Search for Keybinds") "$scriptsDir/KeyBinds.sh" ;;
+  "Choose Palette Source") palette_source_menu ;;
   "Toggle Waybar Weather units"* | "Toggle Waybar Weather units (C/F)") "$scriptsDir/Toggle-weather-waybar-units.sh" ;;
   "Toggle Waybar Clock (12H/24H)") "$scriptsDir/ToggleWaybarTime.sh" ;;
   "Toggle Game Mode") "$scriptsDir/GameMode.sh" ;;
@@ -754,6 +826,42 @@ get_wobble_label() {
   printf '%s\n' "${label:-Unknown}"
 }
 
+get_palette_source_label() {
+  case "$(palette_source_current)" in
+  butterpal) printf 'Butterpal' ;;
+  wallust) printf 'Wallust' ;;
+  *) printf 'Unknown' ;;
+  esac
+}
+
+# Wallpaper palette source: butterpal, or wallust's own extraction.
+#
+# Delegated to WallustConfig.sh so the state-file path and the resolution
+# order (environment, then state file, then auto-detect) live in exactly one
+# place. It is sourced in a subshell so its globals - wallust_args and friends
+# - do not leak into this script.
+palette_source_state_file() {
+  local config="$scriptsDir/WallustConfig.sh"
+  local state_file=""
+
+  if [[ -f "$config" ]]; then
+    state_file="$(. "$config" >/dev/null 2>&1; wallust_palette_source_file)"
+  fi
+
+  printf '%s' "${state_file:-${XDG_STATE_HOME:-$HOME/.local/state}/hypr/palette_source}"
+}
+
+palette_source_current() {
+  local config="$scriptsDir/WallustConfig.sh"
+  local source=""
+
+  if [[ -f "$config" ]]; then
+    source="$(. "$config" >/dev/null 2>&1; printf '%s' "$palette_source")"
+  fi
+
+  printf '%s' "${source:-wallust}"
+}
+
 show_category_menu() {
   local category="$1"
   local quick_settings_monitor="$2"
@@ -822,6 +930,7 @@ Choose Hyprland Animations
 Choose Monitor Profiles
 Choose Rofi Themes
 Search for Keybinds
+Choose Palette Source
 Rainbow Borders Mode
 EOF
     )
@@ -856,7 +965,7 @@ show_main_menu() {
   printf '%b\n' "[[ User Settings ]]\x00meta\x1fManage User Defaults Edit User Defaults Edit User Keybinds Edit User ENV variables Edit User Startup Apps overlay Edit User Window Rules overlay Edit User Layer Rules overlay Edit User Settings Edit User Decorations Edit User Animations Edit User Laptop Settings Edit User Monitor config Select Hyprview Layout"
   printf '%b\n' "[[ System Settings ]]\x00meta\x1fEdit System Default Keybinds Edit System Default Startup Apps Edit System Default Window Rules Edit System Default Layer Rules Edit System Default Settings"
   printf '%b\n' "[[ Toggle Options ]]\x00meta\x1fToggle Waybar Weather units C F Toggle Waybar Clock 12H 24H Toggle Game Mode Toggle Window Wobble On Off"
-  printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Choose Wlogout Theme Choose Wlogout Wallpaper Arrange Monitors nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Rainbow Borders Mode"
+  printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Choose Wlogout Theme Choose Wlogout Wallpaper Arrange Monitors nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Choose Palette Source Rainbow Borders Mode"
   printf '%s\n' "[ Quick Links]"
   printf '%s\n' "Manage User Defaults"
   printf '%s\n' "Set User Keybinds"
@@ -899,6 +1008,7 @@ show_main_menu() {
   printf '%s\n' "Choose Monitor Profiles"
   printf '%s\n' "Choose Rofi Themes"
   printf '%s\n' "Search for Keybinds"
+  printf '%s\n' "Choose Palette Source"
   printf '%s\n' "Rainbow Borders Mode"
 }
 
