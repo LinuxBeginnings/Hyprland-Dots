@@ -18,7 +18,11 @@
  @define-color color9 {{color9}};
  @define-color color10 {{color10}};
  @define-color color11 {{color11}};
- @define-color color12 {{color12}};
- @define-color color13 {{color13}};
+ /* The accent. The Wallust-* styles read @color12 and @color13 as their
+    accent and secondary accent (37 and 29 uses), and barely touch
+    @foreground, so the accent has to live here or the bar keeps painting the
+    ANSI palette, which hardly moves between wallpapers. */
+ @define-color color12 {{cursor}};
+ @define-color color13 {{cursor}};
  @define-color color14 {{color14}};
  @define-color color15 {{color15}}; 

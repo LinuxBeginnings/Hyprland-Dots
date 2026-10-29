@@ -445,7 +445,12 @@ fi
     sed -i -E 's/^(\s*palette\s*=\s*)([0-9]{1,2}):/\1\2=/' "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" 2>/dev/null || true
   fi
 
-  # Light wait for Ghostty colors file to be present then signal Ghostty to reload (SIGUSR2)
+  # Light wait for the Ghostty palette file, then ask Ghostty to reload.
+  # SIGUSR2 is Ghostty's documented reload and it does run, but on 1.4.0 it
+  # does not re-apply colours to a surface that is already open, so the
+  # palette appears only after Ghostty's own reload or a restart. The signal
+  # is still sent: it is correct for builds that do apply it, and harmless
+  # otherwise.
   for _ in 1 2 3; do
     [ -s "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" ] && break
     sleep 0.1

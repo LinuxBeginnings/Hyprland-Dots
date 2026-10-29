@@ -174,9 +174,19 @@
   - butterpal keeps `color12` ANSI blue so terminal output stays readable
   - Its accent pick goes to `cursor`, so those roles now read `{{cursor}}`
   - `colors-hyprland.conf` carries it in `$color12`, which the borders read
-  - `colors-rofi.rasi`, `colors-waybar.css` and `colors-nwg-dock.css` too
+  - `colors-rofi.rasi` and `colors-nwg-dock.css` use `{{cursor}}` directly
+  - `colors-waybar.css` puts it in `@color12`/`@color13`, not `@foreground`
+  - Those two are what the Wallust styles read, 37 and 29 times
+  - `@foreground` is used 16 times and `@cursor` not at all
+  - Without that the bar kept painting the ANSI palette and never moved
   - Terminal palettes keep `color12`, so ANSI output stays blue
   - Rofi's selection is no longer rebuilt from `color12`/`color13`
+- Ghostty's wallpaper colours need a Ghostty reload, not a signal
+  - `WallustSwww.sh` sends `SIGUSR2`, which Ghostty receives and acts on
+  - On 1.4.0 that reload does not repaint a surface that is already open
+  - Writing the palette into the main config fails the same way
+  - So the colours appear only after Ghostty's own reload or a restart
+  - The signal stays: it is right for builds that do apply it
 
 ## Removed:
 
