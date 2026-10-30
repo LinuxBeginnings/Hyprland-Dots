@@ -95,7 +95,7 @@
 	"on-click": "$HOME/.config/hypr/scripts/KooLsDotsUpdate.sh",
 	"on-click-right": "$HOME/.config/hypr/scripts/KooLsDotsUpdate.sh --upgrade",
 	"tooltip": true,
-	"tooltip-format": "Left Click: Check KooL Dots update\nRight Click: Download & upgrade (installer + dots)",
+	"tooltip-format": "Left Click: Check KooL Dots update\nRight Click: Download &amp; upgrade (installer + dots)",
 },
 
 // Hypridle inhibitor

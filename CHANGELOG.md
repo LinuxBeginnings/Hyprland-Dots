@@ -4,6 +4,12 @@
 
 ## Fixed:
 
+- The `custom/dot_update` Waybar tooltip is no longer blank
+  - `tooltip-format` is rendered as Pango markup, not plain text
+  - The text held a bare `&` in `Download & upgrade`
+  - Pango rejects that, so the tooltip parsed to nothing
+  - It is escaped as `&amp;` now
+
 - Clients that need an alpha buffer can start again, e.g. `kitty` on a VM
   - `quirks:skip_non_kms_dmabuf_formats` defaults to `true`
   - It narrows advertised renderer dmabuf formats to the display's scanout set
