@@ -146,7 +146,8 @@
   - Falls back to `wallust run` when butterpal produces no scheme
   - butterpal reads PNG, JPEG, BMP and GIF; WebP and video take that fallback
   - `KOOLDOTS_PALETTE_SOURCE` or `state/hypr/palette_source` picks the source
-  - Without either, butterpal wins when installed, else wallust
+  - Without either, wallust, which is the default
+  - butterpal is opt-in: it is not installed by default
   - Quick Settings lists `Choose Palette Source` under `[[ Misc ]]`
   - It marks the current source and regenerates on a change
   - Picking Butterpal with butterpal missing notifies and changes nothing

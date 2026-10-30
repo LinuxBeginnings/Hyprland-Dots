@@ -111,7 +111,10 @@ wallust_prepare_args() {
 # Which tool extracts the colours:
 #   1. KOOLDOTS_PALETTE_SOURCE=butterpal|wallust   (environment, wins)
 #   2. ${XDG_STATE_HOME:-$HOME/.local/state}/hypr/palette_source
-#   3. butterpal when installed, otherwise wallust
+#   3. wallust, which is the default
+#
+# butterpal is opt-in. It is not installed by default, so auto-detecting it
+# would make the source depend on whatever happens to be on PATH.
 # ---------------------------------------------------------------------------
 
 wallust_palette_source_file() {
@@ -136,11 +139,9 @@ wallust_resolve_palette_source() {
     palette_source="$requested"
     ;;
   "")
-    if command -v butterpal >/dev/null 2>&1; then
-      palette_source="butterpal"
-    else
-      palette_source="wallust"
-    fi
+    # wallust is the default. butterpal is opt-in: it is not installed by
+    # default, so the source must not depend on what is on PATH.
+    palette_source="wallust"
     ;;
   *)
     # An unrecognised value must not take every wallpaper change down with it.
