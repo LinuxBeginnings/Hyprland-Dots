@@ -36,7 +36,10 @@ check() {
   local label="$1" expected="$2"
   shift 2
   local got
-  got="$("$@" /bin/bash -c ". '$CONFIG' >/dev/null 2>&1; printf '%s' \"\$palette_source\"")"
+  # $BASH, not /bin/bash: one case runs with a stripped PATH, and NixOS has
+  # no /bin/bash at all. The absolute path of the bash already running this
+  # test works either way.
+  got="$("$@" "$BASH" -c ". '$CONFIG' >/dev/null 2>&1; printf '%s' \"\$palette_source\"")"
   assert_eq "$label" "$expected" "$got"
 }
 
