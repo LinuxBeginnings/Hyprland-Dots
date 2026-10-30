@@ -406,8 +406,23 @@ install_butterpal_binary() {
   _warn() { echo "[${APP_NAME}] WARN: $*" 1>&2 | tee -a "$log"; }
 
   # Already there, from this asset or a package: leave it alone.
-  if command -v "$APP_NAME" >/dev/null 2>&1; then
-    _log "already installed at $(command -v "$APP_NAME")."
+  #
+  # PATH first, then the two places a package or a local build lands. An
+  # install can run under sudo with a PATH that holds neither, and unpacking a
+  # second copy into /usr/local/bin would then shadow the packaged one.
+  local existing=""
+  existing="$(command -v "$APP_NAME" 2>/dev/null || true)"
+  if [ -z "$existing" ]; then
+    local candidate
+    for candidate in "/usr/bin/$APP_NAME" "/usr/local/bin/$APP_NAME"; do
+      if [ -x "$candidate" ]; then
+        existing="$candidate"
+        break
+      fi
+    done
+  fi
+  if [ -n "$existing" ]; then
+    _log "already installed at ${existing}."
     return 0
   fi
 

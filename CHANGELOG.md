@@ -157,6 +157,8 @@
 - `butterpal` is installed from a bundled asset
   - `copy.sh` unpacks `assets/butterpal.gz` to `/usr/local/bin`
   - Only when it is not already installed, and never on NixOS
+  - The check looks at `PATH`, then `/usr/bin` and `/usr/local/bin`
+  - An install can run under `sudo` with a `PATH` holding neither
   - The asset is dynamically linked, so it cannot run on NixOS
   - A flake is expected to provide it there instead
   - butterpal stays optional: the palette source still defaults to wallust
