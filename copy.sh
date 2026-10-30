@@ -793,6 +793,9 @@ if is_nixos; then
 else
   install_waybar_weather "$LOG"
 fi
+# butterpal is optional: the palette source defaults to wallust, and this
+# helper skips NixOS on its own because the asset cannot run there.
+install_butterpal_binary "$LOG"
 ensure_oh_my_zsh "$LOG"
 printf "\n%.0s" {1..1}
 

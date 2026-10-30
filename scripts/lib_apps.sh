@@ -387,6 +387,67 @@ install_waybar_weather() {
   fi
 }
 
+# Install butterpal from the bundled asset.
+#
+# butterpal is an alternative palette source, not the default, so nothing here
+# is fatal: a problem is a warning and the dots install carries on with wallust.
+#
+# NixOS is skipped on purpose. The asset is dynamically linked against glibc,
+# so it cannot run there; a flake is expected to provide it instead. That is
+# why it goes to /usr/local/bin and not /usr/bin - the same place a locally
+# built binary would land.
+install_butterpal_binary() {
+  local log="${1:-/dev/null}"
+  local APP_NAME="butterpal"
+  local INSTALL_PATH="/usr/local/bin/${APP_NAME}"
+  local ASSET="${SCRIPT_DIR:-.}/assets/${APP_NAME}.gz"
+
+  _log() { echo "[${APP_NAME}] $*" 2>&1 | tee -a "$log"; }
+  _warn() { echo "[${APP_NAME}] WARN: $*" 1>&2 | tee -a "$log"; }
+
+  # Already there, from this asset or a package: leave it alone.
+  if command -v "$APP_NAME" >/dev/null 2>&1; then
+    _log "already installed at $(command -v "$APP_NAME")."
+    return 0
+  fi
+
+  if grep -qi '^ID=nixos' /etc/os-release 2>/dev/null; then
+    _log "NixOS detected; skipping the bundled binary. It needs a flake."
+    return 0
+  fi
+
+  if [ ! -f "$ASSET" ]; then
+    _warn "asset not found: $ASSET"
+    return 0
+  fi
+  if ! command -v gzip >/dev/null 2>&1; then
+    _warn "gzip not found; cannot unpack $ASSET"
+    return 0
+  fi
+
+  local SUDO=""
+  if [ "$EUID" -ne 0 ]; then
+    if command -v sudo >/dev/null 2>&1; then
+      SUDO="sudo"
+    else
+      _warn "sudo not available; cannot write to ${INSTALL_PATH}"
+      return 0
+    fi
+  fi
+
+  _log "Installing to ${INSTALL_PATH} from ${ASSET}"
+  if ${SUDO} sh -c "tmp=\$(mktemp '${INSTALL_PATH}.XXXXXX') && gzip -dc '$ASSET' > \"\$tmp\" && chmod 0755 \"\$tmp\" && mv -f \"\$tmp\" '${INSTALL_PATH}'"; then
+    if "${INSTALL_PATH}" --version >/dev/null 2>&1; then
+      _log "Installed ${APP_NAME} successfully."
+    else
+      _warn "${APP_NAME} installed, but a basic self-check did not run."
+    fi
+  else
+    _warn "Failed to install ${APP_NAME} to ${INSTALL_PATH}"
+  fi
+  return 0
+}
+
 # Install Oh My Zsh (and bundled theme templates) when zsh is used and OMZ is missing.
 # Uses --unattended --keep-zshrc so it never blocks the script, doesn't hijack the user's
 # shell immediately, and preserves the existing .zshrc.
