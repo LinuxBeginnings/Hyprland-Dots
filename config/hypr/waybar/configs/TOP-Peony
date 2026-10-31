@@ -38,6 +38,7 @@
 "modules-center": ["hyprland/submap", "clock#4"], 
 	
 "modules-right": [
+	"custom/qs-network",
 	"battery",
 	"custom/separator#blank",
 	"backlight",

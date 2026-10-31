@@ -55,10 +55,18 @@ Once it is running, show or hide it with:
 ```
 
 The Waybar module (`custom/qs-network`, defined in `waybar/ModulesCustom`) is
-already on the `TOP-Default` and `TOP-Default-Laptop` bars:
+on every bundled bar layout, in `modules-right`:
 
 - left click: show or hide the panel
 - right click: `nmtui` (unchanged behaviour from the old `network` module)
+
+The icon follows the connection: wired, Wi-Fi signal strength, or a slashed
+Wi-Fi glyph when nothing is connected. Two-bar layouts (`TOP-&-BOT-*`,
+`TOP-&-*`, `BOT-&-*`) get it on the first bar only, so it does not appear twice.
+Every stylesheet in `waybar/style` carries a `#custom-qs-network` rule; it
+inherits the bar's text colour, so a style you switch to later still looks
+right. To take the icon off a bar, delete the `"custom/qs-network",` line from
+its `modules-right`.
 
 To bind it on the keyboard, add to `hypr/UserConfigs/UserKeybinds.conf`:
 

@@ -34,6 +34,7 @@
     "custom/keyboard#icon",
     "custom/keyboard#text",
     "tray",
+    "custom/qs-network",
     "custom/separator",
     "custom/power"
   ],

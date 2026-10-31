@@ -107,7 +107,11 @@
 
 ## Added:
 
-- Quickshell network / Bluetooth widget for waybar 
+- Quickshell network / Bluetooth widget for waybar
+  - Ethernet, Wi-Fi and Bluetooth tabs, with address, gateway, DNS and MAC
+  - Waybar `custom/qs-network` icon on every bundled bar layout
+  - Each bundled style carries a matching `#custom-qs-network` rule
+  - Colours follow wallust, so the panel tracks the current wallpaper
 - Waybar's dots update check can now download and run the upgrade
   - Right-click `custom/dot_update`, or pick `Upgrade now` in its window
   - It clones the installer for your OS and `Hyprland-Dots` into a temp dir

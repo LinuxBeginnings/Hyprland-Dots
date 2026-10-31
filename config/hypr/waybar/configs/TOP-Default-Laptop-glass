@@ -45,6 +45,7 @@
 
 "modules-right": [
 	"tray",
+	"custom/qs-network",
 	"group/laptop",
 	"group/mobo_drawer",
 	"group/audio",

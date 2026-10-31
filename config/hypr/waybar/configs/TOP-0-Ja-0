@@ -44,6 +44,7 @@
 	],
 
 "modules-right": [
+	"custom/qs-network",
 	"group/laptop",
 	"custom/separator#blank",
 	"group/mobo_drawer",

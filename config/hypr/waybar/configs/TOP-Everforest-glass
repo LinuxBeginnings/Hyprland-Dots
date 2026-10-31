@@ -38,6 +38,7 @@
 	"idle_inhibitor",
 	],
 "modules-right": [
+	"custom/qs-network",
 	"cpu#forest",
 	"memory#forest",
 	"temperature#forest",

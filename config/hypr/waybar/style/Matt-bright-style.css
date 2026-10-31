@@ -356,3 +356,14 @@ margin-left: 0;
 .modules-right > widget\:last-child > #workspaces {
 margin-right: 0;
 }
+
+/* Network & Bluetooth panel launcher (Quickshell widget) */
+#custom-qs-network {
+    padding: 0 10px;
+    margin: 0 2px;
+    border-radius: 8px;
+}
+
+#custom-qs-network.disconnected {
+    color: red;
+}

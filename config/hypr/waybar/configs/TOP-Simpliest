@@ -34,6 +34,7 @@
 	],
     
 "modules-right": [
+	"custom/qs-network",
 	"idle_inhibitor",
 	"custom/nightlight",
 	"group/notify",

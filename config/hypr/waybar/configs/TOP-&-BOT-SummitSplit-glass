@@ -41,6 +41,7 @@
 	], 
 
 "modules-right": [
+	"custom/qs-network",
 	"custom/weather2",	  
 	"battery", 
 	"backlight",
@@ -95,4 +96,4 @@
 	"pulseaudio#microphone",	  
 	"custom/power",
 	],  
-}],
+}]

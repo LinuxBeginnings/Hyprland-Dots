@@ -31,6 +31,7 @@
 "modules-right": [
 	"custom/menu", 
 	"tray",
+	"custom/qs-network",
 	"group/notify",
 	"mpris", 
 	"network", 

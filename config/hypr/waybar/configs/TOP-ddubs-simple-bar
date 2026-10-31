@@ -47,6 +47,7 @@
 	"pulseaudio#microphone",
 	"custom/separator#blank",
 	"tray",
+	"custom/qs-network",
 	"custom/separator#blank",
 	"custom/weather2",
 	"cpu",

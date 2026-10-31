@@ -39,6 +39,7 @@
 "modules-right": [
 	"mpris",
 	"tray",
+	"custom/qs-network",
 	"group/notify",
 	"backlight#vertical",
 	"pulseaudio#microphone_vertical",

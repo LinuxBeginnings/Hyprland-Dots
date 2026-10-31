@@ -38,6 +38,7 @@
 "modules-center": ["hyprland/submap", "hyprland/workspaces#kanji"], 
 	
 "modules-right": [
+	"custom/qs-network",
 	"pulseaudio#1",
 	"backlight#2", 
 	"battery",

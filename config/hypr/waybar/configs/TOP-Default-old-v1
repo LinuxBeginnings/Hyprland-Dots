@@ -59,6 +59,7 @@
 	"custom/separator#dot-line",
 	"group/notify",
 	"tray",
+	"custom/qs-network",
 	"mpris", 
 	"custom/separator#dot-line",
 	"bluetooth",
