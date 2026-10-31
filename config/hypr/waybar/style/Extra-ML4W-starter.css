@@ -134,7 +134,8 @@ window#waybar.empty #window {
 #network,
 #pulseaudio,
 #battery,
-#clock {
+#clock,
+#custom-qs-network {
     margin-right: 20px;
     font-weight: bold;
     color: @iconcolor;
@@ -201,7 +202,8 @@ window#waybar.empty #window {
 #custom-weather.severe,
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
-#custom-weather.sunnyDay {
+#custom-weather.sunnyDay,
+#custom-qs-network {
   padding-right: 6px;
   padding-left: 6px;
     color: @iconcolor;
@@ -271,7 +273,8 @@ window#waybar.empty #window {
  * Network
  * ----------------------------------------------------- */
 
-#network {
+#network,
+#custom-qs-network {
     background-color: @backgroundlight;
     color: @textcolor2;
     border-radius: 15px;
@@ -405,12 +408,6 @@ label:focus {
 }
 
 /* Network & Bluetooth panel launcher (Quickshell widget) */
-#custom-qs-network {
-    padding: 0 10px;
-    margin: 0 2px;
-    border-radius: 8px;
-}
-
 #custom-qs-network.disconnected {
     color: red;
 }

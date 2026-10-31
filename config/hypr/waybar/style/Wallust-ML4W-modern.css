@@ -192,7 +192,8 @@ window#waybar.empty #window {
 #custom-weather.severe,
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
-#custom-weather.sunnyDay {
+#custom-weather.sunnyDay,
+#custom-qs-network {
     margin-right: 8px;
 	margin-left: 6px;
     /* NOTE: Waybar v14+ ignores % font-size values */
@@ -302,7 +303,8 @@ background-color: @color13;
     color: @textcolor1;
 }
 
-#network {
+#network,
+#custom-qs-network {
     background-color: @backgroundlight;
     color: @textcolor2;
     border-radius: 5px 5px 5px 5px;
@@ -429,12 +431,6 @@ background-color: @color13;
 }
 
 /* Network & Bluetooth panel launcher (Quickshell widget) */
-#custom-qs-network {
-    padding: 0 10px;
-    margin: 0 2px;
-    border-radius: 8px;
-}
-
 #custom-qs-network.disconnected {
     color: red;
 }

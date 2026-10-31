@@ -130,7 +130,8 @@ button.active {
 #custom-weather.severe,
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
-#custom-weather.sunnyDay {
+#custom-weather.sunnyDay,
+#custom-qs-network {
   color: #ffffff;
   padding-top: 2px;
   padding-bottom: 2px;
@@ -159,7 +160,8 @@ button.active {
 #idle_inhibitor,
 #custom-swaync,
 #custom-menu,
-#custom-power {
+#custom-power,
+#custom-qs-network {
   margin-top: 2px;
   margin-bottom: 2px;
 }
@@ -282,7 +284,8 @@ label:focus {
   padding-left: 10px;
 }
 
-#network {
+#network,
+#custom-qs-network {
   background-color: #2980b9;
   border-bottom: 8px solid #1f618d;
 }
@@ -546,12 +549,6 @@ tooltip label {
 }
 
 /* Network & Bluetooth panel launcher (Quickshell widget) */
-#custom-qs-network {
-    padding: 0 10px;
-    margin: 0 2px;
-    border-radius: 8px;
-}
-
 #custom-qs-network.disconnected {
     color: red;
 }

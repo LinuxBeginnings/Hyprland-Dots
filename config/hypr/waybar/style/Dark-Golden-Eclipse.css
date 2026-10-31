@@ -95,7 +95,8 @@ window#waybar.hidden {
 #custom-weather.severe,
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
-#custom-weather.sunnyDay {
+#custom-weather.sunnyDay,
+#custom-qs-network {
   color: #fcba03;
   padding-top: 3px;
   padding-bottom: 3px;
@@ -244,12 +245,6 @@ window#waybar.hidden {
 }
 
 /* Network & Bluetooth panel launcher (Quickshell widget) */
-#custom-qs-network {
-    padding: 0 10px;
-    margin: 0 2px;
-    border-radius: 8px;
-}
-
 #custom-qs-network.disconnected {
     color: red;
 }

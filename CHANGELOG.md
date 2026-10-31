@@ -4,6 +4,12 @@
 
 ## Fixed:
 
+- `custom/qs-network` now matches each Waybar style's module treatment
+  - Styles had a pasted `#custom-qs-network` rule with padding and radius
+  - The module was missing from each style's shared module selector list
+  - It now inherits the same pill, underline or background as `#network`
+  - `Garuda.css` and `Wallust-Box-type.css` use an underline, not a pill
+  - `Matt-bright-style.css` has no shared list, so it gets a standalone rule
 - Quickshell applets no longer render pure white in dark themes
   - `templates/qml_color.json` mapped `layerBackground1` to `color7`
   - In dark palettes `color7` is the light foreground text color

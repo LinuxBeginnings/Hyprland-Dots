@@ -49,7 +49,8 @@ window#waybar {
 #tray,
 #window,
 #custom-menu,
-#custom-power {
+#custom-power,
+#custom-qs-network {
     padding: 0 3px;
     border-bottom: 2px solid #d8dee9;
 }
@@ -156,12 +157,6 @@ window#waybar {
 }
 
 /* Network & Bluetooth panel launcher (Quickshell widget) */
-#custom-qs-network {
-    padding: 0 10px;
-    margin: 0 2px;
-    border-radius: 8px;
-}
-
 #custom-qs-network.disconnected {
     color: red;
 }
