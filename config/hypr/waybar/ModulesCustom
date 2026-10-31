@@ -79,6 +79,17 @@
 	"tooltip-format": "Left Click: Quick Tips\nRight Click: Keybinds",
 },
 
+// Quickshell network & bluetooth widget (hypr/quickshell/network-widget)
+"custom/qs-network": {
+	"exec": "$HOME/.config/hypr/scripts/QsNetworkPanel.sh status",
+	"interval": 10,
+	"return-type": "json",
+	"format": "{}",
+	"tooltip": true,
+	"on-click": "$HOME/.config/hypr/scripts/QsNetworkPanel.sh toggle",
+	"on-click-right": "$HOME/.config/hypr/scripts/WaybarScripts.sh --nmtui",
+},
+
 // External monitor brightness (ddcutil)
 "custom/brightness_external": {
 	"format": "{}",

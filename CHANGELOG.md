@@ -107,6 +107,7 @@
 
 ## Added:
 
+- Quickshell network / Bluetooth widget for waybar 
 - Waybar's dots update check can now download and run the upgrade
   - Right-click `custom/dot_update`, or pick `Upgrade now` in its window
   - It clones the installer for your OS and `Hyprland-Dots` into a temp dir
@@ -168,6 +169,18 @@
   - The asset is dynamically linked, so it cannot run on NixOS
   - A flake is expected to provide it there instead
   - butterpal stays optional: the palette source still defaults to wallust
+- Quickshell network & bluetooth panel for Waybar
+  - Horizontal tabs for Ethernet, Wi-Fi and Bluetooth, one screen each
+  - `custom/qs-network` shows the active link, left click opens the panel
+  - Right click keeps the old `nmtui` behaviour
+  - Ethernet and Wi-Fi tabs show address, gateway, DNS and MAC
+  - Wi-Fi tab lists networks, click one to connect, the active one to drop
+  - Locked networks ask for the password inline
+  - Bluetooth tab groups connected devices and shows their battery
+  - Panel follows wallust: background, accent and text from the palette
+  - Both `colors-waybar.css` and `qml_color.json` are watched for changes
+  - New: `hypr/quickshell/network-widget/` and `QsNetworkPanel.sh`
+  - Enabled on the `TOP-Default` and `TOP-Default-Laptop` bars
 
 ## Updated:
 

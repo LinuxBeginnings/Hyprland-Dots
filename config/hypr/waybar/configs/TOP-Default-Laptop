@@ -46,6 +46,7 @@
 
 "modules-right": [
 	"tray",
+	"custom/qs-network",
 	"network#speed",
 	"group/laptop",
 	"group/mobo_drawer",

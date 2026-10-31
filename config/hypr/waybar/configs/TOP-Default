@@ -49,6 +49,7 @@
 
 "modules-right": [
 	"tray",
+	"custom/qs-network",
 	"network#speed",
 	"custom/separator#dot-line",
 	"group/mobo_drawer",
