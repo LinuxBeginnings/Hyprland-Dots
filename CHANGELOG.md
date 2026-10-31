@@ -124,10 +124,12 @@
   - Type to filter on the chord or the description
   - `↑`/`↓` move the selection, `Enter` copies the chord
   - `Esc` or a click outside dismisses it
-  - `SUPER ALT K` toggles it through `QsKeybinds.sh`
+  - `SUPER SHIFT K` opens it, the keybind the rofi menu had
+  - Where quickshell is missing that keybind opens the rofi menu instead
+  - So the Ubuntu 24.04 based installs keep the menu they always had
+  - `QsKeybinds.sh which` prints which of the two would open
   - Colours follow wallust; the layer rule blurs the card only
   - New: `quickshell/keybinds/` and `QsKeybinds.sh`
-  - Where quickshell is missing the keybind notifies and does nothing else
 - Quickshell network / Bluetooth widget for waybar
   - Ethernet, Wi-Fi and Bluetooth tabs, with address, gateway, DNS and MAC
   - Waybar `custom/qs-network` icon on every bundled bar layout

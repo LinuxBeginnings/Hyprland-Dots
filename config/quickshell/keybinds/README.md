@@ -7,14 +7,19 @@ one key cap per key in the chord.
 
 ```sh
 quickshell -p ~/.config/quickshell/keybinds          # start, stays resident
-~/.config/hypr/scripts/QsKeybinds.sh toggle          # SUPER ALT K
+~/.config/hypr/scripts/QsKeybinds.sh toggle          # SUPER SHIFT K
 ~/.config/hypr/scripts/QsKeybinds.sh open | close | refresh
+~/.config/hypr/scripts/QsKeybinds.sh which           # quickshell or rofi
 ```
 
 The shell starts hidden and collapses to a single pixel, so it stays resident
 between toggles and the panel opens instantly. `QsKeybinds.sh` starts the shell
-if it is not already running. Where quickshell is not installed the script says
-so through a notification and exits - the keybind is then simply inert.
+if it is not already running.
+
+`SUPER SHIFT K` is the entry point, and it reaches both menus. Where quickshell
+is missing - the Ubuntu 24.04 based installs - or the panel will not start, the
+script opens the rofi menu (`KeyBinds.sh`) instead, so the keybind is never
+dead. `which` prints the menu that would open without opening it.
 
 IPC, if something else wants to drive it:
 
