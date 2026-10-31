@@ -103,3 +103,14 @@ apply_layer_rule({
   blur = true,
   ignore_alpha = 0,
 })
+
+-- Quickshell keybind panel. ignore_alpha is what keeps the blur on the card:
+-- the card is nearly opaque and the dimmed backdrop behind it is 0.35.
+apply_layer_rule({
+  name = "system-layer-layerrule-010",
+  match = {
+    namespace = "quickshell:keybinds",
+  },
+  blur = true,
+  ignore_alpha = 0.5,
+})

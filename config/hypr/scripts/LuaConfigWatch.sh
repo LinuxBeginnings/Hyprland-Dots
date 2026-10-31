@@ -48,6 +48,15 @@
 #   re-enters MonitorWatcher through `configreloaded`, so the session reloaded
 #   every ~2s. Only the content can tell such a write from a real save, so the
 #   content of each watched file is cached and compared before the reload.
+# * An inotify watch follows the inode, not the path. `copy.sh` backs the config
+#   up and copies a new tree in on every dots upgrade, so the watched
+#   directories are deleted and recreated under a running watcher: the watches
+#   then point at inodes that no longer exist, `inotifywait` stays alive and
+#   reports nothing, and the watcher looks healthy while hearing nothing for the
+#   rest of the session. The inode of each watched directory is recorded when
+#   the watches are armed and re-checked on the tick, and re-arming reconciles
+#   every watched file against the cache, so a save made during the blind window
+#   is still applied.
 # * No `set -e`: a transient failure (inotify limit reached, a watched directory
 #   removed mid-session) must not end the watcher for the rest of the session.
 
@@ -80,6 +89,10 @@ debounce=0.25
 max_debounce_events=8
 watcher_pid=""
 changed_files=()
+# Inode of each watched directory as of the last arm. Compared on the tick,
+# which costs one `stat` per tick and nothing per event.
+dir_ids=""
+armed=0
 
 log_line() {
   printf '%s %s\n' "$(date '+%H:%M:%S')" "$*" >>"$log" 2>/dev/null || true
@@ -225,6 +238,34 @@ settle() {
   done
 }
 
+# --- watch identity ---------------------------------------------------------
+
+record_watch_identity() {
+  dir_ids="$(stat -c '%i' "${watch_dirs[@]}" 2>/dev/null | tr '\n' ' ')"
+}
+
+# False once a watched directory has been deleted or replaced. A directory that
+# is gone entirely prints fewer ids than were recorded, so a removal is caught
+# as well as a replacement.
+watches_are_current() {
+  [ "$(stat -c '%i' "${watch_dirs[@]}" 2>/dev/null | tr '\n' ' ')" = "$dir_ids" ]
+}
+
+# Anything written while the watches were dead is invisible to inotify: those
+# events went to the old inodes. Compare every watched file against the cache so
+# a save made during that window is still applied, and so the content check that
+# guards against the MonitorWatcher loop still applies.
+reconcile() {
+  local file
+  changed_files=()
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    content_changed "$file" && record_change "$file"
+  done < <(find "${watch_dirs[@]}" -type f -name '*.lua' 2>/dev/null)
+  [ "${#changed_files[@]}" -gt 0 ] && apply_changes
+  return 0
+}
+
 # --- watching ---------------------------------------------------------------
 
 watch_with_inotify() {
@@ -238,6 +279,11 @@ watch_with_inotify() {
     --format '%w%f' --include "$lua_re" \
     "${watch_dirs[@]}" >"$fifo" 2>/dev/null &
   watcher_pid=$!
+  record_watch_identity
+  # Re-arming, not the first arm: pick up anything written while the previous
+  # watches were pointing at deleted inodes.
+  [ "$armed" = 1 ] && reconcile
+  armed=1
 
   local event
   while :; do
@@ -251,6 +297,13 @@ watch_with_inotify() {
     # Bounded read, so there is a chance to notice inotifywait is gone (inotify
     # limits, a watch that could not be established) and start it again.
     kill -0 "$watcher_pid" 2>/dev/null || break
+    # A dots upgrade backs the config up and copies a new tree in, which
+    # replaces the watched directories. The live watches then point at deleted
+    # inodes and never fire again, so re-arm instead of trusting them.
+    if ! watches_are_current; then
+      log_line "watched directories were replaced - re-arming"
+      break
+    fi
   done <"$fifo"
 
   kill "$watcher_pid" 2>/dev/null

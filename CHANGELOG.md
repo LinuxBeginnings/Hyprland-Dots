@@ -4,6 +4,13 @@
 
 ## Fixed:
 
+- A saved config file applies again after a dots upgrade
+  - An inotify watch follows the inode, not the path
+  - The upgrade backs `~/.config/hypr` up and copies a new tree in
+  - The watches then pointed at deleted directories and never fired again
+  - `inotifywait` stayed alive, so the watcher looked healthy but was deaf
+  - `LuaConfigWatch.sh` records each directory's inode and re-arms on a change
+  - Re-arming reconciles every watched file, so a save meanwhile still lands
 - The `custom/dot_update` Waybar tooltip is no longer blank
   - `tooltip-format` is rendered as Pango markup, not plain text
   - The text held a bare `&` in `Download & upgrade`
@@ -107,6 +114,20 @@
 
 ## Added:
 
+- Quickshell keybind panel: a searchable frame of key caps, grouped by function
+  - Lists what the compositor has bound, not what the config text says
+  - Reads the same live index `SUPER SHIFT K` hands to rofi
+  - One 3D key cap per key in the chord, drawn rather than shipped as images
+  - Modifier caps are tinted with the palette accent
+  - Sorted into categories, with a header and a count per category
+  - Two binds to a row in one scrollable page; frame up to 1426x989
+  - Type to filter on the chord or the description
+  - `↑`/`↓` move the selection, `Enter` copies the chord
+  - `Esc` or a click outside dismisses it
+  - `SUPER ALT K` toggles it through `QsKeybinds.sh`
+  - Colours follow wallust; the layer rule blurs the card only
+  - New: `quickshell/keybinds/` and `QsKeybinds.sh`
+  - Where quickshell is missing the keybind notifies and does nothing else
 - Quickshell network / Bluetooth widget for waybar
   - Ethernet, Wi-Fi and Bluetooth tabs, with address, gateway, DNS and MAC
   - Waybar `custom/qs-network` icon on every bundled bar layout

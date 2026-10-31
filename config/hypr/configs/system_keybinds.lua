@@ -625,6 +625,7 @@ bind(
   { description = "toggle active window opacity" }
 )
 bind("SUPER SHIFT", "K", exec_cmd("$HOME/.config/hypr/scripts/KeyBinds.sh"), { description = "search keybinds" })
+bind("SUPER ALT", "K", exec_cmd("$HOME/.config/hypr/scripts/QsKeybinds.sh toggle"), { description = "keybind panel (quickshell)" })
 bind("SUPER SHIFT", "A", exec_cmd("$HOME/.config/hypr/scripts/Animations.sh"), { description = "animations menu" })
 bind(
   "SUPER SHIFT",
