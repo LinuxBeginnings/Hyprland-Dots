@@ -79,7 +79,7 @@
 	"tooltip-format": "Left Click: Quick Tips\nRight Click: Keybinds",
 },
 
-// Quickshell network & bluetooth widget (hypr/quickshell/network-widget)
+// Quickshell network & bluetooth widget (quickshell/network-widget)
 "custom/qs-network": {
 	"exec": "$HOME/.config/hypr/scripts/QsNetworkPanel.sh status",
 	"interval": 10,

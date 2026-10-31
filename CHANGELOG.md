@@ -4,6 +4,17 @@
 
 ## Fixed:
 
+- Quickshell applets no longer render pure white in dark themes
+  - `templates/qml_color.json` mapped `layerBackground1` to `color7`
+  - In dark palettes `color7` is the light foreground text color
+  - Workspace cards in overview read `colLayer1`, which became pure white
+  - `templates/qml_color.json` now maps to `background` and `color12`
+  - `overview/common/Appearance.qml` derives surface layers via `ColorUtils.mix`
+  - `MaterialThemeLoader` discards light layer overrides in dark mode
+- Network widget paths no longer fail on non-standard XDG environments
+  - `Backend.qml` and `QsNetworkPanel.sh` resolved from an obsolete path
+  - Relative and environment-based path resolution restores functionality
+
 - A saved config file applies again after a dots upgrade
   - An inotify watch follows the inode, not the path
   - The upgrade backs `~/.config/hypr` up and copies a new tree in
@@ -206,10 +217,15 @@
   - Bluetooth tab groups connected devices and shows their battery
   - Panel follows wallust: background, accent and text from the palette
   - Both `colors-waybar.css` and `qml_color.json` are watched for changes
-  - New: `hypr/quickshell/network-widget/` and `QsNetworkPanel.sh`
+  - New: `quickshell/network-widget/` and `QsNetworkPanel.sh`
   - Enabled on the `TOP-Default` and `TOP-Default-Laptop` bars
 
 ## Updated:
+
+- Quickshell applets unified on dynamic Wallust theme resolution
+  - Portable `MaterialThemeLoader` installed across applets
+  - `overview` and `qs-hyprview` update dynamically on wallpaper change
+  - Legacy M3 aliases preserved for compatibility with existing widgets
 
 - `SUPER SHIFT B` opens the Rainbow Borders mode menu
   - It ran `RainbowBorders-low-cpu.sh --run-once`, one fixed gradient

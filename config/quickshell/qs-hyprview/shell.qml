@@ -3,14 +3,17 @@ import QtQuick
 import Quickshell
 import "./modules"
 import "./common"
+import "./services"
 
 ShellRoot {
     id: root
 
-    Appearance { id: m3 }
+    readonly property var m3: Appearance.m3colors
 
     Hyprview {
         liveCapture: true
         moveCursorToActiveWindow: false
     }
+
+    Component.onCompleted: MaterialThemeLoader.reapplyTheme()
 }

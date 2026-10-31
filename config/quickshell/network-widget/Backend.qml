@@ -13,8 +13,9 @@ Item {
     id: backend
 
     // Resolved from this widget's own directory, so it works both installed
-    // (~/.config/hypr/quickshell/network-widget) and straight from the repo.
-    readonly property string script: Quickshell.shellDir + "/../../scripts/QsNetworkPanel.sh"
+    // (~/.config/quickshell/network-widget) and straight from the repo. The
+    // widget sits under quickshell/, the script under hypr/scripts/.
+    readonly property string script: Quickshell.shellDir + "/../../hypr/scripts/QsNetworkPanel.sh"
 
     // Snapshot state.
     property var devices: []        // { iface, type, state, connection, ip, prefix, gateway, dns, mac, connected }

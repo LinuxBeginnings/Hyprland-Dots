@@ -6,7 +6,7 @@
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
 # Backend for the Quickshell network & bluetooth widget
-# (~/.config/hypr/quickshell/network-widget) and its Waybar module
+# (~/.config/quickshell/network-widget) and its Waybar module
 # (custom/qs-network).
 #
 # The QML panel never talks to NetworkManager or BlueZ directly: it runs
@@ -43,13 +43,13 @@
 
 set -u
 
-# The script lives next to the widget in both layouts:
-#   <hypr>/scripts/QsNetworkPanel.sh      (repo: config/hypr/scripts)
-#   <hypr>/quickshell/network-widget/    (repo: config/hypr/quickshell)
-# Deriving the path from here keeps repo runs and installed runs identical.
+# The widget sits two levels up from this script, under quickshell/:
+#   <config>/hypr/scripts/QsNetworkPanel.sh    this script
+#   <config>/quickshell/network-widget/        the widget
+# Deriving it from here keeps a repo run and an installed run identical.
 script_dir=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-widget_dir=$(CDPATH= cd -- "$script_dir/../quickshell/network-widget" 2>/dev/null && pwd) \
-  || widget_dir="$script_dir/../quickshell/network-widget"
+widget_dir=$(CDPATH= cd -- "$script_dir/../../quickshell/network-widget" 2>/dev/null && pwd) \
+  || widget_dir="$script_dir/../../quickshell/network-widget"
 qs_target="network-widget"
 
 have() { command -v "$1" >/dev/null 2>&1; }

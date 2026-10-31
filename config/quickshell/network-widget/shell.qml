@@ -1,10 +1,10 @@
 // Network & bluetooth popup for Waybar.
 //
-// Start:   quickshell -p ~/.config/hypr/quickshell/network-widget
+// Start:   quickshell -p ~/.config/quickshell/network-widget
 // Toggle:  ~/.config/hypr/scripts/QsNetworkPanel.sh toggle
 //
 // IPC (used by the Waybar module and available for keybinds):
-//   quickshell ipc -p ~/.config/hypr/quickshell/network-widget \
+//   quickshell ipc -p ~/.config/quickshell/network-widget \
 //       call network-widget toggle|open|close|isOpen|refresh
 //
 // The panel starts hidden; the Waybar module opens it.

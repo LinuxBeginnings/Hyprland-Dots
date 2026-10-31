@@ -33,19 +33,18 @@ part.
 
 ## Usage
 
-`copy.sh` installs this directory as `~/.config/hypr/quickshell/network-widget`
-together with the rest of `config/hypr`. Running it shows the panel straight
-away:
+`copy.sh` installs this directory as `~/.config/quickshell/network-widget`,
+beside the other quickshell widgets. Running it shows the panel straight away:
 
 ```bash
-quickshell -p ~/.config/hypr/quickshell/network-widget
+quickshell -p ~/.config/quickshell/network-widget
 ```
 
 It also runs from a checkout, because `QsNetworkPanel.sh` is resolved relative
 to this directory:
 
 ```bash
-quickshell -p ~/Hyprland-Dots/config/hypr/quickshell/network-widget
+quickshell -p ~/Hyprland-Dots/config/quickshell/network-widget
 ```
 
 Once it is running, show or hide it with:
@@ -154,7 +153,7 @@ window is closed, so keeping the surface alive is what makes reopening instant.
 Run it in a terminal to see QML errors:
 
 ```bash
-quickshell -p ~/.config/hypr/quickshell/network-widget
+quickshell -p ~/.config/quickshell/network-widget
 ```
 
 Check what the panel would receive:
