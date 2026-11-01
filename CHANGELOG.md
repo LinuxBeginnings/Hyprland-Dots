@@ -4,6 +4,24 @@
 
 ## Fixed:
 
+- The 24H answer at install now reaches every Waybar clock
+  - The install prompt applied 12H only, so the 24H answer changed nothing
+  - Its `sed` patterns had drifted off the modules files and matched nothing
+  - `clock`, `clock#2` and `clock#5` therefore stayed on 12H as shipped
+  - `ModulesVertical` was never edited at all
+  - `format-alt` is toggled too, so the extended display cannot disagree
+  - `clock#forest` and `clock#text` were outside the toggle entirely
+  - Both now have a 12H/24H pair and are edited with the rest
+  - The Waybar half is delegated to `ToggleWaybarTime.sh`
+  - That is the script Quick Settings already runs, so they cannot drift
+  - The prompt now offers 24H or 12H and applies whichever is answered
+  - The shipped modules and hyprlock templates now default to 24H
+  - The hyprlock hour label is swapped rather than set one way
+  - Answering 24H used to leave a 12H lock screen
+  - `hyprlock-2k.conf` had a live seconds label inside a commented block
+  - `test-waybar-clock.sh` covers both answers and the shipped defaults
+  - Issue: [#163](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/163)
+
 - Workspace to display bindings from `nwg-displays` are applied again
   - `nwg-displays` writes them to `workspaces.conf`, which nothing loads
   - The Lua config reads `UserConfigs/workspaces.lua`, which held no rule
@@ -144,6 +162,7 @@
 
 ## Added:
 
+- `docs/KoolDots-UserGuide.md` and spanish translation `docs/KoolDots-UserGuide.es.md`
 - Quickshell keybind panel: a searchable frame of key caps, grouped by function
   - Lists what the compositor has bound, not what the config text says
   - Reads the same live index `SUPER SHIFT K` hands to rofi

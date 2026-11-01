@@ -209,7 +209,8 @@
   
   
   "clock#text": {
-    "format": "{:%I:%M %p}",
+    //"format": "{:%I:%M %p}", // AM PM format
+    "format": "{:%H:%M}", // 24H
     "format-alt": "{:%a, %d %b}",
     "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
     "calendar": {

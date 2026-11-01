@@ -846,7 +846,7 @@ elif [ "$resolution" == "≥ 1440p" ]; then
 fi
 
 printf "\n%.0s" {1..1}
-prompt_clock_12h "$LOG"
+prompt_clock_format "$LOG"
 printf "\n%.0s" {1..1}
 
 # Upgrade/express: confirm Hyprlang -> Lua migration (default yes).

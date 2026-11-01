@@ -222,7 +222,7 @@ because a broken theme means an unusable login screen.
   - `apply_sddm_12h_format_sequoia` handles `sequoia_2`'s `clockFormat=`
     (`:311-325`)
   - both are only reachable from the install/upgrade prompt
-    (`prompt_clock_12h`, `:280-286`); there is no runtime 12H toggle for SDDM
+    (`prompt_clock_format`, `:39-47`); there is no runtime 12H toggle for SDDM
 - `config/hypr/scripts/Kool_Quick_Settings.sh`
   - "Set SDDM Wallpaper" in `[[ Misc ]]` (`:571-577`, menu entries `:769`
     and `:843`)
