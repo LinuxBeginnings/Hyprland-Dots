@@ -190,6 +190,33 @@ Three things worth knowing:
   then competes with `UserConfigs/monitors.lua` for the same monitors. Its own
   README suggests that line for Hyprland 0.55+; ignore it here.
 
+## Workspace → display assignments
+
+`nwg-displays` also has a **Workspaces** panel, where each workspace is assigned
+an output. It writes those to a second file, `~/.config/hypr/workspaces.conf`,
+which this Lua config never reads either. The watcher imports them the same way
+it imports the monitor arrangement, into `UserConfigs/workspaces.lua`:
+
+```lua
+hl.workspace_rule({ workspace = "1", monitor = "eDP-1", default = true })
+```
+
+Without that rule there is nothing to hold a workspace in place, and
+`SUPER`+`1`…`0` puts the workspace on whichever monitor has focus. That is
+Hyprland working as configured, not a bug in the dots: a workspace only stays on
+a display if a rule says so.
+
+You can write these yourself instead of using the panel — `UserConfigs/workspaces.lua`
+is yours, and the importer leaves rules it did not write alone. A rule it did
+write carries a `-- nwg-displays: monitor` marker, and re-importing only ever
+gives back the fields that marker names. So a workspace you unassign in
+`nwg-displays` keeps the layout you chose for it, and a binding you wrote by
+hand outranks the panel (the log says when that happens).
+
+Changing a layout never binds a monitor. `SUPER`+`ALT`+`1`…`4` and
+`SUPER`+`ALT`+`L` record the *layout* for the active workspace, in the same file;
+a layout belongs to the workspace, not to the display it happened to be on.
+
 ## Waybar
 
 Each layout picks one: bars on **all** monitors (the default — nothing is
@@ -239,6 +266,8 @@ DisplayProfile.sh label -- <text>       name this monitor set
 DisplayProfile.sh config-newer          exit 0 if a monitor config file is newer
                                         than the recorded layout
 DisplayProfile.sh import-nwg <file>     apply what nwg-displays wrote
+DisplayProfile.sh import-nwg-workspaces <file>
+                                        import nwg-displays' workspace bindings
 DisplayProfile.sh --dry-run auto        print the plan, change nothing
 ```
 

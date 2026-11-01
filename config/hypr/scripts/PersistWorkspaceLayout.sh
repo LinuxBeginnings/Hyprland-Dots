@@ -5,7 +5,16 @@
 #  License: GNU GPLv3
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
-# Persist active monitor/workspace layout back into ~/.config/hypr/workspaces.conf.
+# Persist the active workspace's layout into UserConfigs/workspaces.lua, the file
+# lua/workspaces.lua loads on every config load. There is no hyprlang
+# workspaces.conf any more: nothing reads one, so writing it only ever made a
+# change look saved while nothing applied it.
+#
+# The rule written here names the workspace and the layout, never the monitor. A
+# layout belongs to the workspace, not to the display it happened to be on, and
+# binding the monitor here is what used to pin each workspace to whichever
+# display it was on when its layout last changed - and to contradict the
+# workspace -> display bindings in the same file (issue #162).
 
 set -u
 
@@ -13,17 +22,15 @@ quiet_mode=0
 layout_override=""
 workspace_override=""
 monitor_override=""
-workspaces_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/workspaces.conf"
 lua_workspaces_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/workspaces.lua"
 
 usage() {
   cat <<'EOF'
-Usage: PersistWorkspaceLayout.sh [--quiet] [--layout <layout>] [--workspace <selector>] [--monitor <monitor>] [--file <path>]
+Usage: PersistWorkspaceLayout.sh [--quiet] [--layout <layout>] [--workspace <selector>] [--monitor <monitor>] [--lua-file <path>]
   --quiet              Suppress console notifications.
   --layout <layout>    Override layout (master|dwindle|scrolling|monocle).
   --workspace <sel>    Override workspace selector (e.g. 5, name:code, special:scratchpad).
-  --monitor <name>     Override monitor name.
-  --file <path>        Target workspace rules file (default: ~/.config/hypr/workspaces.conf).
+  --monitor <name>     Override monitor name. Reported only; the rule never binds it.
   --lua-file <path>    Target Lua workspace rules file (default: ~/.config/hypr/UserConfigs/workspaces.lua).
 EOF
 }
@@ -92,10 +99,6 @@ while [[ $# -gt 0 ]]; do
     monitor_override="${2:-}"
     shift 2
     ;;
-  --file)
-    workspaces_file="${2:-}"
-    shift 2
-    ;;
   --lua-file)
     lua_workspaces_file="${2:-}"
     shift 2
@@ -114,8 +117,6 @@ done
 
 require_cmd hyprctl
 require_cmd jq
-require_cmd awk
-require_cmd mktemp
 
 ws_json="$(get_active_workspace_json)"
 workspace_selector="${workspace_override:-$(get_workspace_selector "$ws_json" || true)}"
@@ -139,21 +140,19 @@ fi
 
 update_lua_workspaces() {
   local target_ws="$1"
-  local target_mon="$2"
-  local target_layout="$3"
-  local lua_file="$4"
+  local target_layout="$2"
+  local lua_file="$3"
 
   mkdir -p "$(dirname "$lua_file")"
 
-  python3 - "$lua_file" "$target_ws" "$target_mon" "$target_layout" <<'PY'
+  python3 - "$lua_file" "$target_ws" "$target_layout" <<'PY'
 import sys
 import re
 from pathlib import Path
 
 lua_path = Path(sys.argv[1])
 target_ws = sys.argv[2].strip()
-target_mon = sys.argv[3].strip()
-target_layout = sys.argv[4].strip()
+target_layout = sys.argv[3].strip()
 
 header = """-- ==================================================
 --  KoolDots (2026)
@@ -163,7 +162,8 @@ header = """-- ==================================================
 -- ==================================================
 
 -- User workspace rules for Lua workflow.
--- PersistWorkspaceLayout.sh writes workspace layout rules into this file.
+-- PersistWorkspaceLayout.sh writes workspace layout rules into this file, and
+-- DisplayProfile.sh imports nwg-displays' Workspace -> Output assignments here.
 -- Keep custom hl.workspace_rule(...) entries here so upgrades preserve them.
 
 """
@@ -183,6 +183,42 @@ pattern = re.compile(
     re.MULTILINE | re.DOTALL
 )
 
+
+def strip_comments(src):
+    """Blank out Lua comments, keeping every offset.
+
+    The shipped template's examples are commented-out rules, and one of them is
+    for workspace 1 - exactly the workspace a user is most likely to change the
+    layout of. Matching those would edit a comment instead of recording the
+    layout, so the same text is matched again with the comments blanked and a
+    rule that lands inside one is left alone. Same idea as
+    dp_lua_has_monitor_call.
+    """
+    out = list(src)
+    i = 0
+    n = len(src)
+    while i < n:
+        if src.startswith("--[[", i):
+            end = src.find("]]", i + 4)
+            end = n if end < 0 else end + 2
+            for k in range(i, end):
+                if out[k] != "\n":
+                    out[k] = " "
+            i = end
+        elif src.startswith("--", i):
+            end = src.find("\n", i)
+            end = n if end < 0 else end
+            for k in range(i, end):
+                out[k] = " "
+            i = end
+        else:
+            i += 1
+    return "".join(out)
+
+
+code = strip_comments(content)
+
+
 def parse_rule_table(table_body):
     params = {}
     for entry in re.finditer(r'([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*("[^"]*"|\'[^\']*\'|[^\s,]+)', table_body):
@@ -192,124 +228,87 @@ def parse_rule_table(table_body):
     return params
 
 updated = False
+pinned = ""
+
+# A rule the nwg-displays import wrote carries a trailing marker naming the fields
+# it owns: `-- nwg-displays: monitor,default`, from DisplayProfile.sh's
+# import-nwg-workspaces verb. Those fields are not this script's to touch - the
+# importer gives them back and writes them again on its next run, so taking one
+# here would only lose the binding until then. The literal is a contract between
+# the two scripts and is named in both.
+IMPORT_MARKER = "nwg-displays"
+
+
+def imported_fields(match):
+    tail = match.string[match.end():]
+    end = tail.find("\n")
+    if end >= 0:
+        tail = tail[:end]
+    found = re.match(
+        r'[ \t]*--[ \t]*' + re.escape(IMPORT_MARKER) + r'\s*:\s*([A-Za-z_, ]*)', tail
+    )
+    if not found:
+        return set()
+    return {field.strip() for field in found.group(1).split(",") if field.strip()}
+
 
 def replace_rule(match):
-    global updated
+    global updated, pinned
+    if not code[match.start():match.end()].strip():
+        # Commented out: an example the user has not enabled.
+        return match.group(0)
     body = match.group(1)
     params = parse_rule_table(body)
-    ws = params.get("workspace", "")
-    mon = params.get("monitor", "")
-    if ws == target_ws and mon == target_mon:
-        updated = True
-        if re.search(r'\blayout\s*=', body):
-            new_body = re.sub(r'(\blayout\s*=\s*)(["\'][^"\']*["\']|[^\s,]+)', r'\1"' + target_layout + '"', body)
-        else:
-            new_body = body.rstrip() + f', layout = "{target_layout}"'
-        return f"hl.workspace_rule({{{new_body}}})"
-    return match.group(0)
+    if params.get("workspace") != target_ws:
+        return match.group(0)
+    updated = True
+    new_body = body
+    # Rules written by an earlier version of this script bound the monitor too.
+    # That pin is given up here, so the workspace stops being tied to the display
+    # it was on when its layout was last changed. A monitor the import owns is
+    # left alone: see IMPORT_MARKER above.
+    if "monitor" in params and "monitor" not in imported_fields(match):
+        pinned = params["monitor"]
+        # `(\s*,)?` and not `\s*,?`: the whitespace is only part of the match when
+        # a comma really follows, so a monitor that is the last field leaves the
+        # space that belongs before the closing brace alone.
+        new_body = re.sub(r'\s*monitor\s*=\s*("[^"]*"|\'[^\']*\'|[^\s,}]+)(\s*,)?', '', new_body, count=1)
+        # A monitor that was the last field leaves the comma that separated it.
+        # Only that comma goes; the body's own trailing space is what sits before
+        # the closing brace.
+        trimmed = new_body.rstrip()
+        if trimmed.endswith(","):
+            new_body = trimmed[:-1] + new_body[len(trimmed):]
+    if re.search(r'\blayout\s*=', new_body):
+        new_body = re.sub(r'(\blayout\s*=\s*)("[^"]*"|\'[^\']*\'|[^\s,}]+)', r'\1"' + target_layout + '"', new_body, count=1)
+    else:
+        # The trailing space is the one that belongs before the closing brace.
+        new_body = new_body.rstrip() + f', layout = "{target_layout}" '
+    return f"hl.workspace_rule({{{new_body}}})"
 
 new_content = pattern.sub(replace_rule, content)
 
 if not updated:
-    new_rule = f'hl.workspace_rule({{ workspace = "{target_ws}", monitor = "{target_mon}", layout = "{target_layout}" }})\n'
+    new_rule = f'hl.workspace_rule({{ workspace = "{target_ws}", layout = "{target_layout}" }})\n'
     if not new_content.endswith("\n"):
         new_content += "\n"
     new_content += new_rule
 
 lua_path.write_text(new_content, encoding="utf-8")
+
+if pinned:
+    print(
+        f"workspace {target_ws} no longer binds monitor {pinned}: a layout rule"
+        " never does, and the pin contradicted the workspace -> display bindings"
+        " in this file",
+        file=sys.stderr,
+    )
 PY
 }
 
 # Always update Lua workspace rules in UserConfigs/workspaces.lua
 if command -v python3 >/dev/null 2>&1; then
-  update_lua_workspaces "$workspace_selector" "$monitor_name" "$layout_name" "$lua_workspaces_file"
-fi
-
-# Optionally update workspaces.conf only if it already exists
-if [[ -f "$workspaces_file" ]]; then
-  tmp_file="$(mktemp "${workspaces_file}.XXXXXX")"
-  cleanup() {
-    rm -f "$tmp_file"
-  }
-  trap cleanup EXIT
-
-  awk \
-    -v target_ws="$workspace_selector" \
-    -v target_mon="$monitor_name" \
-    -v target_layout="$layout_name" '
-function trim(v) {
-  gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
-  return v
-}
-BEGIN {
-  updated = 0
-}
-{
-  line = $0
-  content = line
-  comment = ""
-  hash_pos = index(line, "#")
-  if (hash_pos > 0) {
-    content = substr(line, 1, hash_pos - 1)
-    comment = substr(line, hash_pos)
-  }
-  stripped = trim(content)
-  indent_len = match(line, /[^[:space:]]/) - 1
-  if (indent_len < 0) {
-    indent_len = length(line)
-  }
-  indent = substr(line, 1, indent_len)
-
-  if (stripped ~ /^workspace[[:space:]]*=/) {
-    sub(/^workspace[[:space:]]*=[[:space:]]*/, "", stripped)
-    token_count = split(stripped, tokens, /,/)
-    ws = trim(tokens[1])
-    mon = ""
-    extras_count = 0
-    delete extras
-
-    for (i = 2; i <= token_count; i++) {
-      token = trim(tokens[i])
-      if (token == "") {
-        continue
-      }
-      if (token ~ /^monitor:/) {
-        mon = trim(substr(token, 9))
-        continue
-      }
-      if (token ~ /^layout:/) {
-        continue
-      }
-      extras[++extras_count] = token
-    }
-
-    if (ws == target_ws && mon == target_mon) {
-      if (!updated) {
-        rebuilt = indent "workspace = " ws ", monitor:" target_mon ", layout:" target_layout
-        for (i = 1; i <= extras_count; i++) {
-          rebuilt = rebuilt ", " extras[i]
-        }
-        if (comment != "") {
-          rebuilt = rebuilt " " comment
-        }
-        print rebuilt
-        updated = 1
-      }
-      next
-    }
-  }
-
-  print line
-}
-END {
-  if (!updated) {
-    print "workspace = " target_ws ", monitor:" target_mon ", layout:" target_layout
-  }
-}
-' "$workspaces_file" >"$tmp_file"
-
-  mv "$tmp_file" "$workspaces_file"
-  trap - EXIT
+  update_lua_workspaces "$workspace_selector" "$layout_name" "$lua_workspaces_file"
 fi
 
 if [[ "$quiet_mode" -eq 0 ]]; then

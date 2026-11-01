@@ -14,6 +14,10 @@
 #   program DIRECTLY - not just through the layout menu - is what updates
 #   UserConfigs/monitors.lua. See import_nwg_conf below.
 #
+#   nwg-displays writes its Workspace -> Output assignments to a second file
+#   that nothing loads, so those are watched here too and handed to the
+#   controller. See import_nwg_workspaces_conf below.
+#
 #   Started from UserConfigs/user_startup.lua. Safe to run by hand.
 set -Eeuo pipefail
 
@@ -55,6 +59,13 @@ MW_NWG_CONF="${MW_NWG_CONF:-$config_home/hypr/monitors.conf}"
 # Touched after every import attempt and once at startup, so only a change made
 # while this watcher is running is picked up.
 MW_NWG_STAMP="${MW_NWG_STAMP:-$MW_STATE_DIR/nwg-import.stamp}"
+# nwg-displays' Workspace -> Output assignments, written to the same directory as
+# monitors.conf and loaded by nothing: the Lua config reads
+# UserConfigs/workspaces.lua, and lua/workspaces.lua deliberately does not load
+# nwg's Lua sibling either. Without this watch the assignments are dropped, and
+# `workspace N` then lands on whichever monitor has focus (issue #162).
+MW_NWG_WS_CONF="${MW_NWG_WS_CONF:-$config_home/hypr/workspaces.conf}"
+MW_NWG_WS_STAMP="${MW_NWG_WS_STAMP:-$MW_STATE_DIR/nwg-workspaces-import.stamp}"
 # The process name that means "the user is arranging monitors". An explicitly
 # EMPTY value disables the check - which is why this uses ${V-default} and not
 # ${V:-default} - and the tests rely on that so a real nwg-displays on the
@@ -214,6 +225,11 @@ touch_nwg_stamp() {
   : >"$MW_NWG_STAMP" 2>/dev/null || true
 }
 
+touch_nwg_ws_stamp() {
+  mkdir -p -- "$(dirname -- "$MW_NWG_WS_STAMP")" 2>/dev/null || true
+  : >"$MW_NWG_WS_STAMP" 2>/dev/null || true
+}
+
 # import_nwg_conf: hand an arrangement nwg-displays wrote to the controller,
 # which applies it and writes UserConfigs/monitors.lua.
 #
@@ -242,6 +258,36 @@ import_nwg_conf() {
   # deterministic for this content, so retrying it on every poll would only fill
   # the log; pressing Apply again in nwg-displays retries with a new file.
   touch_nwg_stamp
+  return 0
+}
+
+# import_nwg_workspaces_conf: hand nwg-displays' Workspace -> Output assignments
+# to the controller, which merges them into UserConfigs/workspaces.lua.
+#
+# nwg writes these to a hyprlang workspaces.conf that nothing loads, so before
+# this the assignments were silently dropped and `workspace N` landed on
+# whichever monitor had focus. The monitor half of nwg-displays has been bridged
+# here since the Lua migration; this is the other half, and the same stamp
+# discipline applies - only a change made while this watcher runs is picked up.
+#
+# The cheap tests come first and are bash builtins, so an idle tick that finds
+# nothing forks nothing.
+import_nwg_workspaces_conf() {
+  [[ -f $MW_NWG_WS_CONF ]] || return 0
+  [[ $MW_NWG_WS_CONF -nt $MW_NWG_WS_STAMP ]] || return 0
+  if ! grep -q '^[[:space:]]*workspace[[:space:]]*=' "$MW_NWG_WS_CONF" 2>/dev/null; then
+    # nwg-displays creates this file empty at startup, like monitors.conf, so it
+    # exists long before it holds anything. Stamping stops us re-reading it.
+    touch_nwg_ws_stamp
+    return 0
+  fi
+  log "nwg-displays wrote new workspace assignments; importing them"
+  if "$MW_PROFILE_SCRIPT" import-nwg-workspaces "$MW_NWG_WS_CONF" 9>&-; then
+    log "imported the workspace assignments from $MW_NWG_WS_CONF"
+  else
+    log "WARN: could not import $MW_NWG_WS_CONF; see the display profile log"
+  fi
+  touch_nwg_ws_stamp
   return 0
 }
 
@@ -360,8 +406,10 @@ main() {
   fi
 
   # Start the clock for nwg-displays: an arrangement written before this session
-  # has either been applied already or is superseded by the stored layout.
+  # has either been applied already or is superseded by the stored layout. Same
+  # for the workspace assignments.
   touch_nwg_stamp
+  touch_nwg_ws_stamp
 
   local reconnects=0 line rc cls
   pending=0
@@ -398,8 +446,9 @@ main() {
         # read timed out: the burst has settled
         flush_pending
         # ...and with nothing pending, this was the idle tick. Two builtin tests
-        # per tick; the import only runs if nwg-displays wrote the file.
+        # per file per tick; an import only runs if nwg-displays wrote it.
         import_nwg_conf
+        import_nwg_workspaces_conf
         continue
       fi
       # end of stream: `read` may still have handed us a final unterminated line

@@ -4,6 +4,19 @@
 
 ## Fixed:
 
+- Workspace to display bindings from `nwg-displays` are applied again
+  - `nwg-displays` writes them to `workspaces.conf`, which nothing loads
+  - The Lua config reads `UserConfigs/workspaces.lua`, which held no rule
+  - So `SUPER` + `1`..`0` put the workspace on whichever monitor had focus
+  - `MonitorWatcher.sh` now imports that file as `hl.workspace_rule` entries
+  - Imported rules are marked, so a rule of your own is never rewritten
+  - A workspace you unassign in `nwg-displays` keeps its layout
+  - `ChangeLayout.sh` no longer binds a monitor when a layout is changed
+  - A layout belongs to the workspace, not to the display it was on
+  - An old rule left with `monitor` in it is cleared on the next layout change
+  - `PersistWorkspaceLayout.sh` no longer writes the dead `workspaces.conf`
+  - Issue: [#162](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/162)
+
 - `custom/qs-network` now matches each Waybar style's module treatment
   - Styles had a pasted `#custom-qs-network` rule with padding and radius
   - The module was missing from each style's shared module selector list
