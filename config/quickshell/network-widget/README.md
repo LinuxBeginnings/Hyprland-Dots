@@ -76,11 +76,16 @@ inherits the bar's text colour, so a style you switch to later still looks
 right. To take the icon off a bar, delete the `"custom/qs-network",` line from
 its `modules-right`.
 
-To bind it on the keyboard, add to `hypr/UserConfigs/UserKeybinds.conf`:
+Nothing is bound by default. To put it on the keyboard, add this to
+`hypr/UserConfigs/user_keybinds.lua`:
 
-```ini
-bind = $mainMod SHIFT, N, exec, $HOME/.config/hypr/scripts/QsNetworkPanel.sh toggle
+```lua
+bind("SUPER CTRL", "N", exec_cmd("$HOME/.config/hypr/scripts/QsNetworkPanel.sh toggle"),
+  { description = "Network panel" })
 ```
+
+`SUPER + CTRL + N` is free; `SUPER + SHIFT + N` already toggles the swaync
+notification panel.
 
 Close the panel with the 󰅖 button or with the same Waybar click. Escape cancels
 a password prompt.
