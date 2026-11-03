@@ -41,7 +41,8 @@ Una guía práctica de los atajos de teclado predeterminados y de los archivos e
    - [6.11 `workspaces.lua`](#611-workspaceslua)
    - [6.12 `user_laptops.lua`](#612-user_laptopslua)
 7. [Aplicar, comprobar y deshacer cambios](#7-aplicar-comprobar-y-deshacer-cambios)
-8. [Lecturas adicionales](#8-lecturas-adicionales)
+8. [El panel de red / Bluetooth](#8-el-panel-de-red--bluetooth)
+9. [Lecturas adicionales](#9-lecturas-adicionales)
 
 ---
 
@@ -984,7 +985,45 @@ Consulte [`HOWTO-Upgrade-Dotfiles.md`](./HOWTO-Upgrade-Dotfiles.md).
 
 ---
 
-## 8. Lecturas adicionales
+## 8. El panel de red / Bluetooth
+
+El icono de la derecha de Waybar (`custom/qs-network`) abre un panel de Quickshell
+para las conexiones cableadas, inalámbricas y Bluetooth. El clic izquierdo lo
+muestra u oculta, el clic derecho sigue abriendo `nmtui`. No tiene atajo
+predeterminado; añada uno en `user_keybinds.lua` si lo quiere en el teclado:
+
+```lua
+bind("SUPER SHIFT", "N", exec_cmd("$HOME/.config/hypr/scripts/QsNetworkPanel.sh toggle"),
+  { description = "Panel de red" })
+```
+
+Cada pestaña cubre un tipo de dispositivo: Ethernet, Wi-Fi y Bluetooth, más
+Tailscale, Docker y Podman cuando esas herramientas o sus interfaces existen. Al
+hacer clic en un dispositivo o en una red se conecta o se desconecta; una red
+Wi-Fi protegida pide la contraseña en el propio panel. El bloque de información
+muestra Dirección, Puerta de enlace, DNS y MAC del enlace activo, con todas las
+direcciones de esa interfaz, alias incluidos.
+
+Hay dos situaciones que conviene conocer, porque el panel se comporta distinto:
+
+- **NetworkManager no gestiona la NIC.** Algunas imágenes de máquina virtual
+entregan la interfaz a `/etc/network/interfaces`, y NetworkManager la informa
+como `unmanaged`; antes la pestaña Ethernet quedaba vacía. Ahora el dispositivo
+aparece en solo lectura, con la dirección, la puerta de enlace y la MAC que
+informa el kernel, y sin Conectar/Desconectar en esa fila. Cómo pasar la NIC a
+NetworkManager se describe en
+[`network-widget/README.md`](../config/quickshell/network-widget/README.md).
+- **Falta `nmcli`.** La lista cableada se lee de `ip` y `/sys/class/net` en vez
+de quedar vacía, el pie explica el motivo en el color de error y se envía una
+notificación por sesión indicando lo que falta. Instale `networkmanager` para
+recuperar el panel completo.
+
+El DNS se lee de `/etc/resolv.conf`; cuando systemd-resolved deja allí solo su
+stub `127.0.0.53`, el panel pregunta a `resolvectl` por los servidores reales.
+
+---
+
+## 9. Lecturas adicionales
 
 Las guías HOWTO por archivo están en `docs/`:
 

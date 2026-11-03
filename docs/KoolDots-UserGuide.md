@@ -41,7 +41,8 @@ A practical guide to the default keybindings and to the files in
    - [6.11 `workspaces.lua`](#611-workspaceslua)
    - [6.12 `user_laptops.lua`](#612-user_laptopslua)
 7. [Applying, checking and undoing changes](#7-applying-checking-and-undoing-changes)
-8. [Further reading](#8-further-reading)
+8. [The network / Bluetooth panel](#8-the-network--bluetooth-panel)
+9. [Further reading](#9-further-reading)
 
 ---
 
@@ -954,7 +955,43 @@ managed by the dotfiles and leaves `UserConfigs` and `UserScripts` alone. See
 
 ---
 
-## 8. Further reading
+## 8. The network / Bluetooth panel
+
+The right-hand Waybar icon (`custom/qs-network`) opens a Quickshell panel for the
+wired, wireless and Bluetooth connections. Left click shows or hides it, right
+click still runs `nmtui`. It has no key by default; add one in
+`user_keybinds.lua` if you want it on the keyboard:
+
+```lua
+bind("SUPER SHIFT", "N", exec_cmd("$HOME/.config/hypr/scripts/QsNetworkPanel.sh toggle"),
+  { description = "Network panel" })
+```
+
+Each tab covers one kind of device — Ethernet, Wi-Fi and Bluetooth, plus
+Tailscale, Docker and Podman when those tools or their interfaces exist. Click a
+device or a network to connect or disconnect it; a locked Wi-Fi network asks for
+its password in the panel. The info block shows Address, Gateway, DNS and MAC
+for the active link, with every address on that interface, aliases included.
+
+Two situations are worth knowing, because the panel behaves differently in them:
+
+- **NetworkManager does not manage the NIC.** Some VM images give the interface
+to `/etc/network/interfaces`, and NetworkManager reports it `unmanaged`; the
+Ethernet tab used to be empty. The device is listed read-only now, with the
+address, gateway and MAC the kernel reports, and no Connect/Disconnect on that
+row. Moving the NIC under NetworkManager is described in
+[`network-widget/README.md`](../config/quickshell/network-widget/README.md).
+- **`nmcli` is missing.** The wired list is read from `ip` and `/sys/class/net`
+instead of going blank, the footer explains why in the error colour, and one
+notification per session names the missing piece. Install `networkmanager` to
+get the full panel back.
+
+DNS comes from `/etc/resolv.conf`; when systemd-resolved leaves only its
+`127.0.0.53` stub there, the panel asks `resolvectl` for the real servers.
+
+---
+
+## 9. Further reading
 
 Per-file HOWTOs live in `docs/`:
 
