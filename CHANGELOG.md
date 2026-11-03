@@ -4,18 +4,6 @@
 
 ## Fixed:
 
-- `unbind(...)` works on installs older than v2.3.26.2
-  - v2.3.24 to v2.3.26.1 shipped a `user_keybinds.lua` with only `bind` in it
-  - The helper exported `unbind` and `dispatch`, the template never pulled them
-  - A call was `attempt to call a nil value`, which aborts the whole file
-  - `user_overrides.lua` reports that as one `[WARN]`, so the key looked inert
-  - A hand-written `pcall(hl.unbind, ...)` worked, bypassing the helper
-  - So the helper read as having no `unbind` at all, which is what was reported
-  - `copy.sh` only ADDS missing `UserConfigs` files, so v2.3.26.2 never arrived
-  - `patches/90-user-keybinds-helper-locals.sh` adds the two missing lines
-  - It adds them after the helper lines the file already has, and nothing else
-  - Issue: [#164](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/164)
-
 - The 24H answer at install now reaches every Waybar clock
   - The install prompt applied 12H only, so the 24H answer changed nothing
   - Its `sed` patterns had drifted off the modules files and matched nothing
@@ -454,6 +442,23 @@
 
 ---- 
 
+## v2.3.28.1
+
+## Fixed:
+
+- `unbind(...)` works on installs older than v2.3.26.2
+  - v2.3.24 to v2.3.26.1 shipped a `user_keybinds.lua` with only `bind` in it
+  - The helper exported `unbind` and `dispatch`, the template never pulled them
+  - A call was `attempt to call a nil value`, which aborts the whole file
+  - `user_overrides.lua` reports that as one `[WARN]`, so the key looked inert
+  - A hand-written `pcall(hl.unbind, ...)` worked, bypassing the helper
+  - So the helper read as having no `unbind` at all, which is what was reported
+  - `copy.sh` only ADDS missing `UserConfigs` files, so v2.3.26.2 never arrived
+  - `patches/90-user-keybinds-helper-locals.sh` adds the two missing lines
+  - It adds them after the helper lines the file already has, and nothing else
+  - Issue: [#164](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/164)
+
+---
 
 ## v2.3.28
 
