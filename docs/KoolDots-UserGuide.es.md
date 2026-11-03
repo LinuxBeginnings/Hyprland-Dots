@@ -321,7 +321,7 @@ importar en un solo sentido. Descripción completa:
 | `SUPER + T`                | Selector global de tema (Wallust) |
 | `SUPER + W`                | Elegir fondo de pantalla          |
 | `SUPER + SHIFT + W`        | Efectos del fondo de pantalla     |
-| `SUPER + CTRL + ALT + W`   | Fondo de pantalla aleatorio       |
+| `CTRL + ALT + W`           | Fondo de pantalla aleatorio       |
 | `SUPER + N`                | Alternar Hyprsunset (luz nocturna) |
 | `SUPER + SHIFT + G`        | Alternar el modo juego            |
 | `SUPER + SHIFT + X`        | Alternar el efecto wobble de las ventanas |

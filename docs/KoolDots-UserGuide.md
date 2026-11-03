@@ -311,7 +311,7 @@ files, which it can import one way. Full description:
 | `SUPER + T`                | Global theme switcher (Wallust)   |
 | `SUPER + W`                | Select wallpaper                  |
 | `SUPER + SHIFT + W`        | Wallpaper effects                 |
-| `SUPER + CTRL + ALT + W`   | Random wallpaper                  |
+| `CTRL + ALT + W`           | Random wallpaper                  |
 | `SUPER + N`                | Toggle Hyprsunset (night light)   |
 | `SUPER + SHIFT + G`        | Toggle game mode                  |
 | `SUPER + SHIFT + X`        | Toggle window wobble              |
