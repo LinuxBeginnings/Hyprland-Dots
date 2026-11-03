@@ -98,6 +98,17 @@
   - It also survived `SIGTERM`, leaving a loop that kept rewriting
   - Restore reads the 0.57 `gradient data:` line and adds the `0x` prefix
   - That line prints bare hex, which the colour parser rejected
+- The Rainbow Borders mode survives a config reload
+  - A reload re-runs the config, which never sets `general:col.active_border`
+  - `lua/decorations.lua` is a template and is deliberately not loaded
+  - So every reload put the border back to the default `ffffffff 0deg`
+  - Only `WallustSwww.sh` re-applied a mode, and only on a wallpaper change
+  - `RainbowBordersReloadWatch.sh` subscribes to the Hyprland event socket
+  - On `configreloaded` it runs `RainbowBordersStartup.sh`
+  - That is the one implementation every other caller already used
+  - A reload burst is settled first, so one reload re-applies the mode once
+  - Started unconditionally from `lua/startup.lua`; it costs one idle `socat`
+  - The socket path is re-resolved on reconnect, so a Hyprland restart is followed
 - The config is no longer reloaded every ~2 seconds
   - `DisplayProfile.sh` rewrites `UserConfigs/monitors.lua` on every apply
   - The `configreloaded` that follows made `MonitorWatcher.sh` re-apply
@@ -173,6 +184,28 @@
   - The panel centres on the pointer whenever that is on a screen edge
   - A keybind opened with the pointer elsewhere keeps the default corner
   - It is 620px wide, so the six tabs no longer wrap onto a second line
+
+- The Ethernet tab lists a NIC that NetworkManager leaves unmanaged
+  - Some VM images hand the NIC to `/etc/network/interfaces` instead
+  - NetworkManager then reports the device `unmanaged` and the tab stayed empty
+  - `QsNetworkPanel.sh` marks every device `managed`; `Backend.qml` carries it
+  - An unmanaged device is listed read-only, with no Connect or Disconnect
+  - It still gets its info block, with the address the kernel reports
+  - `connected (externally)` counts as connected now, not as unmanaged
+  - The script and `Backend.qml` both read the state that way
+
+- The network widget keeps working without `nmcli`
+  - `nmcli` missing, or a snapshot that lists no devices at all, blanked the tab
+  - The wired list then comes from `ip` and `/sys/class/net` instead
+  - Each NIC keeps its addresses, gateway and MAC, read-only
+  - The footer says why, in the error colour, from an `ERR` snapshot record
+  - The Waybar tooltip carries the same line
+  - One `notify-send` per session names the missing NetworkManager
+  - Its marker is only written when `notify-send` exists, so it repeats otherwise
+  - DNS falls back to `resolvectl` when `resolv.conf` lists 127.0.0.53/54 or nothing
+    - systemd-resolved leaves only its stub there, so the real servers are asked
+    - The `resolvectl` answer replaces the list whenever it has one
+  - The README covers the fallback, the unmanaged case and a NIC migration recipe
 
 ## Added:
 
@@ -287,8 +320,31 @@
   - Both `colors-waybar.css` and `qml_color.json` are watched for changes
   - New: `quickshell/network-widget/` and `QsNetworkPanel.sh`
   - Enabled on the `TOP-Default` and `TOP-Default-Laptop` bars
+- `config/hypr/scripts/KeybindProbe.sh` and `docs/HOWTO-Keyboard-Mappings.md`
+  - A bind is written against a keysym, and the Fn row legends often lie
+  - A keysym nothing emits registers a bind that is listed and never fires
+  - The script asks the compositor instead of the key legend
+  - Its probe is loaded with `hyprctl eval` and claims a net of candidate keysyms
+  - Each one logs the keysym Hyprland actually received
+  - Every chord it claims is unbound first, so a keypress only logs
+  - The probe lives in the running compositor and `hyprctl reload` discards it
+  - Needs a Hyprland 0.57+ session: no root, no `wev`, no packages
+  - `--check-deps` prints what is missing and how to install it
+  - The HOWTO covers why guessing fails, which file to edit and the bind form
+- `docs/Plan-Adding-SilentSDDM.md`, a design doc for a SilentSDDM integration
+  - Design only: `copy.sh` and the config do not implement it yet
+- The user guide documents the network / Bluetooth panel
+  - Section 8 covers the tabs, the click behaviour and the two degraded cases
+  - `docs/KoolDots-UserGuide.es.md` carries the same section
 
 ## Updated:
+
+- `custom/qs-network` follows a link change in about a second
+  - The module ran `QsNetworkPanel.sh status` every 10s
+  - A cable pulled, or a NetworkManager state change, sat unnoticed in the bar
+  - `interval` is 1 now; the script takes tens of milliseconds per run
+  - It stays polling, not an event subscription: Waybar has no push API for `exec`
+  - The README states the rate and the cost
 
 - Quickshell applets unified on dynamic Wallust theme resolution
   - Portable `MaterialThemeLoader` installed across applets
@@ -380,6 +436,9 @@
   - Nothing in the dots called them, in config, scripts, keybinds or docs
   - It had fallen well behind the current config layout
   - A replacement install/upgrade TUI is planned
+- `docs/LuaScriptsMigrationPlan.md`
+  - The bash-to-Lua migration it tracked is finished
+  - Its verification notes described steps that no longer exist
 
 ---- 
 
