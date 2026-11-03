@@ -340,22 +340,22 @@ files, which it can import one way. Full description:
 These use the `""` (no modifier) chord and are marked `locked`, so they keep
 working with the lockscreen up.
 
-| Keys                                                          | Action                          |
-| ------------------------------------------------------------- | ------------------------------- |
-| `XF86AudioRaiseVolume` / `XF86AudioLowerVolume`               | Volume up / down                |
-| `ALT + XF86AudioRaiseVolume` / `LowerVolume`                  | Volume up / down (fine step)    |
-| `XF86AudioMute`                                               | Mute / unmute                   |
-| `XF86AudioMicMute`                                            | Mute / unmute microphone        |
-| `XF86AudioPlay` / `Pause` / `Next` / `Prev` / `Stop`          | Media transport                 |
-| `XF86MonBrightnessUp` / `Down`                                | Screen brightness               |
-| `CTRL + ALT + =` / `-`, `CTRL + ALT + KP_Add` / `KP_Subtract` | Screen brightness (no Fn row)   |
-| `XF86KbdBrightnessUp` / `Down` / `KbdLightOnOff`              | Keyboard backlight              |
-| `XF86TouchpadToggle`                                          | Toggle touchpad                 |
-| `XF86Sleep`                                                   | Suspend                         |
-| `XF86Rfkill`                                                  | Airplane mode                   |
-| `XF86Launch1`                                                 | ASUS Armoury Crate button       |
-| `XF86Launch3`                                                 | ASUS: next keyboard RGB profile |
-| `XF86Launch4`                                                 | ASUS: next fan profile          |
+| Keys                                                                                     | Action                          |
+| ---------------------------------------------------------------------------------------- | ------------------------------- |
+| `XF86AudioRaiseVolume` / `XF86AudioLowerVolume`                                          | Volume up / down                |
+| `ALT + XF86AudioRaiseVolume` / `XF86AudioLowerVolume`                                    | Volume up / down (fine step)    |
+| `XF86AudioMute`                                                                          | Mute / unmute                   |
+| `XF86AudioMicMute`                                                                       | Mute / unmute microphone        |
+| `XF86AudioPlay` / `XF86AudioPause` / `XF86AudioNext` / `XF86AudioPrev` / `XF86AudioStop` | Media transport                 |
+| `XF86MonBrightnessUp` / `XF86MonBrightnessDown`                                          | Screen brightness               |
+| `CTRL + ALT + =` / `-`, `CTRL + ALT + KP_Add` / `KP_Subtract`                            | Screen brightness (no Fn row)   |
+| `XF86KbdBrightnessUp` / `XF86KbdBrightnessDown` / `XF86KbdLightOnOff`                    | Keyboard backlight              |
+| `XF86TouchpadToggle`                                                                     | Toggle touchpad                 |
+| `XF86Sleep`                                                                              | Suspend                         |
+| `XF86Rfkill`                                                                             | Airplane mode                   |
+| `XF86Launch1`                                                                            | ASUS Armoury Crate button       |
+| `XF86Launch3`                                                                            | ASUS: next keyboard RGB profile |
+| `XF86Launch4`                                                                            | ASUS: next fan profile          |
 
 There is also a keyboard-passthrough submap: `SUPER + SHIFT + P` sends your
 keystrokes to the focused window (useful for VMs and remote sessions), and

@@ -350,22 +350,22 @@ importar en un solo sentido. Descripción completa:
 Estas usan la combinación `""` (sin modificador) y están marcadas como `locked`,
 así que siguen funcionando con la pantalla de bloqueo activa.
 
-| Teclas                                                        | Acción                             |
-| ------------------------------------------------------------- | ---------------------------------- |
-| `XF86AudioRaiseVolume` / `XF86AudioLowerVolume`               | Subir / bajar el volumen           |
-| `ALT + XF86AudioRaiseVolume` / `LowerVolume`                  | Subir / bajar el volumen (paso fino) |
-| `XF86AudioMute`                                               | Silenciar / reactivar              |
-| `XF86AudioMicMute`                                            | Silenciar / reactivar el micrófono |
-| `XF86AudioPlay` / `Pause` / `Next` / `Prev` / `Stop`          | Control de reproducción            |
-| `XF86MonBrightnessUp` / `Down`                                | Brillo de la pantalla              |
-| `CTRL + ALT + =` / `-`, `CTRL + ALT + KP_Add` / `KP_Subtract` | Brillo de la pantalla (sin fila Fn) |
-| `XF86KbdBrightnessUp` / `Down` / `KbdLightOnOff`              | Retroiluminación del teclado       |
-| `XF86TouchpadToggle`                                          | Activar / desactivar el touchpad   |
-| `XF86Sleep`                                                   | Suspender                          |
-| `XF86Rfkill`                                                  | Modo avión                         |
-| `XF86Launch1`                                                 | Botón Armoury Crate de ASUS        |
-| `XF86Launch3`                                                 | ASUS: siguiente perfil de RGB del teclado |
-| `XF86Launch4`                                                 | ASUS: siguiente perfil de ventiladores |
+| Teclas                                                                                   | Acción                                    |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `XF86AudioRaiseVolume` / `XF86AudioLowerVolume`                                          | Subir / bajar el volumen                  |
+| `ALT + XF86AudioRaiseVolume` / `XF86AudioLowerVolume`                                    | Subir / bajar el volumen (paso fino)      |
+| `XF86AudioMute`                                                                          | Silenciar / reactivar                     |
+| `XF86AudioMicMute`                                                                       | Silenciar / reactivar el micrófono        |
+| `XF86AudioPlay` / `XF86AudioPause` / `XF86AudioNext` / `XF86AudioPrev` / `XF86AudioStop` | Control de reproducción                   |
+| `XF86MonBrightnessUp` / `XF86MonBrightnessDown`                                          | Brillo de la pantalla                     |
+| `CTRL + ALT + =` / `-`, `CTRL + ALT + KP_Add` / `KP_Subtract`                            | Brillo de la pantalla (sin fila Fn)       |
+| `XF86KbdBrightnessUp` / `XF86KbdBrightnessDown` / `XF86KbdLightOnOff`                    | Retroiluminación del teclado              |
+| `XF86TouchpadToggle`                                                                     | Activar / desactivar el touchpad          |
+| `XF86Sleep`                                                                              | Suspender                                 |
+| `XF86Rfkill`                                                                             | Modo avión                                |
+| `XF86Launch1`                                                                            | Botón Armoury Crate de ASUS               |
+| `XF86Launch3`                                                                            | ASUS: siguiente perfil de RGB del teclado |
+| `XF86Launch4`                                                                            | ASUS: siguiente perfil de ventiladores    |
 
 También hay un submapa de paso directo del teclado: `SUPER + SHIFT + P` envía sus
 pulsaciones a la ventana enfocada (útil para máquinas virtuales y sesiones
