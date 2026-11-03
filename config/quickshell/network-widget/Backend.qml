@@ -1,9 +1,9 @@
 // Bridge between the QML panel and QsNetworkPanel.sh.
 //
-// The snapshot subcommand prints tab separated records (DEV, WIFI, WIFI-ON,
-// BT-ON, BT-SCAN, BT-CTL, BTDEV, NOTE) which are parsed here into plain
-// JavaScript objects, so the panel only ever renders data and never talks to
-// NetworkManager or BlueZ itself.
+// The snapshot subcommand prints tab separated records (DEV, ADDR, LINK,
+// FEATURE, WIFI, WIFI-ON, BT-ON, BT-SCAN, BT-CTL, BTDEV, NOTE) which are
+// parsed here into plain JavaScript objects, so the panel only ever renders
+// data and never talks to NetworkManager or BlueZ itself.
 
 import QtQuick
 import Quickshell
@@ -18,7 +18,13 @@ Item {
     readonly property string script: Quickshell.shellDir + "/../../hypr/scripts/QsNetworkPanel.sh"
 
     // Snapshot state.
-    property var devices: []        // { iface, type, state, connection, ip, prefix, gateway, dns, mac, connected }
+    property var devices: []        // { iface, type, state, connection, ip, prefix, gateway, dns, mac, connected, addresses }
+    property var links: []          // { kind, iface, state, addresses }
+    property var features: ({})     // { tailscale: true, docker: true, podman: true }
+    property var tailscalePeers: [] // { name, ip, online, os, self }
+    property var exitNodes: []      // { name, ip, selected }
+    property string tailscaleState: ""
+    property var containers: []     // { kind, name, state, status, runtime, cpu, mem }
     property var networks: []       // { ssid, signal, security, inUse }
     property var btDevices: []      // { address, name, connected, paired, battery, icon }
     property bool wifiEnabled: false
@@ -45,6 +51,55 @@ Item {
         return null;
     }
 
+    // The Tailscale/Docker/Podman tabs exist only when the tool is installed or
+    // at least one of its links is present.
+    readonly property var tailscaleLinks: linksFor("tailscale")
+    readonly property var dockerLinks: linksFor("docker")
+    readonly property var podmanLinks: linksFor("podman")
+    readonly property bool hasTailscale: features["tailscale"] === true || tailscaleLinks.length > 0
+    readonly property bool hasDocker: features["docker"] === true || dockerLinks.length > 0
+    readonly property bool hasPodman: features["podman"] === true || podmanLinks.length > 0
+
+    readonly property var dockerContainers: containersFor("docker")
+    readonly property var podmanContainers: containersFor("podman")
+    readonly property bool tailscaleRunning: tailscaleState === "Running"
+
+    function linksFor(kind) {
+        return links.filter(function (link) {
+            return link.kind === kind;
+        });
+    }
+
+    function containersFor(kind) {
+        return containers.filter(function (container) {
+            return container.kind === kind;
+        });
+    }
+
+    // Addresses for the info block. Link local IPv6 is left out: every device
+    // has one and it is never the address anyone wants to copy.
+    function formattedAddresses(device) {
+        var rows = [];
+        if (!device) return rows;
+        var addresses = device.addresses ? device.addresses : [];
+        for (var i = 0; i < addresses.length; i++) {
+            var address = addresses[i];
+            if (address.ip === "" || address.scope === "link") continue;
+            rows.push({
+                label: rows.length === 0 ? "Address" : "Alias",
+                value: address.prefix !== "" ? address.ip + "/" + address.prefix : address.ip
+            });
+        }
+        // Older script output has no ADDR records; fall back to the DEV fields.
+        if (rows.length === 0 && device.ip) {
+            rows.push({
+                label: "Address",
+                value: device.prefix !== "" ? device.ip + "/" + device.prefix : device.ip
+            });
+        }
+        return rows;
+    }
+
     function field(parts, index, fallback) {
         var value = parts[index];
         if (value === undefined || value === null) return fallback;
@@ -53,6 +108,14 @@ Item {
 
     function applySnapshot(text) {
         var devices = [];
+        var addresses = [];
+        var links = [];
+        var features = {};
+        var tailscalePeers = [];
+        var exitNodes = [];
+        var tailscaleState = "";
+        var containers = [];
+        var containerStats = [];
         var networks = [];
         var btDevices = [];
         var wifiEnabled = false;
@@ -79,10 +142,69 @@ Item {
                     gateway: field(parts, 7, ""),
                     dns: dns === "" ? [] : dns.split(","),
                     mac: field(parts, 9, ""),
-                    connected: field(parts, 3, "") === "connected"
+                    connected: field(parts, 3, "") === "connected",
+                    addresses: []
                 });
                 break;
             }
+            case "ADDR":
+                addresses.push({
+                    iface: field(parts, 1, ""),
+                    family: field(parts, 2, "inet"),
+                    ip: field(parts, 3, ""),
+                    prefix: field(parts, 4, ""),
+                    scope: field(parts, 5, "")
+                });
+                break;
+            case "LINK":
+                links.push({
+                    kind: field(parts, 1, ""),
+                    iface: field(parts, 2, ""),
+                    state: field(parts, 3, ""),
+                    addresses: []
+                });
+                break;
+            case "FEATURE":
+                features[field(parts, 1, "")] = true;
+                break;
+            case "TS-STATE":
+                tailscaleState = field(parts, 1, "");
+                break;
+            case "TS-EXIT":
+                exitNodes.push({
+                    name: field(parts, 1, ""),
+                    ip: field(parts, 2, ""),
+                    selected: field(parts, 3, "0") === "1"
+                });
+                break;
+            case "TSPEER":
+                tailscalePeers.push({
+                    name: field(parts, 1, ""),
+                    ip: field(parts, 2, ""),
+                    online: field(parts, 3, "0") === "1",
+                    os: field(parts, 4, ""),
+                    self: field(parts, 5, "0") === "1"
+                });
+                break;
+            case "BOX":
+                containers.push({
+                    kind: field(parts, 1, ""),
+                    name: field(parts, 2, ""),
+                    state: field(parts, 3, ""),
+                    status: field(parts, 4, ""),
+                    runtime: field(parts, 5, ""),
+                    cpu: "",
+                    mem: ""
+                });
+                break;
+            case "BOXSTAT":
+                containerStats.push({
+                    kind: field(parts, 1, ""),
+                    name: field(parts, 2, ""),
+                    cpu: field(parts, 3, ""),
+                    mem: field(parts, 4, "")
+                });
+                break;
             case "WIFI":
                 networks.push({
                     ssid: field(parts, 1, ""),
@@ -119,7 +241,39 @@ Item {
             }
         }
 
+        // ADDR and LINK/DEV records are independent lines, so the addresses are
+        // attached once everything has been read.
+        function attach(list) {
+            for (var j = 0; j < list.length; j++) {
+                var owned = [];
+                for (var k = 0; k < addresses.length; k++) {
+                    if (addresses[k].iface === list[j].iface) owned.push(addresses[k]);
+                }
+                list[j].addresses = owned;
+            }
+        }
+        attach(devices);
+        attach(links);
+
+        // Usage arrives as its own record per container, after the list.
+        for (var s = 0; s < containerStats.length; s++) {
+            var stat = containerStats[s];
+            for (var c = 0; c < containers.length; c++) {
+                if (containers[c].kind === stat.kind && containers[c].name === stat.name) {
+                    containers[c].cpu = stat.cpu;
+                    containers[c].mem = stat.mem;
+                    break;
+                }
+            }
+        }
+
         backend.devices = devices;
+        backend.links = links;
+        backend.features = features;
+        backend.tailscalePeers = tailscalePeers;
+        backend.exitNodes = exitNodes;
+        backend.tailscaleState = tailscaleState;
+        backend.containers = containers;
         backend.networks = networks;
         backend.btDevices = btDevices;
         backend.wifiEnabled = wifiEnabled;
@@ -190,6 +344,38 @@ Item {
 
     function disconnectDevice(iface) {
         run(["disconnect-device", iface]);
+    }
+
+    // kind is docker or podman, action is start|stop|restart.
+    function containerAction(kind, action, name) {
+        run(["container", kind, action, name]);
+    }
+
+    function stopContainer(kind, name) {
+        containerAction(kind, "stop", name);
+    }
+
+    function startContainer(kind, name) {
+        containerAction(kind, "start", name);
+    }
+
+    function restartContainer(kind, name) {
+        containerAction(kind, "restart", name);
+    }
+
+    // Tailscale: bring the tunnel up or down, and switch exit node. Passing
+    // "none" clears the exit node.
+    function setTailscale(enabled) {
+        run(["tailscale", enabled ? "up" : "down"]);
+    }
+
+    function setExitNode(name) {
+        run(["tailscale", "exit-node", name]);
+    }
+
+    // Asks Tailscale for the best exit node and selects it.
+    function suggestExitNode() {
+        run(["tailscale", "suggest"]);
     }
 
     Timer {

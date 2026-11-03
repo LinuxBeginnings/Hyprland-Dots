@@ -160,8 +160,38 @@
   - `GhosttyThemeGuard.sh` had the same filter and is fixed too
   - A theme commented twice no longer produces two identical rows
 
+- The network widget lists every wired interface with all of its addresses
+  - Only the first `IP4.ADDRESS` from `nmcli device show` reached the panel
+  - Aliased and secondary IPv4 addresses and global IPv6 were dropped
+  - A second wired NIC appeared with an empty info block
+  - `QsNetworkPanel.sh` now reads `ADDR` records from `ip -o addr`
+  - `Backend.qml` attaches them to the device, so aliases list under `Address`
+  - Link-local `fe80::` addresses are left out
+- The network panel drops down under the Waybar module again
+  - It was pinned to the top-right corner with a fixed right margin
+  - Layer shell exposes no module geometry, so the pointer is the anchor
+  - The panel centres on the pointer whenever that is on a screen edge
+  - A keybind opened with the pointer elsewhere keeps the default corner
+  - It is 620px wide, so the six tabs no longer wrap onto a second line
+
 ## Added:
 
+- Tailscale, Docker and Podman tabs in the Quickshell network widget
+  - A tab exists only when the tool is installed or one of its links is present
+  - `LINK` and `FEATURE` records come from `ip -o link`, so no daemon is needed
+  - `tailscale0` reads its state from IFF_UP; its operstate reports `unknown`
+  - Tailscale: up/down switch, `TS-STATE`, exit node picker and peers
+  - Peers are `TSPEER` records with IP, OS, online state and this-device mark
+  - Exit nodes are `TS-EXIT`; "Suggest" runs `tailscale exit-node suggest`
+  - The prose output is matched against known exit node names and IPs
+  - Docker and Podman: bridge links with addresses, then the containers
+  - `BOX`/`BOXSTAT` give name, status, runtime, CPU and memory
+  - Clicking a container stops it, or starts it when stopped ones are shown
+  - A "Stopped" switch lists them; running containers is the default
+  - New: `quickshell/network-widget/VirtualNetTab.qml`
+  - New subcommands: `container docker|podman start|stop|restart NAME`,
+    `tailscale up|down|exit-node NAME|none` and `tailscale suggest`
+  - Exit node suggestions need `jq`; their section stays hidden without it
 - `docs/KoolDots-UserGuide.md` and spanish translation `docs/KoolDots-UserGuide.es.md`
 - Quickshell keybind panel: a searchable frame of key caps, grouped by function
   - Lists what the compositor has bound, not what the config text says

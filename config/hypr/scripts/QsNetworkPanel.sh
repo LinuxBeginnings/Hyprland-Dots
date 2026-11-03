@@ -30,6 +30,14 @@
 # snapshot format, one record per line, tab separated, no tabs or newlines
 # inside a value:
 #   DEV      <iface> <type> <state> <connection> <ip> <prefix> <gateway> <dns> <mac>
+#   ADDR     <iface> <family> <address> <prefix> <scope>
+#   LINK     <kind> <iface> <state>       kind: tailscale|docker|podman
+#   FEATURE  <kind>                       tooling that is installed
+#   TS-STATE <backend state>              Running, NeedsLogin, Stopped, ...
+#   TSPEER   <name> <ip> <online 0|1> <os> <self 0|1>
+#   TS-EXIT  <name> <ip> <selected 0|1>
+#   BOX      <kind> <name> <state> <status> <runtime>
+#   BOXSTAT  <kind> <name> <cpu> <mem>
 #   WIFI     <ssid> <signal> <security> <in-use 0|1>
 #   WIFI-ON  <0|1>
 #   BT-ON    <0|1>
@@ -100,6 +108,23 @@ trim() {
 
 # ---------------------------------------------------------------- network --
 
+# Every address an interface carries, including aliases and secondary IPv6
+# addresses. nmcli reports only the first IP4.ADDRESS, so `ip` is the source of
+# truth here and the panel lists them all under the device.
+emit_addresses() {
+  local iface="$1"
+  [[ -z $iface ]] && return 0
+  have ip || return 0
+  ip -o addr show dev "$iface" 2>/dev/null |
+    awk -F'[ /]+' -v iface="$iface" '
+      $3 == "inet" || $3 == "inet6" {
+        scope = ""
+        for (i = 4; i < NF; i++) if ($i == "scope") scope = $(i + 1)
+        printf "ADDR\t%s\t%s\t%s\t%s\t%s\n", iface, $3, $4, $5, scope
+      }'
+  return 0
+}
+
 emit_device() {
   local iface="$1" type="$2" state="$3" connection="$4"
   [[ -z $iface ]] && return 0
@@ -137,6 +162,9 @@ emit_device() {
     "$(san "$iface")" "$(san "$type")" "$(san "$state")" \
     "$(san "$connection")" "$(san "$ip")" "$(san "$prefix")" \
     "$(san "$gateway")" "$(san "$dns")" "$(san "$mac")"
+
+  # All addresses on the device, not just the primary one nmcli gave us.
+  emit_addresses "$iface"
 }
 
 snapshot_network() {
@@ -295,8 +323,129 @@ snapshot_bluetooth() {
   } | sort -t$'\t' -k4,4nr -k5,5nr -k3,3f
 }
 
+# ------------------------------------------------------- virtual networks --
+
+# Tailscale: the backend state and the tailnet peers, so the tab can list them
+# next to the tunnel interface. Peers come from the plain status table: IP,
+# hostname, user, OS, then the connection state.
+snapshot_tailscale() {
+  have tailscale || return 0
+
+  local state
+  state=$(timeout 4 tailscale status --json 2>/dev/null |
+    sed -n 's/.*"BackendState":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
+  [[ -n $state ]] && printf 'TS-STATE\t%s\n' "$(san "$state")"
+
+  timeout 4 tailscale status 2>/dev/null |
+    awk '
+      $1 ~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ {
+        online = 1
+        for (i = 5; i <= NF; i++) if ($i ~ /^offline/) online = 0
+        printf "TSPEER\t%s\t%s\t%s\t%s\t%s\n", $2, $1, online, $4,
+          (NR == 1 ? 1 : 0)
+      }'
+
+  # Exit node candidates. jq is the only reliable way to read the peer list;
+  # without it the tab simply leaves the section out.
+  if have jq; then
+    timeout 4 tailscale status --json 2>/dev/null |
+      jq -r '.Peer[]? | select(.ExitNodeOption == true) |
+        [.HostName, (.TailscaleIPs[0] // ""),
+         (if .ExitNode then "1" else "0" end)] | @tsv' 2>/dev/null |
+      while IFS=$'\t' read -r name ip selected; do
+        [[ -z ${name:-} ]] && continue
+        printf 'TS-EXIT\t%s\t%s\t%s\n' "$(san "$name")" "$(san "${ip:-}")" "${selected:-0}"
+      done
+  fi
+  return 0
+}
+
+# Containers per engine, running or not, then the live resource use of the
+# running ones. `|` is the delimiter: none of these fields contain a pipe, and
+# both docker and podman render the same Go templates.
+snapshot_containers() {
+  local kind name state status runtime cpu mem
+  for kind in docker podman; do
+    have "$kind" || continue
+    timeout 4 "$kind" ps -a --format '{{.Names}}|{{.State}}|{{.Status}}' 2>/dev/null |
+      while IFS='|' read -r name state status; do
+        [[ -z ${name:-} ]] && continue
+        if [[ $status == Up* ]]; then
+          # "Up 2 hours (healthy)" -> "2 hours".
+          runtime=${status#Up }
+          runtime=${runtime%% (*}
+        elif [[ $status == Exited* || $status == Dead* ]]; then
+          # "Exited (0) 5 minutes ago" -> "5 minutes ago".
+          runtime=$(printf '%s' "$status" |
+            sed -E 's/^[^(]*\([^)]*\)[[:space:]]*//')
+        else
+          runtime=""
+        fi
+        printf 'BOX\t%s\t%s\t%s\t%s\t%s\n' "$kind" "$(san "$name")" \
+          "$(san "${state:-}")" "$(san "${status:-}")" "$(san "${runtime:-}")"
+      done
+    timeout 8 "$kind" stats --no-stream --format '{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}' 2>/dev/null |
+      while IFS='|' read -r name cpu mem; do
+        [[ -z ${name:-} ]] && continue
+        printf 'BOXSTAT\t%s\t%s\t%s\t%s\n' "$kind" "$(san "$name")" \
+          "$(san "${cpu:-}")" "$(san "${mem%% / *}")"
+      done
+  done
+  return 0
+}
+
+# Tunnels and bridges report operstate "unknown", so fall back to the
+# interface flags: IFF_UP means the link is up.
+link_state() {
+  local iface="$1" state flags
+  state=$(cat "/sys/class/net/$iface/operstate" 2>/dev/null)
+  if [[ -z $state || $state == unknown ]]; then
+    flags=$(cat "/sys/class/net/$iface/flags" 2>/dev/null)
+    flags=${flags#0x}
+    if [[ -n $flags ]] && (((16#$flags & 0x1) == 1)); then
+      state=up
+    else
+      state=${state:-unknown}
+    fi
+  fi
+  printf '%s' "$state"
+}
+
+# Links NetworkManager does not manage: tailscale0, the docker bridges and the
+# podman bridges. They are read from the kernel, so they appear whether or not
+# their daemon happens to be running, together with every address they carry.
+snapshot_extras() {
+  local iface kind
+  if have ip; then
+    while IFS= read -r iface; do
+
+      [[ -z $iface ]] && continue
+      case "$iface" in
+        tailscale*) kind=tailscale ;;
+        docker* | br-*) kind=docker ;;
+        podman* | cni-podman*) kind=podman ;;
+        *) continue ;;
+      esac
+      printf 'LINK\t%s\t%s\t%s\n' "$kind" "$(san "$iface")" "$(san "$(link_state "$iface")")"
+      emit_addresses "$iface"
+    done < <(ip -o link show 2>/dev/null |
+      awk -F': ' '{ split($2, name, "@"); print name[1] }')
+  fi
+
+  # Installed tooling keeps its tab available even when no link is up yet.
+  have tailscale && printf 'FEATURE\ttailscale\n'
+  have docker && printf 'FEATURE\tdocker\n'
+  have podman && printf 'FEATURE\tpodman\n'
+
+  snapshot_tailscale
+  snapshot_containers
+
+  return 0
+}
+
 snapshot() {
   snapshot_network
+  snapshot_extras
   snapshot_bluetooth
 }
 
@@ -479,6 +628,55 @@ case "${1:-snapshot}" in
       nohup bluetoothctl scan on >/dev/null 2>&1 &
     fi
     ;;
+  container)
+    case "${2:-}" in
+      docker | podman) ;;
+      *) printf 'usage: %s container docker|podman start|stop|restart NAME\n' "$0" >&2; exit 2 ;;
+    esac
+    case "${3:-}" in
+      start | stop | restart) ;;
+      *) printf 'usage: %s container docker|podman start|stop|restart NAME\n' "$0" >&2; exit 2 ;;
+    esac
+    [[ -n ${4:-} ]] || { printf 'usage: %s container docker|podman start|stop|restart NAME\n' "$0" >&2; exit 2; }
+    have "$2" || { printf '%s is not installed\n' "$2" >&2; exit 1; }
+    timeout 60 "$2" "$3" "$4"
+    ;;
+  tailscale)
+    have tailscale || { printf 'tailscale is not installed\n' >&2; exit 1; }
+    case "${2:-}" in
+      up | down) timeout 30 tailscale "$2" ;;
+      exit-node)
+        [[ -n ${3:-} ]] || { printf 'usage: %s tailscale exit-node NAME|none\n' "$0" >&2; exit 2; }
+        if [[ $3 == none ]]; then
+          timeout 30 tailscale set --exit-node=
+        else
+          timeout 30 tailscale set --exit-node="$3"
+        fi
+        ;;
+      suggest)
+        # The command only prints prose, so the suggestion is matched against
+        # the exit node names and addresses we already know about.
+        have jq || { printf 'jq is required for exit node suggestions\n' >&2; exit 1; }
+        suggestion=$(timeout 15 tailscale exit-node suggest 2>&1) || true
+        name=$(timeout 10 tailscale status --json 2>/dev/null |
+          jq -r '.Peer[]? | select(.ExitNodeOption == true) |
+            [.HostName, (.TailscaleIPs[0] // "")] | @tsv' 2>/dev/null |
+          while IFS=$'\t' read -r host ip; do
+            [[ -n ${host:-} ]] || continue
+            if [[ $suggestion == *"$host"* ]] || [[ -n ${ip:-} && $suggestion == *"$ip"* ]]; then
+              printf '%s\n' "$host"
+              break
+            fi
+          done)
+        [[ -n $name ]] || { printf 'No exit node suggestion is available\n' >&2; exit 1; }
+        timeout 30 tailscale set --exit-node="$name"
+        ;;
+      *)
+        printf 'usage: %s tailscale up|down|exit-node NAME|none|suggest\n' "$0" >&2
+        exit 2
+        ;;
+    esac
+    ;;
   bt)
     case "${2:-}" in
       connect | disconnect | pair | trust | remove)
@@ -496,7 +694,7 @@ case "${1:-snapshot}" in
     esac
     ;;
   *)
-    printf 'usage: %s [snapshot|status|toggle|open|close|wifi|scan-wifi|connect-wifi|disconnect-wifi|connect-device|disconnect-device|bt-power|bt-scan|bt]\n' "$0" >&2
+    printf 'usage: %s [snapshot|status|toggle|open|close|wifi|scan-wifi|connect-wifi|disconnect-wifi|connect-device|disconnect-device|bt-power|bt-scan|bt|container|tailscale]\n' "$0" >&2
     exit 2
     ;;
 esac

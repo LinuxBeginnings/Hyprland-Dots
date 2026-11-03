@@ -13,6 +13,7 @@ Rectangle {
 
     signal clicked()
 
+    implicitWidth: content.implicitWidth + 22
     implicitHeight: 30
     radius: 8
     color: active
@@ -22,6 +23,7 @@ Rectangle {
     border.color: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.45)
 
     RowLayout {
+        id: content
         anchors.centerIn: parent
         spacing: 5
 

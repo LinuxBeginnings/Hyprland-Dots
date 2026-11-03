@@ -2,11 +2,14 @@
 
 A small Quickshell panel for the Waybar `custom/qs-network` module. It manages
 ethernet, Wi-Fi and bluetooth, and shows the connection details (address,
-gateway, DNS, MAC) for the active wired and wireless link.
+gateway, DNS, MAC) for the active wired and wireless link. Tailscale, Docker
+and Podman get their own tabs, but only when they are installed or their links
+exist.
 
 ```
 ┌─ 󰖟 Connections ────────────────────── 󰑐  󰅖 ─┐
 │ [󰌘 Ethernet] [󰤨 Wi-Fi] [󰂯 Bluetooth]         │
+│ [󰖂 Tailscale] [ Docker] [ Podman]           │
 │                                              │
 │ 󰤨 Wi-Fi                        󰑓      [on]   │
 │   Linux-Da-Bomb                              │
@@ -81,8 +84,10 @@ a password prompt.
 Each tab holds everything for its device type, so the panel never becomes one
 long list.
 
-- **Ethernet** - the wired device, its state, and an info block with Address,
-  Gateway, DNS and MAC. Click the device line to bring it up or take it down.
+- **Ethernet** - every wired device, its state, and an info block with
+  Address, Gateway, DNS and MAC. All addresses on an interface are listed, so
+  aliased and secondary IPs appear under the first one. Click the device line
+  to bring it up or take it down.
 - **Wi-Fi** - radio switch and rescan, the active connection's Address,
   Gateway, DNS and MAC, then the available networks. Click a network to
   connect, the connected one to disconnect. Locked networks ask for the
@@ -90,6 +95,20 @@ long list.
 - **Bluetooth** - adapter switch and discovery, connected devices with their
   battery level, then paired and available devices. Click an unpaired device to
   pair and connect it, a paired one to connect, a connected one to disconnect.
+- **Tailscale** - only shown when `tailscale` is installed or `tailscale0`
+  exists. The switch brings the tunnel up or down, then the backend state, the
+  tunnel interface with its addresses, the exit nodes (`tailscale set
+  --exit-node`, click to select or clear, "Suggest" asks Tailscale for the best
+  one) and the tailnet peers with their IP, OS and online/offline state.
+- **Docker** - only shown when `docker` is installed or a `docker0`/`br-*`
+  bridge exists. Lists each bridge with its addresses, then the containers as
+  name, status, runtime and live CPU/memory from `docker stats`. Running
+  containers are shown; the "Stopped" switch also lists stopped ones. Click a
+  container to stop it, or start it again.
+- **Podman** - the same for `podman`, the `podman*`/`cni-podman*` bridges and
+  `podman ps` / `podman stats`.
+
+If a tool goes away its tab disappears and an open tab falls back to Ethernet.
 
 Battery is shown for connected devices that report it over BlueZ. Audio
 devices often do not, in which case no battery is displayed for them.
@@ -120,10 +139,17 @@ are watched; changing the wallpaper repaints the panel without a restart.
 The QML side calls it for two things:
 
 - `snapshot` prints the current state as tab separated records
-  (`DEV`, `WIFI`, `WIFI-ON`, `BT-ON`, `BT-SCAN`, `BT-CTL`, `BTDEV`, `NOTE`)
-  which `Backend.qml` parses.
-- the action subcommands (`connect-wifi`, `wifi on|off`, `bt connect`, ...)
-  change state; errors are printed on stderr and shown in the panel.
+  (`DEV`, `ADDR`, `LINK`, `FEATURE`, `WIFI`, `WIFI-ON`, `BT-ON`, `BT-SCAN`,
+  `BT-CTL`, `BTDEV`, `NOTE`) which `Backend.qml` parses. `ADDR` carries every
+  address of an interface (read from `ip`, so aliases are included), `LINK`
+  the tailscale/docker/podman interfaces NetworkManager does not manage,
+  `FEATURE` the installed tooling, `TS-STATE`/`TSPEER`/`TS-EXIT` the tailnet
+  status, peers and exit nodes, and `BOX`/`BOXSTAT` the docker/podman
+  containers and the resource use of the running ones.
+- the action subcommands (`connect-wifi`, `wifi on|off`, `bt connect`,
+  `container docker|podman start|stop|restart NAME`, `tailscale up|down`,
+  `tailscale exit-node NAME|none`, `tailscale suggest`, ...) change state;
+  errors are printed on stderr and shown in the panel.
 
 `status` prints the Waybar JSON, so the module icon and tooltip come from the
 same code as the panel.
@@ -135,6 +161,7 @@ Files:
 | `shell.qml` | entry point, IPC handler, wallust palette loading |
 | `Panel.qml` | the layer-shell window, header, tab bar and footer |
 | `EthernetTab.qml` | wired devices and their connection details |
+| `VirtualNetTab.qml` | Tailscale, Docker and Podman links and their addresses |
 | `WifiTab.qml` | radio, current connection details, network list |
 | `BluetoothTab.qml` | adapter, discovery, devices and battery |
 | `Backend.qml` | runs the script, parses the snapshot, holds the state |

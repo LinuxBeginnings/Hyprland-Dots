@@ -1,4 +1,5 @@
-// Ethernet tab: wired devices with their address, gateway, DNS and MAC.
+// Ethernet tab: every wired device with its addresses (including aliases),
+// gateway, DNS and MAC.
 
 import QtQuick
 import QtQuick.Layouts
@@ -12,13 +13,17 @@ ColumnLayout {
     height: implicitHeight
     spacing: 6
 
-    function addressText(device) {
-        if (device.ip === "") return "—";
-        return device.prefix !== "" ? device.ip + "/" + device.prefix : device.ip;
-    }
-
     function dnsText(device) {
         return device.dns.length > 0 ? device.dns.join(", ") : "—";
+    }
+
+    function detailRows(device) {
+        var rows = root.backend.formattedAddresses(device);
+        if (rows.length === 0) rows.push({ label: "Address", value: "—" });
+        rows.push({ label: "Gateway", value: device.gateway !== "" ? device.gateway : "—" });
+        rows.push({ label: "DNS", value: root.dnsText(device) });
+        rows.push({ label: "MAC", value: device.mac !== "" ? device.mac : "—" });
+        return rows;
     }
 
     Repeater {
@@ -46,12 +51,7 @@ ColumnLayout {
                 theme: root.theme
                 Layout.fillWidth: true
                 visible: modelData.connected
-                rows: modelData.connected ? [
-                    { label: "Address", value: root.addressText(modelData) },
-                    { label: "Gateway", value: modelData.gateway !== "" ? modelData.gateway : "—" },
-                    { label: "DNS", value: root.dnsText(modelData) },
-                    { label: "MAC", value: modelData.mac !== "" ? modelData.mac : "—" }
-                ] : []
+                rows: modelData.connected ? root.detailRows(modelData) : []
             }
 
             Text {

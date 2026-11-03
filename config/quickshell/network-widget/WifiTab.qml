@@ -60,9 +60,13 @@ ColumnLayout {
         return parts.join(" ");
     }
 
-    function addressText(device) {
-        if (!device || device.ip === "") return "—";
-        return device.prefix !== "" ? device.ip + "/" + device.prefix : device.ip;
+    function detailRows(device) {
+        var rows = root.backend.formattedAddresses(device);
+        if (rows.length === 0) rows.push({ label: "Address", value: "—" });
+        rows.push({ label: "Gateway", value: device.gateway !== "" ? device.gateway : "—" });
+        rows.push({ label: "DNS", value: device.dns.length > 0 ? device.dns.join(", ") : "—" });
+        rows.push({ label: "MAC", value: device.mac !== "" ? device.mac : "—" });
+        return rows;
     }
 
     function activateNetwork(network) {
@@ -145,12 +149,8 @@ ColumnLayout {
         theme: root.theme
         Layout.fillWidth: true
         visible: root.activeDevice !== null && root.activeDevice.connected
-        rows: (root.activeDevice !== null && root.activeDevice.connected) ? [
-            { label: "Address", value: root.addressText(root.activeDevice) },
-            { label: "Gateway", value: root.activeDevice.gateway !== "" ? root.activeDevice.gateway : "—" },
-            { label: "DNS", value: root.activeDevice.dns.length > 0 ? root.activeDevice.dns.join(", ") : "—" },
-            { label: "MAC", value: root.activeDevice.mac !== "" ? root.activeDevice.mac : "—" }
-        ] : []
+        rows: (root.activeDevice !== null && root.activeDevice.connected)
+            ? root.detailRows(root.activeDevice) : []
     }
 
     // -------------------------------------------------------- password entry
