@@ -145,12 +145,17 @@ Shape:
   - Set `DOTS_VERSION` in `config/hypr/lua/env.lua`.
   - Rename the `config/hypr/vX.Y.Z` marker file. `copy.sh` and `KooLsDotsUpdate.sh` read it to detect the installed version.
   - Merge `development` into `main` and tag `Hyprland-Dots-vX.Y.Z`.
+  - Sync the wiki changelogs and push them. See Wiki sync.
+- A release is not finished until the wiki carries it.
 - The updater compares against `main`, so an unreleased version on `development` must not be advertised there.
 
 ## Wiki sync
 
 - The wiki documents released versions only.
 - Update `Changelogs.md` (English) and `Changelogs.es.md` (Spanish) after the release lands on `main`. Never sync a change that only exists on `development`.
+- This is part of every release, a patch release cut on `main` such as `v2.3.28.1` included.
 - Keep the header of each file (title, language links, updated date) and refresh the date line.
 - Spanish section headings: `## Corregido:`, `## Añadido:`, `## Actualizado:`, `## Eliminado:`.
 - `../Hyprland-Dots.wiki` is a separate git repository. Commit and push it separately.
+- The moved-repository URL GitHub names for a wiki push is the parent repo, not the wiki.
+  - Correct `origin` to `git@github.com:LinuxBeginnings/Hyprland-Dots.wiki.git`, keeping `.wiki`.
