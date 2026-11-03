@@ -32,7 +32,11 @@ exist.
 - A Nerd Font (`JetBrainsMono Nerd Font`, the dots default)
 
 Without NetworkManager or BlueZ the panel still opens and names the missing
-part.
+part. When `nmcli` is missing, or NetworkManager reports no devices at all, the
+wired devices are read from the kernel (`ip`, `/sys/class/net`) instead: the
+Ethernet tab still lists each NIC with its addresses, gateway and MAC,
+read-only, and the footer says why in the error colour. Opening the panel also
+raises one desktop notification about the missing NetworkManager per session.
 
 ## Usage
 
@@ -87,7 +91,9 @@ long list.
 - **Ethernet** - every wired device, its state, and an info block with
   Address, Gateway, DNS and MAC. All addresses on an interface are listed, so
   aliased and secondary IPs appear under the first one. Click the device line
-  to bring it up or take it down.
+  to bring it up or take it down. A device NetworkManager leaves unmanaged
+  (common in VMs where `/etc/network/interfaces` owns the NIC) is listed
+  read-only, with the addresses and gateway the kernel reports.
 - **Wi-Fi** - radio switch and rescan, the active connection's Address,
   Gateway, DNS and MAC, then the available networks. Click a network to
   connect, the connected one to disconnect. Locked networks ask for the
@@ -189,6 +195,51 @@ Check what the panel would receive:
 ~/.config/hypr/scripts/QsNetworkPanel.sh snapshot
 ~/.config/hypr/scripts/QsNetworkPanel.sh status
 ```
+
+If the Ethernet tab marks a device as "Unmanaged by NetworkManager", something
+else owns it - usually `/etc/network/interfaces` in a VM image, with
+`[ifupdown] managed=false` in `/etc/NetworkManager/NetworkManager.conf`. Its
+addresses are still shown. To hand the device to NetworkManager (so Connect
+and Disconnect work in the panel), with `ens18` standing in for your NIC:
+
+```bash
+# 1. keep a backup, then leave the file describing only `lo`
+sudo cp -a /etc/network/interfaces /etc/network/interfaces.bak
+sudo sed -i -E 's/^(allow-hotplug ens18|iface ens18 .*)$/# \1/' /etc/network/interfaces
+
+# 2. give NetworkManager a profile that autoconnects by interface name
+sudo nmcli connection add type ethernet ifname ens18 con-name ens18 \
+  ipv4.method auto ipv6.method auto connection.autoconnect yes
+
+# 3. stop ifupdown and the dhcpcd it started, then let NetworkManager
+#    run DHCP itself
+sudo systemctl stop networking
+sudo pkill -x dhcpcd
+sudo nmcli connection down ens18
+sudo nmcli connection up ens18
+```
+
+`nmcli device status` should now show `ens18  connected  ens18`, and
+`/etc/resolv.conf` becomes NetworkManager's. The lease usually changes, so
+check port forwards and bookmarks aimed at the old address. `[ifupdown]
+managed=false` can stay: `lo` is then the only interface that file describes,
+and NetworkManager owns the rest through its own profiles.
+
+To go back, restore the backup, let ifupdown configure the NIC again and drop
+the profile:
+
+```bash
+sudo mv /etc/network/interfaces.bak /etc/network/interfaces
+sudo systemctl start networking
+sudo nmcli connection delete ens18
+```
+
+With no `nmcli` at all, or when NetworkManager reports no devices, the panel
+falls back to the kernel for wired hardware: `ip link`/`ip addr` for the state
+and addresses, `ip route` for the gateway, `/sys/class/net` for the MAC and
+`/etc/resolv.conf` for DNS (falling back to `resolvectl` when systemd-resolved
+only leaves its `127.0.0.53` stub there). Those rows are read-only, and the
+`ERR` record in the snapshot is what carries the reason into the footer.
 
 If the panel does not follow the wallpaper, check that the file exists and
 contains `@define-color background`:

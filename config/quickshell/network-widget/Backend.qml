@@ -18,7 +18,7 @@ Item {
     readonly property string script: Quickshell.shellDir + "/../../hypr/scripts/QsNetworkPanel.sh"
 
     // Snapshot state.
-    property var devices: []        // { iface, type, state, connection, ip, prefix, gateway, dns, mac, connected, addresses }
+    property var devices: []        // { iface, type, state, connection, ip, prefix, gateway, dns, mac, managed, connected, addresses }
     property var links: []          // { kind, iface, state, addresses }
     property var features: ({})     // { tailscale: true, docker: true, podman: true }
     property var tailscalePeers: [] // { name, ip, online, os, self }
@@ -32,6 +32,9 @@ Item {
     property bool btScanning: false
     property string controller: ""
     property string note: ""
+    // A note that reports something broken (no NetworkManager, for example)
+    // rather than a normal hint, so the panel can colour it as an error.
+    property bool noteIsError: false
     property bool loaded: false
 
     // Panel driven state.
@@ -123,6 +126,7 @@ Item {
         var btScanning = false;
         var controller = "";
         var notes = [];
+        var noteIsError = false;
 
         var lines = String(text).split("\n");
         for (var i = 0; i < lines.length; i++) {
@@ -142,7 +146,11 @@ Item {
                     gateway: field(parts, 7, ""),
                     dns: dns === "" ? [] : dns.split(","),
                     mac: field(parts, 9, ""),
-                    connected: field(parts, 3, "") === "connected",
+                    // Older script output has no MANAGED field; assume managed.
+                    managed: field(parts, 10, "1") === "1",
+                    // nmcli reports assumed configurations as "connected
+                    // (externally)" or "connected (site only)" too.
+                    connected: field(parts, 3, "").indexOf("connected") === 0,
                     addresses: []
                 });
                 break;
@@ -238,6 +246,10 @@ Item {
             case "NOTE":
                 notes.push(field(parts, 1, ""));
                 break;
+            case "ERR":
+                notes.push(field(parts, 1, ""));
+                noteIsError = true;
+                break;
             }
         }
 
@@ -281,6 +293,7 @@ Item {
         backend.btScanning = btScanning;
         backend.controller = controller;
         backend.note = notes.join(" · ");
+        backend.noteIsError = noteIsError;
         backend.loaded = true;
     }
 

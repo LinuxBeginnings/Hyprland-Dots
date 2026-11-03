@@ -39,9 +39,14 @@ ColumnLayout {
                 Layout.fillWidth: true
                 icon: "󰌘"
                 label: modelData.connection !== "" ? modelData.connection : modelData.iface
-                detail: modelData.iface
-                trailing: modelData.connected ? "Disconnect" : "Connect"
-                highlighted: modelData.connected
+                // A device NetworkManager does not manage (ifupdown owns the
+                // NIC in some VM images) still gets its addresses below, but
+                // it cannot be brought up or down from here.
+                detail: modelData.managed ? modelData.iface : "Unmanaged by NetworkManager"
+                trailing: !modelData.managed ? ""
+                    : (modelData.connected ? "Disconnect" : "Connect")
+                highlighted: modelData.connected || modelData.addresses.length > 0
+                interactive: modelData.managed
                 onActivated: modelData.connected
                     ? root.backend.disconnectDevice(modelData.iface)
                     : root.backend.connectDevice(modelData.iface)
@@ -50,16 +55,18 @@ ColumnLayout {
             InfoBlock {
                 theme: root.theme
                 Layout.fillWidth: true
-                visible: modelData.connected
-                rows: modelData.connected ? root.detailRows(modelData) : []
+                visible: modelData.connected || modelData.addresses.length > 0
+                rows: (modelData.connected || modelData.addresses.length > 0)
+                    ? root.detailRows(modelData) : []
             }
 
             Text {
                 Layout.fillWidth: true
                 Layout.leftMargin: 10
                 Layout.bottomMargin: 4
-                visible: !modelData.connected
-                text: modelData.state !== "" ? "Cable unplugged (" + modelData.state + ")" : "Cable unplugged"
+                visible: !modelData.connected && modelData.addresses.length === 0
+                text: !modelData.managed ? "Not managed by NetworkManager"
+                    : (modelData.state !== "" ? "Cable unplugged (" + modelData.state + ")" : "Cable unplugged")
                 font.family: root.theme.fontFamily
                 font.pixelSize: 10
                 color: root.theme.muted

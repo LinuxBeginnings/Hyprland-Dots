@@ -291,7 +291,8 @@ PanelWindow {
             Layout.fillWidth: true
             Layout.topMargin: 2
             text: panel.footerText()
-            color: backend.error !== "" ? panel.theme.bad : panel.theme.muted
+            color: backend.error !== "" || backend.noteIsError
+                ? panel.theme.bad : panel.theme.muted
             font.family: panel.theme.fontFamily
             font.pixelSize: 10
             wrapMode: Text.Wrap
