@@ -361,6 +361,11 @@ There is also a keyboard-passthrough submap: `SUPER + SHIFT + P` sends your
 keystrokes to the focused window (useful for VMs and remote sessions), and
 `SUPER + ALT + P` leaves it. Waybar shows `submap: Bind KB` while it is active.
 
+The network / Bluetooth panel has no default binding, so it is absent from the
+tables above. Section 8 shows the `bind(...)` line for it; `SUPER + CTRL + N` is
+free and is what that example uses. Once you add it, `SUPER + SHIFT + K` lists it
+under your description.
+
 ---
 
 ## 5. The UserConfigs directory
@@ -963,7 +968,7 @@ click still runs `nmtui`. It has no key by default; add one in
 `user_keybinds.lua` if you want it on the keyboard:
 
 ```lua
-bind("SUPER SHIFT", "N", exec_cmd("$HOME/.config/hypr/scripts/QsNetworkPanel.sh toggle"),
+bind("SUPER CTRL", "N", exec_cmd("$HOME/.config/hypr/scripts/QsNetworkPanel.sh toggle"),
   { description = "Network panel" })
 ```
 

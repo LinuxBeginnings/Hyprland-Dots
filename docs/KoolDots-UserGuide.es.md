@@ -372,6 +372,11 @@ pulsaciones a la ventana enfocada (útil para máquinas virtuales y sesiones
 remotas), y `SUPER + ALT + P` sale de él. Waybar muestra `submap: Bind KB`
 mientras está activo.
 
+El panel de red / Bluetooth no tiene atajo predeterminado, por eso no aparece en
+las tablas anteriores. La sección 8 muestra la línea `bind(...)` para asignarle
+uno; `SUPER + CTRL + N` está libre y es el que usa ese ejemplo. Una vez añadido,
+`SUPER + SHIFT + K` lo lista con su descripción.
+
 ---
 
 ## 5. El directorio UserConfigs
@@ -993,7 +998,7 @@ muestra u oculta, el clic derecho sigue abriendo `nmtui`. No tiene atajo
 predeterminado; añada uno en `user_keybinds.lua` si lo quiere en el teclado:
 
 ```lua
-bind("SUPER SHIFT", "N", exec_cmd("$HOME/.config/hypr/scripts/QsNetworkPanel.sh toggle"),
+bind("SUPER CTRL", "N", exec_cmd("$HOME/.config/hypr/scripts/QsNetworkPanel.sh toggle"),
   { description = "Panel de red" })
 ```
 
