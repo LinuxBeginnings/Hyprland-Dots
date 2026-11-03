@@ -66,8 +66,10 @@ on every bundled bar layout, in `modules-right`:
 - left click: show or hide the panel
 - right click: `nmtui` (unchanged behaviour from the old `network` module)
 
-The icon follows the connection: wired, Wi-Fi signal strength, or a slashed
-Wi-Fi glyph when nothing is connected. Two-bar layouts (`TOP-&-BOT-*`,
+The module polls once a second (`"interval": 1`), so the icon and tooltip
+follow a link going up or down without a click. The icon follows the
+connection: wired, Wi-Fi signal strength, or a slashed Wi-Fi glyph when nothing
+is connected. Two-bar layouts (`TOP-&-BOT-*`,
 `TOP-&-*`, `BOT-&-*`) get it on the first bar only, so it does not appear twice.
 Every stylesheet in `waybar/style` carries a `#custom-qs-network` rule; it
 inherits the bar's text colour, so a style you switch to later still looks

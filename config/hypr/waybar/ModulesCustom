@@ -82,7 +82,8 @@
 // Quickshell network & bluetooth widget (quickshell/network-widget)
 "custom/qs-network": {
 	"exec": "$HOME/.config/hypr/scripts/QsNetworkPanel.sh status",
-	"interval": 10,
+	// Short, so the icon and tooltip follow link changes on their own.
+	"interval": 1,
 	"return-type": "json",
 	"format": "{}",
 	"tooltip": true,
