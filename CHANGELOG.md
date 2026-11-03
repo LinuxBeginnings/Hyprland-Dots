@@ -4,6 +4,16 @@
 
 ## Fixed:
 
+- `user_startup.lua` is no longer broken by an installer autostart entry
+  - `enable_ags()`, `enable_asusctl()`, `enable_blueman()` matched the table
+  - That `sed` address was unanchored, so it matched the COMMENTED opener
+  - Every template before v2.3.28 ships the startup block commented out
+  - The entry then landed outside any table, which is not valid Lua
+  - The file stopped parsing, so none of its startup commands ran
+  - `user_overrides.lua` reports that as one `[WARN]`, and nothing else
+  - `lib_apps.sh` anchors the address and falls back to a live `exec_once()`
+  - `patches/91-user-startup-orphan-entry.sh` repairs the files already broken
+
 - The 24H answer at install now reaches every Waybar clock
   - The install prompt applied 12H only, so the 24H answer changed nothing
   - Its `sed` patterns had drifted off the modules files and matched nothing

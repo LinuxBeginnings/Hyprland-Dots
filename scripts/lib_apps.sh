@@ -7,16 +7,75 @@
 # ==================================================
 # App enablement and editor selection helpers.
 
+# --- UserConfigs/user_startup.lua -------------------------------------------
+#
+# The three helpers below add one command each to user_startup.lua. They used to
+# insert it with
+#
+#   sed '/local startup_commands = {/a \  "ags",'
+#
+# which is not anchored. Every template before v2.3.28 ships the startup block
+# commented out, so the address matched the COMMENTED `-- local startup_commands
+# = {` and the entry landed outside any table. A stray `  "ags",` at the top
+# level is not valid Lua: the whole file stopped parsing, lua/user_overrides.lua
+# dropped it with a single [WARN], and none of the user's startup commands ran.
+#
+# So the table line is matched with its leading whitespace anchored, and when the
+# file has no live table the command is added as a live exec_once() call instead.
+# The template's own header documents exec_once("command") as the alternative to
+# the table, and exec_once is a top-level local in every template that has ever
+# shipped, so a call to it is valid at the end of the file.
+#
+# patches/91-user-startup-orphan-entry.sh repairs the files an earlier installer
+# run already broke.
+KOOLDOTS_LIVE_STARTUP_TABLE='^[[:space:]]*local[[:space:]]+startup_commands[[:space:]]*=[[:space:]]*[{]'
+
+# startup_entry_present <file> <command>
+# True when the command is already ENABLED: a live table entry, or a live
+# exec_once() call. A commented-out mention does not count. Reading one as
+# "already there" is what would keep a repaired file from ever getting its entry
+# back, and it is also why an entry could be added twice.
+startup_entry_present() {
+  local file="$1" cmd="$2"
+  grep -qE "^[[:space:]]*(\"$cmd\",|exec_once\\(\"$cmd\"\\))" "$file" 2>/dev/null
+}
+
+# startup_add <file> <command> <log>
+# Adds the command to a live startup_commands table, or as a live exec_once() call
+# when there is no live table. It never writes an entry outside a table.
+startup_add() {
+  local file="$1" cmd="$2" log="$3"
+  local tmp
+
+  [ -f "$file" ] || return 0
+
+  if grep -qE "$KOOLDOTS_LIVE_STARTUP_TABLE" "$file" 2>/dev/null; then
+    tmp="$(mktemp "${TMPDIR:-/tmp}/kooldots-startup.XXXXXX")" || return 1
+    if awk -v re="$KOOLDOTS_LIVE_STARTUP_TABLE" -v entry="  \"$cmd\"," '
+          { print }
+          !done && $0 ~ re { print entry; done = 1 }
+        ' "$file" >"$tmp"; then
+      cat "$tmp" >"$file"
+      rm -f "$tmp"
+      echo "${INFO:-[INFO]} Added $cmd to the startup_commands table in user_startup.lua" 2>&1 | tee -a "$log"
+      return 0
+    fi
+    rm -f "$tmp"
+    echo "${WARN:-[WARN]} Could not add $cmd to user_startup.lua; add it by hand" 2>&1 | tee -a "$log"
+    return 1
+  fi
+
+  printf '\n-- Added by the installer: %s is installed.\nexec_once("%s")\n' "$cmd" "$cmd" >>"$file"
+  echo "${INFO:-[INFO]} user_startup.lua has no live startup_commands table; added exec_once(\"$cmd\") instead" 2>&1 | tee -a "$log"
+}
+
 enable_asusctl() {
   local log="$1"
   local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
   if command -v asusctl >/dev/null 2>&1; then
     local target="$cfg_home/hypr/UserConfigs/user_startup.lua"
-    if [ -f "$target" ]; then
-      if ! grep -q '"rog-control-center"' "$target"; then
-        sed -i '/local startup_commands = {/a \  "rog-control-center",' "$target"
-        echo "${INFO:-[INFO]} Added rog-control-center to user_startup.lua" 2>&1 | tee -a "$log"
-      fi
+    if [ -f "$target" ] && ! startup_entry_present "$target" "rog-control-center"; then
+      startup_add "$target" "rog-control-center" "$log"
     fi
   fi
 }
@@ -26,13 +85,17 @@ enable_blueman() {
   local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
   if command -v blueman-applet >/dev/null 2>&1; then
     local target="$cfg_home/hypr/UserConfigs/user_startup.lua"
-    if [ -f "$target" ]; then
-      if sed -n '/local startup_commands = {/,/}/p' "$target" | grep -q '^[[:space:]]*--[[:space:]]*"blueman-applet"'; then
-        sed -i '/local startup_commands = {/,/}/s/^[[:space:]]*--[[:space:]]*\("blueman-applet"\)/\1/' "$target"
+    if [ -f "$target" ] && ! startup_entry_present "$target" "blueman-applet"; then
+      # The shipped table carries the entry commented out, so uncomment that one
+      # rather than adding a second. Only an entry inside a LIVE table counts:
+      # one inside the commented template block would become the same orphan the
+      # old installer produced.
+      if sed -nE "/$KOOLDOTS_LIVE_STARTUP_TABLE/,/^[[:space:]]*}/p" "$target" |
+        grep -q '^[[:space:]]*--[[:space:]]*"blueman-applet",'; then
+        sed -i -E 's/^([[:space:]]*)--[[:space:]]*("blueman-applet",)/\1\2/' "$target"
         echo "${INFO:-[INFO]} Enabled blueman-applet in user_startup.lua" 2>&1 | tee -a "$log"
-      elif ! grep -q '"blueman-applet"' "$target"; then
-        sed -i '/local startup_commands = {/a \  "blueman-applet",' "$target"
-        echo "${INFO:-[INFO]} Added blueman-applet to user_startup.lua" 2>&1 | tee -a "$log"
+      else
+        startup_add "$target" "blueman-applet" "$log"
       fi
     fi
   fi
@@ -45,10 +108,8 @@ enable_ags() {
   if command -v ags >/dev/null 2>&1; then
     echo "${INFO:-[INFO]} AGS detected - enabling in startup and refresh scripts" 2>&1 | tee -a "$log"
     local target="$cfg_home/hypr/UserConfigs/user_startup.lua"
-    if [ -f "$target" ]; then
-      if ! grep -q '"ags"' "$target"; then
-        sed -i '/local startup_commands = {/a \  "ags",' "$target"
-      fi
+    if [ -f "$target" ] && ! startup_entry_present "$target" "ags"; then
+      startup_add "$target" "ags" "$log"
     fi
     sed -i '/#ags -q && ags &/s/^#//' "$base/config/hypr/scripts/RefreshNoWaybar.sh" 2>/dev/null || true
     sed -i '/#ags -q && ags &/s/^#//' "$base/config/hypr/scripts/Refresh.sh" 2>/dev/null || true
