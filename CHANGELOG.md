@@ -4,6 +4,15 @@
 
 ## Fixed:
 
+- `movetoworkspace +1` no longer moves the window to workspace 1
+  - Lua reads `"+1"` as the number `1`, so the relative move was lost
+  - Hyprland turns a Lua number back into `"1"`, an absolute workspace
+  - A signed value now stays a string, which Hyprland parses as relative
+  - Fixed in `system_keybinds.lua`, the helper and the migration template
+  - `SUPER SHIFT + ]`, `SUPER CTRL + ]` and user binds using `+1` work again
+  - Thanks to @andreineustroev for the report and the original fix
+  - PR: [#165](https://github.com/LinuxBeginnings/Hyprland-Dots/pull/165)
+
 - `user_startup.lua` is no longer broken by an installer autostart entry
   - `enable_ags()`, `enable_asusctl()`, `enable_blueman()` matched the table
   - That `sed` address was unanchored, so it matched the COMMENTED opener

@@ -158,6 +158,13 @@ end
 
 local function workspace_value(value)
   value = trim(value)
+  -- Lua reads "+1" as the number 1, and Hyprland turns a Lua number into a
+  -- workspace selector with std::to_string, so `movetoworkspace +1` arrived as
+  -- the absolute workspace 1. A signed value stays a string, which Hyprland
+  -- parses as relative, the same way `hyprctl dispatch` always has.
+  if value:match("^[+-]%d+$") then
+    return value
+  end
   return tonumber(value) or value
 end
 
