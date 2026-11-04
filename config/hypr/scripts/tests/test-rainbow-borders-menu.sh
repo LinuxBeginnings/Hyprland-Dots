@@ -44,17 +44,31 @@ chmod +x "$CFG/hypr/scripts/Refresh.sh"
 
 # The classic script carries the effect as a variable at the top. Both files are
 # stubs: the menu only reads, moves and rewrites them.
+#
+# Both are launched in the background by the menu, and rewriting a script a
+# process is still executing fails with "Text file busy": the old content then
+# survives and the next case is judged against it. Writing a sibling and
+# renaming it into place leaves the running process on the old inode, so a
+# later case always gets the content it just wrote.
+write_exec() { # write_exec <path>, content on stdin
+  local path=$1 tmp="$1.new"
+  cat >"$tmp"
+  chmod +x "$tmp"
+  mv -f -- "$tmp" "$path"
+}
+
 make_classic() {
-  cat >"$CLASSIC" <<'EOS'
+  write_exec "$CLASSIC" <<'EOS'
 #!/usr/bin/env bash
 EFFECT_TYPE="gradient_flow"
 exit 0
 EOS
-  chmod +x "$CLASSIC"
 }
 make_lowcpu() {
-  printf '#!/usr/bin/env bash\nsleep 30\n' >"$LOWCPU"
-  chmod +x "$LOWCPU"
+  write_exec "$LOWCPU" <<'EOS'
+#!/usr/bin/env bash
+sleep 30
+EOS
 }
 
 # Fake rofi: records the rows and arguments of every call, and answers with the

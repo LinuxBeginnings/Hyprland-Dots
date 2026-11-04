@@ -21,8 +21,11 @@
 #   reason:
 #     - pidof skips a process whose executable is a shell unless given -x, so
 #       the fakes must not be shell wrappers
-#     - the marker has to survive in argv, and `sleep 60 +list-themes` exits on
-#       the invalid duration, so `tail -f` carries the marker instead
+#     - the program has to keep running under a rewritten argv[0]. NixOS ships
+#       coreutils as one multi-call binary that dispatches on argv[0], so
+#       `exec -a <name> sleep` answers "coreutils: unknown program" and exits,
+#       and `tail -f` turns the marker into a file it cannot open. `awk` ignores
+#       argv[0] and stays up, so it hosts every fake.
 #   That is what the liveness guard below is for: a fake that already exited,
 #   or that pidof cannot see, would pass "not listed" vacuously.
 #   SIGUSR2 terminates by default, so "was it signalled" is answered by
@@ -53,14 +56,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# start_fake <pidfile> <command> [args...]
-# Runs the command with argv[0] rewritten to $NAME. The command must not be a
-# shell, or pidof will not report it and the fake is invisible rather than
-# filtered.
+# start_fake <pidfile> [marker-arg...]
+# Runs awk with argv[0] rewritten to $NAME. awk is a real binary, not a shell,
+# so pidof reports it; it loops on `sleep 1` so the fake stays up until it is
+# signalled, and any extra argument is the CLI marker being tested.
 start_fake() {
   local pidfile="$1"
   shift
-  bash -c 'exec -a "$0" "${@:1}"' "$NAME" "$@" >/dev/null 2>&1 &
+  bash -c 'exec -a "$0" "${@:1}"' "$NAME" \
+    awk 'BEGIN { while (1) system("sleep 1") }' "$@" >/dev/null 2>&1 &
   printf '%s\n' "$!" >"$pidfile"
 }
 
@@ -93,7 +97,7 @@ started() {
 
 # --- the application is listed, a + subcommand is not ----------------------
 it "the application is listed"
-start_fake "$WORK/app.pid" sleep 60
+start_fake "$WORK/app.pid"
 app_pid="$(cat "$WORK/app.pid")"
 started "$WORK/app.pid" "application" || true
 
@@ -101,7 +105,7 @@ listed="$(terminal_app_pids "$NAME" 2>/dev/null || true)"
 assert_contains "$listed" "$app_pid" "the application PID is listed"
 
 it "a + subcommand is not listed"
-start_fake "$WORK/plus.pid" tail -f /dev/null +list-themes
+start_fake "$WORK/plus.pid" +list-themes
 plus_pid="$(cat "$WORK/plus.pid")"
 started "$WORK/plus.pid" "+list-themes" || true
 
@@ -109,7 +113,7 @@ listed="$(terminal_app_pids "$NAME" 2>/dev/null || true)"
 assert_not_contains "$listed" "$plus_pid" "the +list-themes PID is skipped"
 
 it "an @ remote-control invocation is not listed"
-start_fake "$WORK/at.pid" tail -f /dev/null @load-config
+start_fake "$WORK/at.pid" @load-config
 at_pid="$(cat "$WORK/at.pid")"
 started "$WORK/at.pid" "@load-config" || true
 

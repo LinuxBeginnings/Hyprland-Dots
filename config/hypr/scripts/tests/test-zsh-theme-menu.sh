@@ -18,6 +18,15 @@ HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./lib_test.sh
 source "$HERE/lib_test.sh"
 
+# ZshChangeTheme.sh refuses to run on NixOS by design ("Sorry NixOS does not
+# support this KooL feature"), so there is no menu to drive there.
+if grep -qi nixos /etc/os-release 2>/dev/null; then
+  it "the zsh theme menu is unsupported on NixOS, so it was not driven"
+  pass_msg
+  summary "test-zsh-theme-menu"
+  exit 0
+fi
+
 SCRIPT="$HERE/../ZshChangeTheme.sh"
 WORK="$(mktemp -d)"; trap 'rm -rf -- "$WORK"' EXIT
 

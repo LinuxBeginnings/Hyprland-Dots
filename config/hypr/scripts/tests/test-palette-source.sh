@@ -30,6 +30,12 @@ for choice in wallust butterpal; do
   printf '%s\n' "$choice" >"$WORK/state-$choice/hypr/palette_source"
 done
 mkdir -p "$WORK/emptybin"
+# A fake butterpal, so a case that resolves to it does not depend on whether the
+# host has butterpal installed. The resolver only checks that it is on PATH, and
+# the extraction itself is not what this suite is about.
+mkdir -p "$WORK/bin"
+printf '#!/usr/bin/env bash\nexit 0\n' >"$WORK/bin/butterpal"
+chmod +x "$WORK/bin/butterpal"
 
 # check <label> <expected> <command...>
 check() {
@@ -48,9 +54,9 @@ check "no environment, no state file" wallust \
 check "state file says wallust" wallust \
   env -u KOOLDOTS_PALETTE_SOURCE XDG_STATE_HOME="$WORK/state-wallust"
 check "state file says butterpal" butterpal \
-  env -u KOOLDOTS_PALETTE_SOURCE XDG_STATE_HOME="$WORK/state-butterpal"
+  env -u KOOLDOTS_PALETTE_SOURCE PATH="$WORK/bin:$PATH" XDG_STATE_HOME="$WORK/state-butterpal"
 check "the environment beats the state file" butterpal \
-  env KOOLDOTS_PALETTE_SOURCE=butterpal XDG_STATE_HOME="$WORK/state-wallust"
+  env KOOLDOTS_PALETTE_SOURCE=butterpal PATH="$WORK/bin:$PATH" XDG_STATE_HOME="$WORK/state-wallust"
 check "an unrecognised value falls back" wallust \
   env KOOLDOTS_PALETTE_SOURCE=nonsense XDG_STATE_HOME="$WORK/state-none"
 check "butterpal chosen but not on PATH" wallust \

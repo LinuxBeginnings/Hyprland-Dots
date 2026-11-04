@@ -62,6 +62,20 @@ run_dp() {
   timeout 60 bash "$SCRIPT" "$@"
 }
 
+# wait_for_log <extended-regex> [tries]
+# The bar is launched in the background, so the fake's line lands after the
+# script has returned. Poll briefly for it rather than race the assertion
+# against the launch.
+wait_for_log() {
+  local re=$1 tries=${2:-100}
+  while (( tries > 0 )); do
+    grep -qE -- "$re" "$CALL_LOG" && return 0
+    sleep 0.02
+    tries=$((tries - 1))
+  done
+  return 1
+}
+
 # --- applying a stored layout ----------------------------------------------
 reset_store
 it "applying a named layout succeeds"
@@ -301,6 +315,7 @@ cp "$F/waybar-config-2bars" "$WORK/waybar/config"
 it "waybar is restarted when the config changes"
 waybar_store
 run_dp "$F/monitors-dual.json" "$F/monitors-dual.json" -- Home >/dev/null 2>&1
+wait_for_log '^waybar -c .* -s ' || true
 # anchored: the systemd-run line also contains "waybar -c ... -s ...".
 assert_count_re 1 "$CALL_LOG" '^waybar -c .* -s ' "exactly one launch"
 assert_contains "$CALL_LOG" "-s $WORK/waybar/style.css" "the stylesheet was passed"
