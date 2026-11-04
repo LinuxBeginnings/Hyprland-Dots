@@ -6,6 +6,7 @@ import Quickshell.Widgets
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Qt5Compat.GraphicalEffects
+import "../common"
 
 Item {
     id: thumbContainer
@@ -254,7 +255,7 @@ Item {
                     anchors.fill: parent
                     color: thumbContainer.hovered ? "transparent": "#33000000"
                     border.width : thumbContainer.hovered ? 3 : 1
-                    border.color : thumbContainer.hovered ? m3.m3Primary : m3.m3Secondary
+                    border.color : thumbContainer.hovered ? Appearance.m3colors.m3borderPrimary : Appearance.m3colors.m3borderSecondary
                     radius: 16
                 }
             }

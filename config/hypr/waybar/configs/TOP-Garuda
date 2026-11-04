@@ -55,6 +55,7 @@
 	"pulseaudio",
 	"network",
 	"tray",
+	"custom/qs-network",
 	"idle_inhibitor",
 	"custom/power",
 	],

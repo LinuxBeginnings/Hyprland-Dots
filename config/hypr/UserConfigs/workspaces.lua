@@ -6,12 +6,24 @@
 -- ==================================================
 
 -- User workspace rules for Lua workflow.
--- PersistWorkspaceLayout.sh writes workspace layout rules into this file.
+-- PersistWorkspaceLayout.sh writes workspace layout rules into this file, and
+-- DisplayProfile.sh imports nwg-displays' Workspace -> Output assignments here.
 -- Keep custom hl.workspace_rule(...) entries here so upgrades preserve them.
-
--- Example:
--- hl.workspace_rule({
---     workspace = "1",
---     monitor = "eDP-1",
---     layout = "dwindle",
--- })
+--
+-- A workspace stays on a display only if a rule says so. With no rule,
+-- SUPER + 1..0 puts the workspace on whichever monitor has focus, so switching
+-- from the external display looks like the workspace moving there.
+--
+-- Example - bind workspaces to displays:
+-- hl.workspace_rule({ workspace = "1", monitor = "eDP-1" })
+-- hl.workspace_rule({ workspace = "2", monitor = "eDP-1" })
+-- hl.workspace_rule({ workspace = "3", monitor = "HDMI-A-1" })
+-- hl.workspace_rule({ workspace = "4", monitor = "HDMI-A-1", default = true })
+--
+-- Rules can also carry a layout, and any of the fields in hl.meta.lua's
+-- WorkspaceRuleSpec (gaps_in, gaps_out, no_rounding, persistent, ...).
+-- `hyprctl monitors` lists the output names.
+--
+-- Leave a rule alone if it ends with `-- nwg-displays: ...`: that marker names
+-- the fields nwg-displays' Workspaces panel owns, and the import rewrites only
+-- those. Everything else in this file is yours.

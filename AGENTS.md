@@ -34,11 +34,29 @@ The user's interactive shell is **zsh** (currently 5.9.2) on ~98% of their syste
 - Prefer tools that parse their own input (`find`, `grep -r`, `awk`, `jq`) over shell loops and globs.
 - If output is empty, a single blob, or a suspiciously short list, suspect a shell mismatch before concluding the system is in that state.
 
+## Script shebangs
+
+Every script in this repository starts with `#!/usr/bin/env bash`.
+
+- Never `#!/bin/bash` and never `#!/bin/sh`.
+  - NixOS has no `/bin/bash`, only `/nix/store/.../bin/bash`.
+  - `/usr/bin/env` is the one path it does provide, so `env bash` is the portable form.
+  - The installer does not cover NixOS, but the scripts are run there.
+- The rule covers an interpreter named inside a script, not just the shebang.
+  - `systemd-run` and `setsid` resolve their command against a different `PATH`, so name the interpreter absolutely there.
+  - `"$BASH"` is the bash already running the script, and the right thing to pass. Not `bash`, not `/bin/bash`.
+- Python scripts use `#!/usr/bin/env python3` for the same reason.
+- `config/hypr/scripts/tests/test-shebangs.sh` enforces all of this.
+
 ## Branch hygiene
 
 - `git fetch --prune` and pull the current branch before editing. Never start work on a stale branch.
 - Stash or commit local edits first, so the pull cannot fail or conflict.
-- Work on `development`. Pull requests target `development`, not `main`.
+- Work on `development` and push there directly.
+- Do not open a pull request for work on `development`, and do not offer to.
+  - `development` reaches `main` only when a release is cut.
+  - A change is finished once it is on `development`.
+  - Pull requests from outside contributors still target `development`.
 - Say which branch and commit the work started from.
 
 ## Remote
@@ -48,6 +66,38 @@ The user's interactive shell is **zsh** (currently 5.9.2) on ~98% of their syste
 - Keep the transport already in use. This repo is SSH, so a corrected URL stays `git@github.com:...`, never `https://`.
 - Do not defer it: GitHub redirects the old path, so nothing fails loudly and every later push repeats the warning.
 - The difference is usually only the case of the org name (`Linuxbeginnings` against `LinuxBeginnings`), but treat whatever URL GitHub names as the one to use.
+
+## Supported distros
+
+The installer and the dotfiles upgrade flow cover these:
+
+- Debian, Arch, Fedora and openSUSE: installer on `main`.
+- Ubuntu: the installer is branched per release, matched on `VERSION_ID`.
+  - Linux Mint and Zorin OS are supported as Ubuntu 24.04 based.
+  - Ubuntu 26.10 is not officially supported and uses the 26.04 branch.
+    - It must warn: `Ubuntu 26.10 not officially supported. Use at own risk`
+- NixOS and Gentoo are not covered.
+  - NixOS is declarative and ships no `update-deps.sh`.
+  - There is no Gentoo installer repository.
+  - The scripts still have to run on NixOS. See Script shebangs.
+
+## Hyprland 0.57
+
+The dots target Hyprland 0.57, which configures through a Lua manager. The hyprlang parser and its `hyprctl keyword` write path are gone.
+
+- Config is Lua: `hl.config()`, `hl.get_config()`, `hl.dsp.*`, `hl.curve`, `hl.animation`, loaded from `hyprland.lua` through `dofile`.
+- Write config at runtime with `hyprctl eval`, never `hyprctl keyword`.
+  - `eval` runs the string in Hyprland's embedded Lua state and answers exactly `ok`.
+  - `keyword` is no longer a registered command, yet `hyprctl keyword <opt> <value>` still exits 0 while answering `unknown request`.
+  - Exit status alone therefore reads a rejected write as a success, which is how Rainbow Borders silently stopped applying the border.
+  - Only the exact reply `ok` counts as a successful write.
+  - Keep a `keyword` fallback only for builds older than 0.57.
+  - `RainbowBorders-low-cpu.sh` and `RainbowBorders.bak.sh` are the reference: build the `hl.config()` string, `eval` it, require `ok`.
+- `hyprctl getoption` prints a gradient as `gradient data: <c1> <c2> ... <N>deg`, with bare hex and no `0x` prefix.
+  - Re-add `0x` before handing such a value back to a colour parser.
+- `hyprctl dispatch` is a shorthand for `hl.dispatch(...)`; a dispatcher name plus arguments is parsed as Lua.
+  - Use the `hl.dsp.*` helpers instead of legacy dispatcher strings.
+- New in 0.57: `decoration:wobble`, off by default, and `quirks:skip_non_kms_dmabuf_formats`.
 
 ## Changelog
 
@@ -95,12 +145,17 @@ Shape:
   - Set `DOTS_VERSION` in `config/hypr/lua/env.lua`.
   - Rename the `config/hypr/vX.Y.Z` marker file. `copy.sh` and `KooLsDotsUpdate.sh` read it to detect the installed version.
   - Merge `development` into `main` and tag `Hyprland-Dots-vX.Y.Z`.
+  - Sync the wiki changelogs and push them. See Wiki sync.
+- A release is not finished until the wiki carries it.
 - The updater compares against `main`, so an unreleased version on `development` must not be advertised there.
 
 ## Wiki sync
 
 - The wiki documents released versions only.
 - Update `Changelogs.md` (English) and `Changelogs.es.md` (Spanish) after the release lands on `main`. Never sync a change that only exists on `development`.
+- This is part of every release, a patch release cut on `main` such as `v2.3.28.1` included.
 - Keep the header of each file (title, language links, updated date) and refresh the date line.
 - Spanish section headings: `## Corregido:`, `## Añadido:`, `## Actualizado:`, `## Eliminado:`.
 - `../Hyprland-Dots.wiki` is a separate git repository. Commit and push it separately.
+- The moved-repository URL GitHub names for a wiki push is the parent repo, not the wiki.
+  - Correct `origin` to `git@github.com:LinuxBeginnings/Hyprland-Dots.wiki.git`, keeping `.wiki`.

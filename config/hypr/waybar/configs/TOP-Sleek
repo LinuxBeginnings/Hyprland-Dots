@@ -38,6 +38,7 @@
 ],
 		
 "modules-right": [
+	"custom/qs-network",
 	"hyprland/window",
 	"custom/separator#blank_2",
 	"pulseaudio",

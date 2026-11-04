@@ -793,6 +793,9 @@ if is_nixos; then
 else
   install_waybar_weather "$LOG"
 fi
+# butterpal is optional: the palette source defaults to wallust, and this
+# helper skips NixOS on its own because the asset cannot run there.
+install_butterpal_binary "$LOG"
 ensure_oh_my_zsh "$LOG"
 printf "\n%.0s" {1..1}
 
@@ -843,7 +846,7 @@ elif [ "$resolution" == "≥ 1440p" ]; then
 fi
 
 printf "\n%.0s" {1..1}
-prompt_clock_12h "$LOG"
+prompt_clock_format "$LOG"
 printf "\n%.0s" {1..1}
 
 # Upgrade/express: confirm Hyprlang -> Lua migration (default yes).
@@ -1236,11 +1239,16 @@ default_wallpapers_count=$(find "$SCRIPT_DIR/wallpapers" -type f 2>/dev/null | w
 WALLPAPER_BANK_MIN_FILES=$(( ${default_wallpapers_count:-0} + 15 ))
 
 download_wallpaper_bank() {
-  local clone_dir revision
+  local clone_dir revision clone_status
   clone_dir=$(mktemp -d "${TMPDIR:-/tmp}/wallpaper-bank.XXXXXX") || return 1
   trap 'rm -rf "$clone_dir"' EXIT INT TERM
 
-  if ! git clone --depth 1 --single-branch "$WALLPAPER_BANK_REPO" "$clone_dir/Wallpaper-Bank" >>"$LOG" 2>&1; then
+  # --progress draws the transfer meter even though stderr is not a terminal,
+  # and tee keeps the clone output in the log as well as on screen. The
+  # pipeline reports tee's status, so git's exit code is read from PIPESTATUS.
+  git clone --progress --depth 1 --single-branch "$WALLPAPER_BANK_REPO" "$clone_dir/Wallpaper-Bank" 2>&1 | tee -a "$LOG"
+  clone_status=${PIPESTATUS[0]}
+  if [ "$clone_status" -ne 0 ]; then
     echo "${ERROR} Downloading additional wallpapers failed" | tee -a "$LOG"
     trap - EXIT INT TERM
     rm -rf "$clone_dir"
@@ -1417,6 +1425,9 @@ if [ "$EXPRESS_MODE" -eq 1 ]; then
   echo "${NOTE} Express upgrade selected: skipping wallust run entirely." 2>&1 | tee -a "$LOG"
 elif [ "$RUN_MODE" != "install" ] && [ "${KOOLDOTS_RUNTIME_THEME_RESTORED:-0}" -eq 1 ]; then
   echo "${NOTE} Preserved existing Wallust/global theme colors from pre-upgrade state; skipping wallust regeneration." 2>&1 | tee -a "$LOG"
+elif palette_source_is_butterpal && butterpal_palette_from_image "$wallpaper"; then
+  echo "${NOTE} Generating the palette with butterpal." 2>&1 | tee -a "$LOG"
+  wallust_cs_from_palette "${wallust_args[@]}" 2>&1 | tee -a "$LOG"
 else
   wallust "${wallust_args[@]}" run -s "$wallpaper" 2>&1 | tee -a "$LOG"
 fi

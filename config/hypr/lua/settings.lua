@@ -20,7 +20,9 @@ hl.config({
     default_split_ratio = 1.0,
     split_bias = 0,
     precise_mouse_move = false,
-    special_scale_factor = 0.8,
+    -- `special_scale_factor` is deprecated on Hyprland 0.57 and is flagged by
+    -- `hyprctl deprecated-config`. The special workspace is inset with a
+    -- workspace rule instead; see lua/workspaces.lua.
   },
 })
 
@@ -124,8 +126,7 @@ local ZOOM_MIN = 1.0
 local ZOOM_MAX = 16.0
 
 local function zoom_factor()
-  local factor = hl and hl.get_config
-    and (hl.get_config("cursor.zoom_factor") or hl.get_config("cursor:zoom_factor"))
+  local factor = hl and hl.get_config and (hl.get_config("cursor.zoom_factor") or hl.get_config("cursor:zoom_factor"))
 
   if type(factor) ~= "number" then
     factor = ZOOM_MIN
@@ -235,10 +236,21 @@ hl.config({
   },
 })
 
+-- Advertise the renderer's full dmabuf format list, not just the formats the
+-- display can scan out. The default (true) narrows the list to the display's
+-- scanout set; on virtio-gpu that is XRGB8888 only, so clients that need an
+-- alpha config find no matching EGLConfig. kitty (GLFW asks for
+-- EGL_ALPHA_SIZE 8) then fails with "EGL: No EGLConfigs returned".
+hl.config({
+  quirks = {
+    skip_non_kms_dmabuf_formats = false,
+  },
+})
+
 hl.config({
   cursor = {
     sync_gsettings_theme = true,
-    no_hardware_cursors =       1,
+    no_hardware_cursors =    1,
     enable_hyprcursor = true,
     warp_on_change_workspace = 2,
     no_warps = true,

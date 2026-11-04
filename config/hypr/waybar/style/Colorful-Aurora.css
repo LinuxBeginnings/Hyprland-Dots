@@ -144,7 +144,8 @@ tooltip label {
 #custom-weather.severe,
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
-#custom-weather.sunnyDay {
+#custom-weather.sunnyDay,
+#custom-qs-network {
   background-image: linear-gradient(45deg, #95e6cb, #59c2ff, #d2a6ff);
   color: black;
   border: 1px;
@@ -252,4 +253,9 @@ tooltip label {
 /*-----Submap indicator (visible only while a submap is active)----*/
 #submap {
   margin-right: 8px;
+}
+
+/* Network & Bluetooth panel launcher (Quickshell widget) */
+#custom-qs-network.disconnected {
+    color: red;
 }

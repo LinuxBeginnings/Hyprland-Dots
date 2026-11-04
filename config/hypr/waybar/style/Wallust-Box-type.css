@@ -148,7 +148,8 @@ window#waybar.empty #window {
 #custom-weather.severe,
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
-#custom-weather.sunnyDay {
+#custom-weather.sunnyDay,
+#custom-qs-network {
   padding-top: 4px;
   padding-bottom: 4px;
   padding-left: 8px;
@@ -301,4 +302,9 @@ window#waybar.empty #window {
 /*-----Submap indicator (visible only while a submap is active)----*/
 #submap {
   margin-right: 8px;
+}
+
+/* Network & Bluetooth panel launcher (Quickshell widget) */
+#custom-qs-network.disconnected {
+    color: red;
 }

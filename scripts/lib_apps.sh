@@ -7,16 +7,75 @@
 # ==================================================
 # App enablement and editor selection helpers.
 
+# --- UserConfigs/user_startup.lua -------------------------------------------
+#
+# The three helpers below add one command each to user_startup.lua. They used to
+# insert it with
+#
+#   sed '/local startup_commands = {/a \  "ags",'
+#
+# which is not anchored. Every template before v2.3.28 ships the startup block
+# commented out, so the address matched the COMMENTED `-- local startup_commands
+# = {` and the entry landed outside any table. A stray `  "ags",` at the top
+# level is not valid Lua: the whole file stopped parsing, lua/user_overrides.lua
+# dropped it with a single [WARN], and none of the user's startup commands ran.
+#
+# So the table line is matched with its leading whitespace anchored, and when the
+# file has no live table the command is added as a live exec_once() call instead.
+# The template's own header documents exec_once("command") as the alternative to
+# the table, and exec_once is a top-level local in every template that has ever
+# shipped, so a call to it is valid at the end of the file.
+#
+# patches/91-user-startup-orphan-entry.sh repairs the files an earlier installer
+# run already broke.
+KOOLDOTS_LIVE_STARTUP_TABLE='^[[:space:]]*local[[:space:]]+startup_commands[[:space:]]*=[[:space:]]*[{]'
+
+# startup_entry_present <file> <command>
+# True when the command is already ENABLED: a live table entry, or a live
+# exec_once() call. A commented-out mention does not count. Reading one as
+# "already there" is what would keep a repaired file from ever getting its entry
+# back, and it is also why an entry could be added twice.
+startup_entry_present() {
+  local file="$1" cmd="$2"
+  grep -qE "^[[:space:]]*(\"$cmd\",|exec_once\\(\"$cmd\"\\))" "$file" 2>/dev/null
+}
+
+# startup_add <file> <command> <log>
+# Adds the command to a live startup_commands table, or as a live exec_once() call
+# when there is no live table. It never writes an entry outside a table.
+startup_add() {
+  local file="$1" cmd="$2" log="$3"
+  local tmp
+
+  [ -f "$file" ] || return 0
+
+  if grep -qE "$KOOLDOTS_LIVE_STARTUP_TABLE" "$file" 2>/dev/null; then
+    tmp="$(mktemp "${TMPDIR:-/tmp}/kooldots-startup.XXXXXX")" || return 1
+    if awk -v re="$KOOLDOTS_LIVE_STARTUP_TABLE" -v entry="  \"$cmd\"," '
+          { print }
+          !done && $0 ~ re { print entry; done = 1 }
+        ' "$file" >"$tmp"; then
+      cat "$tmp" >"$file"
+      rm -f "$tmp"
+      echo "${INFO:-[INFO]} Added $cmd to the startup_commands table in user_startup.lua" 2>&1 | tee -a "$log"
+      return 0
+    fi
+    rm -f "$tmp"
+    echo "${WARN:-[WARN]} Could not add $cmd to user_startup.lua; add it by hand" 2>&1 | tee -a "$log"
+    return 1
+  fi
+
+  printf '\n-- Added by the installer: %s is installed.\nexec_once("%s")\n' "$cmd" "$cmd" >>"$file"
+  echo "${INFO:-[INFO]} user_startup.lua has no live startup_commands table; added exec_once(\"$cmd\") instead" 2>&1 | tee -a "$log"
+}
+
 enable_asusctl() {
   local log="$1"
   local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
   if command -v asusctl >/dev/null 2>&1; then
     local target="$cfg_home/hypr/UserConfigs/user_startup.lua"
-    if [ -f "$target" ]; then
-      if ! grep -q '"rog-control-center"' "$target"; then
-        sed -i '/local startup_commands = {/a \  "rog-control-center",' "$target"
-        echo "${INFO:-[INFO]} Added rog-control-center to user_startup.lua" 2>&1 | tee -a "$log"
-      fi
+    if [ -f "$target" ] && ! startup_entry_present "$target" "rog-control-center"; then
+      startup_add "$target" "rog-control-center" "$log"
     fi
   fi
 }
@@ -26,13 +85,17 @@ enable_blueman() {
   local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
   if command -v blueman-applet >/dev/null 2>&1; then
     local target="$cfg_home/hypr/UserConfigs/user_startup.lua"
-    if [ -f "$target" ]; then
-      if sed -n '/local startup_commands = {/,/}/p' "$target" | grep -q '^[[:space:]]*--[[:space:]]*"blueman-applet"'; then
-        sed -i '/local startup_commands = {/,/}/s/^[[:space:]]*--[[:space:]]*\("blueman-applet"\)/\1/' "$target"
+    if [ -f "$target" ] && ! startup_entry_present "$target" "blueman-applet"; then
+      # The shipped table carries the entry commented out, so uncomment that one
+      # rather than adding a second. Only an entry inside a LIVE table counts:
+      # one inside the commented template block would become the same orphan the
+      # old installer produced.
+      if sed -nE "/$KOOLDOTS_LIVE_STARTUP_TABLE/,/^[[:space:]]*}/p" "$target" |
+        grep -q '^[[:space:]]*--[[:space:]]*"blueman-applet",'; then
+        sed -i -E 's/^([[:space:]]*)--[[:space:]]*("blueman-applet",)/\1\2/' "$target"
         echo "${INFO:-[INFO]} Enabled blueman-applet in user_startup.lua" 2>&1 | tee -a "$log"
-      elif ! grep -q '"blueman-applet"' "$target"; then
-        sed -i '/local startup_commands = {/a \  "blueman-applet",' "$target"
-        echo "${INFO:-[INFO]} Added blueman-applet to user_startup.lua" 2>&1 | tee -a "$log"
+      else
+        startup_add "$target" "blueman-applet" "$log"
       fi
     fi
   fi
@@ -45,10 +108,8 @@ enable_ags() {
   if command -v ags >/dev/null 2>&1; then
     echo "${INFO:-[INFO]} AGS detected - enabling in startup and refresh scripts" 2>&1 | tee -a "$log"
     local target="$cfg_home/hypr/UserConfigs/user_startup.lua"
-    if [ -f "$target" ]; then
-      if ! grep -q '"ags"' "$target"; then
-        sed -i '/local startup_commands = {/a \  "ags",' "$target"
-      fi
+    if [ -f "$target" ] && ! startup_entry_present "$target" "ags"; then
+      startup_add "$target" "ags" "$log"
     fi
     sed -i '/#ags -q && ags &/s/^#//' "$base/config/hypr/scripts/RefreshNoWaybar.sh" 2>/dev/null || true
     sed -i '/#ags -q && ags &/s/^#//' "$base/config/hypr/scripts/Refresh.sh" 2>/dev/null || true
@@ -385,6 +446,82 @@ install_waybar_weather() {
   else
     install_waybar_weather_binary "$log"
   fi
+}
+
+# Install butterpal from the bundled asset.
+#
+# butterpal is an alternative palette source, not the default, so nothing here
+# is fatal: a problem is a warning and the dots install carries on with wallust.
+#
+# NixOS is skipped on purpose. The asset is dynamically linked against glibc,
+# so it cannot run there; a flake is expected to provide it instead. That is
+# why it goes to /usr/local/bin and not /usr/bin - the same place a locally
+# built binary would land.
+install_butterpal_binary() {
+  local log="${1:-/dev/null}"
+  local APP_NAME="butterpal"
+  local INSTALL_PATH="/usr/local/bin/${APP_NAME}"
+  local ASSET="${SCRIPT_DIR:-.}/assets/${APP_NAME}.gz"
+
+  _log() { echo "[${APP_NAME}] $*" 2>&1 | tee -a "$log"; }
+  _warn() { echo "[${APP_NAME}] WARN: $*" 1>&2 | tee -a "$log"; }
+
+  # Already there, from this asset or a package: leave it alone.
+  #
+  # PATH first, then the two places a package or a local build lands. An
+  # install can run under sudo with a PATH that holds neither, and unpacking a
+  # second copy into /usr/local/bin would then shadow the packaged one.
+  local existing=""
+  existing="$(command -v "$APP_NAME" 2>/dev/null || true)"
+  if [ -z "$existing" ]; then
+    local candidate
+    for candidate in "/usr/bin/$APP_NAME" "/usr/local/bin/$APP_NAME"; do
+      if [ -x "$candidate" ]; then
+        existing="$candidate"
+        break
+      fi
+    done
+  fi
+  if [ -n "$existing" ]; then
+    _log "already installed at ${existing}."
+    return 0
+  fi
+
+  if grep -qi '^ID=nixos' /etc/os-release 2>/dev/null; then
+    _log "NixOS detected; skipping the bundled binary. It needs a flake."
+    return 0
+  fi
+
+  if [ ! -f "$ASSET" ]; then
+    _warn "asset not found: $ASSET"
+    return 0
+  fi
+  if ! command -v gzip >/dev/null 2>&1; then
+    _warn "gzip not found; cannot unpack $ASSET"
+    return 0
+  fi
+
+  local SUDO=""
+  if [ "$EUID" -ne 0 ]; then
+    if command -v sudo >/dev/null 2>&1; then
+      SUDO="sudo"
+    else
+      _warn "sudo not available; cannot write to ${INSTALL_PATH}"
+      return 0
+    fi
+  fi
+
+  _log "Installing to ${INSTALL_PATH} from ${ASSET}"
+  if ${SUDO} sh -c "tmp=\$(mktemp '${INSTALL_PATH}.XXXXXX') && gzip -dc '$ASSET' > \"\$tmp\" && chmod 0755 \"\$tmp\" && mv -f \"\$tmp\" '${INSTALL_PATH}'"; then
+    if "${INSTALL_PATH}" --version >/dev/null 2>&1; then
+      _log "Installed ${APP_NAME} successfully."
+    else
+      _warn "${APP_NAME} installed, but a basic self-check did not run."
+    fi
+  else
+    _warn "Failed to install ${APP_NAME} to ${INSTALL_PATH}"
+  fi
+  return 0
 }
 
 # Install Oh My Zsh (and bundled theme templates) when zsh is used and OMZ is missing.

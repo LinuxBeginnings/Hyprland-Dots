@@ -38,6 +38,7 @@
 	"idle_inhibitor",
 	],
 "modules-right": [
+	"custom/qs-network",
 	"cpu#forest",
 	"memory#forest",
 	"temperature#forest",
@@ -55,7 +56,8 @@
       "on-click": "rofi -show drun"
 },
 "clock#forest": {
-      "format": "{:L%A %d.%m.%Y - %H:%M}",
+      //"format": "{:L%A %d.%m.%Y - %I:%M %p}", // AM PM format
+      "format": "{:L%A %d.%m.%Y - %H:%M}", // 24H
       "tooltip-format": "<span color='#D3C6AA' size='larger'>{:%Y %B}</span>\n<tt>{calendar}</tt>",
       "calendar-weeks-pos": "right",
       "today-format": "<span color='#E67E80' weight='ultrabold'>{}</span>",

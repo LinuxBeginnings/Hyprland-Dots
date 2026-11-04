@@ -32,6 +32,7 @@
     ],
     "modules-center": ["hyprland/submap", "hyprland/window"],
 "modules-right": [
+      "custom/qs-network",
       "mpris",
       "battery",
       "backlight",

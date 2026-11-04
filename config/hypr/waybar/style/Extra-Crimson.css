@@ -149,7 +149,8 @@ tooltip {
 #custom-weather.severe,
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
-#custom-weather.sunnyDay {
+#custom-weather.sunnyDay,
+#custom-qs-network {
   color: wheat;
   padding-top: 5px;
   padding-bottom: 5px;
@@ -235,4 +236,9 @@ tooltip {
 /*-----Submap indicator (visible only while a submap is active)----*/
 #submap {
   margin-right: 8px;
+}
+
+/* Network & Bluetooth panel launcher (Quickshell widget) */
+#custom-qs-network.disconnected {
+    color: red;
 }

@@ -39,6 +39,7 @@
 	],
     
 "modules-right": [
+    "custom/qs-network",
     "network",
     "bluetooth",
 	"custom/weather2",

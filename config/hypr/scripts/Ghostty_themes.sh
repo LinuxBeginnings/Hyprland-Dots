@@ -13,13 +13,16 @@ config_file="$user_ghostty_config"
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
 rofi_theme_primary="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-ghostty-theme.rasi"
 rofi_theme_fallback="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-edit.rasi"
-wallust_include_path="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf"
+wallust_include_path="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/ghostty-themes/01-Wallust.conf"
 wallust_option_label="Set by wallpaper"
 default_option_label="Default - no color"
 # Same indicator the other selection menus use. Stripped again before a row is
 # read as a theme name.
 MARKER="👉"
 wallust_refresh_script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustSwww.sh"
+# Signals the terminal, never a CLI invocation of it.
+# shellcheck source=/dev/null
+. "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/TerminalSignal.sh"
 
 notify_user() {
   local icon="$1"
@@ -35,9 +38,12 @@ notify_user() {
 
 refresh_wallpaper_theme() {
   if [[ -x "$wallust_refresh_script" ]]; then
+    # WallustSwww.sh renders the palette and signals the terminal itself, so
+    # there is nothing to signal here.
     "$wallust_refresh_script" >/dev/null 2>&1 || true
+    return
   fi
-  pkill -SIGUSR2 ghostty >/dev/null 2>&1 || true
+  signal_terminal_app ghostty SIGUSR2 >/dev/null 2>&1 || true
 }
 ensure_managed_ghostty_config() {
   if [[ -f "$user_ghostty_config" && -r "$user_ghostty_config" ]]; then
@@ -115,7 +121,11 @@ original_theme_count=${#available_theme_names[@]}
 ghostty_themes_dir="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/themes"
 ghostty_theme_list=""
 if command -v ghostty >/dev/null 2>&1; then
-  ghostty_theme_list="$(ghostty +list-themes 2>/dev/null | sed -E 's/[[:space:]]+\((user|builtin)\)[[:space:]]*$//')"
+  # Ghostty tags each name with where it came from: "(resources)" for the
+  # bundled collection on 1.4.0, "(user)" and "(builtin)" elsewhere. The tag
+  # is always a lowercase word in parentheses, and it has to come off or the
+  # exact-match below never hits and every built-in theme looks missing.
+  ghostty_theme_list="$(ghostty +list-themes 2>/dev/null | sed -E 's/[[:space:]]+\([a-z][a-z-]*\)[[:space:]]*$//')"
 fi
 theme_is_available() {
   local name="$1"
@@ -131,9 +141,18 @@ theme_is_available() {
 }
 filtered_theme_names=()
 for _theme in "${available_theme_names[@]}"; do
-  if theme_is_available "$_theme"; then
-    filtered_theme_names+=("$_theme")
-  fi
+  theme_is_available "$_theme" || continue
+  # The same name can appear twice: this script comments the active theme, and
+  # the template may already carry that line commented. One row is enough.
+  _dup=0
+  for _seen in "${filtered_theme_names[@]}"; do
+    if [[ "$_seen" == "$_theme" ]]; then
+      _dup=1
+      break
+    fi
+  done
+  [[ "$_dup" -eq 1 ]] && continue
+  filtered_theme_names+=("$_theme")
 done
 available_theme_names=("${filtered_theme_names[@]}")
 
@@ -264,7 +283,7 @@ END {
     exit 1
   fi
 
-  pkill -SIGUSR2 ghostty >/dev/null 2>&1 || true
+  signal_terminal_app ghostty SIGUSR2 >/dev/null 2>&1 || true
   notify_user "$iDIR/ja.png" "Ghostty Theme Applied" "$default_option_label"
   exit 0
 fi
@@ -326,7 +345,7 @@ if ! sync_runtime_ghostty_config; then
   exit 1
 fi
 
-pkill -SIGUSR2 ghostty >/dev/null 2>&1 || true
+signal_terminal_app ghostty SIGUSR2 >/dev/null 2>&1 || true
 
 notify_user "$iDIR/ja.png" "Ghostty Theme Applied" "$selected_theme"
 

@@ -12,6 +12,9 @@ wallust_args=()
 if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustConfig.sh" ]; then
   . "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustConfig.sh"
 fi
+# Signals the terminal, never a CLI invocation of it.
+# shellcheck source=/dev/null
+. "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/TerminalSignal.sh"
 
 # SPDX-FileCopyrightText: 2025-present Ahum Maitra theahummaitra@gmail.com
 #
@@ -273,7 +276,8 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
 
   # Wait until template targets exist, are newer than start_ts, and are stable (size/mtime stops changing)
   # Ensure Ghostty and GTK-3.0 directories exist so Wallust can write targets even if not yet created
-  mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0" || true
+  mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/ghostty-themes" \
+    "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0" || true
 
   targets=(
     "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/wallust/colors-waybar.css"
@@ -282,7 +286,7 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
   )
 
   # Normalize Ghostty palette syntax in case upstream templates or older targets used ':'
-  ghostty_conf="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf"
+  ghostty_conf="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/ghostty-themes/01-Wallust.conf"
   if [ -f "$ghostty_conf" ]; then
     sed -i -E 's/^(\s*palette\s*=\s*)([0-9]{1,2}):/\1\2=/' "$ghostty_conf" 2>/dev/null || true
   fi
@@ -334,8 +338,10 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
   # Normalize Rofi selection colors to use the palette's accent (color12)
   rofi_colors="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
   if [ -f "$rofi_colors" ]; then
-    accent_hex=$(sed -n 's/^\s*color12:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
-    [ -z "$accent_hex" ] && accent_hex=$(sed -n 's/^\s*color13:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
+    # The accent is what the template wrote to active-background, which carries
+    # color12: wallust puts its accent there and WallustConfig.sh moves
+    # butterpal's there. Reading color13 here would put an ANSI hue back over it.
+    accent_hex=$(sed -n 's/^\s*active-background:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
     if [ -n "$accent_hex" ]; then
       sed -i -E "s|^(\s*selected-normal-background:\s*).*$|\1$accent_hex;|" "$rofi_colors"
       sed -i -E "s|^(\s*selected-active-background:\s*).*$|\1$accent_hex;|" "$rofi_colors"
@@ -365,14 +371,10 @@ if wallust "${wallust_args[@]}" theme -- "${choice}" >"$wallust_log" 2>&1; then
   fi
 
   # Ask kitty to reload its config so the new 01-Wallust.conf is picked up
-  if pidof kitty >/dev/null; then
-    for pid in $(pidof kitty); do kill -SIGUSR1 "$pid" 2>/dev/null || true; done
-  fi
+  signal_terminal_app kitty SIGUSR1 >/dev/null 2>&1 || true
 
   # Ask ghostty to reload its config so the updated wallust.conf is applied
-  if pidof ghostty >/dev/null; then
-    for pid in $(pidof ghostty); do kill -SIGUSR2 "$pid" 2>/dev/null || true; done
-  fi
+  signal_terminal_app ghostty SIGUSR2 >/dev/null 2>&1 || true
 else
   have_notify && notify-send -u critical -a ThemeChanger \
     -h string:x-dunst-stack-tag:themechanger \

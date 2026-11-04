@@ -217,6 +217,31 @@ While nwg-displays is open the watcher drops monitor and reload events, so its
 reload cannot undo the drag before the import lands. That check is by process
 name, so it works for a run the menu did not start.
 
+### The Workspaces panel
+
+`nwg-displays` has a second panel, **Workspaces**, where each workspace is
+assigned an output. It writes those to `~/.config/hypr/workspaces.conf`, next to
+`monitors.conf` and just as unread: `lua/workspaces.lua` loads
+`UserConfigs/workspaces.lua`, and nwg's own Lua sibling at
+`~/.config/hypr/workspaces.lua` is deliberately not loaded either.
+
+The watcher imports this file the same way, on its own stamp
+(`nwg-workspaces-import.stamp`), through `DisplayProfile.sh
+import-nwg-workspaces`. Each `workspace=N,monitor:M` becomes
+`hl.workspace_rule({ workspace = "N", monitor = "M" })` in
+`UserConfigs/workspaces.lua`.
+
+That file is shared: it also holds your own rules and the layout rules
+`ChangeLayout.sh` writes. So a rule the import generates carries a trailing
+marker naming the fields it owns — `-- nwg-displays: monitor,default` — and a
+re-import gives back exactly those and nothing else. A workspace you unassign in
+the panel keeps its layout; a rule that already binds a monitor and was not
+written by the import is yours, is left alone, and the log says nwg's assignment
+for it was not applied.
+
+The rules are read at config load, so nothing has to be dispatched: writing the
+file is the whole change, and it is what makes a binding survive a reload.
+
 ## Do not add `require("monitors")`
 
 From 0.4.3, `nwg-displays` also writes a Lua sibling next to its `.conf`, at
@@ -235,6 +260,18 @@ alone and let the watcher import the arrangement instead.
   another monitor and does not move them back when the monitor returns. The log
   records which workspaces moved. Pin the ones you care about in
   `UserConfigs/workspaces.lua`.
+- **A workspace stays on a display only if a rule says so.** With no
+  `hl.workspace_rule({ workspace = "5", monitor = "DP-2" })` for it,
+  `SUPER`+`5` puts workspace 5 on whichever monitor has focus, so switching from
+  the external display looks like the workspace "jumping" there. Assign
+  workspaces in `nwg-displays`' **Workspaces** panel and the watcher imports them,
+  or write the rules yourself.
+- **Changing a layout never binds a monitor.** `ChangeLayout.sh` and
+  `PersistWorkspaceLayout.sh` write `layout` for the active workspace and nothing
+  else. An earlier version also wrote `monitor`, which pinned each workspace to
+  whichever display it was on when its layout last changed; a rule left over from
+  that is cleaned up the next time you change that workspace's layout, and the
+  script says so when it does it.
 - **A monitor with no make or model** (some cheap adapters report neither) is
   identified by its port name instead, so for that one monitor, moving the cable
   does look like a different monitor.
@@ -274,11 +311,12 @@ alone and let the watcher import the arrangement instead.
 |---|---|
 | `UserConfigs/display-layouts.json` | Your layouts. The installer only ever *adds* this file when it is missing, so an upgrade cannot overwrite it. |
 | `UserConfigs/monitors.lua` | Written when you apply a layout or import a drag, as `hl.monitor` rules; a boot never rewrites it. Loaded by `lua/monitors.lua` and read by `user_laptops.lua`. Delete its marker line to take it over. |
+| `UserConfigs/workspaces.lua` | Yours. `lua/workspaces.lua` loads it on every config load. Holds your `hl.workspace_rule(...)` entries, the layout rules `ChangeLayout.sh` writes, and the workspace → display bindings imported from `nwg-displays` (marked, and the only rules the import ever rewrites). |
 | `scripts/lib_display_store.sh` | The data model. Pure: no `hyprctl`, no session state. |
 | `scripts/DisplayProfile.sh` | The only thing that changes monitors, focus and Waybar. |
 | `scripts/DisplayProfileMenu.sh` | `SUPER`+`ALT`+`D`. |
 | `scripts/DisplayProfileSetup.sh` | The parameter table. |
-| `scripts/MonitorWatcher.sh` | Watches Hyprland's event socket, and `~/.config/hypr/monitors.conf` so a directly-run `nwg-displays` is imported. One per session. |
+| `scripts/MonitorWatcher.sh` | Watches Hyprland's event socket, `~/.config/hypr/monitors.conf` so a directly-run `nwg-displays` arrangement is imported, and `~/.config/hypr/workspaces.conf` for its workspace → display assignments. One per session. |
 | `scripts/MonitorProfiles.sh` | Quick Settings → **Choose Monitor Profiles**: this system's layouts, plus a one-way import of `Monitor_Profiles/`. |
 | `Monitor_Profiles/Work.lua` | An example profile: one `preferred`/`auto`/`1` rule per output, matched by port. |
 | `scripts/tests/` | The 677-check suite. It is installed with the rest of `config/hypr`, so it is available on an installed system too - run it with `bash ~/.config/hypr/scripts/tests/run-all.sh`. |
@@ -287,7 +325,8 @@ Runtime state lives in `$XDG_RUNTIME_DIR/kooldots-display-profiles/`:
 `display-profile.log`, `monitor-watcher.log`, `current` (the fingerprint and the
 running layout's name), `active-layout.json` and `active-layout.fingerprint`
 (what is on screen now), `config-active`, `pause`, `monitors*.json` scratch
-files, `nwg-import.stamp` (what the watcher has already imported), and the
+files, `nwg-import.stamp` and `nwg-workspaces-import.stamp` (what the watcher has
+already imported, per file), and the
 throwaway `nwg-monitors.discard.conf` the menu points `nwg-displays` at. The
 `.conf` suffix on that last one matters: `nwg-displays` derives the Lua file it
 also writes from it, and a path without it makes nwg write to
@@ -315,6 +354,8 @@ DisplayProfile.sh waybar-config          the config path Waybar should run
 DisplayProfile.sh config-newer           exit 0 if a monitor config file is newer
                                          than the recorded layout
 DisplayProfile.sh import-nwg <file>      apply what nwg-displays wrote
+DisplayProfile.sh import-nwg-workspaces <file>
+                                         import nwg-displays' workspace bindings
 DisplayProfile.sh --dry-run auto         print the plan, change nothing
 ```
 

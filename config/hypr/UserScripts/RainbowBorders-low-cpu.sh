@@ -179,76 +179,73 @@ log "Using transport: $RB_MODE"
 PREV_VALUE=""
 if [[ "$RB_RESTORE" == "1" && "$RB_ONCE" != "1" ]]; then
   if command -v hyprctl >/dev/null 2>&1; then
-    # hyprctl getoption <opt> prints various formats; try common keys
+    # 0.57 prints "gradient data: <c1> <c2> ... <N>deg" with bare hex values
+    # (no 0x prefix) and a separate "set:" line. Older builds printed
+    # "str:" / "string:" / "value:" lines instead.
     PREV_VALUE="$(hyprctl getoption "$RB_TARGET" 2>/dev/null \
-                    | sed -n 's/^.*str:[[:space:]]\+//p; s/^.*string:[[:space:]]\+//p; s/^.*value:[[:space:]]\+//p' \
-                    | tail -n1)"
+                    | sed -n 's/^.*gradient data:[[:space:]]*//p' \
+                    | head -n1)"
+    if [[ -z "$PREV_VALUE" ]]; then
+      PREV_VALUE="$(hyprctl getoption "$RB_TARGET" 2>/dev/null \
+                      | sed -n 's/^.*str:[[:space:]]\+//p; s/^.*string:[[:space:]]\+//p; s/^.*value:[[:space:]]\+//p' \
+                      | tail -n1)"
+    fi
+    # getoption prints bare hex; the config parser needs 0x-prefixed values.
+    PREV_VALUE="$(printf '%s' "$PREV_VALUE" \
+                    | awk '{ for (i = 1; i <= NF; i++) if ($i ~ /^[0-9a-fA-F]{6,8}$/) $i = "0x" $i; print }')"
   fi
 fi
 
-# Apply a border color value under conf or Lua Hyprland modes.
-# Cache parser mode (keyword vs eval) to avoid double-process overhead per tick on Lua configs.
+# ---------- border dispatch ----------
+# Border writes go through hyprctl eval, which runs hl.config() in Hyprland's
+# embedded Lua state and answers exactly "ok".
+#
+# Why not hyprctl keyword: Hyprland 0.57 dropped the legacy keyword socket
+# command, and hyprctl still exits 0 while answering "unknown request", so a
+# keyword write looks successful while changing nothing. keyword is kept only
+# as a fallback for builds that have no eval command.
 HYPR_DISPATCH_MODE=""
+
+# build_lua_expr <option> <angle> <color...>
+build_lua_expr() {
+  local option="$1" angle="$2"
+  shift 2
+  local lua_colors="" c
+
+  for c in "$@"; do
+    [[ -n "$lua_colors" ]] && lua_colors+=", "
+    lua_colors+="\"${c}\""
+  done
+
+  case "$option" in
+  general:col.active_border)
+    printf 'hl.config({ general = { col = { active_border = { colors = { %s }, angle = %s } } } })' "$lua_colors" "$angle"
+    ;;
+  general:col.inactive_border)
+    printf 'hl.config({ general = { col = { inactive_border = { colors = { %s }, angle = %s } } } })' "$lua_colors" "$angle"
+    ;;
+  *)
+    return 1
+    ;;
+  esac
+}
+
+# True when the socket reply is a rejection rather than an applied write.
+dispatch_rejected() {
+  case "$1" in
+  *"unknown request"* | *"non-legacy parsers"* | *"only supported with the lua config manager"* | *"error"* | *"invalid"* | *"failed"*)
+    return 0
+    ;;
+  esac
+  return 1
+}
 
 apply_border_value() {
   local option="$1"
   local value="$2"
-  local out angle colors_str c lua_colors expr rc
+  local out angle c expr
   local -a colors=()
 
-  # Fast path: if parser mode is already known to be keyword (legacy)
-  if [[ "$HYPR_DISPATCH_MODE" == "keyword" ]]; then
-    if out="$(hyprctl keyword "$option" $value 2>&1)"; then
-      return 0
-    fi
-    HYPR_DISPATCH_MODE=""
-  fi
-
-  # Fast path: if parser mode is already known to be Lua eval
-  if [[ "$HYPR_DISPATCH_MODE" == "eval" ]]; then
-    angle="0"
-    for c in $value; do
-      if [[ "$c" =~ ^([0-9]+)deg$ ]]; then
-        angle="${BASH_REMATCH[1]}"
-      else
-        colors+=("$c")
-      fi
-    done
-    ((${#colors[@]} > 0)) || return 1
-
-    lua_colors=""
-    for c in "${colors[@]}"; do
-      [[ -n "$lua_colors" ]] && lua_colors+=", "
-      lua_colors+="\"${c}\""
-    done
-
-    case "$option" in
-    general:col.active_border)
-      expr="hl.config({ general = { col = { active_border = { colors = { ${lua_colors} }, angle = ${angle} } } } })"
-      ;;
-    general:col.inactive_border)
-      expr="hl.config({ general = { col = { inactive_border = { colors = { ${lua_colors} }, angle = ${angle} } } } })"
-      ;;
-    *)
-      return 1
-      ;;
-    esac
-
-    if hyprctl eval "$expr" >/dev/null 2>&1; then
-      return 0
-    fi
-    HYPR_DISPATCH_MODE=""
-  fi
-
-  # Auto-detection pass (runs on first tick or after fallback)
-  out="$(hyprctl keyword "$option" $value 2>&1)"
-  rc=$?
-  if [[ $rc -eq 0 && "$out" != *"non-legacy parsers"* && "$out" != *"Use eval"* && "$out" != *"error"* && "$out" != *"invalid"* ]]; then
-    HYPR_DISPATCH_MODE="keyword"
-    return 0
-  fi
-
-  # Parse "c1 c2 ... Ndeg" or bare colors into Lua gradient table.
   angle="0"
   for c in $value; do
     if [[ "$c" =~ ^([0-9]+)deg$ ]]; then
@@ -257,35 +254,28 @@ apply_border_value() {
       colors+=("$c")
     fi
   done
-  ((${#colors[@]} > 0)) || {
-    log "WARN: cannot parse border value for Lua fallback: $value (keyword: $out)"
-    return 1
-  }
+  ((${#colors[@]} > 0)) || return 1
 
-  lua_colors=""
-  for c in "${colors[@]}"; do
-    [[ -n "$lua_colors" ]] && lua_colors+=", "
-    lua_colors+="\"${c}\""
-  done
+  # Preferred path: Lua config via eval. "ok" is the only success reply, so an
+  # unregistered command ("unknown request", still exit 0) is not mistaken for
+  # a write that worked.
+  if [[ "$HYPR_DISPATCH_MODE" != "keyword" ]]; then
+    if expr="$(build_lua_expr "$option" "$angle" "${colors[@]}")" && [[ -n "$expr" ]]; then
+      if out="$(hyprctl eval "$expr" 2>&1)" && [[ "$out" == "ok" ]]; then
+        HYPR_DISPATCH_MODE="eval"
+        return 0
+      fi
+    fi
+    HYPR_DISPATCH_MODE=""
+  fi
 
-  case "$option" in
-  general:col.active_border)
-    expr="hl.config({ general = { col = { active_border = { colors = { ${lua_colors} }, angle = ${angle} } } } })"
-    ;;
-  general:col.inactive_border)
-    expr="hl.config({ general = { col = { inactive_border = { colors = { ${lua_colors} }, angle = ${angle} } } } })"
-    ;;
-  *)
-    log "WARN: unsupported option for Lua fallback: $option (keyword: $out)"
-    return 1
-    ;;
-  esac
-
-  if out="$(hyprctl eval "$expr" 2>&1)"; then
-    HYPR_DISPATCH_MODE="eval"
+  # Legacy fallback for builds without the eval command.
+  if out="$(hyprctl keyword "$option" "${colors[@]}" "${angle}deg" 2>&1)" && ! dispatch_rejected "$out"; then
+    HYPR_DISPATCH_MODE="keyword"
     return 0
   fi
-  log "WARN: failed to apply border via eval: $out"
+
+  log "WARN: cannot apply $option via eval or keyword: $out"
   return 1
 }
 
@@ -295,14 +285,23 @@ restore_previous() {
   fi
 }
 
-on_exit() {
+# A signal restores the previous border and then stops the loop. Without the
+# exit the trap only restored and the loop resumed, overwriting the restored
+# border on the next tick and leaving the process alive after SIGTERM.
+on_signal() {
   restore_previous
+  exit 0
+}
+
+# The EXIT trap drops the lock on every exit path.
+on_exit() {
   cleanup_lock
 }
 
 # In loop mode, set traps for cleanup/restore
 if [[ "$RB_ONCE" != "1" ]]; then
-  trap on_exit INT TERM EXIT
+  trap on_signal INT TERM
+  trap on_exit EXIT
 fi
 
 # ---------- main logic ----------
@@ -312,8 +311,8 @@ STEP=$(( RB_STEP_DEG % 360 ))
 
 write_border() {
   local a="$1"
-  # Always go through apply_border_value so Lua config mode works.
-  # (socat keyword transport is rejected under non-legacy/Lua parsers.)
+  # Always go through apply_border_value: it writes via hyprctl eval (Lua
+  # config), so the transport picked by open_transport() is not used here.
   apply_border_value "$RB_TARGET" "$RB_COLORS ${a}deg" >/dev/null 2>&1 || true
 }
 

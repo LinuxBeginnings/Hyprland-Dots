@@ -13,4 +13,8 @@ import Quickshell.Hyprland
 
 ShellRoot {
     Overview {}
+
+    // Singletons are lazily loaded, so the first read can happen before the
+    // palette file is there. Kick it once the root exists.
+    Component.onCompleted: MaterialThemeLoader.reapplyTheme()
 }

@@ -58,6 +58,37 @@ hl.config({
   },
 })
 
+-- Window wobble (Hyprland 0.57+).
+-- Wobble is a window transformer, not an animation style: it is driven by
+-- decoration:wobble:* and Hyprland ships it disabled by default.
+--
+-- This table is the only place wobble is configured. scripts/ToggleWobble.sh
+-- flips the "enabled" value below and reports it back for the quick settings
+-- menu. Both locate this table by its keys and brace depth, not by line number,
+-- indentation or line length, so the layout below can be reformatted freely.
+-- Adding or renaming the keys it reads is the only thing that would break it.
+--
+-- Physics: upstream defaults are mesh 12, stiffness 200, damping 12, mass 1,
+-- intensity 0.2, value_epsilon 0.25, velocity_epsilon 2. These are stiffer, so
+-- the window settles instead of swinging. Damping ratio ~0.52, still underdamped
+-- so it does wobble. Raise damping to settle faster, lower stiffness to float more.
+--
+-- Inspect live state with: hyprctl getoption decoration:wobble:enabled
+hl.config({
+  decoration = {
+    wobble = {
+      enabled = true,
+      mesh = 12,
+      stiffness = 240,
+      damping = 16,
+      mass = 1,
+      intensity = 0.25,
+      value_epsilon = 0.25,
+      velocity_epsilon = 2,
+    },
+  },
+})
+
 hl.config({
   group = {
     col = {

@@ -16,6 +16,9 @@ wallust_kitty_args=()
 if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustConfig.sh" ]; then
   . "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustConfig.sh"
 fi
+# Signals the terminal, never a CLI invocation of it.
+# shellcheck source=/dev/null
+. "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/TerminalSignal.sh"
 have_notify() { command -v notify-send >/dev/null 2>&1; }
 wallust_log="${XDG_CACHE_HOME:-$HOME/.cache}/wallust/wallust-swww.log"
 mkdir -p "$(dirname "$wallust_log")"
@@ -260,8 +263,13 @@ ln -sf "$wallpaper_path" "$rofi_link" || true
 mkdir -p "$(dirname "$wallpaper_current")"
 cp -f "$wallpaper_path" "$wallpaper_current" || true
 
-# Ensure Ghostty directory exists so Wallust can write targets even if not yet created
-mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" || true
+# The Ghostty palette lives under UserConfigs, so another tool cannot
+# overwrite it. Same shape as the kitty palette next to it.
+ghostty_palette_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/ghostty-themes"
+ghostty_palette="$ghostty_palette_dir/01-Wallust.conf"
+# Ensure the directory exists so Wallust can write its target even if it has
+# not been created yet.
+mkdir -p "$ghostty_palette_dir" || true
 wait_for_templates() {
   shift
   local files=("$@")
@@ -292,18 +300,29 @@ for target in "${wallust_targets[@]}"; do
 done
 
 global_theme="$(read_global_theme)"
+palette_rc=0
 if [ -n "$global_theme" ]; then
-  if ! wallust "${wallust_args[@]}" theme -- "$global_theme" >"$wallust_log" 2>&1; then
-    have_notify && notify-send -u critical -a WallustSwww \
-      "Wallust failed" "See: $wallust_log"
-    exit 1
+  # butterpal has no equivalent of wallust's named themes, so this path stays
+  # wallust's whichever palette source is configured.
+  wallust "${wallust_args[@]}" theme -- "$global_theme" >"$wallust_log" 2>&1 || palette_rc=$?
+elif palette_source_is_butterpal; then
+  if butterpal_palette_from_image "$wallpaper_path"; then
+    wallust_cs_from_palette "${wallust_args[@]}" >"$wallust_log" 2>&1 || palette_rc=$?
+  else
+    # butterpal produced nothing for this image. wallust's own extraction is
+    # still better than leaving the previous wallpaper's colours in place.
+    printf 'ButterpalWallust: no palette from butterpal for %s; using wallust extraction\n' \
+      "$wallpaper_path" >"$wallust_log"
+    wallust "${wallust_args[@]}" run -s "$wallpaper_path" >>"$wallust_log" 2>&1 || palette_rc=$?
   fi
 else
-  if ! wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1; then
-    have_notify && notify-send -u critical -a WallustSwww \
-      "Wallust failed" "See: $wallust_log"
-    exit 1
-  fi
+  wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1 || palette_rc=$?
+fi
+
+if [ "$palette_rc" -ne 0 ]; then
+  have_notify && notify-send -u critical -a WallustSwww \
+    "Wallust failed" "See: $wallust_log"
+  exit 1
 fi
 if ! wait_for_templates "$start_ts" "${wallust_targets[@]}"; then
   have_notify && notify-send -u critical -a WallustSwww \
@@ -317,8 +336,10 @@ reload_running_waybar_colors
 # Normalize Rofi selection colors to a brighter accent and readable foreground
 rofi_colors="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
 if [ -f "$rofi_colors" ]; then
-  accent_hex=$(sed -n 's/^\s*color13:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
-  [ -z "$accent_hex" ] && accent_hex=$(sed -n 's/^\s*color12:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
+  # The accent is what the template wrote to active-background, which carries
+  # color12: wallust puts its accent there and WallustConfig.sh moves
+  # butterpal's there. Reading color13 here would put an ANSI hue back over it.
+  accent_hex=$(sed -n 's/^\s*active-background:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
   fg_hex=$(sed -n 's/^\s*foreground:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
   if [ -n "$accent_hex" ]; then
     sed -i -E "s|^(\s*selected-normal-background:\s*).*$|\1$accent_hex;|" "$rofi_colors"
@@ -335,6 +356,21 @@ fi
 # Run kitty-only wallust config to keep terminal palette separate
 run_wallust_with_config() {
   local cfg="$1"
+
+  # butterpal: the palette was already extracted in the main pass, so only this
+  # config's templates need rendering from it. Skipped when the main pass used
+  # a named theme, which leaves no butterpal palette behind.
+  if palette_source_is_butterpal && [ -s "${butterpal_palette_json:-}" ]; then
+    if [ "${#wallust_kitty_args[@]}" -gt 0 ]; then
+      wallust_cs_from_palette "${wallust_kitty_args[@]}" || true
+      return
+    fi
+    if [ -f "$cfg" ] && [ -n "$wallust_templates_dir" ]; then
+      wallust_cs_from_palette -C "$cfg" --templates-dir "$wallust_templates_dir" || true
+      return
+    fi
+  fi
+
   # Wallust v4: prefer config-file flag via WallustConfig.sh
   if [ "${#wallust_kitty_args[@]}" -gt 0 ]; then
     wallust "${wallust_kitty_args[@]}" run -s "$wallpaper_path" || true
@@ -406,26 +442,25 @@ fi
   # Use SIGUSR1 directly to avoid extra latency from kitty remote-control calls.
   kitty_wallust_theme="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/kitty-themes/01-Wallust.conf"
   if [ -s "$kitty_wallust_theme" ]; then
-    if pidof kitty >/dev/null 2>&1; then
-      for pid in $(pidof kitty); do
-        kill -SIGUSR1 "$pid" 2>/dev/null || true
-      done
-    fi
+    signal_terminal_app kitty SIGUSR1 >/dev/null 2>&1 || true
   fi
 
   # Normalize Ghostty palette syntax in case ':' was used by older files
-  if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" ]; then
-    sed -i -E 's/^(\s*palette\s*=\s*)([0-9]{1,2}):/\1\2=/' "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" 2>/dev/null || true
+  if [ -f "$ghostty_palette" ]; then
+    sed -i -E 's/^(\s*palette\s*=\s*)([0-9]{1,2}):/\1\2=/' "$ghostty_palette" 2>/dev/null || true
   fi
 
-  # Light wait for Ghostty colors file to be present then signal Ghostty to reload (SIGUSR2)
+  # Light wait for the Ghostty palette file, then ask Ghostty to reload.
+  # SIGUSR2 is Ghostty's documented reload and it does run, but on 1.4.0 it
+  # does not re-apply colours to a surface that is already open, so the
+  # palette appears only after Ghostty's own reload or a restart. The signal
+  # is still sent: it is correct for builds that do apply it, and harmless
+  # otherwise.
   for _ in 1 2 3; do
-    [ -s "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" ] && break
+    [ -s "$ghostty_palette" ] && break
     sleep 0.1
   done
-  if pidof ghostty >/dev/null; then
-    for pid in $(pidof ghostty); do kill -SIGUSR2 "$pid" 2>/dev/null || true; done
-  fi
+  signal_terminal_app ghostty SIGUSR2 >/dev/null 2>&1 || true
   # Hyprland reload/keyword updates are applied above to avoid delayed color/gap updates.
 ) >/dev/null 2>&1 &
 

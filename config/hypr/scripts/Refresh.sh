@@ -103,6 +103,15 @@ restart_waybar() {
   local waybar_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar"
   local restart_cmd
 
+  # NixOS ships no /bin/bash, and systemd-run resolves its command against the
+  # user manager's PATH rather than this script's, so name the interpreter
+  # absolutely. BASH is the one already running this script, and falls back to
+  # a PATH lookup if it is somehow unset.
+  local bash_bin="${BASH:-}"
+  if [ -z "$bash_bin" ] || [ ! -x "$bash_bin" ]; then
+    bash_bin="$(command -v bash 2>/dev/null || printf '%s' bash)"
+  fi
+
   # WaybarStartup.sh owns the Waybar lifecycle and serializes every start and
   # restart on a shared flock (and also decides systemd-service vs direct
   # launch). Delegating here means concurrent Refresh.sh runs - for example the
@@ -125,9 +134,9 @@ restart_waybar() {
       --setenv=XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" \
       --setenv=HYPRLAND_INSTANCE_SIGNATURE="${HYPRLAND_INSTANCE_SIGNATURE:-}" \
       --setenv=WEATHER_UNITS="${WEATHER_UNITS:-}" \
-      /bin/bash -c "$restart_cmd" >/dev/null 2>&1 || setsid /bin/bash -c "$restart_cmd" >/dev/null 2>&1 &
+      "$bash_bin" -c "$restart_cmd" >/dev/null 2>&1 || setsid "$bash_bin" -c "$restart_cmd" >/dev/null 2>&1 &
   else
-    setsid /bin/bash -c "$restart_cmd" >/dev/null 2>&1 &
+    setsid "$bash_bin" -c "$restart_cmd" >/dev/null 2>&1 &
   fi
 }
 

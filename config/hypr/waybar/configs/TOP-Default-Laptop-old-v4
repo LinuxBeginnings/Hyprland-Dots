@@ -52,6 +52,7 @@
 	"group/connections",
 	"custom/separator#line",
 	"tray",
+	"custom/qs-network",
 	"mpris", 
 	"group/audio",
 	"custom/nightlight",

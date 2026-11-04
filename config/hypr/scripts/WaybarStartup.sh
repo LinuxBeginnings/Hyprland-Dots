@@ -42,6 +42,23 @@ WAYBAR_SETTLE_DELAY="${WAYBAR_SETTLE_DELAY:-0.4}"
 # Overridable so the test suite does not have to sleep it out.
 WAYBAR_EXIT_WAIT_TICKS="${WAYBAR_EXIT_WAIT_TICKS:-30}"
 
+# Diagnostics. Every early exit in this script is silent by design - a lock
+# timeout, an already-running bar, a launch that never produced one - and from
+# the outside they all look identical: no bar. This records which branch was
+# taken, what the environment looked like, and whether a bar appeared. It lives
+# in the runtime dir, so a reboot clears it, and it costs one append per run.
+WAYBAR_STARTUP_LOG="${WAYBAR_STARTUP_LOG:-$runtime_dir/waybar-startup.log}"
+
+log() {
+    [ -n "$WAYBAR_STARTUP_LOG" ] || return 0
+    printf '%s [%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$$" "$*" >>"$WAYBAR_STARTUP_LOG" 2>/dev/null || true
+}
+
+# Waybar's own output used to go to /dev/null, so a config or CSS error left no
+# trace anywhere - the bar simply never appeared. Capture it beside the startup
+# log instead; WAYBAR_LOG still overrides.
+WAYBAR_LOG="${WAYBAR_LOG:-$runtime_dir/waybar.log}"
+
 # Any process at all matching a waybar name, in any state. This is a question
 # about the process table, not about whether the user has a bar: a process that
 # is dumping core matches here and still has to be escalated against, while
@@ -265,13 +282,23 @@ start_waybar_direct() {
     fi
     local log_target="${WAYBAR_LOG:-/dev/null}"
     if command -v waybar >/dev/null 2>&1; then
+        log "launching: waybar -c ${WAYBAR_CONFIG_ARG} -s ${WAYBAR_STYLE_ARG} (output -> ${log_target})"
         waybar -c "$WAYBAR_CONFIG_ARG" -s "$WAYBAR_STYLE_ARG" 9>&- >"$log_target" 2>&1 &
-        wait_for_waybar
+        if wait_for_waybar; then
+            log "waybar is up; pids=$(waybar_processes_alive waybar | tr '\n' ' ')"
+        else
+            log "waybar did NOT appear within ~8s; check ${log_target}"
+        fi
         return 0
     fi
     if command -v .waybar-wrapped >/dev/null 2>&1; then
+        log "launching: .waybar-wrapped -c ${WAYBAR_CONFIG_ARG} -s ${WAYBAR_STYLE_ARG} (output -> ${log_target})"
         .waybar-wrapped -c "$WAYBAR_CONFIG_ARG" -s "$WAYBAR_STYLE_ARG" 9>&- >"$log_target" 2>&1 &
-        wait_for_waybar
+        if wait_for_waybar; then
+            log ".waybar-wrapped is up"
+        else
+            log ".waybar-wrapped did NOT appear within ~8s; check ${log_target}"
+        fi
         return 0
     fi
     return 1
@@ -287,6 +314,12 @@ main() {
 
     local lock_file="${runtime_dir}/waybar-startup-${UID:-$(id -u)}.lock"
 
+    log "start mode=${mode} uid=${UID:-$(id -u)} ppid=${PPID:-?}"
+    log "env WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-unset} HYPRLAND_INSTANCE_SIGNATURE=${HYPRLAND_INSTANCE_SIGNATURE:-unset}"
+    log "env XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-unset} XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-unset} HOME=${HOME:-unset}"
+    log "resolved config=${WAYBAR_CONFIG_ARG} style=${WAYBAR_STYLE_ARG}"
+    log "bins waybar=$(command -v waybar || echo MISSING) flock=$(command -v flock || echo MISSING) systemctl=$(command -v systemctl || echo MISSING)"
+
     # Bounded lock: every Waybar start/restart funnels through here so two
     # concurrent callers can never both launch a bar. The winner holds the lock
     # until Waybar is confirmed running. Wait briefly so restart/start requests
@@ -296,9 +329,11 @@ main() {
         local lock_timeout=3
         [ "$mode" = "restart" ] && lock_timeout=5
         if ! flock -w "$lock_timeout" 9; then
+            log "exit 0: lock busy for ${lock_timeout}s; another caller owns the bar"
             exec 9>&-
             exit 0
         fi
+        log "lock acquired (timeout ${lock_timeout}s)"
     fi
 
     if [ "$mode" = "restart" ]; then
@@ -307,6 +342,7 @@ main() {
             systemctl --user restart waybar.service >/dev/null 2>&1 || true
             if wait_for_waybar; then
                 dedupe_waybar_instances
+                log "exit 0: restarted via systemd"
                 exec 9>&-
                 exit 0
             fi
@@ -318,26 +354,39 @@ main() {
     elif is_waybar_running; then
         # Already up (possibly duplicated by an older release): keep one bar.
         dedupe_waybar_instances
+        log "exit 0: a bar was already running; pids=$(waybar_processes_alive waybar | tr '\n' ' ')"
         exec 9>&-
         exit 0
     fi
 
-    wait_for_wayland || true
+    if wait_for_wayland; then
+        log "wayland ready: WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-unset} sig=${HYPRLAND_INSTANCE_SIGNATURE:-unset}"
+    else
+        log "wayland not ready after ~3s; continuing anyway"
+    fi
     sync_portal_env || true
     ensure_wallust_waybar_colors
 
     # Try systemd first if enabled, otherwise launch directly
+    if waybar_service_enabled; then
+        log "waybar.service is enabled/active; systemd owns the bar"
+    else
+        log "waybar.service is masked/disabled; managing the bar directly"
+    fi
     if start_waybar_via_systemd; then
         dedupe_waybar_instances
+        log "exit 0: started via systemd"
         exec 9>&-
         exit 0
     fi
 
     if start_waybar_direct "$force"; then
         dedupe_waybar_instances
+        log "exit 0: direct launch done (force=${force:-none}); pids=$(waybar_processes_alive waybar | tr '\n' ' ')"
         exec 9>&-
         exit 0
     fi
+    log "exit 1: no waybar binary found (neither 'waybar' nor '.waybar-wrapped') on PATH=$PATH"
     exec 9>&-
     exit 1
 }

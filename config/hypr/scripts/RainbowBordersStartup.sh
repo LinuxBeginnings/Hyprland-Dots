@@ -22,9 +22,11 @@
 #   One implementation, so the callers cannot drift apart.
 #
 # Modes written by scripts/Kool_Quick_Settings.sh:
-#   wallust_random | rainbow | gradient_flow  -> one-shot RainbowBorders.sh
-#   low_cpu                                   -> animated RainbowBorders-low-cpu.sh
+#   wallust_random | rainbow | gradient_flow  -> RainbowBorders.sh
+#   low_cpu                                   -> RainbowBorders-low-cpu.sh
 #   disabled                                  -> leave the Wallust border alone
+#
+# Both scripts animate, so both hold a PID lock and each start stops the other.
 set -u
 
 UserScripts="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserScripts"
@@ -32,6 +34,7 @@ CLASSIC="$UserScripts/RainbowBorders.sh"
 LOWCPU="$UserScripts/RainbowBorders-low-cpu.sh"
 MODE_FILE="$UserScripts/rainbow-borders.mode"
 LOCKFILE="${RB_LOCKFILE:-/tmp/hypr-rainbowborders.lock}"
+CLASSIC_LOCKFILE="${RB_CLASSIC_LOCKFILE:-/tmp/hypr-rainbowborders-classic.lock}"
 
 # Give hyprctl a usable environment. Matches the other startup helpers, and is
 # required when this runs from a login shell that never inherited the session.
@@ -84,9 +87,28 @@ stop_lowcpu() {
   pkill -f 'RainbowBorders-low-cpu\.sh' >/dev/null 2>&1 || true
 }
 
+# Both scripts animate and both hold general:col.active_border, so each start
+# stops the other. The classic script owns a PID lock, so without this a mode
+# change left the previous loop running and the new one exited on that lock -
+# the effect never changed until the next logout.
+stop_classic() {
+  local oldpid=""
+  if [ -f "$CLASSIC_LOCKFILE" ]; then
+    oldpid="$(cat "$CLASSIC_LOCKFILE" 2>/dev/null || true)"
+    if [ -n "$oldpid" ] && kill -0 "$oldpid" 2>/dev/null; then
+      kill "$oldpid" >/dev/null 2>&1 || true
+      sleep 0.1
+      kill -0 "$oldpid" 2>/dev/null && kill -9 "$oldpid" >/dev/null 2>&1 || true
+    fi
+    rm -f "$CLASSIC_LOCKFILE" >/dev/null 2>&1 || true
+  fi
+  pkill -f 'RainbowBorders\.sh' >/dev/null 2>&1 || true
+}
+
 start_lowcpu() {
   [ -f "$LOWCPU" ] || return 1
   [ -x "$LOWCPU" ] || chmod +x "$LOWCPU" >/dev/null 2>&1 || true
+  stop_classic
   stop_lowcpu
   run_detached "$LOWCPU"
 }
@@ -94,6 +116,8 @@ start_lowcpu() {
 start_classic() {
   [ -f "$CLASSIC" ] || return 1
   [ -x "$CLASSIC" ] || chmod +x "$CLASSIC" >/dev/null 2>&1 || true
+  stop_lowcpu
+  stop_classic
   run_detached "$CLASSIC"
 }
 
@@ -113,6 +137,8 @@ wallust_random | rainbow | gradient_flow)
   ;;
 disabled)
   # Explicitly off. The Wallust border colour written by the caller stays.
+  stop_lowcpu
+  stop_classic
   ;;
 "")
   # No mode file yet: match the menu's legacy detection, where a present

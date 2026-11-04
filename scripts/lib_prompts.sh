@@ -232,8 +232,15 @@ prompt_resolution_choice() {
   done
 }
 
-# Prompt for 12H clock; sets waybar/hyprlock/SDDM changes when accepted.
-prompt_clock_12h() {
+# Prompt for the clock format and apply it to the Waybar clocks, the hyprlock
+# hour label and - for the 12H answer - SDDM.
+#
+# The Waybar half is delegated to ToggleWaybarTime.sh, which owns the 12H/24H
+# format pairs. Both answers are applied, so the format a fresh copy happens to
+# ship cannot decide the outcome. The inline sed block this replaces only ever
+# edited for 12H, and its patterns had drifted off the modules files, so the
+# 24H answer changed nothing at all.
+prompt_clock_format() {
   local log="$1"
   local base="${DOTFILES_DIR:-.}"
 
@@ -246,53 +253,88 @@ prompt_clock_12h() {
     echo "${NOTE:-[NOTE]} Upgrade mode: keeping existing clock format (change anytime via Quick Settings -> Toggle Waybar Clock)." 2>&1 | tee -a "$log"
     return 0
   fi
+
+  local answer mode
   while true; do
     echo -e "${NOTE} ${SKY_BLUE} By default, KooL's Dots are configured in 24H clock format."
-    echo -n "$CAT Do you want to change to 12H (AM/PM) clock format? (y/n): "
-    read answer
+    echo -n "$CAT Do you want 24H or 12H (AM/PM) clock format? [24H]: "
+    read -r answer
     answer=$(echo "$answer" | tr '[:upper:]' '[:lower:]')
-    if [[ "$answer" == "y" ]]; then
-      # waybar clocks
-      sed -i 's#^\(\s*\)//\("format": " {:%I:%M %p}",\) #\1\2 #g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": " {:%H:%M:%S}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": "  {:%H:%M}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)//\("format": "{:%I:%M %p - %d/%b}",\) #\1\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": "{:%H:%M - %d/%b}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)//\("format": "{:%B | %a %d, %Y | %I:%M %p}",\) #\1\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": "{:%B | %a %d, %Y | %H:%M}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)//\("format": "{:%A, %I:%M %P}",\) #\1\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": "{:%a %d | %H:%M}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
-
-      # hyprlock
-      local HYPRLOCK_FILE="$base/config/hypr/hyprlock.conf"
-      if [ ! -f "$HYPRLOCK_FILE" ] && [ -f "$base/config/hypr/hyprlock-1080p.conf" ]; then
-        HYPRLOCK_FILE="$base/config/hypr/hyprlock-1080p.conf"
-      fi
-      if [ -f "$HYPRLOCK_FILE" ]; then
-        sed -i 's/^\s*text = cmd\[update:1000\] echo \"\$(date +\"%H\")\"/# &/' "$HYPRLOCK_FILE" 2>&1 | tee -a "$log"
-        sed -i 's/^\(\s*\)# *text = cmd\[update:1000\] echo \"\$(date +\"%I\")\" #AM\/PM/\1    text = cmd\[update:1000\] echo \"\$(date +\"%I\")\" #AM\/PM/' "$HYPRLOCK_FILE" 2>&1 | tee -a "$log"
-        sed -i 's/^\s*text = cmd\[update:1000\] echo \"\$(date +\"%S\")\"/# &/' "$HYPRLOCK_FILE" 2>&1 | tee -a "$log"
-        sed -i 's/^\(\s*\)# *text = cmd\[update:1000\] echo \"\$(date +\"%S %p\")\" #AM\/PM/\1    text = cmd\[update:1000\] echo \"\$(date +\"%S %p\")\" #AM\/PM/' "$HYPRLOCK_FILE" 2>&1 | tee -a "$log"
-      else
-        echo "${WARN} hyprlock template not found; skipping 12H lock format edits" 2>&1 | tee -a "$log"
-      fi
-
-      if [ "${EXPRESS_MODE:-0}" -eq 0 ]; then
-        apply_sddm_12h_format "/usr/share/sddm/themes/simple-sddm" "$log"
-        apply_sddm_12h_format "/usr/share/sddm/themes/simple_sddm_2" "$log"
-        apply_sddm_12h_format_sequoia "/usr/share/sddm/themes/sequoia_2" "$log"
-      else
-        echo "${NOTE:-[NOTE]} Express mode: skipping SDDM 12H edits to avoid sudo prompts." 2>&1 | tee -a "$log"
-      fi
-      echo "${OK} 12H format set on waybar clocks succesfully." 2>&1 | tee -a "$log"
-      return
-    elif [[ "$answer" == "n" ]]; then
-      echo "${NOTE} You chose not to change to 12H format." 2>&1 | tee -a "$log"
-      return
-    else
-      echo "${ERROR} Invalid choice. Please enter y for yes or n for no."
-    fi
+    case "$answer" in
+      "" | 24 | 24h | h24) mode="24h"; break ;;
+      12 | 12h | h12 | am | pm | ampm) mode="12h"; break ;;
+      *) echo "${ERROR} Please enter 24H or 12H." ;;
+    esac
   done
+
+  apply_waybar_clock_format "$base" "$mode" "$log"
+  apply_hyprlock_clock_format "$base" "$mode" "$log"
+
+  if [ "$mode" = "12h" ]; then
+    if [ "${EXPRESS_MODE:-0}" -eq 0 ]; then
+      apply_sddm_12h_format "/usr/share/sddm/themes/simple-sddm" "$log"
+      apply_sddm_12h_format "/usr/share/sddm/themes/simple_sddm_2" "$log"
+      apply_sddm_12h_format_sequoia "/usr/share/sddm/themes/sequoia_2" "$log"
+    else
+      echo "${NOTE:-[NOTE]} Express mode: skipping SDDM 12H edits to avoid sudo prompts." 2>&1 | tee -a "$log"
+    fi
+  fi
+
+  echo "${OK} ${mode^^} format set on waybar clocks successfully." 2>&1 | tee -a "$log"
+}
+
+# Hand the Waybar half to ToggleWaybarTime.sh, the same script the Quick
+# Settings entry runs, so the project keeps one 12H/24H format list.
+#
+# --dir points at the dotfiles tree, which is edited before it is copied, and
+# --no-restart because Waybar is not running yet.
+apply_waybar_clock_format() {
+  local base="$1" mode="$2" log="$3"
+  local toggle="$base/config/hypr/scripts/ToggleWaybarTime.sh"
+
+  if [ ! -f "$toggle" ]; then
+    echo "${WARN:-[WARN]} ToggleWaybarTime.sh not found; Waybar clocks left as shipped." 2>&1 | tee -a "$log"
+    return 0
+  fi
+
+  if bash "$toggle" --dir "$base/config/hypr/waybar" --set "$mode" --no-restart 2>&1 | tee -a "$log"; then
+    return 0
+  fi
+
+  echo "${WARN:-[WARN]} Not every Waybar clock was changed; see the messages above." 2>&1 | tee -a "$log"
+  return 0
+}
+
+# Point the hyprlock hour label at the chosen format.
+#
+# All three hyprlock files are edited: copy.sh has already replaced
+# hyprlock.conf with the resolution variant by the time this runs, and an
+# upgrade re-copies every one of them.
+#
+# The two spellings are swapped rather than set one way. The code this replaces
+# only ever enabled the 12H line, so answering 24H left a 12H lock screen.
+apply_hyprlock_clock_format() {
+  local base="$1" mode="$2" log="$3"
+  local f disc
+
+  # %H is the 24H hour, %I the 12H one. %S is deliberately not matched: that is
+  # the seconds label inside a commented-out block, not the hour.
+  if [ "$mode" = "12h" ]; then disc="I"; else disc="H"; fi
+
+  for f in "$base/config/hypr/hyprlock.conf" \
+    "$base/config/hypr/hyprlock-1080p.conf" \
+    "$base/config/hypr/hyprlock-2k.conf"; do
+    [ -f "$f" ] || continue
+    # Comment whichever hour line is live, then enable the one we want. Both
+    # anchors are state-aware, so this works from either starting point and
+    # leaves a line that is already correct alone.
+    # [(] and not \( : in sed's ERE a backslash before a paren opens a group
+    # instead of matching one, which silently leaves the line commented.
+    sed -i -E 's|^([[:space:]]*)(text = cmd\[update:1000\] echo "\$[(]date \+"%[HI])|# \1\2|' "$f"
+    sed -i -E "s|^# ([[:space:]]*text = cmd\[update:1000\] echo \"\\\$[(]date \+\"%${disc})|\1|" "$f"
+  done
+
+  echo "${OK} ${mode^^} format set on the hyprlock hour label." 2>&1 | tee -a "$log"
 }
 
 apply_sddm_12h_format() {

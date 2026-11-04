@@ -27,8 +27,12 @@ CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 MANAGED_CONFIG="$CONFIG_HOME/hypr/UserConfigs/ghostty.conf"
 RUNTIME_CONFIG="$CONFIG_HOME/ghostty/config"
 USER_THEMES_DIR="$CONFIG_HOME/ghostty/themes"
-WALLUST_INCLUDE="$CONFIG_HOME/ghostty/wallust.conf"
+WALLUST_INCLUDE="$CONFIG_HOME/hypr/UserConfigs/ghostty-themes/01-Wallust.conf"
 LOGFILE="${XDG_RUNTIME_DIR:-/tmp}/ghostty-theme-guard.log"
+# Signals the terminal, never a CLI invocation of it - this script runs
+# `ghostty +list-themes` itself and would otherwise kill its own call.
+# shellcheck source=/dev/null
+. "$CONFIG_HOME/hypr/scripts/TerminalSignal.sh"
 
 NOTIFY=0
 case "${1:-}" in
@@ -36,7 +40,11 @@ case "${1:-}" in
 esac
 [ "${GHOSTTY_THEME_GUARD_NOTIFY:-0}" = "1" ] && NOTIFY=1
 
-# Theme names advertised by Ghostty itself (strips the "(user)"/"(builtin)" tag).
+# Theme names advertised by Ghostty itself. Ghostty tags each one with where
+# it came from - "(resources)" for the bundled collection on 1.4.0, "(user)"
+# and "(builtin)" elsewhere - and every tag is a lowercase word in parens.
+# The tag has to come off or the exact match below never hits, which is how a
+# theme that is installed and resolvable gets read as missing.
 THEME_LIST=""
 
 log() {
@@ -55,7 +63,7 @@ notify_user() {
 
 load_theme_list() {
   have ghostty || return 0
-  THEME_LIST="$(ghostty +list-themes 2>/dev/null | sed -E 's/[[:space:]]+\((user|builtin)\)[[:space:]]*$//')"
+  THEME_LIST="$(ghostty +list-themes 2>/dev/null | sed -E 's/[[:space:]]+\([a-z][a-z-]*\)[[:space:]]*$//')"
 }
 
 # theme_available <name> -> 0 when Ghostty can resolve the theme
@@ -213,7 +221,7 @@ main() {
       mkdir -p "$(dirname "$RUNTIME_CONFIG")" 2>/dev/null || true
       cp -f "$MANAGED_CONFIG" "$RUNTIME_CONFIG" 2>/dev/null || true
     fi
-    have pkill && pkill -SIGUSR2 -x ghostty >/dev/null 2>&1 || true
+    signal_terminal_app ghostty SIGUSR2 >/dev/null 2>&1 || true
     notify_user "Ghostty colors restored" "Configured theme was not installed; using wallpaper/default colors."
   fi
 

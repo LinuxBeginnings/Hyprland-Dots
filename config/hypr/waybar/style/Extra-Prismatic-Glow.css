@@ -192,6 +192,7 @@ window#waybar.empty {
 #custom-tty,
 #custom-updater,
 #custom-hyprpicker,
+#custom-qs-network,
 #custom-weather,
 #custom-weather2,
 #custom-weather.clearNight,
@@ -213,6 +214,7 @@ window#waybar.empty {
 }
 
 #network.disconnected,
+#custom-qs-network.disconnected,
 #pulseaudio.muted {
     color: red;
 }

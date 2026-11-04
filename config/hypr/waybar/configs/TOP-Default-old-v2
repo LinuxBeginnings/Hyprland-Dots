@@ -50,6 +50,7 @@
 	"network#speed",
 	"custom/separator#line",
 	"tray",
+	"custom/qs-network",
 	"mpris", 
 	"bluetooth",
 	"group/audio",

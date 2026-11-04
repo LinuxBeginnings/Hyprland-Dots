@@ -41,6 +41,7 @@
 	], 
 
 "modules-right": [
+	"custom/qs-network",
 	"custom/weather2",	  
 	"battery", 
 	"backlight",
@@ -97,4 +98,4 @@
 	"custom/nightlight",
 	"custom/power",
 	],  
-}],
+}]

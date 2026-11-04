@@ -40,6 +40,7 @@
 	"idle_inhibitor",
 	],
 "modules-right": [
+	"custom/qs-network",
 	"group/mobo_drawer",
 	"custom/separator#blank_2",
 	"group/laptop",

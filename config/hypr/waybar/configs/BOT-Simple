@@ -37,6 +37,7 @@
 	],
     
 "modules-right": [
+	"custom/qs-network",
 	"hyprland/window",  
 	"battery",
  	"group/audio", 
