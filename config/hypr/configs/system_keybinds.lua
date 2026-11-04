@@ -158,6 +158,9 @@ end
 
 local function workspace_value(value)
   value = trim(value)
+  if value:match("^[+-]%d+$") then
+    return value
+  end
   return tonumber(value) or value
 end
 
