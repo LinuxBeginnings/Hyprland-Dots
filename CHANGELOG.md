@@ -424,6 +424,10 @@
   - The runtime template carried a name `21-ghostty-font.sh` exists to fix
   - Which font was in effect depended on what ran last
   - They are identical now, and a test keeps them that way
+- The additional wallpaper download reports progress instead of looking hung
+  - `git clone` sent both streams to the log, and git draws no meter off a tty
+  - `copy.sh` passes `--progress` and tees the output, so the meter is visible
+  - A pipeline reports `tee`'s status, so git's is read from `PIPESTATUS`
 
 ## Removed:
 

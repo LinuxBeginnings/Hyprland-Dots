@@ -1239,11 +1239,16 @@ default_wallpapers_count=$(find "$SCRIPT_DIR/wallpapers" -type f 2>/dev/null | w
 WALLPAPER_BANK_MIN_FILES=$(( ${default_wallpapers_count:-0} + 15 ))
 
 download_wallpaper_bank() {
-  local clone_dir revision
+  local clone_dir revision clone_status
   clone_dir=$(mktemp -d "${TMPDIR:-/tmp}/wallpaper-bank.XXXXXX") || return 1
   trap 'rm -rf "$clone_dir"' EXIT INT TERM
 
-  if ! git clone --depth 1 --single-branch "$WALLPAPER_BANK_REPO" "$clone_dir/Wallpaper-Bank" >>"$LOG" 2>&1; then
+  # --progress draws the transfer meter even though stderr is not a terminal,
+  # and tee keeps the clone output in the log as well as on screen. The
+  # pipeline reports tee's status, so git's exit code is read from PIPESTATUS.
+  git clone --progress --depth 1 --single-branch "$WALLPAPER_BANK_REPO" "$clone_dir/Wallpaper-Bank" 2>&1 | tee -a "$LOG"
+  clone_status=${PIPESTATUS[0]}
+  if [ "$clone_status" -ne 0 ]; then
     echo "${ERROR} Downloading additional wallpapers failed" | tee -a "$LOG"
     trap - EXIT INT TERM
     rm -rf "$clone_dir"
