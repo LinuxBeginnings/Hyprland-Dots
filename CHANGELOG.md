@@ -1,5 +1,41 @@
 # Changelog — KoolDots
 
+## v2.3.28.2
+
+## Fixed:
+
+- Clients that need an alpha buffer start again, e.g. `kitty` on a VM
+  - `quirks:skip_non_kms_dmabuf_formats` now defaults to `false`
+  - The old default advertised only the display's scanout formats
+  - On `virtio-gpu` (VirGL) that left only `XRGB8888`
+  - So no alpha `EGLConfig` existed for `kitty` to use
+  - `kitty` failed with `EGL: No EGLConfigs returned`
+  - GLFW asks for `EGL_ALPHA_SIZE 8`, which no offered config had
+  - `lua/settings.lua` sets `skip_non_kms_dmabuf_formats = false`
+  - Existing installs get it from the refreshed system config, no patch
+
+## Updated:
+
+- `hl.meta.lua` refreshed to the stub Hyprland 0.57.0 ships
+  - It is generated upstream by `meta/generateLuaStubs.py`
+  - The installed copy is `/usr/share/hypr/stubs/hl.meta.lua`
+  - The vendored copy was 1252 lines; the shipped stub is 2015
+  - Editors flagged `decoration.wobble.*`, which the dots already set
+  - New `HL.ConfigOpt` tree types `hl.config({ ... })` as well
+
+## Removed:
+
+- Deprecated `dwindle.special_scale_factor` setting
+  - `hyprctl deprecated-config` flags it on Hyprland 0.57
+  - The special workspace is inset with a workspace rule instead
+  - The rule is a system default in `lua/workspaces.lua`
+  - Override it with a rule in `UserConfigs/workspaces.lua`
+  - `gaps_out` is absolute pixels, unlike the old `0.8` factor
+  - Raise `gaps_out` on a display larger than 1080p
+  - `special:scratchpad` needs no rule: the dropdown terminal is floating
+
+---
+
 ## v2.3.28.1
 
 ## Fixed:
