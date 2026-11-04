@@ -39,7 +39,7 @@ is active rather than what this file says.
 - `SUPER + CTRL + SHIFT + W` — Wlogout background & Wallust theme selector (`RofiWlogoutWallust.sh`)
 - `SUPER + SHIFT + O` — Change Oh-My-Zsh theme (`ZshChangeTheme.sh`)
 - `SUPER + SHIFT + A` — Animations menu (`Animations.sh`)
-- `SUPER + W` — Select wallpaper (`WallpaperSelect.sh`)
+- `SUPER + W` — Select wallpaper (Quickshell carousel, `WallpaperSelect.sh` fallback)
 - `SUPER + SHIFT + W` — Wallpaper effects (`WallpaperEffects.sh`)
 - `CTRL + ALT + W` — Random wallpaper (`WallpaperRandom.sh`)
 - `SUPER + CTRL + O` — Toggle active window opacity (`setprop active opaque toggle`)

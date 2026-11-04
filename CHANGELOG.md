@@ -228,6 +228,21 @@
 
 ## Added:
 
+- A Quickshell wallpaper carousel on `SUPER W`
+  - A frameless deck of portrait previews, tallest in the middle
+  - The cards fan over the wallpaper; nothing is drawn behind them
+  - `←` `→` or the wheel step, `Enter` applies, `Esc` or empty space closes
+  - It opens centred on the wallpaper that is on screen
+  - `QsWallpaper.sh open --query TEXT` opens it already filtered
+  - Quick Settings has a `Wallpaper Carousel` entry for the same deck
+  - Symlinked wallpapers and a capitalised `Wallpapers/` folder both work
+  - Adapted from the ML4W `WallpaperApp` carousel, GPL-3.0
+  - It reads this project's Wallust palette, not ML4W's `qs.CustomTheme`
+  - `QsWallpaper.sh` lists and applies through the existing wallpaper scripts
+  - `SUPER W` still opens the rofi menu where Quickshell is not installed
+  - Videos, GIFs and the effects stay with `WallpaperSelect.sh`
+  - `test-qs-wallpaper.sh` covers the listing, the apply and both menus
+
 - Tailscale, Docker and Podman tabs in the Quickshell network widget
   - A tab exists only when the tool is installed or one of its links is present
   - `LINK` and `FEATURE` records come from `ip -o link`, so no daemon is needed

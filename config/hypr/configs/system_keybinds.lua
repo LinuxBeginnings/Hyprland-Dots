@@ -612,7 +612,10 @@ bind(
   { description = "Toggle Hyprsunset - night light" }
 )
 bind("SUPER SHIFT", "M", exec_cmd("$HOME/.config/hypr/UserScripts/RofiBeats.sh"), { description = "online music" })
-bind("SUPER", "W", exec_cmd("$HOME/.config/hypr/scripts/WallpaperSelect.sh"), { description = "select wallpaper" })
+-- The Quickshell carousel where it can run, the rofi menu where it cannot.
+-- QsWallpaper.sh picks the one that is available, so neither distro loses the
+-- bind and the video wallpapers stay reachable on quickshell installs.
+bind("SUPER", "W", exec_cmd("$HOME/.config/hypr/scripts/QsWallpaper.sh select"), { description = "select wallpaper" })
 bind(
   "SUPER SHIFT",
   "W",

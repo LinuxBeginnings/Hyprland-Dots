@@ -670,6 +670,9 @@ handle_choice() {
       "$scriptsDir/sddm_wallpaper.sh" --normal
     fi
     ;;
+  # The same Quickshell deck SUPER W opens, in front of the rofi menu it falls
+  # back to, so both entry points reach one code path.
+  "Wallpaper Carousel") "$scriptsDir/QsWallpaper.sh select" ;;
   "Choose Kitty Terminal Theme") "$scriptsDir/Kitty_themes.sh" ;;
   "Choose Ghostty Terminal Theme") "$scriptsDir/Ghostty_themes.sh" ;;
   "Choose Wlogout Theme") "$scriptsDir/RofiWlogoutTheme.sh" ;;
@@ -917,6 +920,7 @@ EOF
       cat <<EOF
 Change Starship Prompt
 Set SDDM Wallpaper
+Wallpaper Carousel
 Choose Kitty Terminal Theme
 Choose Ghostty Terminal Theme
 Choose Wlogout Theme
@@ -965,7 +969,7 @@ show_main_menu() {
   printf '%b\n' "[[ User Settings ]]\x00meta\x1fManage User Defaults Edit User Defaults Edit User Keybinds Edit User ENV variables Edit User Startup Apps overlay Edit User Window Rules overlay Edit User Layer Rules overlay Edit User Settings Edit User Decorations Edit User Animations Edit User Laptop Settings Edit User Monitor config Select Hyprview Layout"
   printf '%b\n' "[[ System Settings ]]\x00meta\x1fEdit System Default Keybinds Edit System Default Startup Apps Edit System Default Window Rules Edit System Default Layer Rules Edit System Default Settings"
   printf '%b\n' "[[ Toggle Options ]]\x00meta\x1fToggle Waybar Weather units C F Toggle Waybar Clock 12H 24H Toggle Game Mode Toggle Window Wobble On Off"
-  printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Choose Wlogout Theme Choose Wlogout Wallpaper Arrange Monitors nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Choose Palette Source Rainbow Borders Mode"
+  printf '%b\n' "[[ Misc ]]\x00meta\x1fChange Starship Prompt Set SDDM Wallpaper Wallpaper Carousel Choose Kitty Terminal Theme Choose Ghostty Terminal Theme Choose Wlogout Theme Choose Wlogout Wallpaper Arrange Monitors nwg-displays GTK Settings nwg-look QT Apps Settings qt6ct QT Apps Settings qt5ct Set Hyprlock Wallpaper Choose Hyprland Animations Choose Monitor Profiles Choose Rofi Themes Search for Keybinds Choose Palette Source Rainbow Borders Mode"
   printf '%s\n' "[ Quick Links]"
   printf '%s\n' "Manage User Defaults"
   printf '%s\n' "Set User Keybinds"
@@ -995,6 +999,7 @@ show_main_menu() {
   printf '%s\n' "Toggle Window Wobble [Current: $wobble_label]"
   printf '%s\n' "Change Starship Prompt"
   printf '%s\n' "Set SDDM Wallpaper"
+  printf '%s\n' "Wallpaper Carousel"
   printf '%s\n' "Choose Kitty Terminal Theme"
   printf '%s\n' "Choose Ghostty Terminal Theme"
   printf '%s\n' "Choose Wlogout Theme"
