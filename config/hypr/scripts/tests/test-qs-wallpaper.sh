@@ -312,7 +312,8 @@ else
 fi
 
 it "the deck is a fan of portrait cards"
-if grep -qF 'cardWidth: Math.round(cardHeight * 0.4)' "$WIDGET/Carousel.qml" &&
+if grep -qF 'cardWidth: Math.round(cardHeight * cardAspect)' "$WIDGET/Carousel.qml" &&
+  grep -qF 'readonly property real cardAspect: 0.4' "$WIDGET/Carousel.qml" &&
   grep -qF 'stripHeight: Math.round(cardHeight + 56)' "$WIDGET/Carousel.qml"; then
   pass_msg
 else
