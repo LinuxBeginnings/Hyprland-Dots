@@ -14,9 +14,9 @@
 #   second drive), and the folder itself is sometimes capitalised, so both are
 #   fixtures here rather than assumptions.
 #
-#   The QML is checked with qmllint where it is installed, plus the two things
-#   that would silently undo the port: a theme loader this project does not
-#   ship, and a carousel with no search field.
+#   The QML is checked with qmllint where it is installed, plus the things that
+#   would silently undo the port: a theme loader this project does not ship, a
+#   panel drawn behind the deck, and a search bar that is not the deck's filter.
 # No `set -e`: the assertion helpers return non-zero on failure, and exiting on
 # the first one would hide every later check in the run.
 set -uo pipefail
@@ -314,10 +314,19 @@ fi
 it "the deck is a fan of portrait cards"
 if grep -qF 'cardWidth: Math.round(cardHeight * cardAspect)' "$WIDGET/Carousel.qml" &&
   grep -qF 'readonly property real cardAspect: 0.4' "$WIDGET/Carousel.qml" &&
-  grep -qF 'stripHeight: Math.round(cardHeight + 56)' "$WIDGET/Carousel.qml"; then
+  grep -qF 'stripHeight: Math.round(cardHeight + 100)' "$WIDGET/Carousel.qml"; then
   pass_msg
 else
   fail "the cards are not the portrait deck shape"
+fi
+
+it "the deck has a search bar wired to its filter"
+if grep -qF 'readonly property int searchBarWidth: Math.min(width - 60, 640)' "$WIDGET/Carousel.qml" &&
+  grep -qF 'onTextChanged: carousel.wallpapers.query = text' "$WIDGET/Carousel.qml" &&
+  grep -qF 'Keys.onEscapePressed: carousel.handleEscape()' "$WIDGET/Carousel.qml"; then
+  pass_msg
+else
+  fail "the search bar is missing or does not drive wallpapers.query"
 fi
 
 it "the strip is sized to the deck, not the screen"

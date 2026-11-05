@@ -228,6 +228,17 @@
 
 ## Added:
 
+- A search bar floats under the wallpaper carousel's deck
+  - Wider than a card, so a long file name stays readable
+  - Typing filters the deck in place and it re-centres on the current one
+  - The arrows and `Home`/`End` move the caret, so the deck steps with `Tab`
+  - The wheel and a click still step it; `Enter` applies the centred card
+  - `Escape` clears the filter first, a second press closes the deck
+  - It writes the same `wallpapers.query` the IPC filter already used
+  - So `QsWallpaper.sh open --query TEXT` opens the bar already filled
+  - `Q` no longer closes the deck: it is a printable key, so it filters
+  - `test-qs-wallpaper.sh` covers the bar and the filter
+
 - A Quickshell wallpaper carousel on `SUPER W`
   - A frameless deck of portrait previews, tallest in the middle
   - The cards fan over the wallpaper; nothing is drawn behind them
@@ -372,6 +383,12 @@
   - `docs/KoolDots-UserGuide.es.md` carries the same section
 
 ## Updated:
+
+- The wallpaper carousel previews are 15% larger
+  - Card height was a fixed `0.36` of the monitor height
+  - The size is now `cardHeightFraction` and `cardAspect` in `Carousel.qml`
+  - Width follows from the height and the portrait ratio, so both grew
+  - `test-qs-wallpaper.sh` still pins the portrait shape
 
 - `custom/qs-network` follows a link change in about a second
   - The module ran `QsNetworkPanel.sh status` every 10s

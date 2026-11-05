@@ -2,12 +2,16 @@
 
 A Quickshell wallpaper picker: the wallpapers as a frameless fan of portrait
 previews across the monitor, instead of a list of file names. The card in the
-middle is the focused one; it is what `Enter` applies.
+middle is the focused one; it is what `Enter` applies. A search bar floats under
+the deck, wider than a card, so a long collection can be typed down to a name.
 
 ```
         ┌──┐┌────┐┌─────┐┌───────┐┌─────┐┌────┐┌──┐
         │  ││    ││     ││       ││     ││    ││  │
         └──┘└────┘└─────┘└───────┘└─────┘└────┘└──┘
+   ┌───────────────────────────────────────────────────┐
+   │ Filter wallpapers…                                │
+   └───────────────────────────────────────────────────┘
                       sundown_mountain.jpg
 ```
 
@@ -58,10 +62,25 @@ bind("SUPER ALT", "W", exec_cmd("$HOME/.config/hypr/scripts/QsWallpaper.sh toggl
 
 ## Controls
 
-The deck is keyboard and mouse driven; it has no search field, so the whole
-strip stays clear of chrome. To open it narrowed to a name, pass a query - the
-whole string is matched against folder and file names, and every word has to
-appear:
+The deck is keyboard and mouse driven, and a search bar floats under it - wider
+than a card, so a long file name stays readable. Typing filters the deck in
+place, and it re-centres on the wallpaper that is on screen. The arrows and
+`Home`/`End` belong to the caret, so the deck is stepped with `Tab`, the wheel
+or a click.
+
+| Input | Action |
+| --- | --- |
+| **Type** | filter by folder and file name |
+| **Tab / Shift+Tab** | step one wallpaper |
+| **Enter** | apply the centred wallpaper |
+| **Click a card** | apply it |
+| **Mouse wheel** | step one wallpaper per notch |
+| **Esc** | clear the filter, or close when it is empty |
+| **Click the empty strip** | close |
+
+A query can also be passed in, which opens the deck narrowed with the bar
+already filled. The whole string is matched against folder and file names, and
+every word has to appear:
 
 ```bash
 ~/.config/hypr/scripts/QsWallpaper.sh open --query aurora
@@ -78,19 +97,6 @@ quickshell ipc -p ~/.config/quickshell/wallpaper \
 The query is cleared when the deck closes, so the next `SUPER W` shows every
 wallpaper again. `select --query TEXT` does the same from the keybind path, and
 the rofi fallback ignores it.
-
-| Input | Action |
-| --- | --- |
-| **← →** or **H L** | step one wallpaper |
-| **Enter** | apply the centred wallpaper |
-| **Home / End** | jump to the first / last wallpaper |
-| **Click a card** | apply it |
-| **Mouse wheel** | step one wallpaper per notch |
-| **Esc** or **Q** | close |
-| **Click the empty strip** | close |
-
-With a query passed in, only the matches are in the deck, and `Esc` still
-closes it.
 
 Applying fades the deck out and closes the strip; the wallpaper is set without
 a transition, so it is already in place.

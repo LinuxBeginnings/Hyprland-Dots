@@ -1,11 +1,12 @@
 // The carousel: a frameless deck of portrait wallpaper cards fanned across the
-// monitor, tallest in the middle and shrinking towards both edges, with the name
-// of the focused card underneath.
+// monitor, tallest in the middle and shrinking towards both edges, with a search
+// bar and the name of the focused card underneath.
 //
 // There is no panel behind the deck: the window is transparent and only the
-// cards are drawn, so the wallpaper stays visible around them and the deck
-// reads as floating. Clicking the deck's empty space, Escape or applying a
-// wallpaper closes it; clicking outside the strip goes to the desktop.
+// cards and the search bar are drawn, so the wallpaper stays visible around them
+// and the deck reads as floating. Clicking the deck's empty space, Escape or
+// applying a wallpaper closes it; clicking outside the strip goes to the
+// desktop.
 //
 // Start:   quickshell -p ~/.config/quickshell/wallpaper
 // Toggle:  ~/.config/hypr/scripts/QsWallpaper.sh toggle      (SUPER W)
@@ -14,7 +15,9 @@
 //   quickshell ipc -p ~/.config/quickshell/wallpaper \
 //       call wallpaper-carousel toggle|open|close|isOpen|refresh
 //
-// Keys: Left/Right step, Enter applies, Escape closes, Home/End jump.
+// Keys: type to filter, Tab steps, Enter applies, Escape clears then closes.
+//       The arrows and Home/End move the caret, so the deck is stepped with
+//       Tab, the wheel or a click.
 //
 // Adapted from the ML4W WallpaperApp carousel (GPL-3.0): the deck geometry is
 // theirs, the framing, theme loader, keys and wallpaper calls are this
@@ -62,9 +65,15 @@ PanelWindow {
     readonly property real cardGap: 8
     readonly property real edgeScale: 0.4
 
-    // Only the deck and the label under it: no panel, so nothing covers the
-    // wallpaper behind the cards.
-    readonly property int stripHeight: Math.round(cardHeight + 56)
+    // The search bar floats under the deck, wider than a card so a long file
+    // name stays readable.
+    readonly property int searchBarHeight: 34
+    readonly property int searchBarWidth: Math.min(width - 60, 640)
+
+    // Only the deck and the chrome under it: no panel, so nothing covers the
+    // wallpaper behind the cards. The 100 is the 8px top margin, the 12px gap,
+    // the search bar, and the caption and error lines below it.
+    readonly property int stripHeight: Math.round(cardHeight + 100)
     readonly property int maxVisibleCards: Math.max(3, Math.round(width / (cardWidth + cardGap) * 1.527))
 
     // Full monitor width, one strip tall, centred vertically. The strip
@@ -93,7 +102,7 @@ PanelWindow {
         }
         wallpapers.refresh();
         focusCurrent();
-        keyHandler.forceActiveFocus();
+        searchInput.forceActiveFocus();
     }
 
     function screenForFocusedMonitor() {
@@ -106,8 +115,8 @@ PanelWindow {
     }
 
     // `query` comes from the IPC handler (QsWallpaper.sh open --query TEXT) and
-    // filters the deck before it is shown. There is no search field, so this is
-    // how a filter arrives.
+    // filters the deck before it is shown. It is the same `wallpapers.query` the
+    // search bar writes, so the bar opens already filled.
     function open(query) {
         var match = screenForFocusedMonitor();
         if (match) carousel.targetScreen = match;
@@ -151,39 +160,22 @@ PanelWindow {
         closeTimer.restart();
     }
 
-    function handleKey(event) {
-        if (applying && event.key !== Qt.Key_Escape) {
-            event.accepted = true;
+    // The search field holds the focus and takes the text keys: a printable key
+    // filters the deck, and the arrows and Home/End move the caret. What is left
+    // over is Escape and Tab, and Enter through the field's accepted signal.
+    function handleEscape() {
+        // The first Escape clears the filter, a second one closes the deck.
+        if (wallpapers.query !== "") {
+            wallpapers.query = "";
             return;
         }
+        close();
+    }
 
-        switch (event.key) {
-        case Qt.Key_Left:
-        case Qt.Key_H:
-            view.decrementCurrentIndex();
-            break;
-        case Qt.Key_Right:
-        case Qt.Key_L:
-            view.incrementCurrentIndex();
-            break;
-        case Qt.Key_Return:
-        case Qt.Key_Enter:
-            applyCurrent();
-            break;
-        case Qt.Key_Escape:
-        case Qt.Key_Q:
-            close();
-            break;
-        case Qt.Key_Home:
-            view.currentIndex = 0;
-            break;
-        case Qt.Key_End:
-            view.currentIndex = Math.max(0, wallpapers.filtered.length - 1);
-            break;
-        default:
-            return;
-        }
-        event.accepted = true;
+    function stepDeck(delta) {
+        if (applying) return;
+        if (delta > 0) view.incrementCurrentIndex();
+        else view.decrementCurrentIndex();
     }
 
     Component.onCompleted: {
@@ -206,14 +198,16 @@ PanelWindow {
         }
     }
 
-    // The deck has no panel to take the focus, so it is held here.
-    Item {
-        id: keyHandler
+    // The field is the only thing that types, but the query is also set from
+    // outside: the IPC filter, Escape clearing it, and the close. The field
+    // follows it, so those land in the bar.
+    Connections {
+        target: carousel.wallpapers
 
-        anchors.fill: parent
-        focus: carousel.shown
-
-        Keys.onPressed: (event) => carousel.handleKey(event)
+        function onQueryChanged() {
+            if (searchInput.text !== carousel.wallpapers.query)
+                searchInput.text = carousel.wallpapers.query;
+        }
     }
 
     Item {
@@ -403,10 +397,84 @@ PanelWindow {
             }
         }
 
+        // --- SEARCH BAR ---
+        // Floats under the deck, wider than a card so a long file name stays
+        // readable, and holds the focus: the deck has no panel to take it. It
+        // writes the same `wallpapers.query` the IPC filter uses, so the deck
+        // re-filters and re-centres on every keystroke.
+        Rectangle {
+            id: searchBar
+
+            anchors.top: view.bottom
+            anchors.topMargin: 12
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: carousel.searchBarWidth
+            height: carousel.searchBarHeight
+            radius: height / 2
+            color: carousel.theme.surface
+            border.width: 1
+            border.color: searchInput.activeFocus
+                ? carousel.theme.accent
+                : carousel.theme.border
+
+            // Clicks on the bar's padding focus the field rather than falling
+            // through to the strip's close-on-click area.
+            MouseArea {
+                anchors.fill: parent
+                onClicked: searchInput.forceActiveFocus()
+            }
+
+            TextInput {
+                id: searchInput
+
+                anchors.fill: parent
+                anchors.leftMargin: 16
+                anchors.rightMargin: 16
+                verticalAlignment: TextInput.AlignVCenter
+                clip: true
+                readOnly: carousel.applying
+                selectByMouse: true
+                focus: carousel.shown
+                color: carousel.theme.text
+                selectionColor: carousel.theme.accent
+                selectedTextColor: carousel.theme.accentInk
+                font.family: carousel.theme.fontFamily
+                font.pixelSize: 14
+
+                cursorDelegate: Rectangle {
+                    width: 1
+                    color: carousel.theme.accent
+                }
+
+                Text {
+                    anchors.fill: parent
+                    verticalAlignment: Text.AlignVCenter
+                    visible: searchInput.text === ""
+                    text: "Filter wallpapers…"
+                    color: carousel.theme.muted
+                    font: searchInput.font
+                }
+
+                // Typing is the filter; the deck follows through `filtered`.
+                onTextChanged: carousel.wallpapers.query = text
+
+                // Enter applies the centred card, as the deck always did.
+                onAccepted: carousel.applyCurrent()
+
+                // The arrows and Home/End are the caret's, so the deck is
+                // stepped with Tab, the wheel or a click.
+                Keys.onTabPressed: carousel.stepDeck(1)
+                Keys.onBacktabPressed: carousel.stepDeck(-1)
+                Keys.onEscapePressed: carousel.handleEscape()
+            }
+        }
+
         // --- NAME OF THE FOCUSED WALLPAPER ---
         Text {
-            anchors.top: view.bottom
-            anchors.topMargin: 10
+            id: caption
+
+            anchors.top: searchBar.bottom
+            anchors.topMargin: 8
             anchors.horizontalCenter: parent.horizontalCenter
             width: Math.min(parent.width - 60, 640)
             horizontalAlignment: Text.AlignHCenter
@@ -423,8 +491,8 @@ PanelWindow {
         }
 
         Text {
-            anchors.top: view.bottom
-            anchors.topMargin: 30
+            anchors.top: caption.bottom
+            anchors.topMargin: 4
             anchors.horizontalCenter: parent.horizontalCenter
             width: Math.min(parent.width - 60, 560)
             horizontalAlignment: Text.AlignHCenter

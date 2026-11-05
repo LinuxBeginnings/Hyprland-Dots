@@ -19,7 +19,7 @@
 #                                          WallpaperSelect.sh where it cannot
 #
 # `open` and `select` also take `--query TEXT`, which opens the deck already
-# filtered. The deck has no search field, so this is how a filter arrives.
+# filtered. It is the same filter the search bar writes, so it opens filled.
 #
 # The carousel previews still images. Videos, GIFs and the ImageMagick effects
 # stay with WallpaperSelect.sh (SUPER W) and WallpaperEffects.sh
