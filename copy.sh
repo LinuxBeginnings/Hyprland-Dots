@@ -872,6 +872,18 @@ seed_upgrade_userconfigs "$LOG"
 capture_upgrade_runtime_selection_state
 capture_runtime_personal_state "$LOG"
 
+# Waybar reloads from the files this script is about to replace, and exits when
+# the file it is watching is gone: copy_waybar removes the waybar directory that
+# holds `config` and `style.css`, copy_phase2 moves the whole hypr tree aside for
+# the fresh copy, and the waybar.service block below stops a bar that a distro
+# runs through systemd. Nothing here ever brought the bar back, so the session
+# was left without one. Remember whether there was a bar to restore; the restart
+# itself happens once the installed config and style are final.
+waybar_was_running=0
+if pgrep -x waybar >/dev/null 2>&1 || pgrep -x '\.waybar-wrapped' >/dev/null 2>&1; then
+  waybar_was_running=1
+fi
+
 printf "${INFO} - copying dotfiles ${SKY_BLUE}first${RESET} part\n"
 copy_phase1 "$LOG" "$RUN_MODE"
 printf "\n%.0s" {1..1}
@@ -1438,6 +1450,24 @@ fi
 
 # Ensure shell profile sources /etc/profile (fixes flatpak not showing in rofi on Debian)
 ensure_shell_profile_sources_etc_profile "$LOG"
+
+# Bring back the bar that the copy took down. WaybarStartup.sh owns the Waybar
+# lifecycle - one-instance lock, masked waybar.service, duplicate clean-up - so
+# exactly one bar returns with the newly installed config and style.
+if [ "$waybar_was_running" -eq 1 ]; then
+  waybar_startup="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WaybarStartup.sh"
+  if [ -x "$waybar_startup" ]; then
+    echo "${INFO} - Restarting Waybar with the installed config..." 2>&1 | tee -a "$LOG"
+    "$waybar_startup" --restart 2>&1 | tee -a "$LOG" || true
+    if pgrep -x waybar >/dev/null 2>&1 || pgrep -x '\.waybar-wrapped' >/dev/null 2>&1; then
+      echo "${OK} - Waybar is running again." 2>&1 | tee -a "$LOG"
+    else
+      echo "${WARN} - Waybar did not come back. Run ${YELLOW}SUPER ALT R${RESET} and check ${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/waybar.log" 2>&1 | tee -a "$LOG"
+    fi
+  else
+    echo "${WARN} - WaybarStartup.sh not found at $waybar_startup; start Waybar manually." 2>&1 | tee -a "$LOG"
+  fi
+fi
 
 printf "\n%.0s" {1..2}
 printf "${OK} GREAT! KooL's Hyprland-Dots is now Loaded & Ready !!! "

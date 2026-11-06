@@ -4,6 +4,16 @@
 
 ## Fixed:
 
+- Waybar no longer disappears after `copy.sh`
+  - The copy replaces the config, style and modules a running bar watches
+  - Waybar has no way to reload from a file that is gone, so it exits
+  - `copy_phase2` moves the whole `hypr` tree aside for the fresh copy
+  - A distro that runs the bar through `waybar.service` also saw it stopped
+  - Nothing in `copy.sh` ever started the bar again
+  - A bar that was running before the copy is now restarted at the end
+  - The restart goes through `WaybarStartup.sh`, so exactly one bar returns
+  - Reported on Fedora, Arch, Debian and Ubuntu
+
 - `movetoworkspace +1` no longer moves the window to workspace 1
   - Lua reads `"+1"` as the number `1`, so the relative move was lost
   - Hyprland turns a Lua number back into `"1"`, an absolute workspace
