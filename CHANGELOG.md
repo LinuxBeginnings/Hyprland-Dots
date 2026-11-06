@@ -238,6 +238,11 @@
 
 ## Added:
 
+- HyprMod can edit the `UserConfigs` overrides directly
+  - `UserConfigs/hyprmod.toml` maps each editor to the file it owns
+  - Monitors, keybinds, window rules, animations and decorations
+  - `base_dir` stays `~/.config/hypr`, so `hyprland.lua` is the entrypoint
+
 - A search bar floats under the wallpaper carousel's deck
   - Wider than a card, so a long file name stays readable
   - Typing filters the deck in place and it re-centres on the current one

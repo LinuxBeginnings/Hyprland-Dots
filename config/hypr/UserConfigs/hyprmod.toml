@@ -1,0 +1,22 @@
+# ==================================================
+#  KoolDots (2026)
+#  Project URL: https://github.com/LinuxBeginnings
+#  License: GNU GPLv3
+#  SPDX-License-Identifier: GPL-3.0-or-later
+# ==================================================
+# HyprMod configuration for KooL's Hyprland-Dots.
+# HyprMod edits the user override files under UserConfigs, which copy.sh
+# preserves across installs and upgrades.
+# base_dir stays ~/.config/hypr because that is where Hyprland's entrypoint
+# (hyprland.lua) lives; every target path is relative to it.
+
+[paths]
+base_dir = "~/.config/hypr"
+entrypoint = "hyprland.lua"
+
+[targets]
+monitors   = "UserConfigs/monitors.lua"
+binds      = "UserConfigs/user_keybinds.lua"
+rules      = "UserConfigs/user_window_rules.lua"
+animations = "UserConfigs/user_animations.lua"
+appearance = "UserConfigs/user_decorations.lua"
