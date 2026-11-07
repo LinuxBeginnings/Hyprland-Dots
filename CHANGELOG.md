@@ -432,6 +432,12 @@
 
 ## Updated:
 
+- The minimum supported Hyprland is now 0.56
+  - `copy.sh` used 0.55 as the floor for the Lua config
+  - 0.56 is the oldest build the dots are kept working on
+  - The Debian/Ubuntu warning and the surrounding comments say 0.56
+  - `MIN_LUA_HYPRLAND_VERSION` is `0.56`, so 0.55 gets the too-low warning
+
 - The wallpaper carousel previews are 15% larger
   - Card height was a fixed `0.36` of the monitor height
   - The size is now `cardHeightFraction` and `cardAspect` in `Carousel.qml`

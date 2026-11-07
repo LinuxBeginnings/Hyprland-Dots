@@ -7,7 +7,7 @@ Phase 1 is that download-and-upgrade flow plus a preflight advisory. Phase 2 add
 - Waybar `custom/dot_update` (`config/hypr/waybar/ModulesCustom:93`) is a click target only. It runs `config/hypr/scripts/KooLsDotsUpdate.sh`, which compares the installed `DOTS_VERSION` against `main` and then shows a yad/rofi/zenity window offering only a Changelog link and OK.
 - The manual upgrade route is documented in `docs/HOWTO-Upgrade-Dotfiles.md`: clone the distro installer, run `install-scripts/update-deps.sh`, clone `Hyprland-Dots`, run `./copy.sh --tty --express-upgrade`, reboot.
 - `copy.sh` already parses `--upgrade`, `--express-upgrade` and `--tty` (`copy.sh:563-593`). Express needs installed dots `>= 2.3.18` (`MIN_EXPRESS_VERSION`, `copy.sh:94`). The Debian test host is on `2.3.29-dev`, so express is available.
-- `copy.sh` hard-requires `rsync` (`copy.sh:669`), refuses to run as root (`copy.sh:663`), and warns on Debian/Ubuntu when Hyprland is below `0.55` (`copy.sh:96`, `copy.sh:681`).
+- `copy.sh` hard-requires `rsync` (`copy.sh:669`), refuses to run as root (`copy.sh:663`), and warns on Debian/Ubuntu when Hyprland is below `0.56` (`copy.sh:96`, `copy.sh:681`).
 - Every supported distro installer (`Debian-Hyprland`, `Arch-Hyprland`, `Fedora-Hyprland`, `Ubuntu-Hyprland`, `OpenSUSE-Hyprland`) ships `install-scripts/update-deps.sh`. It resolves its own repo root and `cd`s to the parent, so it can be run by absolute path from a temp clone and it writes its logs into that clone's `Install-Logs/`.
 - The Ubuntu installer is branched per release — upstream heads are `24.04`, `24.04-development`, `25.10`, `26.04`, `26.04-development`, `main`, `ubuntu-install` — while the other installers use `main`.
 - There is no Gentoo installer repo upstream. NixOS has one, but it is declarative and has no `update-deps.sh`.
@@ -86,7 +86,7 @@ Comparison strips a leading `v` from both sides and uses `sort -V`, the same idi
 If any module is `outdated`, print the full report and prompt: upgrade the Hyprland stack to the pinned versions now? On yes, run `( cd "$TEMPDIR/Debian-Hyprland" && ./update-hyprland.sh --install --no-fetch --source )`, which is the command used by hand today:
 - `--install` builds and installs the stack, `--no-fetch` keeps the repo's pinned validated tags instead of pulling the newest upstream releases, and `--source` skips the interactive mode menu.
 - Warn before running: it purges Debian hyprland packages and rebuilds the whole stack, and a build can fail. That is precisely why the repo pins a tested set, so the pin is preferred over upstream latest.
-- If the user declines, continue to `copy.sh` and note the Hyprland `0.55` minimum the dots require.
+- If the user declines, continue to `copy.sh` and note the Hyprland `0.56` minimum the dots require.
 ## Support matrix
 - Phase 1 works on Debian, Ubuntu, Arch, Fedora and openSUSE, since each of those has an installer with `update-deps.sh`.
 - NixOS and Gentoo have no installer, so Phase 1 upgrades the dots alone there, after a prompt. The packages stay the user's step.
