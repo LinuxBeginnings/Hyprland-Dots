@@ -70,6 +70,7 @@ GDK_BACKEND=$BACKEND yad \
   " SPACEBAR" "Toggle float" "single window" \
   " ALT SPACEBAR" "Toggle all windows to float" "all windows" \
   " ALT O" "Toggle Blur" "normal or less blur" \
+  " ALT SHIFT O" "Cycle Blur Variant" "Hyprland 0.57+ (kawase, frost, ...)" \
   " CTRL O" "Toggle Opaque ON or OFF" "on active window only" \
   " Shift A" "Animations Menu" "Choose Animations via rofi" \
   " CTRL R" "Rofi Themes Menu" "Choose Rofi Themes via rofi" \

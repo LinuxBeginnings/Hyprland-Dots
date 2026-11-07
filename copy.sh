@@ -92,8 +92,8 @@ actcheckbox=black,cyan
 '
 fi
 MIN_EXPRESS_VERSION="2.3.18"
-# Hyprland Lua config requires Hyprland 0.55+.
-MIN_LUA_HYPRLAND_VERSION="0.55"
+# Hyprland Lua config requires Hyprland 0.56+.
+MIN_LUA_HYPRLAND_VERSION="0.56"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$SCRIPT_DIR"
 export DOTFILES_DIR
@@ -372,7 +372,7 @@ version_gte() {
   [ "$1" = "$(echo -e "$1\n$2" | sort -V | tail -n1)" ]
 }
 
-# Parse installed Hyprland version (e.g. 0.55.4) from hyprctl/Hyprland.
+# Parse installed Hyprland version (e.g. 0.56.2) from hyprctl/Hyprland.
 # hyprctl version requires a running daemon; fall back to the Hyprland binary
 # (which always reports its own version) when no version can be parsed.
 _parse_hyprland_ver_from_output() {
@@ -424,7 +424,7 @@ warn_hyprland_too_low_for_lua() {
   if [ -z "$ver" ]; then
     ver="unknown"
   fi
-  echo "${WARN} Hyprland Version ${ver} is too low. Installing Hyprlang config, upgrade Hyprland and re-run copy.sh" 2>&1 | tee -a "$log"
+  echo "${WARN} Hyprland Version ${ver} is too low. Hyprlang (.conf) is no longer supported; Hyprland v${MIN_LUA_HYPRLAND_VERSION} or newer is required. Upgrade Hyprland and re-run copy.sh" 2>&1 | tee -a "$log"
 }
 
 get_installed_dotfiles_version() {
@@ -680,7 +680,8 @@ print_color() {
 # Check /etc/os-release for Ubuntu or Debian and warn about Hyprland version requirement
 if grep -iqE '^(ID_LIKE|ID)=.*(ubuntu|debian)' /etc/os-release >/dev/null 2>&1; then
   printf "\n%.0s" {1..1}
-  print_color $WARNING "\nThese Dotfiles are only supported on Hyprland v0.55 or greater. Do not install on older versions of Hyprland.\n"
+  print_color $WARNING "\nThese Dotfiles are only supported on Hyprland v0.56 or greater. Do not install on older versions of Hyprland.\n"
+  print_color $WARNING "Hyprlang (.conf) is no longer supported. An existing .conf config is migrated to LUA/.lua by copy.sh.\n"
   while true; do
     echo -n "${CAT} Do you want to continue anyway? (y/N): "
     read _continue
@@ -849,8 +850,8 @@ printf "\n%.0s" {1..1}
 prompt_clock_format "$LOG"
 printf "\n%.0s" {1..1}
 
-# Upgrade/express: confirm Hyprlang -> Lua migration (default yes).
-# Lua requires Hyprland 0.55+; otherwise stay on Hyprlang.
+# Upgrade/express: migrate any Hyprlang (.conf) config to Lua (default yes).
+# Hyprlang is no longer supported; the Lua config needs Hyprland 0.56+.
 if [ "$RUN_MODE" = "upgrade" ] || [ "$RUN_MODE" = "express" ]; then
   if hyprland_supports_lua; then
     prompt_lua_migration "$LOG"
@@ -893,10 +894,10 @@ printf "${INFO} - Copying dotfiles ${SKY_BLUE}second${RESET} part\n"
 copy_phase2 "$LOG"
 preserve_custom_sddm_configs "$LOG"
 ensure_lua_keybinds "$LOG"
-# Fresh copy defaults to Lua config when Hyprland is 0.55+.
-# Older Hyprland keeps Hyprlang (.conf) entrypoint.
+# Hyprlang (.conf) is no longer supported, so every install lands on Lua.
+# A build older than 0.56 cannot run it, and gets the too-low warning instead.
 # When version detection fails on a fresh install (daemon not yet running),
-# default to Lua — 0.55+ is the minimum supported version.
+# default to Lua — 0.56+ is the minimum supported version.
 if [ "$RUN_MODE" = "install" ]; then
   _hl_install_ver="$(get_hyprland_version)"
   if [ -z "$_hl_install_ver" ] || version_gte "$_hl_install_ver" "$MIN_LUA_HYPRLAND_VERSION"; then
@@ -1121,7 +1122,8 @@ printf "\n%.0s" {1..1}
 restore_hypr_files "$LOG" "$EXPRESS_MODE"
 apply_user_patches "$LOG"
 restore_runtime_personal_state "$LOG"
-# After restores, migrate restored Hyprlang customizations to Lua when approved.
+# After restores, migrate restored Hyprlang (.conf) customizations to Lua.
+# Hyprlang is no longer supported, so an unmigrated .conf never loads.
 if [ "$RUN_MODE" = "upgrade" ] || [ "$RUN_MODE" = "express" ]; then
   migrate_hypr_to_lua_if_needed "$LOG" "${MIGRATE_HYPR_TO_LUA:-0}" || true
 fi

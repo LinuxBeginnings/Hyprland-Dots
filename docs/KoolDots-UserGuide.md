@@ -59,6 +59,10 @@ The current configuration is written in Hyprland's **Lua config API**
 `.conf`/Hyprlang workflow. That is why every example in this guide is a Lua
 table call such as `hl.config({...})`, `hl.bind(...)` or `apply_window_rule({...})`.
 
+Hyprlang (`.conf`) is no longer supported. `copy.sh` migrates an existing
+`.conf` setup to `.lua` and archives the old files under `LegacyConfigs/`,
+so old `.conf` edits no longer take effect after an upgrade.
+
 The layout is deliberately split in two:
 
 | Layer             | Location in this repo          | Installed at                          | Managed by                         |
@@ -316,6 +320,7 @@ files, which it can import one way. Full description:
 | `SUPER + SHIFT + G`        | Toggle game mode                  |
 | `SUPER + SHIFT + X`        | Toggle window wobble              |
 | `SUPER + ALT + O`          | Toggle blur                       |
+| `SUPER + ALT + SHIFT + O`  | Cycle blur variant (0.57+)        |
 | `SUPER + SHIFT + A`        | Animations menu                   |
 | `SUPER + SHIFT + B`        | Rainbow borders mode menu         |
 | `SUPER + SHIFT + O`        | Change oh-my-zsh theme            |
@@ -628,6 +633,25 @@ hl.config({
       size = 8,
       passes = 3,
       xray = true,
+    },
+  },
+})
+```
+
+Blur variants arrived in Hyprland 0.57 and swap the default kawase blur for one
+of `kawase`, `frost`, `ripple`, `drops`, `water`, `fluid_jar`, `prism`,
+`heat_shimmer`, `acrylic`, `aurora` or `haze`. `SUPER + ALT + SHIFT + O` steps
+through them for the running session (`ChangeBlur.sh --variant-next`), and
+`ChangeBlur.sh --variant frost` selects one directly. To keep a choice across a
+reload, set `variant` in the table below — `frost` and `prism` read `glass`, and
+the animated variants cost GPU time:
+
+```lua
+hl.config({
+  decoration = {
+    blur = {
+      variant = "frost",
+      glass = { refraction = 20.0, size = 40.0, roughness = 1.0 },
     },
   },
 })

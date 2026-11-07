@@ -88,6 +88,7 @@ hl.config({
 | `enabled` | boolean | Enable background blur for translucent surfaces |
 | `size` | number | Blur kernel radius |
 | `passes` | number | Number of blur passes (higher = smoother, more GPU intensive) |
+| `variant` | string | Blur variant, Hyprland 0.57+ (`kawase`, `frost`, `ripple`, `drops`, `water`, `fluid_jar`, `prism`, `heat_shimmer`, `acrylic`, `aurora`, `haze`) |
 | `new_optimizations` | boolean | Enable Hyprland blur optimizations |
 | `xray` | boolean | Floating windows blur desktop directly through tiled windows |
 | `ignore_opacity` | boolean | Blurs regardless of window base opacity |

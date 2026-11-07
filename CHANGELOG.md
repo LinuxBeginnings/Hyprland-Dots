@@ -4,6 +4,10 @@
 
 ## Fixed:
 
+- `quirks:skip_non_kms_dmabuf_formats` no longer errors on Hyprland 0.56
+  - It is a 0.57 option, and `lua/settings.lua` wrote it on every build
+  - Now written only when the running build answers for the option
+
 - The network panel closes when you click outside it
   - The card was the whole window, so there was no outside to click
   - The window now fills the monitor while the panel is open
@@ -259,6 +263,23 @@
 
 ## Added:
 
+- `SUPER ALT SHIFT + O` cycles the Hyprland 0.57 blur variants
+  - `ChangeBlur.sh --variant-next` steps through the eleven variants
+  - `--variant <name>` picks one directly, alone it reports the current one
+  - Like the strength cycle it changes the session, not the config file
+  - It refuses to write on a build without `decoration:blur:variant`
+- `patches/92-blur-variant-block.sh` gives old installs the 0.57 blocks
+  - `UserConfigs` is preserved, so the shipped blocks never arrived there
+  - It appends a gated blur-variant block and the wobble table
+  - A file that already configures either one is left alone
+- Blur variants can be chosen from `UserConfigs/user_decorations.lua`
+  - Hyprland 0.57 added `decoration:blur:variant` and a table per variant
+  - The names and each table's defaults sit in a comment next to the setting
+  - `kawase` is set, so the look is unchanged until another name is picked
+  - The block is written only when `hl.get_config` answers for the option
+  - 0.56 has no such option, and writing it is a config error on every reload
+  - `decoration:wobble` is gated by the same test, for the same reason
+
 - HyprMod can edit the `UserConfigs` overrides directly
   - `UserConfigs/hyprmod.toml` maps each editor to the file it owns
   - Monitors, keybinds, window rules, animations and decorations
@@ -419,6 +440,15 @@
   - `docs/KoolDots-UserGuide.es.md` carries the same section
 
 ## Updated:
+
+- The minimum supported Hyprland is now 0.56
+  - `copy.sh` used 0.55 as the floor for the Lua config
+  - 0.56 is the oldest build the dots are kept working on
+  - The Debian/Ubuntu warning and the surrounding comments say 0.56
+  - `MIN_LUA_HYPRLAND_VERSION` is `0.56`, so 0.55 gets the too-low warning
+  - Hyprlang (`.conf`) is no longer supported, and every message says so
+  - An existing `.conf` config is migrated to LUA (`.lua`) on upgrade
+  - The old files are archived under `LegacyConfigs/`, not loaded
 
 - The wallpaper carousel previews are 15% larger
   - Card height was a fixed `0.36` of the monitor height

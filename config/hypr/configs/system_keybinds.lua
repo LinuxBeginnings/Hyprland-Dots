@@ -488,6 +488,9 @@ bind(
   { description = "window switcher" }
 )
 bind("SUPER ALT", "O", exec_cmd("$HOME/.config/hypr/scripts/ChangeBlur.sh"), { description = "toggle blur" })
+-- Blur variants (Hyprland 0.57+). The strength cycle stays on SUPER ALT O; this
+-- steps through the eleven variants, and is a no-op below 0.57.
+bind("SUPER ALT SHIFT", "O", exec_cmd("$HOME/.config/hypr/scripts/ChangeBlur.sh --variant-next"), { description = "cycle blur variant" })
 bind("SUPER SHIFT", "G", exec_cmd("$HOME/.config/hypr/scripts/GameMode.sh"), { description = "toggle game mode" })
 -- Window wobble (Hyprland 0.57+). SUPER SHIFT W was already taken by the
 -- wallpaper effects script, and every other W combo (SUPER, SUPER CTRL,
