@@ -4,6 +4,10 @@
 
 ## Fixed:
 
+- `quirks:skip_non_kms_dmabuf_formats` no longer errors on Hyprland 0.56
+  - It is a 0.57 option, and `lua/settings.lua` wrote it on every build
+  - Now written only when the running build answers for the option
+
 - The network panel closes when you click outside it
   - The card was the whole window, so there was no outside to click
   - The window now fills the monitor while the panel is open
@@ -258,6 +262,14 @@
   - The README covers the fallback, the unmanaged case and a NIC migration recipe
 
 ## Added:
+
+- Blur variants can be chosen from `UserConfigs/user_decorations.lua`
+  - Hyprland 0.57 added `decoration:blur:variant` and a table per variant
+  - The names and each table's defaults sit in a comment next to the setting
+  - `kawase` is set, so the look is unchanged until another name is picked
+  - The block is written only when `hl.get_config` answers for the option
+  - 0.56 has no such option, and writing it is a config error on every reload
+  - `decoration:wobble` is gated by the same test, for the same reason
 
 - HyprMod can edit the `UserConfigs` overrides directly
   - `UserConfigs/hyprmod.toml` maps each editor to the file it owns

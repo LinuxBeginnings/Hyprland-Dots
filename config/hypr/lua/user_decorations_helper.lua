@@ -23,6 +23,20 @@ local function load_wallust_colors(path)
   return colors
 end
 
+-- True when the running compositor has a config option. hl.get_config answers
+-- nil for a key the build does not know, so the option itself is the test: no
+-- version string to parse, and a backport or a later release needs no edit.
+-- Older builds (or a missing binding) answer false.
+local function has_config_option(key)
+  if type(hl) ~= "table" or type(hl.get_config) ~= "function" then
+    return false
+  end
+
+  local ok, value = pcall(hl.get_config, key)
+  return ok and value ~= nil
+end
+
 return {
   load_wallust_colors = load_wallust_colors,
+  has_config_option = has_config_option,
 }

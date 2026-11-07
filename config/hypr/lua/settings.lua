@@ -236,16 +236,31 @@ hl.config({
   },
 })
 
+-- Config options ship with the compositor, not with the dots. `quirks:` is
+-- Hyprland 0.57 and 0.56 is still supported, so the option is written only when
+-- the running build answers for it: hl.get_config returns nil for a key the
+-- build does not have. Same probe as lua/user_decorations_helper.lua.
+local function has_config_option(key)
+  if type(hl) ~= "table" or type(hl.get_config) ~= "function" then
+    return false
+  end
+
+  local ok, value = pcall(hl.get_config, key)
+  return ok and value ~= nil
+end
+
 -- Advertise the renderer's full dmabuf format list, not just the formats the
 -- display can scan out. The default (true) narrows the list to the display's
 -- scanout set; on virtio-gpu that is XRGB8888 only, so clients that need an
 -- alpha config find no matching EGLConfig. kitty (GLFW asks for
 -- EGL_ALPHA_SIZE 8) then fails with "EGL: No EGLConfigs returned".
-hl.config({
-  quirks = {
-    skip_non_kms_dmabuf_formats = false,
-  },
-})
+if has_config_option("quirks.skip_non_kms_dmabuf_formats") then
+  hl.config({
+    quirks = {
+      skip_non_kms_dmabuf_formats = false,
+    },
+  })
+end
 
 hl.config({
   cursor = {
