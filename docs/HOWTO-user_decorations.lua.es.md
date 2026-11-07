@@ -88,6 +88,7 @@ hl.config({
 | `enabled` | boolean | Habilita el efecto de desenfoque para superficies translúcidas |
 | `size` | number | Radio del algoritmo de desenfoque |
 | `passes` | number | Número de pasadas de desenfoque (mayor = más suave, mayor uso de GPU) |
+| `variant` | string | Variante de desenfoque, Hyprland 0.57+ (`kawase`, `frost`, `ripple`, `drops`, `water`, `fluid_jar`, `prism`, `heat_shimmer`, `acrylic`, `aurora`, `haze`) |
 | `new_optimizations` | boolean | Habilita optimizaciones internas de desenfoque en Hyprland |
 | `xray` | boolean | Ventanas flotantes desenfocan directamente el fondo a través de ventanas en mosaico |
 | `ignore_opacity` | boolean | Desenfoca el fondo independientemente de la opacidad base |

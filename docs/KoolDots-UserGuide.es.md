@@ -330,6 +330,7 @@ importar en un solo sentido. Descripción completa:
 | `SUPER + SHIFT + G`        | Alternar el modo juego            |
 | `SUPER + SHIFT + X`        | Alternar el efecto wobble de las ventanas |
 | `SUPER + ALT + O`          | Alternar el desenfoque            |
+| `SUPER + ALT + SHIFT + O`  | Recorrer variantes de desenfoque (0.57+) |
 | `SUPER + SHIFT + A`        | Menú de animaciones              |
 | `SUPER + SHIFT + B`        | Menú de modos de bordes arcoíris  |
 | `SUPER + SHIFT + O`        | Cambiar el tema de oh-my-zsh      |
@@ -651,6 +652,25 @@ hl.config({
       size = 8,
       passes = 3,
       xray = true,
+    },
+  },
+})
+```
+
+Las variantes de desenfoque llegaron en Hyprland 0.57 y sustituyen el
+desenfoque kawase por una de `kawase`, `frost`, `ripple`, `drops`, `water`,
+`fluid_jar`, `prism`, `heat_shimmer`, `acrylic`, `aurora` o `haze`.
+`SUPER + ALT + SHIFT + O` las recorre para la sesión actual
+(`ChangeBlur.sh --variant-next`), y `ChangeBlur.sh --variant frost` elige una
+directamente. Para conservarla tras un reload, defina `variant` en la tabla
+siguiente: `frost` y `prism` leen `glass`, y las variantes animadas consumen GPU:
+
+```lua
+hl.config({
+  decoration = {
+    blur = {
+      variant = "frost",
+      glass = { refraction = 20.0, size = 40.0, roughness = 1.0 },
     },
   },
 })

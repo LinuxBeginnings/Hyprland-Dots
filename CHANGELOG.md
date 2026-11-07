@@ -263,6 +263,15 @@
 
 ## Added:
 
+- `SUPER ALT SHIFT + O` cycles the Hyprland 0.57 blur variants
+  - `ChangeBlur.sh --variant-next` steps through the eleven variants
+  - `--variant <name>` picks one directly, alone it reports the current one
+  - Like the strength cycle it changes the session, not the config file
+  - It refuses to write on a build without `decoration:blur:variant`
+- `patches/92-blur-variant-block.sh` gives old installs the 0.57 blocks
+  - `UserConfigs` is preserved, so the shipped blocks never arrived there
+  - It appends a gated blur-variant block and the wobble table
+  - A file that already configures either one is left alone
 - Blur variants can be chosen from `UserConfigs/user_decorations.lua`
   - Hyprland 0.57 added `decoration:blur:variant` and a table per variant
   - The names and each table's defaults sit in a comment next to the setting

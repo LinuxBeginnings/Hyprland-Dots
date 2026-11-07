@@ -44,6 +44,7 @@ is active rather than what this file says.
 - `CTRL + ALT + W` — Random wallpaper (`WallpaperRandom.sh`)
 - `SUPER + CTRL + O` — Toggle active window opacity (`setprop active opaque toggle`)
 - `SUPER + ALT + O` — Toggle blur (`ChangeBlur.sh`)
+- `SUPER + ALT + SHIFT + O` — Cycle blur variant, Hyprland 0.57+ (`ChangeBlur.sh --variant-next`)
 - `SUPER + SHIFT + B` — Rainbow Borders mode menu (`Kool_Quick_Settings.sh --rainbow-borders`)
 - `SUPER + ALT + mouse_down` — Zoom in (`cursor:zoom_factor * 2.0`)
 - `SUPER + ALT + mouse_up` — Zoom out (`cursor:zoom_factor / 2.0`)
