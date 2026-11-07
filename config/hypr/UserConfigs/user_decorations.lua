@@ -6,16 +6,22 @@
 -- ==================================================
 -- User decorations overrides.
 -- Dynamically loads Wallust generated colors from wallust-hyprland.conf.
+-- Imports configurations set in user_blur.lua
 
 local home = os.getenv("HOME") or ""
 local helper_path = home .. "/.config/hypr/lua/user_decorations_helper.lua"
+local user_blur_path = home .. "/.config/hypr/UserConfigs/user_blur.lua"
 local ok, helper = pcall(dofile, helper_path)
 local wallust = (ok and helper and helper.load_wallust_colors)
-  and helper.load_wallust_colors(home .. "/.config/hypr/wallust/wallust-hyprland.conf")
-  or {}
+and helper.load_wallust_colors(home .. "/.config/hypr/wallust/wallust-hyprland.conf")
+or {}
 
 local active_col = wallust.color12 or "rgba(8db4ffff)"
 local inactive_col = wallust.color10 or "rgba(5f6578ff)"
+local check, blur_config = pcall(dofile, user_blur_path)
+if check and blur_config then
+  blur_config = blur_config
+end
 
 hl.config({
   general = {
@@ -46,6 +52,7 @@ hl.config({
       color_inactive = inactive_col,
     },
     blur = {
+      -- variant = "", -- Check user_blur.lua for configurations
       enabled = true,
       size = 6,
       passes = 3,
