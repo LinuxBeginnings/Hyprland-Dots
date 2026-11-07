@@ -564,11 +564,21 @@ snapshot() {
   snapshot_bluetooth
 }
 
+# The subset the Waybar module renders: its icon and tooltip read the DEV, WIFI,
+# WIFI-ON, BT-ON and BTDEV records only. Waybar runs `status` once a second, and
+# the container and tailnet probes behind snapshot_extras are far too expensive
+# at that rate for records nothing draws - `docker stats` alone takes a second
+# or more.
+snapshot_status() {
+  snapshot_network
+  snapshot_bluetooth
+}
+
 # ------------------------------------------------------------------ waybar --
 
 waybar_status() {
   local snapshot_text
-  snapshot_text=$(snapshot)
+  snapshot_text=$(snapshot_status)
 
   local eth="" wifi_ssid="" wifi_signal="0" wifi_on="0" bt_on="0"
   local -a bt_names=()
@@ -686,7 +696,7 @@ launch_panel() {
   local attempt
   for attempt in $(seq 1 50); do
     sleep 0.1
-    qs_ipc isOpen && return 0
+    qs_ipc ready && return 0
   done
   notify "Network widget" "Quickshell did not start. See 'quickshell -p $widget_dir'."
   printf 'quickshell did not start\n' >&2

@@ -41,7 +41,10 @@ raises one desktop notification about the missing NetworkManager per session.
 ## Usage
 
 `copy.sh` installs this directory as `~/.config/quickshell/network-widget`,
-beside the other quickshell widgets. Running it shows the panel straight away:
+beside the other quickshell widgets. The shell starts hidden and collapses to a
+single pixel, so it stays resident between toggles and never opens the panel on
+its own - the Waybar module or the keybind opens it. Starting it by hand is the
+same command:
 
 ```bash
 quickshell -p ~/.config/quickshell/network-widget
@@ -87,8 +90,11 @@ bind("SUPER CTRL", "N", exec_cmd("$HOME/.config/hypr/scripts/QsNetworkPanel.sh t
 `SUPER + CTRL + N` is free; `SUPER + SHIFT + N` already toggles the swaync
 notification panel.
 
-Close the panel with the 󰅖 button or with the same Waybar click. Escape cancels
-a password prompt.
+The panel drops down at the top-right, offset from the top and right edges, and
+lines up under the Waybar module when it is opened from there. Close it with the
+󰅖 button, with the same Waybar click, or by clicking anywhere outside it. While
+it is open the whole screen is the dismissal target, so a click on the bar goes
+to the panel and closes it. Escape cancels a password prompt.
 
 ## Tabs
 
@@ -165,14 +171,16 @@ The QML side calls it for two things:
   errors are printed on stderr and shown in the panel.
 
 `status` prints the Waybar JSON, so the module icon and tooltip come from the
-same code as the panel.
+same code as the panel. It is built from the device records only: the module
+runs it once a second, and the container and tailnet probes behind `snapshot`
+cost far more than that for records nothing on the bar draws.
 
 Files:
 
 | File | Purpose |
 | --- | --- |
 | `shell.qml` | entry point, IPC handler, wallust palette loading |
-| `Panel.qml` | the layer-shell window, header, tab bar and footer |
+| `Panel.qml` | the layer-shell window, click-outside backdrop, header, tabs, footer |
 | `EthernetTab.qml` | wired devices and their connection details |
 | `VirtualNetTab.qml` | Tailscale, Docker and Podman links and their addresses |
 | `WifiTab.qml` | radio, current connection details, network list |
@@ -187,6 +195,9 @@ Files:
 
 The window stays mapped at 1x1 while hidden: quickshell exits when its last
 window is closed, so keeping the surface alive is what makes reopening instant.
+While the panel is open that same surface fills the monitor, and that is what
+catches a click outside the card - the card swallows its own clicks, so nothing
+under it closes by accident.
 
 ## Troubleshooting
 

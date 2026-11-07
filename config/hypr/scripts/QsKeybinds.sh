@@ -26,9 +26,10 @@ set -u
 
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 # The panel installs with the rest of the quickshell tree, not under hypr/.
-# QsNetworkPanel.sh derives its path from the script location, which resolves to
-# <hypr>/quickshell/<applet> - a directory that does not exist on an installed
-# system. This path is stated outright instead of derived.
+# QsNetworkPanel.sh derives its directory from its own location, which works but
+# ties the script to the shape of the tree. This path is stated outright instead,
+# so moving the script cannot silently point the shell at a directory that is
+# not there.
 widget_dir="$config_home/quickshell/keybinds"
 qs_target="keybinds"
 rofi_script="$config_home/hypr/scripts/KeyBinds.sh"

@@ -7,7 +7,9 @@
 //   quickshell ipc -p ~/.config/quickshell/network-widget \
 //       call network-widget toggle|open|close|isOpen|refresh
 //
-// The panel starts hidden; the Waybar module opens it.
+// The panel starts hidden; the Waybar module opens it. `ready` is for
+// QsNetworkPanel.sh: it answers as soon as the shell is up, where `isOpen`
+// would answer "0" for a panel that is simply closed.
 
 import QtQuick
 import Quickshell
@@ -65,6 +67,12 @@ ShellRoot {
 
         function isOpen(): string {
             return panel.shown ? "1" : "0";
+        }
+
+        // Readiness probe for launch_panel: the shell answering at all is the
+        // question, not whether the panel happens to be open.
+        function ready(): string {
+            return "1";
         }
 
         function refresh(): void {

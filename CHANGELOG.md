@@ -4,6 +4,27 @@
 
 ## Fixed:
 
+- The network panel closes when you click outside it
+  - The card was the whole window, so there was no outside to click
+  - The window now fills the monitor while the panel is open
+  - That surface is the dismissal target; the card swallows its own clicks
+  - It collapses to a single pixel while closed, so the desktop stays clickable
+  - No dim, unlike the keybinds frame: this is a drop-down, not a modal
+  - `WlrLayershell.namespace` is set, so `hyprctl layers` names the surface
+
+- The network panel no longer opens itself
+  - `Panel.qml` started with `shown: true`
+  - Any shell (re)start showed it, including a config reload after `copy.sh`
+  - It starts hidden now, like the keybinds and wallpaper applets
+  - `QsNetworkPanel.sh` starts the shell and then opens the panel
+
+- The Waybar network module stops probing containers and Tailscale every second
+  - `status` built the whole snapshot, `docker stats` and all
+  - The module draws only the device, Wi-Fi and Bluetooth records
+  - Those probes can take longer than the second between the calls
+  - `status` uses `snapshot_status` now, the subset it actually renders
+  - `launch_panel` polls the new `ready` IPC call instead of `isOpen`
+
 - Waybar no longer disappears after `copy.sh`
   - The copy replaces the config, style and modules a running bar watches
   - Waybar has no way to reload from a file that is gone, so it exits

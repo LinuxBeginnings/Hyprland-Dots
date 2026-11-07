@@ -972,6 +972,10 @@ bind("SUPER CTRL", "N", exec_cmd("$HOME/.config/hypr/scripts/QsNetworkPanel.sh t
   { description = "Network panel" })
 ```
 
+The panel stays hidden until it is opened, drops down at the top-right below the
+module, and closes with its 󰅖 button, with the same Waybar click, or with a click
+anywhere outside it.
+
 Each tab covers one kind of device — Ethernet, Wi-Fi and Bluetooth, plus
 Tailscale, Docker and Podman when those tools or their interfaces exist. Click a
 device or a network to connect or disconnect it; a locked Wi-Fi network asks for

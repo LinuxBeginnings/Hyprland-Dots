@@ -83,6 +83,8 @@
 "custom/qs-network": {
 	"exec": "$HOME/.config/hypr/scripts/QsNetworkPanel.sh status",
 	// Short, so the icon and tooltip follow link changes on their own.
+	// `status` reads the device records only, so a 1s interval stays cheap;
+	// the container and tailnet probes are in `snapshot`, for the panel.
 	"interval": 1,
 	"return-type": "json",
 	"format": "{}",

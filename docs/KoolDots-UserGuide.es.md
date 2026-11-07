@@ -1002,6 +1002,10 @@ bind("SUPER CTRL", "N", exec_cmd("$HOME/.config/hypr/scripts/QsNetworkPanel.sh t
   { description = "Panel de red" })
 ```
 
+El panel permanece oculto hasta que se abre, se despliega en la esquina superior
+derecha bajo el módulo, y se cierra con su botón 󰅖, con el mismo clic de Waybar o
+con un clic en cualquier punto fuera de él.
+
 Cada pestaña cubre un tipo de dispositivo: Ethernet, Wi-Fi y Bluetooth, más
 Tailscale, Docker y Podman cuando esas herramientas o sus interfaces existen. Al
 hacer clic en un dispositivo o en una red se conecta o se desconecta; una red
