@@ -424,7 +424,7 @@ warn_hyprland_too_low_for_lua() {
   if [ -z "$ver" ]; then
     ver="unknown"
   fi
-  echo "${WARN} Hyprland Version ${ver} is too low. Installing Hyprlang config, upgrade Hyprland and re-run copy.sh" 2>&1 | tee -a "$log"
+  echo "${WARN} Hyprland Version ${ver} is too low. Hyprlang (.conf) is no longer supported; Hyprland v${MIN_LUA_HYPRLAND_VERSION} or newer is required. Upgrade Hyprland and re-run copy.sh" 2>&1 | tee -a "$log"
 }
 
 get_installed_dotfiles_version() {
@@ -681,6 +681,7 @@ print_color() {
 if grep -iqE '^(ID_LIKE|ID)=.*(ubuntu|debian)' /etc/os-release >/dev/null 2>&1; then
   printf "\n%.0s" {1..1}
   print_color $WARNING "\nThese Dotfiles are only supported on Hyprland v0.56 or greater. Do not install on older versions of Hyprland.\n"
+  print_color $WARNING "Hyprlang (.conf) is no longer supported. An existing .conf config is migrated to LUA/.lua by copy.sh.\n"
   while true; do
     echo -n "${CAT} Do you want to continue anyway? (y/N): "
     read _continue
@@ -849,8 +850,8 @@ printf "\n%.0s" {1..1}
 prompt_clock_format "$LOG"
 printf "\n%.0s" {1..1}
 
-# Upgrade/express: confirm Hyprlang -> Lua migration (default yes).
-# Lua requires Hyprland 0.56+; otherwise stay on Hyprlang.
+# Upgrade/express: migrate any Hyprlang (.conf) config to Lua (default yes).
+# Hyprlang is no longer supported; the Lua config needs Hyprland 0.56+.
 if [ "$RUN_MODE" = "upgrade" ] || [ "$RUN_MODE" = "express" ]; then
   if hyprland_supports_lua; then
     prompt_lua_migration "$LOG"
@@ -893,8 +894,8 @@ printf "${INFO} - Copying dotfiles ${SKY_BLUE}second${RESET} part\n"
 copy_phase2 "$LOG"
 preserve_custom_sddm_configs "$LOG"
 ensure_lua_keybinds "$LOG"
-# Fresh copy defaults to Lua config when Hyprland is 0.56+.
-# Older Hyprland keeps Hyprlang (.conf) entrypoint.
+# Hyprlang (.conf) is no longer supported, so every install lands on Lua.
+# A build older than 0.56 cannot run it, and gets the too-low warning instead.
 # When version detection fails on a fresh install (daemon not yet running),
 # default to Lua — 0.56+ is the minimum supported version.
 if [ "$RUN_MODE" = "install" ]; then
@@ -1121,7 +1122,8 @@ printf "\n%.0s" {1..1}
 restore_hypr_files "$LOG" "$EXPRESS_MODE"
 apply_user_patches "$LOG"
 restore_runtime_personal_state "$LOG"
-# After restores, migrate restored Hyprlang customizations to Lua when approved.
+# After restores, migrate restored Hyprlang (.conf) customizations to Lua.
+# Hyprlang is no longer supported, so an unmigrated .conf never loads.
 if [ "$RUN_MODE" = "upgrade" ] || [ "$RUN_MODE" = "express" ]; then
   migrate_hypr_to_lua_if_needed "$LOG" "${MIGRATE_HYPR_TO_LUA:-0}" || true
 fi

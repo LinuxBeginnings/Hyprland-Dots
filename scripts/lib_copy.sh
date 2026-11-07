@@ -500,7 +500,7 @@ enable_fresh_install_lua_config() {
     return 0
   fi
 
-  echo "${WARN:-[WARN]} - Fresh install: no hyprland.lua template found; left Hyprlang entrypoint as-is." 2>&1 | tee -a "$log"
+  echo "${WARN:-[WARN]} - Fresh install: no hyprland.lua template found; Hyprlang (.conf) is no longer supported, so the config will not load until one exists." 2>&1 | tee -a "$log"
   return 1
 }
 
@@ -527,13 +527,13 @@ migrate_hypr_to_lua_if_needed() {
     return 1
   fi
 
-  echo "${INFO:-[INFO]} - Migrating Hyprlang configuration to LUA via migrate-hypr-to-lua.sh..." 2>&1 | tee -a "$log"
+  echo "${INFO:-[INFO]} - Migrating Hyprlang (.conf) configuration to LUA (.lua) via migrate-hypr-to-lua.sh..." 2>&1 | tee -a "$log"
   if "$migrate_script" --yes 2>&1 | tee -a "$log"; then
     echo "${OK:-[OK]} - Hyprland configuration migrated to LUA." 2>&1 | tee -a "$log"
     return 0
   fi
 
-  echo "${ERROR:-[ERROR]} - LUA migration failed. Hyprlang config may still be active." 2>&1 | tee -a "$log"
+  echo "${ERROR:-[ERROR]} - LUA migration failed. Hyprlang (.conf) is no longer supported, so the config may not load." 2>&1 | tee -a "$log"
   if [ -f "$hypr_dir/hyprland.lua.disable" ] && [ ! -f "$hypr_dir/hyprland.lua" ]; then
     echo "${NOTE:-[NOTE]} - Lua entrypoint remains disabled at $hypr_dir/hyprland.lua.disable" 2>&1 | tee -a "$log"
   fi

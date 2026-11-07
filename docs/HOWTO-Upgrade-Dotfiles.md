@@ -55,7 +55,7 @@
 ```
 
 - `Express update` is faster and many of the restore questions are no longer needed
-- Especially moving from the old `Hyprlang` config files to `LUA` config files
+- Hyprlang (`.conf`) is no longer supported, so express migrates your old `.conf` files to `LUA`
 - A handy shortcut is:
   `./copy.sh --express-upgrade`
   - A simple `TTY` menu is also available

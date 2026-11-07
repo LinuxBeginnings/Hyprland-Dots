@@ -60,6 +60,10 @@ anterior de `.conf`/Hyprlang. Por eso todos los ejemplos de esta guía son
 llamadas a tablas Lua como `hl.config({...})`, `hl.bind(...)` o
 `apply_window_rule({...})`.
 
+Hyprlang (`.conf`) ya no es compatible. `copy.sh` migra una configuración
+`.conf` existente a `.lua` y archiva los archivos antiguos en `LegacyConfigs/`,
+así que las ediciones antiguas de `.conf` dejan de aplicarse tras actualizar.
+
 La disposición está dividida deliberadamente en dos partes:
 
 | Capa                        | Ubicación en este repositorio   | Se instala en                         | Gestionado por                         |

@@ -368,6 +368,7 @@ apply_sddm_12h_format_sequoia() {
 
 
 # Confirm Hyprlang -> Lua migration during upgrade/express workflows.
+# Hyprlang (.conf) is no longer supported; the migration archives the old files.
 # Sets MIGRATE_HYPR_TO_LUA=1 (default yes) or 0 when the user declines.
 prompt_lua_migration() {
   local log="${1:-/dev/null}"
@@ -384,9 +385,9 @@ prompt_lua_migration() {
   fi
 
   printf "\n%.0s" {1..1}
-  echo "${WARNING:-[WARN]} Hyprland will be LUA-only in the next release.${RESET:-}"
-  echo "${NOTE:-[NOTE]} This upgrade will migrate your Hyprlang (.conf) configuration to LUA."
-  echo "${NOTE:-[NOTE]} A backup is created first; hyprland.conf remains as fallback."
+  echo "${WARNING:-[WARN]} Hyprlang (.conf) is no longer supported.${RESET:-}"
+  echo "${NOTE:-[NOTE]} This upgrade migrates your Hyprlang (.conf) configuration to LUA (.lua)."
+  echo "${NOTE:-[NOTE]} A backup is made first; the old .conf files move to LegacyConfigs/."
   while true; do
     if ! read -r -p "${CAT:-[ACTION]} Configuration will be migrated to LUA. Continue? (Y/n): " lua_migrate_choice </dev/tty; then
       echo "${WARN:-[WARN]} Unable to read input; defaulting to migrate to LUA." 2>&1 | tee -a "$log"
@@ -400,7 +401,7 @@ prompt_lua_migration() {
       ;;
     [Nn] | [Nn][Oo])
       MIGRATE_HYPR_TO_LUA=0
-      echo "${WARN:-[WARN]} Skipping LUA migration; remaining on Hyprlang (.conf) for now." 2>&1 | tee -a "$log"
+      echo "${WARN:-[WARN]} Skipping LUA migration; the Hyprlang (.conf) config is not loaded." 2>&1 | tee -a "$log"
       echo "${NOTE:-[NOTE]} You can migrate later with: scripts/migrate-hypr-to-lua.sh" 2>&1 | tee -a "$log"
       break
       ;;

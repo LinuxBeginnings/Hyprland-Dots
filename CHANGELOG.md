@@ -437,6 +437,9 @@
   - 0.56 is the oldest build the dots are kept working on
   - The Debian/Ubuntu warning and the surrounding comments say 0.56
   - `MIN_LUA_HYPRLAND_VERSION` is `0.56`, so 0.55 gets the too-low warning
+  - Hyprlang (`.conf`) is no longer supported, and every message says so
+  - An existing `.conf` config is migrated to LUA (`.lua`) on upgrade
+  - The old files are archived under `LegacyConfigs/`, not loaded
 
 - The wallpaper carousel previews are 15% larger
   - Card height was a fixed `0.36` of the monitor height

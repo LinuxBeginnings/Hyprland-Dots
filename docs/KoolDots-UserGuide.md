@@ -59,6 +59,10 @@ The current configuration is written in Hyprland's **Lua config API**
 `.conf`/Hyprlang workflow. That is why every example in this guide is a Lua
 table call such as `hl.config({...})`, `hl.bind(...)` or `apply_window_rule({...})`.
 
+Hyprlang (`.conf`) is no longer supported. `copy.sh` migrates an existing
+`.conf` setup to `.lua` and archives the old files under `LegacyConfigs/`,
+so old `.conf` edits no longer take effect after an upgrade.
+
 The layout is deliberately split in two:
 
 | Layer             | Location in this repo          | Installed at                          | Managed by                         |
