@@ -14,6 +14,12 @@
   - `lua/settings.lua` sets `skip_non_kms_dmabuf_formats = false`
   - Existing installs get it from the refreshed system config, no patch
 
+## Added:
+
+- Added 'user_blur.lua' to /UserConfigs
+  - Configurations for blur variants added in hyprland 0.57.0
+  - All changes made are loaded in user_decorations.lua
+
 ## Updated:
 
 - `hl.meta.lua` refreshed to the stub Hyprland 0.57.0 ships
