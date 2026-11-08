@@ -334,7 +334,8 @@ margin: 5px;
 font-size: 20px;
 }
 
-#custom-weather2 {
+#custom-weather2,
+#custom-qs-weather {
 background-color: @bg-dark;
 color: @accent-blue;
 padding: 0 12px;
@@ -358,7 +359,8 @@ margin-right: 0;
 }
 
 /* Network & Bluetooth panel launcher (Quickshell widget) */
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
 background-color: @bg-dark;
 color: @accent-blue;
 padding: 0 12px;

@@ -87,7 +87,8 @@ window#waybar.empty #window {
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
   padding-top: 2px;
   padding-bottom: 2px;
   padding-right: 6px;
@@ -271,7 +272,8 @@ window#waybar.empty #window {
   color: #7aa2f7;
 }
 
-#custom-weather {
+#custom-weather,
+#custom-qs-weather {
   color: #9fe044;
 }
 

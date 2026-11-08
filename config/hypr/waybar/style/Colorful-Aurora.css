@@ -145,7 +145,8 @@ tooltip label {
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
   background-image: linear-gradient(45deg, #95e6cb, #59c2ff, #d2a6ff);
   color: black;
   border: 1px;

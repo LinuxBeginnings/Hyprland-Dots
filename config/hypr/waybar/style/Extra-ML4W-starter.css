@@ -135,7 +135,8 @@ window#waybar.empty #window {
 #pulseaudio,
 #battery,
 #clock,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
     margin-right: 20px;
     font-weight: bold;
     color: @iconcolor;
@@ -203,7 +204,8 @@ window#waybar.empty #window {
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
   padding-right: 6px;
   padding-left: 6px;
     color: @iconcolor;
@@ -274,7 +276,8 @@ window#waybar.empty #window {
  * ----------------------------------------------------- */
 
 #network,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
     background-color: @backgroundlight;
     color: @textcolor2;
     border-radius: 15px;

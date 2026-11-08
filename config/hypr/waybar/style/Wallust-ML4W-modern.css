@@ -193,7 +193,8 @@ window#waybar.empty #window {
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
     margin-right: 8px;
 	margin-left: 6px;
     /* NOTE: Waybar v14+ ignores % font-size values */
@@ -304,7 +305,8 @@ background-color: @color13;
 }
 
 #network,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
     background-color: @backgroundlight;
     color: @textcolor2;
     border-radius: 5px 5px 5px 5px;

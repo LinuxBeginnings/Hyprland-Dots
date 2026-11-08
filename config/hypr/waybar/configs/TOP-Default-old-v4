@@ -29,7 +29,8 @@
 	"custom/separator#dot-line",
 	"group/mobo_drawer",
 	"custom/separator#line",
-	"custom/weather2",
+	// "custom/weather2",
+	"custom/qs-weather",
 	],
 
 "modules-center": [

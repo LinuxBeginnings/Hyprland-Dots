@@ -50,7 +50,8 @@ window#waybar {
 #window,
 #custom-menu,
 #custom-power,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
     padding: 0 3px;
     border-bottom: 2px solid #d8dee9;
 }

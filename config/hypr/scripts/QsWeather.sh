@@ -155,7 +155,9 @@ def auto_locate_ip() -> Tuple[str, float, float]:
     # Try ip-api first
     data = http_get_json("http://ip-api.com/json/?fields=city,regionName,country,lat,lon", timeout=4)
     if data and "lat" in data and "lon" in data:
-        parts = [p for p in [data.get("city"), data.get("regionName"), data.get("country")] if p]
+        parts = [p for p in [data.get("city"), data.get("regionName")] if p]
+        if not parts:
+            parts = [p for p in [data.get("city"), data.get("country")] if p]
         name = ", ".join(parts) or "Current Location"
         return name, float(data["lat"]), float(data["lon"])
 
@@ -164,13 +166,15 @@ def auto_locate_ip() -> Tuple[str, float, float]:
     if data2 and "loc" in data2:
         try:
             lat_str, lon_str = data2["loc"].split(",")
-            parts = [p for p in [data2.get("city"), data2.get("region"), data2.get("country")] if p]
+            parts = [p for p in [data2.get("city"), data2.get("region")] if p]
+            if not parts:
+                parts = [p for p in [data2.get("city"), data2.get("country")] if p]
             name = ", ".join(parts) or "Current Location"
             return name, float(lat_str), float(lon_str)
         except Exception:
             pass
 
-    return "Default (New York)", 40.7128, -74.0060
+    return "New York, New York", 40.7128, -74.0060
 
 
 def load_config() -> Dict[str, Any]:
@@ -401,6 +405,10 @@ def get_location_weather(loc: Dict[str, Any], cache: Dict[str, Any], force: bool
     now = time.time()
 
     if not force and cached and (now - cached.get("timestamp", 0) < CACHE_TTL):
+        if cached.get("resolved_name"):
+            loc["resolved_name"] = cached["resolved_name"]
+            if loc.get("is_auto") or loc.get("name") in ("Auto Location", "Auto"):
+                loc["name"] = cached["resolved_name"]
         return cached["data"]
 
     lat = loc.get("lat")
@@ -412,6 +420,8 @@ def get_location_weather(loc: Dict[str, Any], cache: Dict[str, Any], force: bool
         loc["lat"] = lat
         loc["lon"] = lon
         loc["resolved_name"] = name
+        if loc.get("is_auto") or loc.get("name") in ("Auto Location", "Auto"):
+            loc["name"] = name
 
     # Fetch from Open-Meteo with wttr.in fallback
     data = fetch_open_meteo(lat, lon)
@@ -439,6 +449,7 @@ def get_location_weather(loc: Dict[str, Any], cache: Dict[str, Any], force: bool
 
     cache[loc_id] = {
         "timestamp": now,
+        "resolved_name": loc.get("resolved_name"),
         "data": data,
     }
     save_cache(cache)
@@ -480,6 +491,10 @@ def cmd_status():
     icon = cur.get("icon", "")
     condition = cur.get("condition", "Weather")
     loc_name = active_loc.get("resolved_name") or active_loc.get("name", "Location")
+    if active_loc.get("is_auto") and active_loc.get("resolved_name"):
+        loc_name = active_loc["resolved_name"]
+    elif loc_name in ("Auto Location", "Auto") and active_loc.get("resolved_name"):
+        loc_name = active_loc["resolved_name"]
 
     temp_text = format_temp_str(temp_c, temp_f, unit_mode)
     waybar_text = f"{icon}  {temp_text}"
@@ -516,9 +531,13 @@ def cmd_snapshot():
     output_locations = []
     for loc in locations:
         weather = get_location_weather(loc, cache)
+        resolved = loc.get("resolved_name")
+        disp_name = resolved if (loc.get("is_auto") and resolved) else loc.get("name", "Location")
+        if disp_name in ("Auto Location", "Auto") and resolved:
+            disp_name = resolved
         output_locations.append({
             "id": loc.get("id"),
-            "name": loc.get("resolved_name") or loc.get("name", "Location"),
+            "name": disp_name,
             "is_auto": bool(loc.get("is_auto", False)),
             "lat": loc.get("lat"),
             "lon": loc.get("lon"),

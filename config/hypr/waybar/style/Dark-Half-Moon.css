@@ -206,7 +206,8 @@ tooltip label {
 }
 
 #network,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
   color: #ff8f40;
   background: #0f1419;
   border-radius: 50px 50px;
@@ -258,14 +259,16 @@ tooltip label {
   background: linear-gradient(45deg, #95e6cb, #59c2ff, #d2a6ff);
 }
 
-#custom-weather {
+#custom-weather,
+#custom-qs-weather {
   color: #59c2ff;
   background: #0f1419;
   border-radius: 50px 50px;
   margin: 5px;
   padding: 2px 15px;
 }
-#custom-weather2 {
+#custom-weather2,
+#custom-qs-weather {
   color: #59c2ff;
   background: #0f1419;
   border-radius: 50px 50px;

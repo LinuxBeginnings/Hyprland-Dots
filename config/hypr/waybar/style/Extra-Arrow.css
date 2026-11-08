@@ -124,7 +124,8 @@
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
 	padding-left: 8pt;
 	padding-right: 8pt;
 }

@@ -138,7 +138,8 @@ tooltip {
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
   padding-top: 5px;
   padding-bottom: 5px;
   padding-right: 6px;
@@ -262,7 +263,8 @@ tooltip {
   color: @color7; /* Lightest */
 }
 
-#custom-weather {
+#custom-weather,
+#custom-qs-weather {
   color: @color5; /* Lighter */
 }
 

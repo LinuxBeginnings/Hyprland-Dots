@@ -172,7 +172,8 @@ tooltip {
 #custom-swaync,
 #custom-tty,
 #custom-updater,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
     color: @foreground;
 	padding-right: 6px;
 	padding-left: 6px;

@@ -42,7 +42,8 @@
 
 "modules-right": [
 	"custom/qs-network",
-	"custom/weather2",	  
+	// "custom/weather2",
+	"custom/qs-weather",	  
 	"battery", 
 	"backlight",
 	"bluetooth",

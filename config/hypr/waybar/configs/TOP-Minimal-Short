@@ -20,7 +20,8 @@
 	"custom/hypr_layout",
 	"custom/separator#blank",
 	"clock",  
-	"custom/weather2", 
+	// "custom/weather2",
+	"custom/qs-weather", 
 	],
 
 "modules-center": [

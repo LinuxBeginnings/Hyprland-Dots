@@ -96,7 +96,8 @@ window#waybar.hidden {
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
   color: #fcba03;
   padding-top: 3px;
   padding-bottom: 3px;

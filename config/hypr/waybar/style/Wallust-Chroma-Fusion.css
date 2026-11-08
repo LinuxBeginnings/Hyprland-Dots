@@ -123,7 +123,8 @@ tooltip {
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
   background-color: @background-module;
   border-radius: 25px;
   margin: 5px 5px 5px 5px;
@@ -167,7 +168,8 @@ tooltip {
 }
 #network,
 #temperature,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
   color: @rosewater;
 }
 

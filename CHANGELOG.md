@@ -276,6 +276,8 @@
   - Multi-location side-by-side tabs with single auto-location enforcement
   - `scripts/QsWeather.sh` provides Waybar status, caching and Quickshell IPC
   - Open-Meteo primary API with automatic wttr.in fallback
+  - Waybar configs swap `custom/weather2` for `custom/qs-weather`
+  - All 52 bundled Waybar styles include `#custom-qs-weather` styling
   - `test-qs-weather.sh` covers status, unit modes, search and multi-location
 
 - `SUPER ALT SHIFT + O` cycles the Hyprland 0.57 blur variants

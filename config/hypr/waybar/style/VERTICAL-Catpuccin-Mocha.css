@@ -134,7 +134,8 @@ tooltip label {
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
   opacity: 1;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -190,7 +191,8 @@ tooltip label {
   color: @flamingo;
 }
 
-#custom-weather {
+#custom-weather,
+#custom-qs-weather {
   color: @green;
   border-radius: 15px;
   background-color: transparent;

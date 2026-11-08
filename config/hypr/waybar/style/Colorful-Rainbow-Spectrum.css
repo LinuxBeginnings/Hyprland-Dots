@@ -147,7 +147,8 @@ tooltip label {
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
   border-radius: 16px;
   color: #3a3b3c;
   border: 1px solid #b4befe;
@@ -247,7 +248,8 @@ tooltip label {
 }
 
 #custom-swaync,
-#custom-weather {
+#custom-weather,
+#custom-qs-weather {
   background-color: #cba6f7;
 }
 

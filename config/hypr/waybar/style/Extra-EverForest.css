@@ -201,7 +201,8 @@ window#waybar.hidden {
 
 #network,
 #pulseaudio,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
   padding: 0px 5px;
   border-radius: 0px 5px 5px 0px;
   background-color: @blue;
@@ -333,7 +334,8 @@ window#waybar.hidden {
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
   padding-right: 5px;
   padding-left: 5px;
 }

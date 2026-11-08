@@ -133,7 +133,8 @@ window#waybar.empty window#waybar.empty #window {
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
   padding-top: 4px;
   padding-bottom: 4px;
   padding-right: 6px;

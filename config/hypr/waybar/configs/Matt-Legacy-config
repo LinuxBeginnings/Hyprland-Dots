@@ -21,7 +21,8 @@
   "spacing": 0,
   "margin": "5 15 0 15",
   "modules-left": ["custom/menu", "custom/hypr_layout", "custom/separator", "hyprland/workspaces", "custom/separator", "hyprland/window"],
-  "modules-center": [ "clock#icon", "clock#text", "idle_inhibitor", "custom/weather2", "custom/hint#icon", "custom/hint#text"],
+  "modules-center": [ "clock#icon", "clock#text", "idle_inhibitor", // "custom/weather2",
+	"custom/qs-weather", "custom/hint#icon", "custom/hint#text"],
   "modules-right": [
     "custom/swaync#icon",
     "custom/swaync#text",

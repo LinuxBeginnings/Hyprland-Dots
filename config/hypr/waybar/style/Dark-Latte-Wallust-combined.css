@@ -181,7 +181,8 @@ tooltip {
 #custom-weather.showyIcyDay,
 #custom-weather.snowyIcyNight,
 #custom-weather.sunnyDay,
-#custom-qs-network {
+#custom-qs-network,
+#custom-qs-weather {
   color: #e5d9f5;
   padding-right: 6px;
   padding-left: 6px;

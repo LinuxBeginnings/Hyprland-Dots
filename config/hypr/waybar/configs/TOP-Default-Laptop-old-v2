@@ -33,7 +33,8 @@
 	"custom/separator#blank",
 	"group/laptop",
 	"custom/separator#line",
-	"custom/weather2",
+	// "custom/weather2",
+	"custom/qs-weather",
 	],
 
 "modules-center": [
