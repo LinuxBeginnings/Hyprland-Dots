@@ -201,6 +201,19 @@ chmod +x copy.sh
     bind("SUPER", "V", dispatch("togglefloating"), { description = "Float current window" })
     ```
 
+### 🌦️ Quickshell Weather Applet & Waybar Widget
+
+- A rich graphical weather applet (`quickshell/weather`) and Waybar module (`custom/qs-weather`) built with Quickshell and Wallust theming.
+- **Waybar Module**: Displays live condition glyphs (sunny, clear night, cloudy, rain, snow, severe) and temperature in Celsius, Fahrenheit, or both (e.g. `12°C / 54°F`). Click to toggle the applet; right-click to refresh.
+- **Quickshell Applet**: Opens centered at 40% of screen width over a dimmed backdrop. Includes:
+  - Current condition hero card with temperature, feels-like, humidity, and wind speed.
+  - Hourly forecast throughout the day with time, weather icons, and precipitation probability.
+  - 7-day weekly forecast cards with min/max temperature visual range bars.
+  - Multi-location side-by-side tabs: add multiple cities or coordinates, with single auto-location enforcement (only one location auto-locates via IP; others use specified cities/coordinates).
+  - Settings panel with sliders/toggles for Celsius, Fahrenheit, or dual C/F display on both the panel and Waybar, plus location search.
+- **CLI and Daemon**: Driven by `~/.config/hypr/scripts/QsWeather.sh` (subcommands: `status`, `snapshot`, `toggle`, `search`, `set-unit`, `add-location`, `refresh`). Powered by Open-Meteo with automatic wttr.in fallback.
+- Preferences are saved in `UserConfigs/weather.json` to persist across dots upgrades.
+
 ### ✍️ Contributing
 
 - If you have improvements on the dotfiles or configuration, feel free to submit a PR for improvement.

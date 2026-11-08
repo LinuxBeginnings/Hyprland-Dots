@@ -268,6 +268,16 @@
 
 ## Added:
 
+- Quickshell weather applet and Waybar `custom/qs-weather` module
+  - `quickshell/weather` displays conditions, hourly and 7-day forecast
+  - Sized at 40% of screen width, centered with Wallust color palette
+  - Interactive settings panel with Celsius, Fahrenheit and dual C/F display
+  - Auto-location via IP and forward geocoding search for cities or coordinates
+  - Multi-location side-by-side tabs with single auto-location enforcement
+  - `scripts/QsWeather.sh` provides Waybar status, caching and Quickshell IPC
+  - Open-Meteo primary API with automatic wttr.in fallback
+  - `test-qs-weather.sh` covers status, unit modes, search and multi-location
+
 - `SUPER ALT SHIFT + O` cycles the Hyprland 0.57 blur variants
   - `ChangeBlur.sh --variant-next` steps through the eleven variants
   - `--variant <name>` picks one directly, alone it reports the current one

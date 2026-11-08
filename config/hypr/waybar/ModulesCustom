@@ -93,6 +93,17 @@
 	"on-click-right": "$HOME/.config/hypr/scripts/WaybarScripts.sh --nmtui",
 },
 
+// Quickshell weather widget (quickshell/weather)
+"custom/qs-weather": {
+	"exec": "$HOME/.config/hypr/scripts/QsWeather.sh status",
+	"interval": 900,
+	"return-type": "json",
+	"format": "{}",
+	"tooltip": true,
+	"on-click": "$HOME/.config/hypr/scripts/QsWeather.sh toggle",
+	"on-click-right": "$HOME/.config/hypr/scripts/QsWeather.sh refresh",
+},
+
 // External monitor brightness (ddcutil)
 "custom/brightness_external": {
 	"format": "{}",

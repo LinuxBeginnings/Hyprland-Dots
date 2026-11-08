@@ -43,6 +43,15 @@ apply_layer_rule({
 })
 
 apply_layer_rule({
+  name = "quickshell-weather",
+  match = {
+    namespace = "quickshell:weather",
+  },
+  blur = true,
+  ignore_alpha = 0.5,
+})
+
+apply_layer_rule({
   name = "layerrule-004",
   match = {
     namespace = "quickshell:expose",
