@@ -285,6 +285,7 @@
   - `UserConfigs/hyprmod.toml` maps each section to its target override file
   - Monitors, keybinds, window rules, animations, decorations and settings
   - Bidirectional sync with automatic mtime detection and watch mode
+  - `user_overrides.lua` loads `hyprland-gui.lua` directly when present
 
 - A search bar floats under the wallpaper carousel's deck
   - Wider than a card, so a long file name stays readable

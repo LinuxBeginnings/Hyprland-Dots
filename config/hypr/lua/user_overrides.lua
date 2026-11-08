@@ -114,4 +114,7 @@ end
 if not loaded_user_split then
   load_optional(userDir .. "/user_overrides.lua") -- legacy single-file support
 end
+-- Load HyprMod managed overrides if present
+load_optional(userDir .. "/hyprland-gui.lua")
+load_optional(hyprDir .. "/hyprland-gui.lua")
 apply_qt_style_fallbacks()
