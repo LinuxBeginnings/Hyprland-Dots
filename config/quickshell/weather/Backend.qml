@@ -18,8 +18,11 @@ Item {
         "provider": "open-meteo"
     })
     property var searchResults: []
+    property bool searching: false
+    property string lastSearchQuery: ""
     property bool loaded: false
     property bool busy: false
+    property bool queuedRefresh: false
     property string error: ""
 
     readonly property var activeLocation: {
@@ -44,7 +47,10 @@ Item {
     }
 
     function refresh() {
-        if (pollProcess.running) return;
+        if (pollProcess.running) {
+            backend.queuedRefresh = true;
+            return;
+        }
         pollProcess.running = true;
     }
 
@@ -76,11 +82,16 @@ Item {
     }
 
     function searchLocations(query) {
-        if (!query || query.trim() === "") {
+        var clean = query ? query.trim() : "";
+        backend.lastSearchQuery = clean;
+        if (clean === "") {
             backend.searchResults = [];
+            backend.searching = false;
             return;
         }
-        searchProcess.command = [backend.script, "search", query.trim()];
+        backend.searching = true;
+        searchProcess.running = false;
+        searchProcess.command = [backend.script, "search", clean];
         searchProcess.running = true;
     }
 
@@ -100,6 +111,10 @@ Item {
         }
         onExited: function (code, status) {
             backend.busy = false;
+            if (backend.queuedRefresh) {
+                backend.queuedRefresh = false;
+                Qt.callLater(backend.refresh);
+            }
         }
     }
 
@@ -124,6 +139,9 @@ Item {
                     backend.searchResults = [];
                 }
             }
+        }
+        onExited: function (code, status) {
+            backend.searching = false;
         }
     }
 

@@ -541,12 +541,13 @@ def cmd_snapshot():
 
 
 def cmd_search(query: str):
-    if not query.strip():
+    q = query.strip()
+    if not q:
         print(json.dumps([]))
         return
 
     # Check if query is latitude, longitude
-    parts = [p.strip() for p in query.split(",")]
+    parts = [p.strip() for p in q.split(",")]
     if len(parts) == 2:
         try:
             lat = float(parts[0])
@@ -555,15 +556,17 @@ def cmd_search(query: str):
                 "name": f"Coordinates ({lat:.2f}, {lon:.2f})",
                 "lat": lat,
                 "lon": lon,
-            }]))
+            }], ensure_ascii=False))
             return
         except ValueError:
             pass
 
-    encoded = urllib.parse.quote(query.strip())
+    results = []
+
+    # 1. Try Open-Meteo geocoding
+    encoded = urllib.parse.quote(q)
     url = f"https://geocoding-api.open-meteo.com/v1/search?name={encoded}&count=5&language=en&format=json"
     raw = http_get_json(url)
-    results = []
     if raw and "results" in raw:
         for r in raw["results"]:
             name = r.get("name", "")
@@ -575,7 +578,27 @@ def cmd_search(query: str):
                 "lat": float(r.get("latitude", 0)),
                 "lon": float(r.get("longitude", 0)),
             })
-    print(json.dumps(results))
+
+    # 2. If no results and query has multiple tokens, fall back to OpenStreetMap Nominatim
+    if not results:
+        url_nom = f"https://nominatim.openstreetmap.org/search?q={encoded}&format=json&limit=5"
+        req_nom = urllib.request.Request(url_nom, headers={"User-Agent": "KoolDots-Weather/1.0 (Linux; Hyprland)"})
+        try:
+            with urllib.request.urlopen(req_nom, timeout=5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                for r in data:
+                    display = r.get("display_name", "")
+                    d_parts = [x.strip() for x in display.split(",")]
+                    short_name = ", ".join(d_parts[:3]) if len(d_parts) >= 3 else display
+                    results.append({
+                        "name": short_name,
+                        "lat": float(r.get("lat", 0)),
+                        "lon": float(r.get("lon", 0)),
+                    })
+        except Exception:
+            pass
+
+    print(json.dumps(results, ensure_ascii=False))
 
 
 def cmd_locate():
@@ -593,6 +616,7 @@ def cmd_add_location(name: str, lat: float, lon: float):
         "lat": lat,
         "lon": lon,
     })
+    cfg["active_location_id"] = loc_id
     save_config(cfg)
     print(json.dumps({"status": "ok", "id": loc_id}))
 
