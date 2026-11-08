@@ -4,6 +4,11 @@
 
 ## Fixed:
 
+- HyprMod window rule floats and centers at 75% screen size
+  - Upstream HyprMod changed its application ID to `io.github.bluemancz.hyprmod`
+  - `lua/window_rules.lua` now matches both modern and legacy window classes
+  - Window rule sets floating, centered, and 75% monitor width and height
+
 - `quirks:skip_non_kms_dmabuf_formats` no longer errors on Hyprland 0.56
   - It is a 0.57 option, and `lua/settings.lua` wrote it on every build
   - Now written only when the running build answers for the option
