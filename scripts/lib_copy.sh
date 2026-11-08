@@ -887,6 +887,9 @@ restore_user_configs() {
       rsync -a "${DIRPATH}-${BACKUP_DIR}/UserConfigs/" "$DIRPATH/UserConfigs/" 2>&1 | tee -a "$log"
       echo "${OK:-[OK]} - UserConfigs directory preserved." 2>&1 | tee -a "$log"
     fi
+    if [ -f "$DIRPATH/UserConfigs/hyprland-gui.lua" ]; then
+      ln -sf "UserConfigs/hyprland-gui.lua" "$DIRPATH/hyprland-gui.lua" 2>/dev/null || true
+    fi
     return
   fi
 
@@ -906,6 +909,17 @@ restore_user_configs() {
         echo "${NOTE:-[NOTE]} - Skipped restoring UserConfigs." 2>&1 | tee -a "$log"
       fi
     fi
+  fi
+
+  # Maintain HyprMod managed file persistence in UserConfigs with root symlink
+  local hyprmod_target="$DIRPATH/UserConfigs/hyprland-gui.lua"
+  local hyprmod_link="$DIRPATH/hyprland-gui.lua"
+  local backup_root_gui="$DIRPATH-backup-$BACKUP_DIR/hyprland-gui.lua"
+  if [ -f "$backup_root_gui" ] && [ ! -L "$backup_root_gui" ] && [ ! -f "$hyprmod_target" ]; then
+    cp -f "$backup_root_gui" "$hyprmod_target" 2>&1 | tee -a "$log" || true
+  fi
+  if [ -f "$hyprmod_target" ]; then
+    ln -sf "UserConfigs/hyprland-gui.lua" "$hyprmod_link" 2>/dev/null || true
   fi
 }
 

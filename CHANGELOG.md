@@ -291,6 +291,7 @@
   - Monitors, keybinds, window rules, animations, decorations and settings
   - Bidirectional sync with automatic mtime detection and watch mode
   - `user_overrides.lua` loads `hyprland-gui.lua` directly when present
+  - `copy.sh` preserves `UserConfigs/hyprland-gui.lua` and links it in root
 
 - A search bar floats under the wallpaper carousel's deck
   - Wider than a card, so a long file name stays readable
