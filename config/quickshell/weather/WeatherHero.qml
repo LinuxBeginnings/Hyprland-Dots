@@ -119,11 +119,11 @@ Rectangle {
         // Metrics Grid (Feels Like, Humidity, Wind)
         RowLayout {
             Layout.fillWidth: true
-            distribution: RowLayout.FillEqually
             spacing: 12
 
             // Feels Like
             RowLayout {
+                Layout.fillWidth: true
                 spacing: 6
                 Text {
                     text: "󰔄"
@@ -141,6 +141,7 @@ Rectangle {
 
             // Humidity
             RowLayout {
+                Layout.fillWidth: true
                 spacing: 6
                 Text {
                     text: ""
@@ -158,6 +159,7 @@ Rectangle {
 
             // Wind
             RowLayout {
+                Layout.fillWidth: true
                 spacing: 6
                 Text {
                     text: "󰠠"

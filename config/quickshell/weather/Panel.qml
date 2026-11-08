@@ -83,6 +83,15 @@ PanelWindow {
             NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
         }
 
+        focus: panel.shown
+        Keys.onEscapePressed: {
+            if (panel.showSettings) {
+                panel.showSettings = false;
+            } else {
+                panel.shown = false;
+            }
+        }
+
         MouseArea {
             anchors.fill: parent
         }
@@ -305,14 +314,6 @@ PanelWindow {
                     }
                 }
             }
-        }
-    }
-
-    Keys.onEscapePressed: {
-        if (panel.showSettings) {
-            panel.showSettings = false;
-        } else {
-            panel.shown = false;
         }
     }
 }
