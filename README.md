@@ -172,6 +172,17 @@ chmod +x copy.sh
   already loads, so it survives a reload and a restart.
 - Full description, usage and architecture: [`README-display-layouts.md`](./README-display-layouts.md)
 
+### 🎛️ HyprMod GUI & Configuration Sync
+
+- [HyprMod](https://github.com/BlueManCZ/hyprmod) is a native GTK4/libadwaita settings app for Hyprland that manages options, keybinds, monitors, animations, and window rules.
+- HyprMod edits a single unified file (`~/.config/hypr/hyprland-gui.lua`), while KoolDots organizes user customizations across modular files in `~/.config/hypr/UserConfigs/` (`monitors.lua`, `user_keybinds.lua`, `user_window_rules.lua`, `user_animations.lua`, `user_decorations.lua`, `user_settings.lua`).
+- `config/hypr/scripts/HyprModSync.sh` synchronizes between HyprMod's managed file and the `UserConfigs/` split files using the mappings defined in `UserConfigs/hyprmod.toml`:
+  - **Export GUI edits to split files**: `~/.config/hypr/scripts/HyprModSync.sh to-split` propagates changes saved in HyprMod into marked managed blocks inside each target file, keeping custom code and helpers intact.
+  - **Import split configs into HyprMod**: `~/.config/hypr/scripts/HyprModSync.sh to-managed` compiles your `UserConfigs/` overrides into `hyprland-gui.lua` so HyprMod recognizes them as owned, editable settings.
+  - **Automatic sync**: `~/.config/hypr/scripts/HyprModSync.sh` (or `sync`) checks file timestamps and automatically synchronizes in the direction of the newest changes.
+  - **Live watch mode**: `~/.config/hypr/scripts/HyprModSync.sh watch` runs in the background and continuously synchronizes whenever either surface is saved.
+  - **Check sync status**: `~/.config/hypr/scripts/HyprModSync.sh status` reports active paths, target mappings, and current sync state.
+
 ### ✍️ Contributing
 
 - If you have improvements on the dotfiles or configuration, feel free to submit a PR for improvement.

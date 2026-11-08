@@ -280,10 +280,11 @@
   - 0.56 has no such option, and writing it is a config error on every reload
   - `decoration:wobble` is gated by the same test, for the same reason
 
-- HyprMod can edit the `UserConfigs` overrides directly
-  - `UserConfigs/hyprmod.toml` maps each editor to the file it owns
-  - Monitors, keybinds, window rules, animations and decorations
-  - `base_dir` stays `~/.config/hypr`, so `hyprland.lua` is the entrypoint
+- HyprMod can synchronize with `UserConfigs` overrides
+  - `scripts/HyprModSync.sh` bridges HyprMod's managed file and split configs
+  - `UserConfigs/hyprmod.toml` maps each section to its target override file
+  - Monitors, keybinds, window rules, animations, decorations and settings
+  - Bidirectional sync with automatic mtime detection and watch mode
 
 - A search bar floats under the wallpaper carousel's deck
   - Wider than a card, so a long file name stays readable

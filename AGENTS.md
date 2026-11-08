@@ -52,11 +52,14 @@ Every script in this repository starts with `#!/usr/bin/env bash`.
 
 - `git fetch --prune` and pull the current branch before editing. Never start work on a stale branch.
 - Stash or commit local edits first, so the pull cannot fail or conflict.
-- Work on `development` and push there directly.
-- Do not open a pull request for work on `development`, and do not offer to.
-  - `development` reaches `main` only when a release is cut.
+- Work on `development` and push there directly, or on a feature branch cut from it.
+- Never open a pull request from `development` into `main`.
+  - `development` reaches `main` only when a release is cut, after it has been
+    tested across the supported distros.
   - A change is finished once it is on `development`.
-  - Pull requests from outside contributors still target `development`.
+- A feature branch cut from `development` is expected to be a pull request into
+  `development`, reviewed and merged there.
+  - Pull requests from outside contributors also target `development`.
 - Say which branch and commit the work started from.
 
 ## Remote
