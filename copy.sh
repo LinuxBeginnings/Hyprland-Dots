@@ -1085,19 +1085,15 @@ if [ "$RUN_MODE" = "install" ]; then
     fi
   fi
 
-  # Ensure overview and qs-hyprview subdirectories exist
-  DIRPATH_OVERVIEW="$DIRPATH_QS/overview"
-  if [ ! -d "$DIRPATH_OVERVIEW" ] && [ -d "$DOTFILES_DIR/config/quickshell/overview" ]; then
-    echo "${INFO} - Copying quickshell overview config..." 2>&1 | tee -a "$LOG"
-    cp -r "$DOTFILES_DIR/config/quickshell/overview" "$DIRPATH_QS/" 2>&1 | tee -a "$LOG"
-    echo "${OK} - Quickshell overview config copied successfully" 2>&1 | tee -a "$LOG"
-  fi
-  DIRPATH_QS_HYPRVIEW="$DIRPATH_QS/qs-hyprview"
-  if [ ! -d "$DIRPATH_QS_HYPRVIEW" ] && [ -d "$DOTFILES_DIR/config/quickshell/qs-hyprview" ]; then
-    echo "${INFO} - Copying quickshell qs-hyprview config..." 2>&1 | tee -a "$LOG"
-    cp -r "$DOTFILES_DIR/config/quickshell/qs-hyprview" "$DIRPATH_QS/" 2>&1 | tee -a "$LOG"
-    echo "${OK} - Quickshell qs-hyprview config copied successfully" 2>&1 | tee -a "$LOG"
-  fi
+  # Ensure all quickshell applet subdirectories exist
+  local sub
+  for sub in overview qs-hyprview network-widget keybinds wallpaper weather; do
+    if [ ! -d "$DIRPATH_QS/$sub" ] && [ -d "$DOTFILES_DIR/config/quickshell/$sub" ]; then
+      echo "${INFO} - Copying quickshell $sub config..." 2>&1 | tee -a "$LOG"
+      cp -r "$DOTFILES_DIR/config/quickshell/$sub" "$DIRPATH_QS/" 2>&1 | tee -a "$LOG"
+      echo "${OK} - Quickshell $sub config copied successfully" 2>&1 | tee -a "$LOG"
+    fi
+  done
 else
   # Upgrade/express: sync repo quickshell files in place so user-created
   # quickshell apps are preserved instead of being moved to a backup.

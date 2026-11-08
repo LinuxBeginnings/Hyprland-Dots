@@ -278,6 +278,7 @@
   - Open-Meteo primary API with automatic wttr.in fallback
   - Waybar configs swap `custom/weather2` for `custom/qs-weather`
   - All 52 bundled Waybar styles include `#custom-qs-weather` styling
+  - `copy.sh` syncs `quickshell/weather` during installs and upgrades
   - `test-qs-weather.sh` covers status, unit modes, search and multi-location
 
 - `SUPER ALT SHIFT + O` cycles the Hyprland 0.57 blur variants
