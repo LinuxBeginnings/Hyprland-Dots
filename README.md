@@ -182,6 +182,24 @@ chmod +x copy.sh
   - **Automatic sync**: `~/.config/hypr/scripts/HyprModSync.sh` (or `sync`) checks file timestamps and automatically synchronizes in the direction of the newest changes.
   - **Live watch mode**: `~/.config/hypr/scripts/HyprModSync.sh watch` runs in the background and continuously synchronizes whenever either surface is saved.
   - **Check sync status**: `~/.config/hypr/scripts/HyprModSync.sh status` reports active paths, target mappings, and current sync state.
+- **Why are 99 window management keybinds marked `(read-only)` under "Other" in HyprMod?**:
+  - In KoolDots, compositor management shortcuts (`SUPER + Q` close window, `SUPER + SHIFT + F` fullscreen, `SUPER + SPACE` toggle float, workspace navigation, directional focus) are implemented as high-performance **in-process Lua closures** rather than external shell commands.
+  - HyprMod cannot decompile or round-trip custom compiled Lua bytecode through its GUI dropdowns, so it intentionally quarantines them under **Other** as `(read-only)` with a lock icon to prevent breaking them.
+  - Application shortcuts (the 94 binds under **Applications & Commands**) remain fully editable in HyprMod via the pencil override button.
+  - To customize or rebind any of the in-process shortcuts, edit `~/.config/hypr/UserConfigs/user_keybinds.lua` directly:
+    ```lua
+    -- Rebind Close Window from SUPER+Q to SUPER+X
+    unbind("SUPER", "Q")
+    bind("SUPER", "X", dispatch("killactive"), { description = "Close active window" })
+
+    -- Rebind Fullscreen from SUPER+SHIFT+F to SUPER+F
+    unbind("SUPER SHIFT", "F")
+    bind("SUPER", "F", dispatch("fullscreen", "0"), { description = "Toggle fullscreen" })
+
+    -- Rebind Float from SUPER+SPACE to SUPER+V
+    unbind("SUPER", "SPACE")
+    bind("SUPER", "V", dispatch("togglefloating"), { description = "Float current window" })
+    ```
 
 ### ✍️ Contributing
 

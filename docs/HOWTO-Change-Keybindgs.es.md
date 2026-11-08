@@ -321,3 +321,24 @@ Si no está seguro del nombre exacto de una tecla especial o no estándar:
 
 ### 4. ¿Cómo puedo ver todos los atajos de teclado actualmente activos?
 - Ejecute `hyprctl binds` en su terminal, o presione `SUPER + SHIFT + K` para abrir el menú de búsqueda de atajos de Rofi.
+
+### 5. ¿Por qué los atajos de gestión de ventanas aparecen marcados como `(read-only)` en HyprMod?
+En la interfaz gráfica de HyprMod, observará que 99 atajos del compositor (`SUPER + Q` cerrar ventana, `SUPER + SHIFT + F` pantalla completa, `SUPER + SPACE` alternar ventana flotante, navegación de espacios de trabajo, cambio de foco) aparecen bajo la categoría **Other** marcados con un icono de candado y `(read-only)`.
+
+- **Por qué ocurre esto**: En KoolDots, estos atajos están implementados como **cierres (closures) de Lua en el proceso** (`function() ... end`) para una ejecución de latencia cero dentro del estado de Lua embebido en Hyprland. HyprMod no puede interpretar ni reconstruir código Lua compilado a través de sus menús gráficos sin romperlo, por lo que HyprMod los bloquea deliberadamente como de solo lectura.
+- **Atajos de aplicaciones**: Los 94 atajos bajo **Applications & Commands** (terminales, navegadores, gestores de archivos, menús rofi, teclas multimedia) son comandos estándar y **sí** se pueden modificar en HyprMod usando el botón de lápiz.
+- **Cómo editar los 99 atajos en proceso**: Simplemente edite `~/.config/hypr/UserConfigs/user_keybinds.lua` directamente:
+  ```lua
+  -- Reasignar Cerrar Ventana de SUPER+Q a SUPER+X
+  unbind("SUPER", "Q")
+  bind("SUPER", "X", dispatch("killactive"), { description = "Cerrar ventana activa" })
+
+  -- Reasignar Pantalla Completa de SUPER+SHIFT+F a SUPER+F
+  unbind("SUPER SHIFT", "F")
+  bind("SUPER", "F", dispatch("fullscreen", "0"), { description = "Alternar pantalla completa" })
+
+  -- Reasignar Ventana Flotante de SUPER+SPACE a SUPER+V
+  unbind("SUPER", "SPACE")
+  bind("SUPER", "V", dispatch("togglefloating"), { description = "Alternar ventana flotante" })
+  ```
+- Los cambios guardados en `user_keybinds.lua` se aplican de inmediato gracias a `LuaConfigWatch.sh` sin reiniciar Hyprland.

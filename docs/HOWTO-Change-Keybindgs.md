@@ -321,3 +321,24 @@ If you are unsure of the exact key name for a special or non-standard key:
 
 ### 4. How can I see all currently active keybindings?
 - Run `hyprctl binds` in your terminal, or press `SUPER + SHIFT + K` to open the Rofi Keybinds Search menu.
+
+### 5. Why are window management keybinds marked `(read-only)` in HyprMod?
+In HyprMod GUI, you may notice that 99 compositor keybindings (`SUPER + Q` close window, `SUPER + SHIFT + F` fullscreen, `SUPER + SPACE` toggle floating, workspace navigation, directional focus) appear under the **Other** category marked with a lock icon and `(read-only)`.
+
+- **Why this happens**: In KoolDots, these shortcuts are implemented as high-performance **in-process Lua closures** (`function() ... end`) for zero-latency execution inside Hyprland's embedded Lua state. HyprMod cannot round-trip compiled Lua closure code through its dropdown GUI without breaking it, so upstream HyprMod intentionally locks them as read-only.
+- **Application shortcuts**: The 94 shortcuts under **Applications & Commands** (terminals, browsers, file managers, rofi applets, media keys) are standard commands and **can** be overridden in HyprMod using the pencil edit icon.
+- **How to edit the 99 in-process keybinds**: Simply edit `~/.config/hypr/UserConfigs/user_keybinds.lua` directly:
+  ```lua
+  -- Rebind Close Window from SUPER+Q to SUPER+X
+  unbind("SUPER", "Q")
+  bind("SUPER", "X", dispatch("killactive"), { description = "Close active window" })
+
+  -- Rebind Fullscreen from SUPER+SHIFT+F to SUPER+F
+  unbind("SUPER SHIFT", "F")
+  bind("SUPER", "F", dispatch("fullscreen", "0"), { description = "Toggle fullscreen" })
+
+  -- Rebind Float from SUPER+SPACE to SUPER+V
+  unbind("SUPER", "SPACE")
+  bind("SUPER", "V", dispatch("togglefloating"), { description = "Float current window" })
+  ```
+- Changes saved in `user_keybinds.lua` are applied immediately by `LuaConfigWatch.sh` without restarting Hyprland.
