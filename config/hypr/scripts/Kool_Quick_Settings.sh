@@ -151,7 +151,7 @@ is_tui_editor() {
   base="$(basename "$bin")"
 
   case "$base" in
-  vi | vim | nvim | nano | hx | helix | kak | micro | emacs-nox)
+  vi | vim | nvim | nano | hx | helix | kak | micro | emacs-nox | ttt)
     return 0
     ;;
   emacs | emacsclient)
@@ -702,10 +702,10 @@ handle_choice() {
     # Pause BEFORE the GUI starts, with our own PID: nwg's reload emits monitor
     # events, and the watcher would re-apply the stored layout over the drag.
     # Writing the pause file after the fork would leave that window open.
-    printf '%s\n' "$$" > "$qs_state_dir/pause"
+    printf '%s\n' "$$" >"$qs_state_dir/pause"
     nwg-displays -m "$qs_discard" 9>&- &
     qs_nwg_pid=$!
-    printf '%s\n' "$qs_nwg_pid" > "$qs_state_dir/pause"
+    printf '%s\n' "$qs_nwg_pid" >"$qs_state_dir/pause"
     wait "$qs_nwg_pid" || true
     rm -f -- "$qs_state_dir/pause"
     if [[ -s $qs_discard ]] && grep -q '^[[:space:]]*monitor=' "$qs_discard" 2>/dev/null; then
@@ -848,7 +848,10 @@ palette_source_state_file() {
   local state_file=""
 
   if [[ -f "$config" ]]; then
-    state_file="$(. "$config" >/dev/null 2>&1; wallust_palette_source_file)"
+    state_file="$(
+      . "$config" >/dev/null 2>&1
+      wallust_palette_source_file
+    )"
   fi
 
   printf '%s' "${state_file:-${XDG_STATE_HOME:-$HOME/.local/state}/hypr/palette_source}"
@@ -859,7 +862,10 @@ palette_source_current() {
   local source=""
 
   if [[ -f "$config" ]]; then
-    source="$(. "$config" >/dev/null 2>&1; printf '%s' "$palette_source")"
+    source="$(
+      . "$config" >/dev/null 2>&1
+      printf '%s' "$palette_source"
+    )"
   fi
 
   printf '%s' "${source:-wallust}"
