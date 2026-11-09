@@ -4,6 +4,12 @@
 
 ## Fixed:
 
+- Per-window keyboard layout no longer resets unpredictably
+  - `Tak0-Per-Window-Switch.sh` could start duplicate `--listener` processes
+  - The `pgrep` check raced when two binds fired close together
+  - The listener now takes an `flock` and exits if one already runs
+  - Issue: [#168](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/168)
+
 - HyprMod window rule floats and centers at 75% screen size
   - Upstream HyprMod changed its application ID to `io.github.bluemancz.hyprmod`
   - `lua/window_rules.lua` now matches both modern and legacy window classes
