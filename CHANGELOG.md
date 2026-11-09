@@ -1,5 +1,17 @@
 # Changelog — KoolDots
 
+## v2.3.28.3
+
+## Fixed:
+
+- Per-window keyboard layout no longer resets unpredictably
+  - `Tak0-Per-Window-Switch.sh` could start duplicate `--listener` processes
+  - The `pgrep` check raced when two binds fired close together
+  - The listener now takes an `flock` and exits if one already runs
+  - Issue: [#168](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/168)
+
+---
+
 ## v2.3.28.2
 
 ## Fixed:

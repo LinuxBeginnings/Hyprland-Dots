@@ -166,6 +166,12 @@ subscribe() {
   local runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
   local SOCKET2=""
 
+  # Single-instance guard: atomic, unlike a pgrep check (race on rapid presses)
+  if command -v flock >/dev/null 2>&1; then
+    exec 9>"$runtime_dir/kb_layout_per_window.lock"
+    flock -n 9 || exit 0
+  fi
+
   if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
     SOCKET2="$runtime_dir/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
   fi
@@ -203,9 +209,9 @@ case "${1:-toggle}" in
     load_map "$W"
     ;;
   toggle|"")
-    # Ensure only one listener is active
-    if ! pgrep -f "$SCRIPT_NAME.*--listener" >/dev/null 2>&1; then
-      "$SCRIPT_PATH" --listener &
+    # The listener takes an flock and exits at once if one already runs
+    if command -v flock >/dev/null 2>&1 || ! pgrep -f "$SCRIPT_NAME.*--listener" >/dev/null 2>&1; then
+      "$SCRIPT_PATH" --listener >/dev/null 2>&1 &
     fi
     cmd_toggle
     ;;
