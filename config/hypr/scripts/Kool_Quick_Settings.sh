@@ -19,6 +19,10 @@ system_env_lua="$hypr_dir/configs/system_env.lua"
 term="${term:-${TERMINAL:-kitty}}"
 edit="${edit:-${EDITOR:-}}"
 visual="${visual:-${VISUAL:-}}"
+# A visual editor replaces edit only when it was configured (user_defaults.lua
+# or an hl.env() in user_env.lua / system_env.lua). A VISUAL inherited from the
+# session must not override the editor the menu wrote.
+visual_explicit=0
 
 # 1. Parse active overrides from user_defaults.lua
 if [[ -f "$lua_defaults_file" ]]; then
@@ -27,7 +31,7 @@ if [[ -f "$lua_defaults_file" ]]; then
   lua_visual=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.visual[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults_file" | tail -n1)
   [[ -n "$lua_term" ]] && term="$lua_term"
   [[ -n "$lua_edit" ]] && edit="$lua_edit"
-  [[ -n "$lua_visual" ]] && visual="$lua_visual"
+  [[ -n "$lua_visual" ]] && { visual="$lua_visual"; visual_explicit=1; }
 fi
 # 2. Parse env overrides from user_env.lua / system_env.lua
 for env_file in "$user_env_lua" "$system_env_lua"; do
@@ -35,7 +39,7 @@ for env_file in "$user_env_lua" "$system_env_lua"; do
     env_edit=$(sed -n 's/^[[:space:]]*hl\.env([[:space:]]*["\x27]EDITOR["\x27][[:space:]]*,[[:space:]]*["\x27]\([^"\x27]*\)["\x27].*$/\1/p' "$env_file" | tail -n1)
     env_visual=$(sed -n 's/^[[:space:]]*hl\.env([[:space:]]*["\x27]VISUAL["\x27][[:space:]]*,[[:space:]]*["\x27]\([^"\x27]*\)["\x27].*$/\1/p' "$env_file" | tail -n1)
     [[ -n "$env_edit" ]] && edit="$env_edit"
-    [[ -n "$env_visual" ]] && visual="$env_visual"
+    [[ -n "$env_visual" ]] && { visual="$env_visual"; visual_explicit=1; }
   fi
 done
 # 3. Fallback to system lua defaults
@@ -763,7 +767,13 @@ handle_choice() {
     read -r -a term_cmd <<<"$term"
     [[ -n "$visual" ]] && read -r -a visual_cmd <<<"$visual"
     selected_cmd=("${edit_cmd[@]}")
-    [[ ${#visual_cmd[@]} -gt 0 ]] && selected_cmd=("${visual_cmd[@]}")
+    # A configured visual editor replaces edit only when it is a GUI editor.
+    # A visual that is itself terminal-based (e.g. visual = "nvim") cannot be
+    # opened any way but through edit, so it must not shadow it. See the
+    # visual_explicit note at the top of the script.
+    if [[ $visual_explicit -eq 1 && ${#visual_cmd[@]} -gt 0 ]] && ! is_tui_editor "${visual_cmd[@]}"; then
+      selected_cmd=("${visual_cmd[@]}")
+    fi
 
     (
       if is_tui_editor "${selected_cmd[@]}"; then

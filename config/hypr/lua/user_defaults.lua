@@ -31,3 +31,15 @@ do
     print("[WARN] Unable to load user defaults file " .. userDefaults .. ": " .. tostring(err))
   end
 end
+
+-- Make the resolved editor the session default so tools started from a
+-- terminal use the same one. VISUAL is pinned to EDITOR as well, because most
+-- tools prefer VISUAL and an inherited or stale one would otherwise shadow the
+-- editor chosen in Quick Settings.
+if hl and hl.env then
+  local resolved_edit = KOOLDOTS_DEFAULTS.edit or ""
+  if resolved_edit ~= "" then
+    hl.env("EDITOR", resolved_edit)
+    hl.env("VISUAL", resolved_edit)
+  end
+end

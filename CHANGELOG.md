@@ -4,6 +4,12 @@
 
 ## Fixed:
 
+- A `Text Editor` choice in Quick Settings is no longer overridden
+  - A `visual` of `nvim` or another TUI editor replaced it, shadowing `edit`
+  - An inherited `$VISUAL` did the same, even with no `visual` configured
+  - `visual` now wins only when it is a GUI editor set in the config file
+  - `EDITOR` and `VISUAL` are exported from `edit`, so the CLI uses it too
+
 - Per-window keyboard layout no longer resets unpredictably
   - `Tak0-Per-Window-Switch.sh` could start duplicate `--listener` processes
   - The `pgrep` check raced when two binds fired close together
