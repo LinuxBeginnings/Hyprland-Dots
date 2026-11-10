@@ -452,7 +452,7 @@ edit_command_field() {
       candidates=(kitty ghostty alacritty foot wezterm urxvt xterm ptyxis warp-terminal konsole gnome-terminal xfce4-terminal)
       ;;
     edit)
-      candidates=(nvim vim nano hx helix micro emacs jed joe mg)
+      candidates=(nvim vim nano hx helix kak micro ttt emacs jed joe mg)
       ;;
     visual)
       candidates=(neovide code vscodium codium cursor zed zed-editor subl sublime_text kate gedit gnome-text-editor mousepad geany emacs atom featherpad xed pluma)

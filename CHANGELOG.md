@@ -274,6 +274,11 @@
 
 ## Added:
 
+- `ttt` recognized as a TUI editor in Quick Settings and User Defaults
+  - `Kool_Quick_Settings.sh` adds `ttt` to `is_tui_editor()`
+  - `RofiUserDefaults.sh` lists `ttt` in the `Text Editor` candidates
+  - Issue: [#169](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/169)
+
 - Quickshell weather applet and Waybar `custom/qs-weather` module
   - `quickshell/weather` displays conditions, hourly and 7-day forecast
   - Sized at 40% of screen width, centered with Wallust color palette
