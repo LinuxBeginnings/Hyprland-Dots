@@ -64,18 +64,21 @@ bind("SUPER ALT", "W", exec_cmd("$HOME/.config/hypr/scripts/QsWallpaper.sh toggl
 
 The deck is keyboard and mouse driven, and a search bar floats under it - wider
 than a card, so a long file name stays readable. Typing filters the deck in
-place, and it re-centres on the wallpaper that is on screen. The arrows and
-`Home`/`End` belong to the caret, so the deck is stepped with `Tab`, the wheel
-or a click.
+place, and it re-centres on the wallpaper that is on screen. Left/Right step the
+deck, and `Home`/`End` stay with the caret. `P` fills the monitor with the
+centred wallpaper; there Left/Right keep stepping and `P` or `Esc` drops back to
+the deck. `P` is the preview key, so it does not type into the filter.
 
 | Input | Action |
 | --- | --- |
 | **Type** | filter by folder and file name |
+| **Left / Right** | step one wallpaper |
 | **Tab / Shift+Tab** | step one wallpaper |
 | **Enter** | apply the centred wallpaper |
+| **P** | preview the centred wallpaper fullscreen |
 | **Click a card** | apply it |
 | **Mouse wheel** | step one wallpaper per notch |
-| **Esc** | clear the filter, or close when it is empty |
+| **Esc** | close the preview, clear the filter, or close when both are done |
 | **Click the empty strip** | close |
 
 A query can also be passed in, which opens the deck narrowed with the bar
@@ -97,6 +100,11 @@ quickshell ipc -p ~/.config/quickshell/wallpaper \
 The query is cleared when the deck closes, so the next `SUPER W` shows every
 wallpaper again. `select --query TEXT` does the same from the keybind path, and
 the rofi fallback ignores it.
+
+The preview is the same layer-shell strip grown to the whole monitor, not a
+second window: the deck stays mounted underneath at zero opacity, which is what
+keeps the keyboard on it so the arrows and `P` still work. Clicking the preview
+drops back to the deck without applying.
 
 Applying fades the deck out and closes the strip; the wallpaper is set without
 a transition, so it is already in place.

@@ -15,9 +15,10 @@
 //   quickshell ipc -p ~/.config/quickshell/wallpaper \
 //       call wallpaper-carousel toggle|open|close|isOpen|refresh
 //
-// Keys: type to filter, Tab steps, Enter applies, Escape clears then closes.
-//       The arrows and Home/End move the caret, so the deck is stepped with
-//       Tab, the wheel or a click.
+// Keys: type to filter, Left/Right or Tab step the deck, Enter applies and
+//       Escape clears then closes. P blows the centred wallpaper up to the
+//       whole monitor; there Left/Right keep stepping and P or Escape drops
+//       back to the deck. Home/End stay with the caret.
 //
 // Adapted from the ML4W WallpaperApp carousel (GPL-3.0): the deck geometry is
 // theirs, the framing, theme loader, keys and wallpaper calls are this
@@ -48,6 +49,19 @@ PanelWindow {
     property bool applying: false
     readonly property int applyDelay: 550
 
+    // Fullscreen preview of the centred wallpaper. The strip grows to the
+    // whole monitor for it and keeps the keyboard, so the arrows keep stepping
+    // and P or Escape drop back to the deck.
+    property bool previewing: false
+
+    // The wallpaper the deck is centred on, and the one a preview shows.
+    readonly property var currentEntry: {
+        var list = wallpapers.filtered;
+        if (view.currentIndex < 0 || view.currentIndex >= list.length) return null;
+        return list[view.currentIndex];
+    }
+    readonly property string previewPath: currentEntry ? currentEntry.path : ""
+
     // --- GEOMETRY ---
     readonly property int screenWidth: screen ? screen.width : 1920
     readonly property int screenHeight: screen ? screen.height : 1080
@@ -76,19 +90,24 @@ PanelWindow {
     readonly property int stripHeight: Math.round(cardHeight + 100)
     readonly property int maxVisibleCards: Math.max(3, Math.round(width / (cardWidth + cardGap) * 1.527))
 
-    // Full monitor width, one strip tall, centred vertically. The strip
-    // collapses to a single pixel while closed: a mapped surface is what keeps
-    // the shell alive between toggles, and a floating strip that stayed mapped
-    // would sit over the desktop.
+    // Full monitor width, one strip tall, centred vertically, and the whole
+    // monitor while a preview is up. The strip collapses to a single pixel
+    // while closed: a mapped surface is what keeps the shell alive between
+    // toggles, and a floating strip that stayed mapped would sit over the
+    // desktop.
     visible: true
-    color: "transparent"
+    color: carousel.previewing ? carousel.theme.bg : "transparent"
     exclusiveZone: 0
     implicitWidth: carousel.shown ? 0 : 1
-    implicitHeight: carousel.shown ? carousel.stripHeight : 1
+    implicitHeight: carousel.shown
+        ? (carousel.previewing ? carousel.screenHeight : carousel.stripHeight)
+        : 1
     anchors.left: true
     anchors.right: carousel.shown
     anchors.top: true
-    margins.top: Math.max(0, Math.round((carousel.screenHeight - carousel.stripHeight) / 2))
+    margins.top: carousel.previewing
+        ? 0
+        : Math.max(0, Math.round((carousel.screenHeight - carousel.stripHeight) / 2))
 
     WlrLayershell.layer: carousel.shown ? WlrLayer.Overlay : WlrLayer.Background
     WlrLayershell.namespace: "quickshell:wallpaper-carousel"
@@ -97,6 +116,7 @@ PanelWindow {
     onShownChanged: {
         if (!shown) {
             applying = false;
+            previewing = false;
             wallpapers.query = "";
             return;
         }
@@ -126,6 +146,7 @@ PanelWindow {
     }
 
     function close() {
+        previewing = false;
         shown = false;
     }
 
@@ -155,16 +176,23 @@ PanelWindow {
         var list = wallpapers.filtered;
         if (view.currentIndex < 0 || view.currentIndex >= list.length) return;
 
+        previewing = false;
         applying = true;
         wallpapers.apply(list[view.currentIndex].path);
         closeTimer.restart();
     }
 
-    // The search field holds the focus and takes the text keys: a printable key
-    // filters the deck, and the arrows and Home/End move the caret. What is left
-    // over is Escape and Tab, and Enter through the field's accepted signal.
+    // The search field holds the focus and takes the printable keys, which
+    // filter the deck; Home/End move the caret. Left/Right and Tab step the
+    // deck, P previews, Escape unwinds, and Enter arrives through the field's
+    // accepted signal.
     function handleEscape() {
-        // The first Escape clears the filter, a second one closes the deck.
+        // Escape unwinds one layer at a time: the preview, then the filter,
+        // then the deck.
+        if (previewing) {
+            previewing = false;
+            return;
+        }
         if (wallpapers.query !== "") {
             wallpapers.query = "";
             return;
@@ -176,6 +204,19 @@ PanelWindow {
         if (applying) return;
         if (delta > 0) view.incrementCurrentIndex();
         else view.decrementCurrentIndex();
+    }
+
+    // P on the deck: the centred wallpaper fills the monitor. The deck stays
+    // mounted underneath at opacity 0, which is what keeps the keyboard focus
+    // (and the arrows) on this surface.
+    function togglePreview() {
+        if (applying) return;
+        if (previewing) {
+            previewing = false;
+            return;
+        }
+        if (currentEntry === null) return;
+        previewing = true;
     }
 
     Component.onCompleted: {
@@ -214,8 +255,10 @@ PanelWindow {
         id: content
 
         anchors.fill: parent
-        opacity: carousel.shown && !carousel.applying ? 1.0 : 0.0
-        scale: carousel.shown && !carousel.applying ? 1.0 : 0.97
+        opacity: carousel.shown && !carousel.applying && !carousel.previewing ? 1.0 : 0.0
+        scale: carousel.shown && !carousel.applying && !carousel.previewing ? 1.0 : 0.97
+        // Hidden behind the preview: clicks belong to it, not to the deck.
+        enabled: !carousel.previewing
 
         Behavior on opacity {
             NumberAnimation {
@@ -432,7 +475,7 @@ PanelWindow {
                 anchors.rightMargin: 16
                 verticalAlignment: TextInput.AlignVCenter
                 clip: true
-                readOnly: carousel.applying
+                readOnly: carousel.applying || carousel.previewing
                 selectByMouse: true
                 focus: carousel.shown
                 color: carousel.theme.text
@@ -461,11 +504,22 @@ PanelWindow {
                 // Enter applies the centred card, as the deck always did.
                 onAccepted: carousel.applyCurrent()
 
-                // The arrows and Home/End are the caret's, so the deck is
-                // stepped with Tab, the wheel or a click.
+                // Left/Right step the deck, as Tab and the wheel do; Home/End
+                // stay with the caret.
                 Keys.onTabPressed: carousel.stepDeck(1)
                 Keys.onBacktabPressed: carousel.stepDeck(-1)
+                Keys.onLeftPressed: carousel.stepDeck(-1)
+                Keys.onRightPressed: carousel.stepDeck(1)
                 Keys.onEscapePressed: carousel.handleEscape()
+
+                // P is a shortcut rather than a filter character: it shows the
+                // centred wallpaper fullscreen, and closes the preview again.
+                // Auto-repeat is ignored so holding the key does not flicker.
+                Keys.onPressed: (event) => {
+                    if (event.key !== Qt.Key_P || event.isAutoRepeat) return;
+                    carousel.togglePreview();
+                    event.accepted = true;
+                }
             }
         }
 
@@ -502,6 +556,57 @@ PanelWindow {
             font.pixelSize: 12
             visible: carousel.wallpapers.lastError !== ""
             text: carousel.wallpapers.lastError
+        }
+    }
+
+    // --- FULLSCREEN PREVIEW ---
+    // The strip has already grown to the monitor, so this is the wallpaper over
+    // the themed background. The deck is still mounted underneath at opacity 0,
+    // so this surface keeps the keyboard and the arrows keep stepping here.
+    Item {
+        id: preview
+
+        anchors.fill: parent
+        visible: carousel.previewing
+
+        Image {
+            anchors.fill: parent
+            source: carousel.previewPath === "" ? "" : "file://" + carousel.previewPath
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+            sourceSize.width: carousel.screenWidth
+            sourceSize.height: carousel.screenHeight
+        }
+
+        // A click drops back to the deck rather than applying the wallpaper.
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: carousel.previewing = false
+        }
+
+        Rectangle {
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 28
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: previewHint.implicitWidth + 28
+            height: previewHint.implicitHeight + 14
+            radius: height / 2
+            color: Qt.rgba(carousel.theme.bg.r, carousel.theme.bg.g,
+                carousel.theme.bg.b, 0.85)
+
+            Text {
+                id: previewHint
+                anchors.centerIn: parent
+                color: carousel.theme.muted
+                font.family: carousel.theme.fontFamily
+                font.pixelSize: 12
+                text: {
+                    var entry = carousel.currentEntry;
+                    var name = entry ? entry.folder + "/" + entry.name : "";
+                    return name + "   ·   P or Esc to close";
+                }
+            }
         }
     }
 
