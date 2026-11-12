@@ -114,6 +114,11 @@ PanelWindow {
     WlrLayershell.namespace: "quickshell:wallpaper-carousel"
     WlrLayershell.keyboardFocus: carousel.shown ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
+    // The field owns the keyboard in both states, so the preview keeps it
+    // focused: Escape then drops back to the deck, the arrows keep stepping and
+    // Ctrl+P closes. Typing is off there because the field goes read-only.
+    onPreviewingChanged: searchInput.forceActiveFocus()
+
     onShownChanged: {
         if (!shown) {
             applying = false;
@@ -268,8 +273,10 @@ PanelWindow {
         anchors.fill: parent
         opacity: carousel.shown && !carousel.applying && !carousel.previewing ? 1.0 : 0.0
         scale: carousel.shown && !carousel.applying && !carousel.previewing ? 1.0 : 0.97
-        // Hidden behind the preview: clicks belong to it, not to the deck.
-        enabled: !carousel.previewing
+        // Not disabled while previewing: the search field inside keeps the
+        // keyboard focus there, which is what lets Escape and the arrows reach
+        // the handlers. Clicks still belong to the preview, whose own MouseArea
+        // covers the window and sits above this.
 
         Behavior on opacity {
             NumberAnimation {
