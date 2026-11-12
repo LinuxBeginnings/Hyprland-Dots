@@ -16,9 +16,10 @@
 //       call wallpaper-carousel toggle|open|close|isOpen|refresh
 //
 // Keys: type to filter, Left/Right or Tab step the deck, Enter applies and
-//       Escape clears then closes. P blows the centred wallpaper up to the
-//       whole monitor; there Left/Right keep stepping and P or Escape drops
-//       back to the deck. Home/End stay with the caret.
+//       Escape clears then closes. Ctrl+P blows the centred wallpaper up to
+//       the whole monitor, where Left/Right keep stepping and Ctrl+P or Escape
+//       drops back to the deck; Ctrl+D sends it to the trash. Home/End stay
+//       with the caret.
 //
 // Adapted from the ML4W WallpaperApp carousel (GPL-3.0): the deck geometry is
 // theirs, the framing, theme loader, keys and wallpaper calls are this
@@ -85,9 +86,9 @@ PanelWindow {
     readonly property int searchBarWidth: Math.min(width - 60, 640)
 
     // Only the deck and the chrome under it: no panel, so nothing covers the
-    // wallpaper behind the cards. The 100 is the 8px top margin, the 12px gap,
-    // the search bar, and the caption and error lines below it.
-    readonly property int stripHeight: Math.round(cardHeight + 100)
+    // wallpaper behind the cards. The 120 is the 8px top margin, the 12px gap,
+    // the search bar, and the key hints, caption and error lines below it.
+    readonly property int stripHeight: Math.round(cardHeight + 120)
     readonly property int maxVisibleCards: Math.max(3, Math.round(width / (cardWidth + cardGap) * 1.527))
 
     // Full monitor width, one strip tall, centred vertically, and the whole
@@ -184,8 +185,8 @@ PanelWindow {
 
     // The search field holds the focus and takes the printable keys, which
     // filter the deck; Home/End move the caret. Left/Right and Tab step the
-    // deck, P previews, Escape unwinds, and Enter arrives through the field's
-    // accepted signal.
+    // deck, Ctrl+P previews, Ctrl+D deletes, Escape unwinds, and Enter arrives
+    // through the field's accepted signal.
     function handleEscape() {
         // Escape unwinds one layer at a time: the preview, then the filter,
         // then the deck.
@@ -206,9 +207,9 @@ PanelWindow {
         else view.decrementCurrentIndex();
     }
 
-    // P on the deck: the centred wallpaper fills the monitor. The deck stays
-    // mounted underneath at opacity 0, which is what keeps the keyboard focus
-    // (and the arrows) on this surface.
+    // Ctrl+P on the deck: the centred wallpaper fills the monitor. The deck
+    // stays mounted underneath at opacity 0, which is what keeps the keyboard
+    // focus (and the arrows) on this surface.
     function togglePreview() {
         if (applying) return;
         if (previewing) {
@@ -217,6 +218,16 @@ PanelWindow {
         }
         if (currentEntry === null) return;
         previewing = true;
+    }
+
+    // Ctrl+D on the deck: the centred wallpaper goes to the trash. The preview
+    // closes with it, because the image behind it is gone.
+    function deleteCurrent() {
+        if (applying) return;
+        var entry = currentEntry;
+        if (entry === null) return;
+        previewing = false;
+        wallpapers.remove(entry.path);
     }
 
     Component.onCompleted: {
@@ -512,23 +523,44 @@ PanelWindow {
                 Keys.onRightPressed: carousel.stepDeck(1)
                 Keys.onEscapePressed: carousel.handleEscape()
 
-                // P is a shortcut rather than a filter character: it shows the
-                // centred wallpaper fullscreen, and closes the preview again.
-                // Auto-repeat is ignored so holding the key does not flicker.
+                // Ctrl+P previews the centred wallpaper and Ctrl+D sends it to
+                // the trash. Both are modifier combos, so every letter still
+                // types into the filter; auto-repeat is ignored so holding the
+                // key does not flicker.
                 Keys.onPressed: (event) => {
-                    if (event.key !== Qt.Key_P || event.isAutoRepeat) return;
-                    carousel.togglePreview();
+                    if (event.isAutoRepeat) return;
+                    if (!(event.modifiers & Qt.ControlModifier)) return;
+                    if (event.key === Qt.Key_P) {
+                        carousel.togglePreview();
+                    } else if (event.key === Qt.Key_D) {
+                        carousel.deleteCurrent();
+                    } else {
+                        return;
+                    }
                     event.accepted = true;
                 }
             }
+        }
+
+        // --- KEY HINTS ---
+        Text {
+            id: keyHints
+
+            anchors.top: searchBar.bottom
+            anchors.topMargin: 6
+            anchors.horizontalCenter: parent.horizontalCenter
+            color: carousel.theme.muted
+            font.family: carousel.theme.fontFamily
+            font.pixelSize: 11
+            text: "Ctrl+P preview   ·   Ctrl+D delete   ·   Enter set wallpaper"
         }
 
         // --- NAME OF THE FOCUSED WALLPAPER ---
         Text {
             id: caption
 
-            anchors.top: searchBar.bottom
-            anchors.topMargin: 8
+            anchors.top: keyHints.bottom
+            anchors.topMargin: 4
             anchors.horizontalCenter: parent.horizontalCenter
             width: Math.min(parent.width - 60, 640)
             horizontalAlignment: Text.AlignHCenter
@@ -604,7 +636,7 @@ PanelWindow {
                 text: {
                     var entry = carousel.currentEntry;
                     var name = entry ? entry.folder + "/" + entry.name : "";
-                    return name + "   ·   P or Esc to close";
+                    return name + "   ·   Ctrl+P or Esc to close";
                 }
             }
         }

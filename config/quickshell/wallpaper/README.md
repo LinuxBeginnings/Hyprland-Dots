@@ -24,6 +24,7 @@ from the middle towards both edges, which is what gives the fan its curve.
 - `quickshell` (0.3 or newer)
 - `awww` or `swww`, as everywhere else in the dots
 - `wallust` for the theming that follows the wallpaper
+- `gio` (`glib`), for deleting wallpapers into the trash
 - A Nerd Font (`JetBrainsMono Nerd Font`, the dots default)
 
 ## Usage
@@ -65,9 +66,11 @@ bind("SUPER ALT", "W", exec_cmd("$HOME/.config/hypr/scripts/QsWallpaper.sh toggl
 The deck is keyboard and mouse driven, and a search bar floats under it - wider
 than a card, so a long file name stays readable. Typing filters the deck in
 place, and it re-centres on the wallpaper that is on screen. Left/Right step the
-deck, and `Home`/`End` stay with the caret. `P` fills the monitor with the
-centred wallpaper; there Left/Right keep stepping and `P` or `Esc` drops back to
-the deck. `P` is the preview key, so it does not type into the filter.
+deck, and `Home`/`End` stay with the caret. `Ctrl+P` fills the monitor with the
+centred wallpaper; there Left/Right keep stepping and `Ctrl+P` or `Esc` drops
+back to the deck. `Ctrl+D` deletes the centred wallpaper, and `Enter` applies
+it. The shortcuts are modifier combos, so every letter still types into the
+filter; the same three are written under the search bar.
 
 | Input | Action |
 | --- | --- |
@@ -75,7 +78,8 @@ the deck. `P` is the preview key, so it does not type into the filter.
 | **Left / Right** | step one wallpaper |
 | **Tab / Shift+Tab** | step one wallpaper |
 | **Enter** | apply the centred wallpaper |
-| **P** | preview the centred wallpaper fullscreen |
+| **Ctrl+P** | preview the centred wallpaper fullscreen |
+| **Ctrl+D** | delete the centred wallpaper (moves it to the trash) |
 | **Click a card** | apply it |
 | **Mouse wheel** | step one wallpaper per notch |
 | **Esc** | close the preview, clear the filter, or close when both are done |
@@ -103,8 +107,13 @@ the rofi fallback ignores it.
 
 The preview is the same layer-shell strip grown to the whole monitor, not a
 second window: the deck stays mounted underneath at zero opacity, which is what
-keeps the keyboard on it so the arrows and `P` still work. Clicking the preview
-drops back to the deck without applying.
+keeps the keyboard on it so the arrows and `Ctrl+P` still work. Clicking the
+preview drops back to the deck without applying.
+
+`Ctrl+D` moves the centred wallpaper to the freedesktop trash with `gio trash`,
+so an accidental delete can be restored from the file manager. On a system
+without `gio` the file is removed outright. The deck reloads the folder after
+the delete, so the card disappears.
 
 Applying fades the deck out and closes the strip; the wallpaper is set without
 a transition, so it is already in place.

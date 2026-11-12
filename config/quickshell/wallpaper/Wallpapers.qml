@@ -33,6 +33,8 @@ Item {
     property string lastError: ""
 
     property string pendingPath: ""
+    // Path the delete call is working on, for its error message.
+    property string removingPath: ""
 
     readonly property int count: wallpapers.all.length
 
@@ -104,6 +106,21 @@ Item {
         applyProcess.running = true;
     }
 
+    // Deletes go through the freedesktop trash, so Ctrl+D pressed by accident
+    // can be undone from the file manager; only a system without gio falls back
+    // to unlinking the file. The list is reloaded afterwards, which is what
+    // drops the card from the deck.
+    function remove(path) {
+        if (path === "") return;
+        wallpapers.lastError = "";
+        wallpapers.removingPath = path;
+        removeProcess.command = ["sh", "-c",
+            "if command -v gio >/dev/null 2>&1; then gio trash -- \"$1\"; "
+                + "else rm -f -- \"$1\"; fi",
+            "sh", path];
+        removeProcess.running = true;
+    }
+
     Component.onCompleted: refresh()
 
     Process {
@@ -133,6 +150,27 @@ Item {
         stdout: StdioCollector {
             id: folderOutput
             onStreamFinished: wallpapers.folder = folderOutput.text.trim()
+        }
+    }
+
+    Process {
+        id: removeProcess
+
+        stdout: StdioCollector {
+            id: removeOutput
+        }
+        stderr: StdioCollector {
+            id: removeError
+        }
+        onExited: function (exitCode, exitStatus) {
+            if (exitCode === 0) {
+                listProcess.running = true;
+            } else {
+                var message = removeError.text.trim();
+                if (message === "") message = removeOutput.text.trim();
+                wallpapers.lastError = message === ""
+                    ? "Could not delete " + wallpapers.removingPath : message;
+            }
         }
     }
 
