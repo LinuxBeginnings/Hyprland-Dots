@@ -480,6 +480,7 @@
 
 ## Updated:
 
+- Quickshell wallpaper app - increased hight and width
 - The minimum supported Hyprland is now 0.56
   - `copy.sh` used 0.55 as the floor for the Lua config
   - 0.56 is the oldest build the dots are kept working on

@@ -58,8 +58,8 @@ PanelWindow {
     // 0.36 x 1.15 is 15% larger than the original deck. Cards shrink linearly
     // from 1.0 in the middle to edgeScale at the monitor edges; the PathPercent
     // values below keep the gap between neighbours shrinking with them.
-    readonly property real cardHeightFraction: 0.36 * 1.15
-    readonly property real cardAspect: 0.4
+    readonly property real cardHeightFraction: 0.36 * 1.45
+    readonly property real cardAspect: 0.9
     readonly property real cardHeight: Math.round(screenHeight * cardHeightFraction)
     readonly property real cardWidth: Math.round(cardHeight * cardAspect)
     readonly property real cardGap: 8
