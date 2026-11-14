@@ -670,7 +670,7 @@ bind(
   exec_cmd("$HOME/.config/hypr/scripts/Tak0-Per-Window-Switch.sh"),
   { description = "switch keyboard layout per-window", locked = true }
 )
-bind("SUPER ALT", "C", exec_cmd("$HOME/.config/hypr/UserScripts/RofiCalc.sh"), { description = "calculator" })
+bind("SUPER ALT", "C", exec_cmd("qalculate-gtk"), { description = "calculator (Qalculate!)" })
 bind(
   "SUPER CTRL",
   "F9",

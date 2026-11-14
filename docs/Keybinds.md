@@ -24,7 +24,7 @@ is active rather than what this file says.
 - `SUPER + S` — Web search (`RofiSearch.sh`)
 - `SUPER + CTRL + S` — Window switcher (`rofi -show window`)
 - `SUPER + ALT + E` — Emoji menu (`RofiEmoji.sh`)
-- `SUPER + ALT + C` — Calculator (`RofiCalc.sh`)
+- `SUPER + ALT + C` — Calculator (`qalculate-gtk`)
 - `SUPER + SHIFT + M` — Online music & stations (`RofiBeats.sh`)
 - `SUPER + H` — Help / cheat sheet (`KeyHints.sh`)
 - `SUPER + SHIFT + K` — Search keybinds menu (`KeyBinds.sh`, active binds)

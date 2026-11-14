@@ -490,7 +490,8 @@ apply_window_rule({
 apply_window_rule({
   name = "float-qalculate",
   match = {
-    class = "^([Qq]alculate-gtk)$",
+    -- qalculate-gtk reports its Wayland class as plain "qalculate".
+    class = "^([Qq]alculate(-gtk)?)$",
   },
   float = true,
 })
@@ -995,7 +996,7 @@ apply_window_rule({
 apply_window_rule({
   name = "Calculators",
   match = {
-    class = "(org.gnome.Calculator|qalculate-gtk)",
+    class = "(org.gnome.Calculator|qalculate(-gtk)?)",
   },
   float = true,
   center = true,

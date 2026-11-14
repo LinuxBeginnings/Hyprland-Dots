@@ -4,6 +4,15 @@
 
 ## Fixed:
 
+- `SUPER + ALT + C` opens the Qalculate! window instead of a rofi prompt
+  - The bind ran `RofiCalc.sh`, a rofi dmenu backed by the `qalc` CLI
+  - It now launches `qalculate-gtk` directly, and `docs/Keybinds.md` says so
+  - `lua/window_rules.lua` floats and centers its window at 55% x 45% of the
+    monitor, matching both classes the app has reported (`qalculate` and
+    `qalculate-gtk`); the old rules matched only the latter
+  - `UserScripts/RofiCalc.sh` and its `rofi/config-calc.rasi` theme are removed
+    because that bind was their only consumer
+
 - A `Text Editor` choice in Quick Settings is no longer overridden
   - A `visual` of `nvim` or another TUI editor replaced it, shadowing `edit`
   - An inherited `$VISUAL` did the same, even with no `visual` configured
