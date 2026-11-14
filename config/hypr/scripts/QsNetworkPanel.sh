@@ -1235,13 +1235,53 @@ case "${1:-snapshot}" in
   tailscale)
     have tailscale || { printf 'tailscale is not installed\n' >&2; exit 1; }
     case "${2:-}" in
-      up | down) timeout 30 tailscale "$2" ;;
+      up | down)
+        local out rc
+        out=$(timeout 30 tailscale "$2" 2>&1)
+        rc=$?
+        if [[ $rc -ne 0 && ($out == *"Access denied"* || $out == *"sudo tailscale"*) ]]; then
+          if have pkexec; then
+            out=$(timeout 30 pkexec tailscale set --operator="$USER" 2>&1) && \
+            out=$(timeout 30 tailscale "$2" 2>&1)
+            rc=$?
+            if [[ $rc -ne 0 ]]; then
+              out=$(timeout 30 pkexec tailscale "$2" 2>&1)
+              rc=$?
+            fi
+          elif sudo -n true 2>/dev/null; then
+            sudo tailscale set --operator="$USER" 2>/dev/null || true
+            out=$(timeout 30 sudo tailscale "$2" 2>&1)
+            rc=$?
+          fi
+        fi
+        if [[ $rc -ne 0 ]]; then
+          printf '%s\n' "$out" >&2
+          exit $rc
+        fi
+        ;;
       exit-node)
         [[ -n ${3:-} ]] || { printf 'usage: %s tailscale exit-node NAME|none\n' "$0" >&2; exit 2; }
+        local arg
         if [[ $3 == none ]]; then
-          timeout 30 tailscale set --exit-node=
+          arg="--exit-node="
         else
-          timeout 30 tailscale set --exit-node="$3"
+          arg="--exit-node=$3"
+        fi
+        local out rc
+        out=$(timeout 30 tailscale set "$arg" 2>&1)
+        rc=$?
+        if [[ $rc -ne 0 && ($out == *"Access denied"* || $out == *"sudo tailscale"*) ]]; then
+          if have pkexec; then
+            out=$(timeout 30 pkexec tailscale set "$arg" 2>&1)
+            rc=$?
+          elif sudo -n true 2>/dev/null; then
+            out=$(timeout 30 sudo tailscale set "$arg" 2>&1)
+            rc=$?
+          fi
+        fi
+        if [[ $rc -ne 0 ]]; then
+          printf '%s\n' "$out" >&2
+          exit $rc
         fi
         ;;
       suggest)
