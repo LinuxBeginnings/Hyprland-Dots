@@ -2,6 +2,7 @@
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 
 Rectangle {
     id: modal
@@ -413,13 +414,14 @@ Rectangle {
 
                         // Custom option button
                         Rectangle {
+                            id: customTermBtn
                             readonly property bool isSelected: modal.customTerminalActive
                             implicitWidth: customLabel.implicitWidth + 14
                             implicitHeight: 24
                             radius: 5
-                            color: isSelected ? modal.theme.accent : (customMouse.containsMouse ? modal.theme.hover : modal.theme.surfaceAlt)
+                            color: customTermBtn.isSelected ? modal.theme.accent : (customMouse.containsMouse ? modal.theme.hover : modal.theme.surfaceAlt)
                             border.width: 1
-                            border.color: isSelected ? modal.theme.accent : modal.theme.border
+                            border.color: customTermBtn.isSelected ? modal.theme.accent : modal.theme.border
 
                             Text {
                                 id: customLabel
@@ -427,7 +429,7 @@ Rectangle {
                                 text: "+ Custom..."
                                 font.family: modal.theme.fontFamily
                                 font.pixelSize: 10
-                                color: isSelected ? modal.theme.accentInk : modal.theme.text
+                                color: customTermBtn.isSelected ? modal.theme.accentInk : modal.theme.text
                             }
 
                             MouseArea {
@@ -607,13 +609,14 @@ Rectangle {
                         }
 
                         Rectangle {
+                            id: customKeyBtn
                             readonly property bool isSelected: modal.customKeyActive
                             implicitWidth: customKeyLabel.implicitWidth + 14
                             implicitHeight: 24
                             radius: 5
-                            color: isSelected ? modal.theme.accent : (customKeyMouse.containsMouse ? modal.theme.hover : modal.theme.surfaceAlt)
+                            color: customKeyBtn.isSelected ? modal.theme.accent : (customKeyMouse.containsMouse ? modal.theme.hover : modal.theme.surfaceAlt)
                             border.width: 1
-                            border.color: isSelected ? modal.theme.accent : modal.theme.border
+                            border.color: customKeyBtn.isSelected ? modal.theme.accent : modal.theme.border
 
                             Text {
                                 id: customKeyLabel
@@ -621,7 +624,7 @@ Rectangle {
                                 text: "+ Custom path..."
                                 font.family: modal.theme.fontFamily
                                 font.pixelSize: 10
-                                color: isSelected ? modal.theme.accentInk : modal.theme.text
+                                color: customKeyBtn.isSelected ? modal.theme.accentInk : modal.theme.text
                             }
 
                             MouseArea {
