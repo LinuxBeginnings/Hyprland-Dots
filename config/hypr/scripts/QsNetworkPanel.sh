@@ -26,6 +26,15 @@
 #   bt-power on|off                 Bluetooth adapter power
 #   bt-scan                         discover for a few seconds
 #   bt connect|disconnect|pair MAC  manage one bluetooth device
+#   tailscale-list-terminals        list installed terminal emulators
+#   tailscale-list-keys             list discovered SSH private keys in ~/.ssh
+#   tailscale-ssh-test ...          test SSH connection to a host
+#   tailscale-ssh-connect ...       launch terminal connected to host via SSH
+#   tailscale-save-host ...         save host profile in UserConfigs/tailscale-hosts.json
+#   tailscale-export ...            export Tailscale host profiles to file
+#   tailscale-import ...            import Tailscale host profiles from file
+#   tailscale-logs [text|json]      read Tailscale SSH log
+#   tailscale-log-save PATH         save log file to destination disk path
 #
 # snapshot format, one record per line, tab separated, no tabs or newlines
 # inside a value:
@@ -574,7 +583,442 @@ snapshot_status() {
   snapshot_bluetooth
 }
 
-# ------------------------------------------------------------------ waybar --
+# -------------------------------------------------------- tailscale ssh --
+
+ts_hosts_file() {
+  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  printf '%s' "$cfg_home/hypr/UserConfigs/tailscale-hosts.json"
+}
+
+ts_log_file() {
+  local state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+  printf '%s' "$state_home/hypr/tailscale-ssh.log"
+}
+
+log_ts_ssh_error() {
+  local host="${1:-}" ip="${2:-}" port="${3:-22}" user="${4:-}" msg="${5:-}"
+  local log_file
+  log_file=$(ts_log_file)
+  mkdir -p "$(dirname "$log_file")" 2>/dev/null || true
+  local ts
+  ts=$(date '+%Y-%m-%d %H:%M:%S')
+  printf '[%s] [ERROR] Host: %s (%s:%s) User: %s - %s\n' \
+    "$ts" "$host" "$ip" "$port" "$user" "$msg" >> "$log_file"
+
+  local icon="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images/error.png"
+  if [[ ! -f "$icon" && -f "$script_dir/../../swaync/images/error.png" ]]; then
+    icon="$script_dir/../../swaync/images/error.png"
+  fi
+  if have notify-send; then
+    if [[ -f "$icon" ]]; then
+      notify-send -u normal -i "$icon" "Tailscale SSH Error" "$host: $msg"
+    else
+      notify-send -u normal "Tailscale SSH Error" "$host: $msg"
+    fi
+  fi
+}
+
+log_ts_ssh_info() {
+  local msg="${1:-}"
+  local log_file
+  log_file=$(ts_log_file)
+  mkdir -p "$(dirname "$log_file")" 2>/dev/null || true
+  local ts
+  ts=$(date '+%Y-%m-%d %H:%M:%S')
+  printf '[%s] [INFO] %s\n' "$ts" "$msg" >> "$log_file"
+}
+
+list_installed_terminals() {
+  local -a candidates=(kitty ghostty alacritty foot wezterm konsole gnome-terminal xfce4-terminal ptyxis urxvt xterm warp-terminal)
+  local -A seen=()
+  local -a discovered=()
+  local c
+
+  # First check well-known terminals
+  for c in "${candidates[@]}"; do
+    if have "$c"; then
+      discovered+=("$c")
+      seen["$c"]=1
+    fi
+  done
+
+  # Scan .desktop files for TerminalEmulator category
+  local d_dirs=(
+    "${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    "/usr/local/share/applications"
+    "/usr/share/applications"
+    "/var/lib/flatpak/exports/share/applications"
+  )
+  local d
+  for d in "${d_dirs[@]}"; do
+    [[ -d "$d" ]] || continue
+    while IFS= read -r f; do
+      if grep -q -E "^Categories=.*TerminalEmulator" "$f" 2>/dev/null; then
+        local exec_line bin next_arg
+        exec_line=$(grep -E '^Exec=' "$f" 2>/dev/null | head -n1 | sed -e 's/^Exec=//' -e 's/ %[a-zA-Z]//g')
+        read -r bin next_arg _ <<< "$exec_line"
+        bin="$(basename "${bin//\"/}")"
+        bin="${bin//\'/}"
+        if [[ "$bin" == "env" && -n "${next_arg:-}" ]]; then
+          bin="$(basename "${next_arg//\"/}")"
+          bin="${bin//\'/}"
+        fi
+        [[ "$bin" == "env" ]] && continue
+        if [[ -n "$bin" && -z "${seen[$bin]:-}" ]] && have "$bin"; then
+          discovered+=("$bin")
+          seen["$bin"]=1
+        fi
+      fi
+    done < <(find "$d" -maxdepth 2 -name "*.desktop" 2>/dev/null)
+  done
+
+  printf '%s\n' "${discovered[@]}"
+}
+
+list_ssh_keys() {
+  local ssh_dir="$HOME/.ssh"
+  [[ -d "$ssh_dir" ]] || return 0
+  local -a keys=()
+  local f fname
+  while IFS= read -r f; do
+    [[ -f "$f" ]] || continue
+    fname="$(basename "$f")"
+    case "$fname" in
+      *.pub|known_hosts*|config*|authorized_keys*) continue ;;
+      *)
+        if [[ -r "$f" ]]; then
+          keys+=("$f")
+        fi
+        ;;
+    esac
+  done < <(find "$ssh_dir" -maxdepth 1 -type f 2>/dev/null | sort)
+  printf '%s\n' "${keys[@]}"
+}
+
+tailscale_ssh_test() {
+  local host="${1:-}" ip="${2:-}" port="${3:-22}" user="${4:-$USER}" auth_type="${5:-key}" key_path="${6:-}"
+  [[ -n "$ip" ]] || { printf 'Missing IP address\n' >&2; exit 2; }
+  port="${port:-22}"
+  user="${user:-$USER}"
+
+  # Expand tilde in key_path
+  if [[ "$key_path" == "~"* ]]; then
+    key_path="${HOME}${key_path#\~}"
+  fi
+
+  # 1. Port reachability check
+  local reachable=0
+  if have nc; then
+    if nc -z -w 3 "$ip" "$port" 2>/dev/null; then
+      reachable=1
+    fi
+  else
+    if timeout 3 bash -c "cat < /dev/null > /dev/tcp/$ip/$port" 2>/dev/null; then
+      reachable=1
+    fi
+  fi
+
+  if ((reachable == 0)); then
+    local err_msg="Port $port is unreachable or connection timed out on $ip"
+    log_ts_ssh_error "$host" "$ip" "$port" "$user" "$err_msg"
+    printf '%s\n' "$err_msg" >&2
+    exit 1
+  fi
+
+  # 2. Key authentication test if key auth is selected
+  if [[ "$auth_type" == "key" ]]; then
+    if [[ -z "$key_path" || ! -f "$key_path" ]]; then
+      local err_msg="SSH key file not found: ${key_path:-(none)}"
+      log_ts_ssh_error "$host" "$ip" "$port" "$user" "$err_msg"
+      printf '%s\n' "$err_msg" >&2
+      exit 1
+    fi
+
+    local ssh_out ssh_rc
+    ssh_out=$(timeout 5 ssh -o BatchMode=yes \
+      -o ConnectTimeout=3 \
+      -o StrictHostKeyChecking=accept-new \
+      -p "$port" -i "$key_path" "$user@$ip" true 2>&1)
+    ssh_rc=$?
+    if [[ $ssh_rc -ne 0 ]]; then
+      local err_msg="SSH authentication failed (exit $ssh_rc): ${ssh_out:-Permission denied}"
+      log_ts_ssh_error "$host" "$ip" "$port" "$user" "$err_msg"
+      printf '%s\n' "$err_msg" >&2
+      exit 1
+    fi
+  fi
+
+  log_ts_ssh_info "Connection test succeeded for $host ($ip:$port, auth: $auth_type)"
+  printf 'OK\n'
+  exit 0
+}
+
+tailscale_ssh_connect() {
+  local host="${1:-}" ip="${2:-}" port="${3:-22}" user="${4:-$USER}" terminal="${5:-}" auth_type="${6:-key}" key_path="${7:-}"
+  [[ -n "$ip" ]] || { printf 'Missing IP address\n' >&2; exit 2; }
+  port="${port:-22}"
+  user="${user:-$USER}"
+
+  if [[ "$key_path" == "~"* ]]; then
+    key_path="${HOME}${key_path#\~}"
+  fi
+
+  local ssh_cmd
+  if [[ "$auth_type" == "key" && -n "$key_path" ]]; then
+    ssh_cmd="ssh -p $port -i \"$key_path\" \"$user@$ip\""
+  else
+    ssh_cmd="ssh -p $port \"$user@$ip\""
+  fi
+
+  local launch_script="$script_dir/LaunchTerminal.sh"
+  if [[ ! -x "$launch_script" && -f "$script_dir/LaunchTerminal.sh" ]]; then
+    launch_script="$script_dir/LaunchTerminal.sh"
+  fi
+
+  local term_cmd="${terminal:-}"
+  if [[ -z "$term_cmd" ]]; then
+    term_cmd="${TERMINAL:-kitty}"
+  fi
+
+  if [[ -x "$launch_script" ]]; then
+    if ! "$launch_script" "$term_cmd" "$ssh_cmd"; then
+      local err_msg="Failed to launch terminal '$term_cmd' for $host"
+      log_ts_ssh_error "$host" "$ip" "$port" "$user" "$err_msg"
+      printf '%s\n' "$err_msg" >&2
+      exit 1
+    fi
+  else
+    if ! have "$term_cmd"; then
+      term_cmd="kitty"
+    fi
+    "$term_cmd" -e sh -c "$ssh_cmd" >/dev/null 2>&1 &
+  fi
+
+  log_ts_ssh_info "Launched SSH connection to $host ($ip:$port) via $term_cmd"
+  exit 0
+}
+
+tailscale_save_host() {
+  local host_key="${1:-}" host_json="${2:-}"
+  [[ -n "$host_key" && -n "$host_json" ]] || { printf 'usage: tailscale-save-host KEY JSON\n' >&2; exit 2; }
+  local target_file
+  target_file=$(ts_hosts_file)
+  mkdir -p "$(dirname "$target_file")" 2>/dev/null || true
+
+  if [[ ! -f "$target_file" ]]; then
+    printf '{"version":1,"hosts":{}}\n' > "$target_file"
+  fi
+
+  if have jq; then
+    local updated
+    updated=$(jq --arg key "$host_key" --argjson data "$host_json" '.hosts[$key] = $data' "$target_file" 2>/dev/null)
+    if [[ -n "$updated" ]]; then
+      printf '%s\n' "$updated" > "$target_file"
+      log_ts_ssh_info "Saved host configuration for $host_key"
+      exit 0
+    fi
+  fi
+
+  # Fallback to python3 if jq fails
+  if have python3; then
+    python3 -c "
+import json, sys
+fpath = '$target_file'
+try:
+    with open(fpath, 'r') as fp:
+        doc = json.load(fp)
+except Exception:
+    doc = {'version': 1, 'hosts': {}}
+if 'hosts' not in doc:
+    doc['hosts'] = {}
+doc['hosts']['$host_key'] = json.loads(sys.argv[1])
+with open(fpath, 'w') as fp:
+    json.dump(doc, fp, indent=2)
+" "$host_json"
+    log_ts_ssh_info "Saved host configuration for $host_key"
+    exit 0
+  fi
+
+  printf 'Unable to save host configuration: jq or python3 required\n' >&2
+  exit 1
+}
+
+tailscale_export_config() {
+  local target="${1:-}"
+  if [[ -z "$target" ]]; then
+    target="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/tailscale-hosts-export.json"
+  fi
+  if [[ "$target" == "~"* ]]; then
+    target="${HOME}${target#\~}"
+  fi
+
+  local src
+  src=$(ts_hosts_file)
+  if [[ ! -f "$src" ]]; then
+    printf '{"version":1,"hosts":{}}\n' > "$src"
+  fi
+
+  mkdir -p "$(dirname "$target")" 2>/dev/null || true
+  cp -f "$src" "$target"
+  log_ts_ssh_info "Exported Tailscale host configuration to $target"
+
+  local icon="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images/ja.png"
+  if have notify-send; then
+    if [[ -f "$icon" ]]; then
+      notify-send -u low -i "$icon" "Tailscale Config" "Exported configuration to $(basename "$target")"
+    else
+      notify-send -u low "Tailscale Config" "Exported configuration to $(basename "$target")"
+    fi
+  fi
+  printf '%s\n' "$target"
+  exit 0
+}
+
+tailscale_import_config() {
+  local source="${1:-}"
+  [[ -n "$source" ]] || { printf 'Missing source configuration file\n' >&2; exit 2; }
+  if [[ "$source" == "~"* ]]; then
+    source="${HOME}${source#\~}"
+  fi
+
+  if [[ ! -f "$source" ]]; then
+    local err_msg="Import file does not exist: $source"
+    log_ts_ssh_error "import" "-" "-" "-" "$err_msg"
+    printf '%s\n' "$err_msg" >&2
+    exit 1
+  fi
+
+  local valid=0
+  if have jq; then
+    jq -e '.hosts' "$source" >/dev/null 2>&1 && valid=1
+  elif have python3; then
+    python3 -c "import json; d = json.load(open('$source')); assert 'hosts' in d" >/dev/null 2>&1 && valid=1
+  fi
+
+  if ((valid == 0)); then
+    local err_msg="Invalid configuration file format (missing 'hosts' dictionary)"
+    log_ts_ssh_error "import" "-" "-" "-" "$err_msg"
+    printf '%s\n' "$err_msg" >&2
+    exit 1
+  fi
+
+  local target
+  target=$(ts_hosts_file)
+  mkdir -p "$(dirname "$target")" 2>/dev/null || true
+  if [[ ! -f "$target" ]]; then
+    printf '{"version":1,"hosts":{}}\n' > "$target"
+  fi
+
+  # Merge source into target
+  if have jq; then
+    local merged
+    merged=$(jq -s '.[0] * .[1]' "$target" "$source" 2>/dev/null)
+    if [[ -n "$merged" ]]; then
+      printf '%s\n' "$merged" > "$target"
+    fi
+  elif have python3; then
+    python3 -c "
+import json
+with open('$target', 'r') as fp:
+    base = json.load(fp)
+with open('$source', 'r') as fp:
+    incoming = json.load(fp)
+if 'hosts' not in base: base['hosts'] = {}
+base['hosts'].update(incoming.get('hosts', {}))
+with open('$target', 'w') as fp:
+    json.dump(base, fp, indent=2)
+"
+  fi
+
+  log_ts_ssh_info "Imported Tailscale host configuration from $source"
+  local icon="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images/ja.png"
+  if have notify-send; then
+    if [[ -f "$icon" ]]; then
+      notify-send -u low -i "$icon" "Tailscale Config" "Imported configuration successfully"
+    else
+      notify-send -u low "Tailscale Config" "Imported configuration successfully"
+    fi
+  fi
+  printf 'OK\n'
+  exit 0
+}
+
+tailscale_read_logs() {
+  local format="${1:-text}"
+  local log_file
+  log_file=$(ts_log_file)
+  if [[ ! -f "$log_file" ]]; then
+    if [[ "$format" == "json" ]]; then
+      printf '[]\n'
+    else
+      printf 'No logs recorded yet.\n'
+    fi
+    exit 0
+  fi
+
+  if [[ "$format" == "json" ]]; then
+    if have jq; then
+      awk '
+        match($0, /^\[([0-9: -]+)\] \[([A-Z]+)\] (.*)$/, arr) {
+          msg = arr[3]
+          gsub(/"/, "\\\"", msg)
+          printf "{\"timestamp\":\"%s\",\"level\":\"%s\",\"message\":\"%s\"}\n", arr[1], arr[2], msg
+        }' "$log_file" | jq -s '.'
+    else
+      python3 -c "
+import json, re
+res = []
+pattern = re.compile(r'^\[(.*?)\] \[(.*?)\] (.*)$')
+try:
+    with open('$log_file') as fp:
+        for line in fp:
+            m = pattern.match(line.strip())
+            if m:
+                res.append({'timestamp': m.group(1), 'level': m.group(2), 'message': m.group(3)})
+except Exception:
+    pass
+print(json.dumps(res))
+"
+    fi
+  else
+    tail -n 120 "$log_file"
+  fi
+  exit 0
+}
+
+tailscale_save_logs_to_disk() {
+  local target="${1:-}"
+  if [[ -z "$target" ]]; then
+    target="$HOME/tailscale-ssh-$(date +%Y%m%d-%H%M%S).log"
+  fi
+  if [[ "$target" == "~"* ]]; then
+    target="${HOME}${target#\~}"
+  fi
+
+  local log_file
+  log_file=$(ts_log_file)
+  if [[ ! -f "$log_file" ]]; then
+    printf 'No logs recorded yet\n' >&2
+    exit 1
+  fi
+
+  mkdir -p "$(dirname "$target")" 2>/dev/null || true
+  cp -f "$log_file" "$target"
+  log_ts_ssh_info "Saved Tailscale SSH log to $target"
+
+  local icon="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images/ja.png"
+  if have notify-send; then
+    if [[ -f "$icon" ]]; then
+      notify-send -u low -i "$icon" "Tailscale Logs" "Saved log to $(basename "$target")"
+    else
+      notify-send -u low "Tailscale Logs" "Saved log to $(basename "$target")"
+    fi
+  fi
+  printf '%s\n' "$target"
+  exit 0
+}
+
+# -------------------------------------------------------- main router --
 
 waybar_status() {
   local snapshot_text
@@ -824,6 +1268,40 @@ case "${1:-snapshot}" in
         ;;
     esac
     ;;
+  tailscale-list-terminals)
+    list_installed_terminals
+    ;;
+  tailscale-list-keys)
+    list_ssh_keys
+    ;;
+  tailscale-ssh-test)
+    shift
+    tailscale_ssh_test "$@"
+    ;;
+  tailscale-ssh-connect)
+    shift
+    tailscale_ssh_connect "$@"
+    ;;
+  tailscale-save-host)
+    shift
+    tailscale_save_host "$@"
+    ;;
+  tailscale-export)
+    shift
+    tailscale_export_config "${1:-}"
+    ;;
+  tailscale-import)
+    shift
+    tailscale_import_config "${1:-}"
+    ;;
+  tailscale-logs)
+    shift
+    tailscale_read_logs "${1:-text}"
+    ;;
+  tailscale-log-save)
+    shift
+    tailscale_save_logs_to_disk "${1:-}"
+    ;;
   bt)
     case "${2:-}" in
       connect | disconnect | pair | trust | remove)
@@ -841,7 +1319,7 @@ case "${1:-snapshot}" in
     esac
     ;;
   *)
-    printf 'usage: %s [snapshot|status|toggle|open|close|wifi|scan-wifi|connect-wifi|disconnect-wifi|connect-device|disconnect-device|bt-power|bt-scan|bt|container|tailscale]\n' "$0" >&2
+    printf 'usage: %s [snapshot|status|toggle|open|close|wifi|scan-wifi|connect-wifi|disconnect-wifi|connect-device|disconnect-device|bt-power|bt-scan|bt|container|tailscale|tailscale-list-terminals|tailscale-list-keys|tailscale-ssh-test|tailscale-ssh-connect|tailscale-save-host|tailscale-export|tailscale-import|tailscale-logs|tailscale-log-save]\n' "$0" >&2
     exit 2
     ;;
 esac

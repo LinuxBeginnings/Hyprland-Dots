@@ -29,6 +29,9 @@ ColumnLayout {
     property bool showStopped: false
 
     signal powerToggled()
+    signal openHostSettings(var peer)
+    signal openConfigModal(string mode)
+    signal openLogModal()
 
     height: implicitHeight
     spacing: 6
@@ -142,6 +145,124 @@ ColumnLayout {
         }
     }
 
+    // ------------------------------------------------ Tailscale action row
+    RowLayout {
+        Layout.fillWidth: true
+        Layout.topMargin: 2
+        Layout.bottomMargin: 2
+        spacing: 6
+        visible: root.showPower
+
+        Rectangle {
+            implicitHeight: 26
+            implicitWidth: expBtnText.implicitWidth + 20
+            radius: 5
+            color: expMouse.containsMouse ? root.theme.hover : root.theme.surfaceAlt
+            border.width: 1
+            border.color: root.theme.border
+
+            RowLayout {
+                anchors.centerIn: parent
+                spacing: 5
+                Text {
+                    text: "󰈔"
+                    font.family: root.theme.iconFont
+                    font.pixelSize: 11
+                    color: root.theme.accent
+                }
+                Text {
+                    id: expBtnText
+                    text: "Export config"
+                    font.family: root.theme.fontFamily
+                    font.pixelSize: 10
+                    color: root.theme.text
+                }
+            }
+
+            MouseArea {
+                id: expMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.openConfigModal("export")
+            }
+        }
+
+        Rectangle {
+            implicitHeight: 26
+            implicitWidth: impBtnText.implicitWidth + 20
+            radius: 5
+            color: impMouse.containsMouse ? root.theme.hover : root.theme.surfaceAlt
+            border.width: 1
+            border.color: root.theme.border
+
+            RowLayout {
+                anchors.centerIn: parent
+                spacing: 5
+                Text {
+                    text: "󰈏"
+                    font.family: root.theme.iconFont
+                    font.pixelSize: 11
+                    color: root.theme.accent
+                }
+                Text {
+                    id: impBtnText
+                    text: "Import config"
+                    font.family: root.theme.fontFamily
+                    font.pixelSize: 10
+                    color: root.theme.text
+                }
+            }
+
+            MouseArea {
+                id: impMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.openConfigModal("import")
+            }
+        }
+
+        Rectangle {
+            implicitHeight: 26
+            implicitWidth: logBtnText.implicitWidth + 20
+            radius: 5
+            color: logMouse.containsMouse ? root.theme.hover : root.theme.surfaceAlt
+            border.width: 1
+            border.color: root.theme.border
+
+            RowLayout {
+                anchors.centerIn: parent
+                spacing: 5
+                Text {
+                    text: "󰈙"
+                    font.family: root.theme.iconFont
+                    font.pixelSize: 11
+                    color: root.theme.accent
+                }
+                Text {
+                    id: logBtnText
+                    text: "View Logs"
+                    font.family: root.theme.fontFamily
+                    font.pixelSize: 10
+                    color: root.theme.text
+                }
+            }
+
+            MouseArea {
+                id: logMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.openLogModal()
+            }
+        }
+
+        Item {
+            Layout.fillWidth: true
+        }
+    }
+
     // -------------------------------------------------------------- content
     Flickable {
         Layout.fillWidth: true
@@ -240,16 +361,141 @@ ColumnLayout {
             Repeater {
                 model: root.peers
 
-                delegate: RowItem {
+                delegate: Rectangle {
+                    id: peerRow
                     required property var modelData
-                    theme: root.theme
                     Layout.fillWidth: true
-                    icon: "󰢬"
-                    label: root.peerLabel(modelData)
-                    detail: root.peerDetail(modelData)
-                    trailing: modelData.online ? "Online" : "Offline"
-                    dimmed: !modelData.online
-                    interactive: false
+                    implicitHeight: 46
+                    radius: 8
+                    color: peerRowHover.hovered ? root.theme.hover : "transparent"
+
+                    readonly property bool isOnline: modelData.online
+                    readonly property bool isSelf: modelData.self
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 10
+                        anchors.rightMargin: 10
+                        spacing: 8
+
+                        Text {
+                            text: "󰢬"
+                            font.family: root.theme.iconFont
+                            font.pixelSize: 16
+                            color: peerRow.isOnline ? root.theme.accent : root.theme.muted
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 0
+
+                            Text {
+                                text: root.peerLabel(modelData)
+                                color: root.theme.text
+                                font.family: root.theme.fontFamily
+                                font.pixelSize: 12
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+
+                            Text {
+                                text: root.peerDetail(modelData)
+                                color: root.theme.muted
+                                font.family: root.theme.fontFamily
+                                font.pixelSize: 10
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+                        }
+
+                        // Connect button (to the left of online/offline status)
+                        Rectangle {
+                            id: connectBtn
+                            readonly property bool canConnect: peerRow.isOnline && !peerRow.isSelf
+                            implicitHeight: 24
+                            implicitWidth: connectBtnText.implicitWidth + 14
+                            radius: 5
+                            color: canConnect
+                                ? (connectMouse.containsMouse ? root.theme.accent : root.theme.surfaceAlt)
+                                : root.theme.surfaceAlt
+                            opacity: canConnect ? 1.0 : 0.4
+                            border.width: 1
+                            border.color: canConnect && connectMouse.containsMouse ? root.theme.accent : root.theme.border
+
+                            Text {
+                                id: connectBtnText
+                                anchors.centerIn: parent
+                                text: "Connect"
+                                font.family: root.theme.fontFamily
+                                font.pixelSize: 10
+                                font.bold: connectBtn.canConnect
+                                color: connectBtn.canConnect && connectMouse.containsMouse
+                                    ? root.theme.accentInk
+                                    : (connectBtn.canConnect ? root.theme.text : root.theme.muted)
+                            }
+
+                            MouseArea {
+                                id: connectMouse
+                                anchors.fill: parent
+                                enabled: connectBtn.canConnect
+                                hoverEnabled: connectBtn.canConnect
+                                cursorShape: connectBtn.canConnect ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onClicked: {
+                                    if (!root.backend) return;
+                                    var cfg = root.backend.getHostConfig(modelData);
+                                    root.backend.connectTailscaleSsh(
+                                        cfg.hostname,
+                                        cfg.ip,
+                                        cfg.port,
+                                        cfg.user,
+                                        cfg.terminal,
+                                        cfg.auth_type,
+                                        cfg.key_path
+                                    );
+                                }
+                            }
+                        }
+
+                        // Online / Offline Status
+                        Text {
+                            text: peerRow.isOnline ? "Online" : "Offline"
+                            color: peerRow.isOnline ? root.theme.good : root.theme.muted
+                            font.family: root.theme.fontFamily
+                            font.pixelSize: 10
+                            font.bold: peerRow.isOnline
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        // Settings Icon (to the right of online/offline status)
+                        Rectangle {
+                            implicitWidth: 26
+                            implicitHeight: 26
+                            radius: 13
+                            color: settingsMouse.containsMouse ? root.theme.surfaceAlt : "transparent"
+                            Layout.alignment: Qt.AlignVCenter
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "󰒓"
+                                font.family: root.theme.iconFont
+                                font.pixelSize: 13
+                                color: settingsMouse.containsMouse ? root.theme.accent : root.theme.muted
+                            }
+
+                            MouseArea {
+                                id: settingsMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.openHostSettings(modelData)
+                            }
+                        }
+                    }
+
+                    HoverHandler {
+                        id: peerRowHover
+                    }
                 }
             }
 

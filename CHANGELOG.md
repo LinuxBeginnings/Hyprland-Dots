@@ -289,6 +289,18 @@
 
 ## Added:
 
+- Tailscale host SSH management, testing and config sync in network widget
+  - Connect button left of status launches SSH session in configured terminal
+  - Connect button is disabled and dimmed when the peer host is offline
+  - Settings icon opens host modal to edit hostname, IP, port, user and auth
+  - Detects installed local terminals and validates custom terminal commands
+  - Dropdown selector for SSH private keys in `~/.ssh` with path verification
+  - Test connection button verifies network reachability and SSH authentication
+  - Failed connection tests and launches record to log and notify via desktop
+  - Export config, import config and view logs buttons added to Tailscale tab
+  - Log viewer modal supports Text and structured JSON format with save to disk
+  - Host profiles persist across updates in `UserConfigs/tailscale-hosts.json`
+
 - `ttt` recognized as a TUI editor in Quick Settings and User Defaults
   - `Kool_Quick_Settings.sh` adds `ttt` to `is_tui_editor()`
   - `RofiUserDefaults.sh` lists `ttt` in the `Text Editor` candidates

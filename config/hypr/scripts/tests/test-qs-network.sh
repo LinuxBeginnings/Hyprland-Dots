@@ -295,6 +295,65 @@ else
   fail "the shell does not answer ready, or launch_panel does not ask"
 fi
 
+# ---------------------------------------------------- tailscale host ssh --
+it "tailscale-list-terminals identifies available terminals"
+terms_out="$(bash "$SCRIPT" tailscale-list-terminals)"
+if [[ -n $terms_out ]]; then
+  pass_msg
+else
+  fail "no terminals returned from tailscale-list-terminals"
+fi
+
+it "tailscale-export and tailscale-import work with JSON config"
+mkdir -p "$XDG_CONFIG_HOME/hypr/UserConfigs"
+exp_file="$WORK/test-export.json"
+cat >"$XDG_CONFIG_HOME/hypr/UserConfigs/tailscale-hosts.json" <<'EOF'
+{"version":1,"hosts":{"100.64.0.5":{"hostname":"node-a","ip":"100.64.0.5","port":22,"user":"testuser","terminal":"kitty","auth_type":"key","key_path":"~/.ssh/id_ed25519"}}}
+EOF
+if bash "$SCRIPT" tailscale-export "$exp_file" >/dev/null 2>&1 && [[ -s $exp_file ]]; then
+  pass_msg
+else
+  fail "tailscale-export failed to produce $exp_file"
+fi
+
+it "tailscale-import merges imported host config"
+imp_src="$WORK/import-src.json"
+cat >"$imp_src" <<'EOF'
+{"version":1,"hosts":{"100.64.0.9":{"hostname":"node-b","ip":"100.64.0.9","port":2222,"user":"otheruser","terminal":"ghostty","auth_type":"password","key_path":""}}}
+EOF
+if bash "$SCRIPT" tailscale-import "$imp_src" >/dev/null 2>&1 &&
+   grep -q 'node-b' "$XDG_CONFIG_HOME/hypr/UserConfigs/tailscale-hosts.json" &&
+   grep -q 'node-a' "$XDG_CONFIG_HOME/hypr/UserConfigs/tailscale-hosts.json"; then
+  pass_msg
+else
+  fail "tailscale-import did not merge host records"
+fi
+
+it "tailscale-logs formats text and json"
+log_target="$WORK/state/hypr/tailscale-ssh.log"
+mkdir -p "$(dirname "$log_target")"
+cat >"$log_target" <<'EOF'
+[2026-11-14 10:00:00] [INFO] Connection test succeeded for test-host (100.64.0.1:22)
+[2026-11-14 10:05:00] [ERROR] Host: test-host (100.64.0.1:22) User: test - Port 22 unreachable
+EOF
+export XDG_STATE_HOME="$WORK/state"
+logs_txt="$(bash "$SCRIPT" tailscale-logs text)"
+logs_json="$(bash "$SCRIPT" tailscale-logs json)"
+if grep -q 'Port 22 unreachable' <<<"$logs_txt" && jq -e '.[1].level == "ERROR"' <<<"$logs_json" >/dev/null 2>&1; then
+  pass_msg
+else
+  fail "tailscale-logs output did not match expected structure"
+fi
+
+it "tailscale-ssh-test logs errors on unreachable port"
+if bash "$SCRIPT" tailscale-ssh-test "deadhost" "127.0.0.1" 65432 "testuser" "key" "/dev/null" >/dev/null 2>&1; then
+  fail "tailscale-ssh-test succeeded unexpectedly on closed port"
+elif grep -q "deadhost" "$log_target"; then
+  pass_msg
+else
+  fail "tailscale-ssh-test did not record error to log"
+fi
+
 if command -v qmllint >/dev/null 2>&1; then
   it "the applet's QML parses"
   if qmllint "$WIDGET"/*.qml >"$WORK/qmllint.log" 2>&1; then

@@ -33,6 +33,12 @@ PanelWindow {
     // module when it is opened from there.
     property int rightMargin: 10
 
+    // Modal management state
+    property string activeModal: ""
+    property var selectedPeer: null
+    property string configMode: "export"
+    readonly property bool hasModal: activeModal !== ""
+
     // Card geometry: wide enough for all six tabs on one line, inset from its
     // own border by cardPadding, and clearing the Waybar bar above it.
     readonly property int cardWidth: 620
@@ -72,9 +78,9 @@ PanelWindow {
     // window is left.
     WlrLayershell.layer: panel.shown ? WlrLayer.Overlay : WlrLayer.Background
     WlrLayershell.namespace: "quickshell:network-widget"
-    // Only take the keyboard while a password is being typed, so the panel
+    // Only take the keyboard while a password or modal is being typed, so the panel
     // never steals keys from the focused window.
-    WlrLayershell.keyboardFocus: (panel.shown && wifiTab.prompting)
+    WlrLayershell.keyboardFocus: (panel.shown && (wifiTab.prompting || panel.hasModal))
         ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     function tabExists(key) {
@@ -123,6 +129,7 @@ PanelWindow {
             backend.refresh();
         } else {
             wifiTab.cancelPrompt();
+            panel.activeModal = "";
         }
     }
 
@@ -154,7 +161,7 @@ PanelWindow {
         anchors.topMargin: panel.cardTopMargin
         anchors.rightMargin: panel.rightMargin
         width: panel.cardWidth
-        height: body.implicitHeight + 2 * panel.cardPadding
+        height: Math.max(body.implicitHeight + 2 * panel.cardPadding, panel.hasModal ? 460 : 0)
         visible: panel.shown
         radius: 14
         color: panel.theme.bg
@@ -290,6 +297,17 @@ PanelWindow {
                     powered: panel.backend.tailscaleRunning
                     onPowerToggled: panel.backend.setTailscale(!panel.backend.tailscaleRunning)
                     hint: "Tailscale is not running"
+                    onOpenHostSettings: function (peer) {
+                        panel.selectedPeer = peer;
+                        panel.activeModal = "tailscaleHost";
+                    }
+                    onOpenConfigModal: function (mode) {
+                        panel.configMode = mode;
+                        panel.activeModal = "tailscaleConfig";
+                    }
+                    onOpenLogModal: function () {
+                        panel.activeModal = "tailscaleLog";
+                    }
                 }
 
                 VirtualNetTab {
@@ -334,6 +352,35 @@ PanelWindow {
                 elide: Text.ElideRight
                 maximumLineCount: 3
             }
+        }
+
+        TailscaleHostModal {
+            id: tailscaleHostModal
+            anchors.fill: parent
+            visible: panel.activeModal === "tailscaleHost"
+            theme: panel.theme
+            backend: panel.backend
+            peer: panel.selectedPeer
+            onClose: panel.activeModal = ""
+        }
+
+        TailscaleConfigModal {
+            id: tailscaleConfigModal
+            anchors.fill: parent
+            visible: panel.activeModal === "tailscaleConfig"
+            theme: panel.theme
+            backend: panel.backend
+            mode: panel.configMode
+            onClose: panel.activeModal = ""
+        }
+
+        TailscaleLogModal {
+            id: tailscaleLogModal
+            anchors.fill: parent
+            visible: panel.activeModal === "tailscaleLog"
+            theme: panel.theme
+            backend: panel.backend
+            onClose: panel.activeModal = ""
         }
     }
 

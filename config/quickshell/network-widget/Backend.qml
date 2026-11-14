@@ -37,6 +37,24 @@ Item {
     property bool noteIsError: false
     property bool loaded: false
 
+    // Tailscale host configuration and SSH management state.
+    readonly property string hostsFilePath: {
+        var xdg = Quickshell.env("XDG_CONFIG_HOME");
+        var home = Quickshell.env("HOME") || "";
+        var base = xdg ? xdg : (home + "/.config");
+        return base + "/hypr/UserConfigs/tailscale-hosts.json";
+    }
+    readonly property string currentUser: Quickshell.env("USER") || ""
+    readonly property string defaultTerminal: Quickshell.env("TERMINAL") || "kitty"
+    property var tailscaleHosts: ({})
+    property var detectedTerminals: []
+    property var detectedSshKeys: []
+    property string tailscaleLogsText: ""
+    property var tailscaleLogsJson: []
+    property bool testingConnection: false
+    property var testResult: null
+    property var testCallback: null
+
     // Panel driven state.
     property bool autoRefresh: false
     property bool busy: false
@@ -389,6 +407,242 @@ Item {
     // Asks Tailscale for the best exit node and selects it.
     function suggestExitNode() {
         run(["tailscale", "suggest"]);
+    }
+
+    // -------------------------------------------------- Tailscale SSH & Config
+    function applyTailscaleHosts(text) {
+        if (!text || text.trim() === "") {
+            backend.tailscaleHosts = {};
+            return;
+        }
+        try {
+            var doc = JSON.parse(text);
+            backend.tailscaleHosts = doc.hosts || {};
+        } catch (e) {
+            backend.tailscaleHosts = {};
+        }
+    }
+
+    function getHostConfig(peer) {
+        if (!peer) return null;
+        var key = peer.ip || peer.name;
+        var existing = backend.tailscaleHosts[key] || backend.tailscaleHosts[peer.name] || {};
+        var fallbackKey = backend.detectedSshKeys.length > 0 ? backend.detectedSshKeys[0] : "~/.ssh/id_ed25519";
+        return {
+            hostname: existing.hostname || peer.name,
+            ip: existing.ip || peer.ip,
+            port: existing.port || 22,
+            user: existing.user || backend.currentUser,
+            terminal: existing.terminal || backend.defaultTerminal,
+            auth_type: existing.auth_type || "key",
+            key_path: existing.key_path !== undefined ? existing.key_path : fallbackKey
+        };
+    }
+
+    function saveTailscaleHost(hostKey, configObj) {
+        run(["tailscale-save-host", hostKey, JSON.stringify(configObj)]);
+    }
+
+    function testTailscaleConnection(host, ip, port, user, authType, keyPath, callback) {
+        if (backend.testingConnection) return;
+        backend.testingConnection = true;
+        backend.testResult = null;
+        backend.testCallback = callback || null;
+        testProcess.command = [
+            backend.script,
+            "tailscale-ssh-test",
+            host || "",
+            ip || "",
+            String(port || 22),
+            user || backend.currentUser,
+            authType || "key",
+            keyPath || ""
+        ];
+        testProcess.running = true;
+    }
+
+    function connectTailscaleSsh(host, ip, port, user, terminal, authType, keyPath) {
+        run([
+            "tailscale-ssh-connect",
+            host || "",
+            ip || "",
+            String(port || 22),
+            user || backend.currentUser,
+            terminal || backend.defaultTerminal,
+            authType || "key",
+            keyPath || ""
+        ]);
+    }
+
+    function exportTailscaleConfig(targetPath, callback) {
+        exportProcess.targetCallback = callback || null;
+        exportProcess.command = [backend.script, "tailscale-export", targetPath || ""];
+        exportProcess.running = true;
+    }
+
+    function importTailscaleConfig(sourcePath, callback) {
+        importProcess.targetCallback = callback || null;
+        importProcess.command = [backend.script, "tailscale-import", sourcePath];
+        importProcess.running = true;
+    }
+
+    function loadTailscaleLogs(format, callback) {
+        logsProcess.targetFormat = format || "text";
+        logsProcess.targetCallback = callback || null;
+        logsProcess.command = [backend.script, "tailscale-logs", format || "text"];
+        logsProcess.running = true;
+    }
+
+    function saveTailscaleLogs(targetPath, callback) {
+        saveLogsProcess.targetCallback = callback || null;
+        saveLogsProcess.command = [backend.script, "tailscale-log-save", targetPath || ""];
+        saveLogsProcess.running = true;
+    }
+
+    function fetchTerminalsAndKeys() {
+        if (!terminalsProcess.running) terminalsProcess.running = true;
+        if (!keysProcess.running) keysProcess.running = true;
+    }
+
+    Component.onCompleted: {
+        backend.fetchTerminalsAndKeys();
+    }
+
+    FileView {
+        id: hostsFileWatcher
+        path: backend.hostsFilePath
+        watchChanges: true
+        onTextChanged: backend.applyTailscaleHosts(hostsFileWatcher.text())
+    }
+
+    Process {
+        id: terminalsProcess
+        command: [backend.script, "tailscale-list-terminals"]
+        stdout: StdioCollector {
+            id: terminalsOutput
+            onStreamFinished: {
+                var lines = terminalsOutput.text.trim().split("\n");
+                var list = [];
+                for (var i = 0; i < lines.length; i++) {
+                    var t = lines[i].trim();
+                    if (t.length > 0) list.push(t);
+                }
+                backend.detectedTerminals = list;
+            }
+        }
+    }
+
+    Process {
+        id: keysProcess
+        command: [backend.script, "tailscale-list-keys"]
+        stdout: StdioCollector {
+            id: keysOutput
+            onStreamFinished: {
+                var lines = keysOutput.text.trim().split("\n");
+                var list = [];
+                for (var i = 0; i < lines.length; i++) {
+                    var k = lines[i].trim();
+                    if (k.length > 0) list.push(k);
+                }
+                backend.detectedSshKeys = list;
+            }
+        }
+    }
+
+    Process {
+        id: testProcess
+        stdout: StdioCollector { id: testOutput }
+        stderr: StdioCollector { id: testError }
+        onExited: function (exitCode, exitStatus) {
+            backend.testingConnection = false;
+            var success = exitCode === 0;
+            var msg = success ? "Connection successful" : testError.text.trim();
+            if (!success && msg === "") msg = testOutput.text.trim();
+            if (msg === "") msg = success ? "OK" : "Connection failed";
+            var res = { success: success, message: msg };
+            backend.testResult = res;
+            if (backend.testCallback) {
+                backend.testCallback(res);
+                backend.testCallback = null;
+            }
+            backend.refresh();
+        }
+    }
+
+    Process {
+        id: exportProcess
+        property var targetCallback: null
+        stdout: StdioCollector { id: exportOutput }
+        stderr: StdioCollector { id: exportError }
+        onExited: function (exitCode, exitStatus) {
+            var success = exitCode === 0;
+            var path = exportOutput.text.trim();
+            var err = exportError.text.trim();
+            var res = { success: success, path: path, error: err };
+            if (exportProcess.targetCallback) {
+                exportProcess.targetCallback(res);
+                exportProcess.targetCallback = null;
+            }
+            backend.refresh();
+        }
+    }
+
+    Process {
+        id: importProcess
+        property var targetCallback: null
+        stdout: StdioCollector { id: importOutput }
+        stderr: StdioCollector { id: importError }
+        onExited: function (exitCode, exitStatus) {
+            var success = exitCode === 0;
+            var err = importError.text.trim();
+            if (!success && err === "") err = importOutput.text.trim();
+            var res = { success: success, error: err };
+            if (importProcess.targetCallback) {
+                importProcess.targetCallback(res);
+                importProcess.targetCallback = null;
+            }
+            backend.refresh();
+        }
+    }
+
+    Process {
+        id: logsProcess
+        property string targetFormat: "text"
+        property var targetCallback: null
+        stdout: StdioCollector { id: logsOutput }
+        onExited: function (exitCode, exitStatus) {
+            var out = logsOutput.text;
+            if (logsProcess.targetFormat === "json") {
+                try {
+                    backend.tailscaleLogsJson = JSON.parse(out);
+                } catch (e) {
+                    backend.tailscaleLogsJson = [];
+                }
+            } else {
+                backend.tailscaleLogsText = out;
+            }
+            if (logsProcess.targetCallback) {
+                logsProcess.targetCallback(out);
+                logsProcess.targetCallback = null;
+            }
+        }
+    }
+
+    Process {
+        id: saveLogsProcess
+        property var targetCallback: null
+        stdout: StdioCollector { id: saveLogsOutput }
+        stderr: StdioCollector { id: saveLogsError }
+        onExited: function (exitCode, exitStatus) {
+            var success = exitCode === 0;
+            var path = saveLogsOutput.text.trim();
+            var err = saveLogsError.text.trim();
+            var res = { success: success, path: path, error: err };
+            if (saveLogsProcess.targetCallback) {
+                saveLogsProcess.targetCallback(res);
+                saveLogsProcess.targetCallback = null;
+            }
+        }
     }
 
     Timer {
