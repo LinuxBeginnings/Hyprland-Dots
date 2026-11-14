@@ -301,6 +301,7 @@
   - Log viewer modal supports Text and structured JSON format with save to disk
   - Host profiles persist across updates in `UserConfigs/tailscale-hosts.json`
   - Tailscale toggle elevates with `pkexec` and sets operator for desktop use
+  - Captures Tailscale web authentication URLs and opens default browser
 
 - `ttt` recognized as a TUI editor in Quick Settings and User Defaults
   - `Kool_Quick_Settings.sh` adds `ttt` to `is_tui_editor()`

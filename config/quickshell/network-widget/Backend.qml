@@ -24,6 +24,7 @@ Item {
     property var tailscalePeers: [] // { name, ip, online, os, self }
     property var exitNodes: []      // { name, ip, selected }
     property string tailscaleState: ""
+    property string tailscaleAuthUrl: ""
     property var containers: []     // { kind, name, state, status, runtime, cpu, mem }
     property var networks: []       // { ssid, signal, security, inUse }
     property var btDevices: []      // { address, name, connected, paired, battery, icon }
@@ -135,6 +136,7 @@ Item {
         var tailscalePeers = [];
         var exitNodes = [];
         var tailscaleState = "";
+        var tailscaleAuthUrl = "";
         var containers = [];
         var containerStats = [];
         var networks = [];
@@ -195,6 +197,9 @@ Item {
                 break;
             case "TS-STATE":
                 tailscaleState = field(parts, 1, "");
+                break;
+            case "TS-AUTH":
+                tailscaleAuthUrl = field(parts, 1, "");
                 break;
             case "TS-EXIT":
                 exitNodes.push({
@@ -303,6 +308,7 @@ Item {
         backend.tailscalePeers = tailscalePeers;
         backend.exitNodes = exitNodes;
         backend.tailscaleState = tailscaleState;
+        backend.tailscaleAuthUrl = tailscaleAuthUrl;
         backend.containers = containers;
         backend.networks = networks;
         backend.btDevices = btDevices;
@@ -407,6 +413,12 @@ Item {
     // Asks Tailscale for the best exit node and selects it.
     function suggestExitNode() {
         run(["tailscale", "suggest"]);
+    }
+
+    function openAuthUrl(url) {
+        var target = url || backend.tailscaleAuthUrl;
+        if (!target) return;
+        run(["tailscale-open-url", target]);
     }
 
     // -------------------------------------------------- Tailscale SSH & Config

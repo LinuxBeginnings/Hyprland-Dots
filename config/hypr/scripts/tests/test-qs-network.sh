@@ -354,6 +354,21 @@ else
   fail "tailscale-ssh-test did not record error to log"
 fi
 
+it "open_auth_url_if_found captures Tailscale authentication link and opens browser"
+cat >"$WORK/bin/xdg-open" <<'EOS'
+#!/usr/bin/env bash
+printf 'xdg-open %s\n' "$*" >>"$CALL_LOG"
+exit 0
+EOS
+chmod +x "$WORK/bin/xdg-open"
+fake_auth="To authenticate, visit: https://login.tailscale.com/a/sample12345"
+if bash -c ". '$SCRIPT'; open_auth_url_if_found '$fake_auth'" >/dev/null 2>&1 &&
+   grep -q 'xdg-open https://login.tailscale.com/a/sample12345' "$CALL_LOG"; then
+  pass_msg
+else
+  fail "did not capture and open auth URL"
+fi
+
 if command -v qmllint >/dev/null 2>&1; then
   it "the applet's QML parses"
   if qmllint "$WIDGET"/*.qml >"$WORK/qmllint.log" 2>&1; then

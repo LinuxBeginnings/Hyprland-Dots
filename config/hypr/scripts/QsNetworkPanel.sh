@@ -460,6 +460,15 @@ snapshot_tailscale() {
     sed -n 's/.*"BackendState":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
   [[ -n $state ]] && printf 'TS-STATE\t%s\n' "$(san "$state")"
 
+  local auth_url
+  if have jq; then
+    auth_url=$(timeout 4 tailscale status --json 2>/dev/null | jq -r '.AuthURL // empty' 2>/dev/null)
+  else
+    auth_url=$(timeout 4 tailscale status --json 2>/dev/null |
+      sed -n 's/.*"AuthURL":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
+  fi
+  [[ -n $auth_url ]] && printf 'TS-AUTH\t%s\n' "$(san "$auth_url")"
+
   timeout 4 tailscale status 2>/dev/null |
     awk '
       $1 ~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ {
@@ -628,6 +637,33 @@ log_ts_ssh_info() {
   printf '[%s] [INFO] %s\n' "$ts" "$msg" >> "$log_file"
 }
 
+open_auth_url_if_found() {
+  local output="${1:-}"
+  local url
+  url=$(printf '%s\n' "$output" | grep -Eo 'https://login\.tailscale\.com/[^[:space:]"'\''<>]+' | head -n 1)
+  if [[ -z $url ]]; then
+    url=$(printf '%s\n' "$output" | grep -Eo 'https://[^[:space:]"'\''<>]+\.tailscale\.com/[^[:space:]"'\''<>]+' | head -n 1)
+  fi
+  if [[ -n $url ]]; then
+    if have xdg-open; then
+      xdg-open "$url" >/dev/null 2>&1 &
+    elif have gio; then
+      gio open "$url" >/dev/null 2>&1 &
+    fi
+    local icon="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images/info.png"
+    if have notify-send; then
+      if [[ -f "$icon" ]]; then
+        notify-send -u normal -i "$icon" "Tailscale Authentication" "Opened browser to authenticate:\n$url"
+      else
+        notify-send -u normal "Tailscale Authentication" "Opened browser to authenticate:\n$url"
+      fi
+    fi
+    log_ts_ssh_info "Captured Tailscale authentication URL and opened browser: $url"
+    return 0
+  fi
+  return 1
+}
+
 list_installed_terminals() {
   local -a candidates=(kitty ghostty alacritty foot wezterm konsole gnome-terminal xfce4-terminal ptyxis urxvt xterm warp-terminal)
   local -A seen=()
@@ -740,6 +776,10 @@ tailscale_ssh_test() {
       -o StrictHostKeyChecking=accept-new \
       -p "$port" -i "$key_path" "$user@$ip" true 2>&1)
     ssh_rc=$?
+    if open_auth_url_if_found "$ssh_out"; then
+      printf 'Authentication required: opened browser to authenticate\n'
+      exit 0
+    fi
     if [[ $ssh_rc -ne 0 ]]; then
       local err_msg="SSH authentication failed (exit $ssh_rc): ${ssh_out:-Permission denied}"
       log_ts_ssh_error "$host" "$ip" "$port" "$user" "$err_msg"
@@ -1239,19 +1279,23 @@ case "${1:-snapshot}" in
         local out rc
         out=$(timeout 30 tailscale "$2" 2>&1)
         rc=$?
+        open_auth_url_if_found "$out" || true
         if [[ $rc -ne 0 && ($out == *"Access denied"* || $out == *"sudo tailscale"*) ]]; then
           if have pkexec; then
             out=$(timeout 30 pkexec tailscale set --operator="$USER" 2>&1) && \
             out=$(timeout 30 tailscale "$2" 2>&1)
             rc=$?
+            open_auth_url_if_found "$out" || true
             if [[ $rc -ne 0 ]]; then
               out=$(timeout 30 pkexec tailscale "$2" 2>&1)
               rc=$?
+              open_auth_url_if_found "$out" || true
             fi
           elif sudo -n true 2>/dev/null; then
             sudo tailscale set --operator="$USER" 2>/dev/null || true
             out=$(timeout 30 sudo tailscale "$2" 2>&1)
             rc=$?
+            open_auth_url_if_found "$out" || true
           fi
         fi
         if [[ $rc -ne 0 ]]; then
@@ -1342,6 +1386,16 @@ case "${1:-snapshot}" in
     shift
     tailscale_save_logs_to_disk "${1:-}"
     ;;
+  tailscale-open-url)
+    shift
+    [[ -n ${1:-} ]] || exit 2
+    if have xdg-open; then
+      xdg-open "$1" >/dev/null 2>&1 &
+    elif have gio; then
+      gio open "$1" >/dev/null 2>&1 &
+    fi
+    exit 0
+    ;;
   bt)
     case "${2:-}" in
       connect | disconnect | pair | trust | remove)
@@ -1359,7 +1413,7 @@ case "${1:-snapshot}" in
     esac
     ;;
   *)
-    printf 'usage: %s [snapshot|status|toggle|open|close|wifi|scan-wifi|connect-wifi|disconnect-wifi|connect-device|disconnect-device|bt-power|bt-scan|bt|container|tailscale|tailscale-list-terminals|tailscale-list-keys|tailscale-ssh-test|tailscale-ssh-connect|tailscale-save-host|tailscale-export|tailscale-import|tailscale-logs|tailscale-log-save]\n' "$0" >&2
+    printf 'usage: %s [snapshot|status|toggle|open|close|wifi|scan-wifi|connect-wifi|disconnect-wifi|connect-device|disconnect-device|bt-power|bt-scan|bt|container|tailscale|tailscale-list-terminals|tailscale-list-keys|tailscale-ssh-test|tailscale-ssh-connect|tailscale-save-host|tailscale-export|tailscale-import|tailscale-logs|tailscale-log-save|tailscale-open-url]\n' "$0" >&2
     exit 2
     ;;
 esac

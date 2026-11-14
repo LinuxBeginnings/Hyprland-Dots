@@ -276,6 +276,55 @@ ColumnLayout {
             width: parent.width
             spacing: 4
 
+            // Tailscale Authentication Banner if web login required
+            Rectangle {
+                visible: root.showPower && root.backend && root.backend.tailscaleAuthUrl !== ""
+                Layout.fillWidth: true
+                implicitHeight: 34
+                radius: 8
+                color: root.theme.surfaceAlt
+                border.width: 1
+                border.color: root.theme.accent
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 10
+                    spacing: 8
+
+                    Text {
+                        text: "󰖟"
+                        font.family: root.theme.iconFont
+                        font.pixelSize: 14
+                        color: root.theme.accent
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Tailscale Authentication Required: Click to open browser"
+                        font.family: root.theme.fontFamily
+                        font.pixelSize: 10
+                        font.bold: true
+                        color: root.theme.text
+                        elide: Text.ElideRight
+                    }
+
+                    Text {
+                        text: "Authenticate"
+                        font.family: root.theme.fontFamily
+                        font.pixelSize: 10
+                        font.bold: true
+                        color: root.theme.accent
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.backend.openAuthUrl(root.backend.tailscaleAuthUrl)
+                }
+            }
+
             Repeater {
                 model: root.links
 
