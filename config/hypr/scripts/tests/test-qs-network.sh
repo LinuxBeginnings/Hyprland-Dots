@@ -350,12 +350,22 @@ fi
 # snapshot is captured first, because the suite runs with pipefail and a probe
 # that exits non-zero would fail the pipeline even when the record is there.
 rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/network-widget.conf"
-it "the snapshot reports \$EDITOR as the default viewer"
+it "the settings field shows a resolved editor, not the \$EDITOR keyword"
 snap_text="$(bash "$SCRIPT" snapshot 2>/dev/null || true)"
-if printf '%s' "$snap_text" | grep -qF "$(printf 'SETTING\tlogViewer\t$EDITOR')"; then
+viewer_shown="$(printf '%s' "$snap_text" | awk -F'\t' '$1=="SETTING" && $2=="logViewer" {print $3}')"
+if [ -n "$viewer_shown" ] && [ "$viewer_shown" != '$EDITOR' ] &&
+  ! printf '%s' "$viewer_shown" | grep -q '\$'; then
   pass_msg
 else
-  fail "default viewer is not \$EDITOR: $(printf '%s' "$snap_text" | grep SETTING)"
+  fail "settings field shows '$viewer_shown'"
+fi
+
+it "the settings field shows the editor \$EDITOR names"
+snap_text="$(EDITOR=myedit bash "$SCRIPT" snapshot 2>/dev/null || true)"
+if printf '%s' "$snap_text" | grep -qF "$(printf 'SETTING\tlogViewer\tmyedit')"; then
+  pass_msg
+else
+  fail "the editor name is not shown: $(printf '%s' "$snap_text" | grep SETTING)"
 fi
 
 : >"$CALL_LOG"

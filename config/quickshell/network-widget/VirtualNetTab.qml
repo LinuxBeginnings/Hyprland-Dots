@@ -35,7 +35,8 @@ ColumnLayout {
     // show on this layer-shell surface, so the hint goes where it is seen.
     property string hoverHint: ""
     // The viewer container logs open in, owned by the panel and the script.
-    property string logViewer: "$EDITOR"
+    // Filled from the backend snapshot with the resolved editor name.
+    property string logViewer: ""
     // Container list pagination.
     property int page: 0
     // Docker/Podman: the viewer preference row, toggled by the gear.
@@ -414,7 +415,13 @@ ColumnLayout {
                 anchors.leftMargin: 8
                 anchors.rightMargin: 8
                 verticalAlignment: TextInput.AlignVCenter
-                text: root.logViewer
+                // Shows the editor that would actually open, not the
+                // `$EDITOR` keyword the preference is stored as.
+                Component.onCompleted: text = root.logViewer
+                Connections {
+                    target: root
+                    function onLogViewerChanged() { viewerField.text = root.logViewer }
+                }
                 color: root.theme.text
                 font.family: root.theme.fontFamily
                 font.pixelSize: 10

@@ -134,8 +134,9 @@ long list.
   and `Stop N` beside `Containers` act on the running ones, where N is how many
   are running. The list is paged: whatever does not fit gets `‹ Prev` /
   `Next ›` links with the page number underneath. The gear next to
-  `Show stopped` opens an editable viewer field holding `$EDITOR` by default;
-  any command (`lnav`, `less`, `bat`) is run as given and kept in
+  `Show stopped` opens an editable viewer field. It shows the editor that
+  `$EDITOR` names (`nvim`, `nano`), because the keyword would be a puzzle; any
+  command (`lnav`, `less`, `bat`) is run as given and kept in
   `UserConfigs/network-widget.conf`. Logs and shells open in a window with its
   own class, so Hyprland floats and centres it, and the panel closes first
   rather than covering it.

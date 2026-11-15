@@ -591,7 +591,7 @@ snapshot_extras() {
 
   # The log viewer preference lives in UserConfigs, so the panel can show the
   # current choice without reading the file itself.
-  printf 'SETTING\tlogViewer\t%s\n' "$(viewer_pref)"
+  printf 'SETTING\tlogViewer\t%s\n' "$(viewer_display)"
 
   snapshot_tailscale
   snapshot_containers
@@ -790,6 +790,29 @@ viewer_is_lnav() {
   [[ $pref == '$EDITOR' ]] && viewer="${EDITOR:-}"
   viewer="${viewer%% *}"
   [[ ${viewer##*/} == lnav ]]
+}
+
+# What the settings field shows: the editor that would actually open. The
+# `$EDITOR` keyword is how the preference is stored, not something to show.
+viewer_display() {
+  local pref editor_cmd viewer
+  pref=$(viewer_pref)
+  if [[ $pref != '$EDITOR' ]]; then
+    printf '%s' "$pref"
+    return 0
+  fi
+  editor_cmd="${EDITOR:-}"
+  if [[ -n $editor_cmd ]]; then
+    printf '%s' "$editor_cmd"
+    return 0
+  fi
+  for viewer in emacs hx nano more; do
+    if have "$viewer"; then
+      printf '%s' "$viewer"
+      return 0
+    fi
+  done
+  printf 'more'
 }
 
 set_viewer_pref() {
