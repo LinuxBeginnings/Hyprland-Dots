@@ -120,12 +120,20 @@ long list.
   --exit-node`, click to select or clear, "Suggest" asks Tailscale for the best
   one) and the tailnet peers with their IP, OS and online/offline state.
 - **Docker** - only shown when `docker` is installed or a `docker0`/`br-*`
-  bridge exists. Lists each bridge with its addresses, then the containers as
-  name, status, runtime and live CPU/memory from `docker stats`. Running
-  containers are shown; the "Stopped" switch also lists stopped ones. Click a
-  container to stop it, or start it again.
-- **Podman** - the same for `podman`, the `podman*`/`cni-podman*` bridges and
-  `podman ps` / `podman stats`.
+  bridge exists. The heading switch reads the daemon (`docker info`) and
+  starts or stops it. Lists each bridge with its addresses, then the
+  containers as name, status and live CPU/memory from `docker stats`.
+  Each container shows its state and four buttons: start/stop, restart, logs
+  and a shell. Logs are captured to a file under `$XDG_RUNTIME_DIR` and opened
+  in `lnav`, falling back to `$EDITOR`, `emacs`, `hx`, `nano`, `more`, so they
+  can be searched and filtered; the shell opens in the preferred terminal,
+  running `bash` in the container and falling back to `sh`. Shift-click on
+  the logs button follows the stream live through `lnav`, and hovering it
+  shows the captured file's path.
+  Running containers are shown; the "Show stopped" switch beside the
+  `Containers` heading also lists stopped ones.
+- **Podman** - the same for `podman`, the `podman*`/`cni-podman*` bridges,
+  `podman ps` / `podman stats` and the `podman.socket` user unit.
 
 If a tool goes away its tab disappears and an open tab falls back to Ethernet.
 
@@ -163,10 +171,12 @@ The QML side calls it for two things:
   address of an interface (read from `ip`, so aliases are included), `LINK`
   the tailscale/docker/podman interfaces NetworkManager does not manage,
   `FEATURE` the installed tooling, `TS-STATE`/`TSPEER`/`TS-EXIT` the tailnet
-  status, peers and exit nodes, and `BOX`/`BOXSTAT` the docker/podman
-  containers and the resource use of the running ones.
+  status, peers and exit nodes, and `BOX`/`BOXSTAT`/`BOXENGINE` the
+  docker/podman containers, the resource use of the running ones and whether
+  each daemon answers.
 - the action subcommands (`connect-wifi`, `wifi on|off`, `bt connect`,
-  `container docker|podman start|stop|restart NAME`, `tailscale up|down`,
+  `container docker|podman start|stop|restart|logs|shell NAME`,
+  `container-engine docker|podman on|off`, `tailscale up|down`,
   `tailscale exit-node NAME|none`, `tailscale suggest`, ...) change state;
   errors are printed on stderr and shown in the panel.
 

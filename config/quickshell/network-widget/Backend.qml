@@ -26,6 +26,7 @@ Item {
     property string tailscaleState: ""
     property string tailscaleAuthUrl: ""
     property var containers: []     // { kind, name, state, status, runtime, cpu, mem }
+    property var containerEngines: ({}) // { docker: true, podman: false }
     property var networks: []       // { ssid, signal, security, inUse }
     property var btDevices: []      // { address, name, connected, paired, battery, icon }
     property bool wifiEnabled: false
@@ -84,6 +85,9 @@ Item {
 
     readonly property var dockerContainers: containersFor("docker")
     readonly property var podmanContainers: containersFor("podman")
+    // A daemon that answers `info`, not merely an installed binary.
+    readonly property bool dockerRunning: containerEngines["docker"] === true
+    readonly property bool podmanRunning: containerEngines["podman"] === true
     readonly property bool tailscaleRunning: tailscaleState === "Running"
 
     function linksFor(kind) {
@@ -139,6 +143,7 @@ Item {
         var tailscaleAuthUrl = "";
         var containers = [];
         var containerStats = [];
+        var containerEngines = {};
         var networks = [];
         var btDevices = [];
         var wifiEnabled = false;
@@ -228,6 +233,9 @@ Item {
                     mem: ""
                 });
                 break;
+            case "BOXENGINE":
+                containerEngines[field(parts, 1, "")] = field(parts, 2, "0") === "1";
+                break;
             case "BOXSTAT":
                 containerStats.push({
                     kind: field(parts, 1, ""),
@@ -310,6 +318,7 @@ Item {
         backend.tailscaleState = tailscaleState;
         backend.tailscaleAuthUrl = tailscaleAuthUrl;
         backend.containers = containers;
+        backend.containerEngines = containerEngines;
         backend.networks = networks;
         backend.btDevices = btDevices;
         backend.wifiEnabled = wifiEnabled;
@@ -383,9 +392,11 @@ Item {
         run(["disconnect-device", iface]);
     }
 
-    // kind is docker or podman, action is start|stop|restart.
-    function containerAction(kind, action, name) {
-        run(["container", kind, action, name]);
+    // kind is docker or podman, action is start|stop|restart|logs|shell.
+    function containerAction(kind, action, name, extra) {
+        var argv = ["container", kind, action, name];
+        if (extra !== undefined && extra !== "") argv.push(extra);
+        run(argv);
     }
 
     function stopContainer(kind, name) {
@@ -398,6 +409,30 @@ Item {
 
     function restartContainer(kind, name) {
         containerAction(kind, "restart", name);
+    }
+
+    // Opens the container's logs in the preferred terminal: the captured file
+    // in a viewer by default, the live stream when `live` is set.
+    function containerLogs(kind, name, live) {
+        containerAction(kind, "logs", name, live === true ? "live" : "");
+    }
+
+    // Where QsNetworkPanel.sh writes that file, named the same way, so the
+    // panel can show the path before anything is opened.
+    function containerLogPath(kind, name) {
+        var dir = Quickshell.env("XDG_RUNTIME_DIR");
+        if (dir === null || dir === "") dir = "/tmp";
+        var safe = String(name).replace(/[^A-Za-z0-9_.-]/g, "_");
+        return dir + "/quickshell-network-widget/" + kind + "-" + safe + ".log";
+    }
+
+    // Opens an interactive shell inside the container.
+    function containerShell(kind, name) {
+        containerAction(kind, "shell", name);
+    }
+
+    function setContainerEngine(kind, enabled) {
+        run(["container-engine", kind, enabled ? "on" : "off"]);
     }
 
     // Tailscale: bring the tunnel up or down, and switch exit node. Passing

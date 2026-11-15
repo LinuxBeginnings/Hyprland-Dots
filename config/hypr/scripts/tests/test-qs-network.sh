@@ -128,6 +128,9 @@ EOS
 cat >"$WORK/bin/docker" <<'EOS'
 #!/usr/bin/env bash
 printf 'docker %s\n' "$*" >>"$CALL_LOG"
+case "$*" in
+  logs*) printf 'hello from the container\n' ;;
+esac
 exit 0
 EOS
 cat >"$WORK/bin/podman" <<'EOS'
@@ -158,12 +161,43 @@ fi
 exit 0
 EOS
 
+# Stays alive long enough for LaunchTerminal.sh to see it running, and logs the
+# payload so the container actions can be checked.
+cat >"$WORK/bin/kitty" <<'EOS'
+#!/usr/bin/env bash
+printf 'kitty %s\n' "$*" >>"$CALL_LOG"
+sleep 1
+exit 0
+EOS
+
+# Stands in for the log viewer, so the chain is checked the same way whether
+# or not lnav is installed on the host running the tests.
+cat >"$WORK/bin/lnav" <<'EOS'
+#!/usr/bin/env bash
+printf 'lnav %s\n' "$*" >>"$CALL_LOG"
+sleep 1
+exit 0
+EOS
+
+# A stand-in for $EDITOR, the second choice in the viewer chain.
+cat >"$WORK/bin/myedit" <<'EOS'
+#!/usr/bin/env bash
+printf 'myedit %s\n' "$*" >>"$CALL_LOG"
+sleep 1
+exit 0
+EOS
+
 cat >"$WORK/bin/notify-send" <<'EOS'
 #!/usr/bin/env bash
 printf 'notify-send %s\n' "$*" >>"$CALL_LOG"
 exit 0
 EOS
 chmod +x "$WORK/bin"/*
+
+# Container logs are written under the runtime directory, so keep them in the
+# sandbox instead of the live session's directory.
+mkdir -p "$WORK/run"
+export XDG_RUNTIME_DIR="$WORK/run"
 
 export PATH="$WORK/bin:$PATH"
 
@@ -207,6 +241,14 @@ else
   fail "the panel snapshot no longer probes them: $(tr '\n' ' ' <"$CALL_LOG")"
 fi
 
+it "snapshot says whether each container engine answers"
+if grep -q $'^BOXENGINE\tdocker\t1$' <<<"$snapshot_out" &&
+  grep -q $'^BOXENGINE\tpodman\t1$' <<<"$snapshot_out"; then
+  pass_msg
+else
+  fail "the engine records are missing"
+fi
+
 it "snapshot lists both devices and the connected network"
 if grep -q $'^DEV\tens18\tethernet\tconnected\tWired connection 1\t' <<<"$snapshot_out" &&
   grep -q $'^DEV\twlan0\twifi\tconnected\tLinux-Da-Bomb\t' <<<"$snapshot_out" &&
@@ -223,6 +265,108 @@ if grep -q $'^BTDEV\tAA:11:22:33:44:55\tHeadphones\t1\t1\t68\taudio-headphones$'
   pass_msg
 else
   fail "the bluetooth or tailnet records are missing"
+fi
+
+# -------------------------------------------------------- container actions --
+: >"$CALL_LOG"
+log_dir="$WORK/run/quickshell-network-widget"
+rm -rf "$log_dir"
+it "container logs are written to a file and opened in lnav"
+if bash "$SCRIPT" container docker logs odysseus-ntfy-1 >/dev/null 2>&1 &&
+  grep -qF 'docker logs --tail 2000 odysseus-ntfy-1' "$CALL_LOG" &&
+  grep -qF "$log_dir/docker-odysseus-ntfy-1.log" "$CALL_LOG" &&
+  grep -qF 'lnav ' "$CALL_LOG" &&
+  grep -qF 'hello from the container' "$log_dir/docker-odysseus-ntfy-1.log"; then
+  pass_msg
+else
+  fail "logs were not captured and opened: $(tr '\n' ' ' <"$CALL_LOG")"
+fi
+
+: >"$CALL_LOG"
+# A PATH without lnav, so the editor branch is reached on a host that has it
+# installed as well as on one that does not.
+mkdir -p "$WORK/nolnav"
+ln -sf /usr/bin/* "$WORK/nolnav/" 2>/dev/null
+rm -f "$WORK/nolnav/lnav" "$WORK/nolnav/docker" "$WORK/nolnav/kitty" "$WORK/nolnav/myedit"
+ln -sf "$WORK/bin/docker" "$WORK/bin/kitty" "$WORK/bin/myedit" "$WORK/bin/notify-send" "$WORK/nolnav/"
+it "container logs fall back to \$EDITOR when lnav is missing"
+if PATH="$WORK/nolnav" EDITOR=myedit bash "$SCRIPT" container docker logs odysseus-ntfy-1 >/dev/null 2>&1 &&
+  grep -qF 'myedit ' "$CALL_LOG"; then
+  pass_msg
+else
+  fail "the editor fallback was not used: $(tr '\n' ' ' <"$CALL_LOG")"
+fi
+
+: >"$CALL_LOG"
+it "container shell tries bash and falls back to sh in a terminal"
+if bash "$SCRIPT" container docker shell odysseus-ntfy-1 >/dev/null 2>&1 &&
+  grep -qF 'docker exec -it' "$CALL_LOG" &&
+  grep -qF 'odysseus-ntfy-1' "$CALL_LOG" &&
+  grep -qF 'exec bash' "$CALL_LOG" &&
+  grep -qF 'exec sh' "$CALL_LOG"; then
+  pass_msg
+else
+  fail "shell did not reach a terminal: $(tr '\n' ' ' <"$CALL_LOG")"
+fi
+
+: >"$CALL_LOG"
+it "container logs live follows the stream through lnav"
+if bash "$SCRIPT" container docker logs odysseus-ntfy-1 live >/dev/null 2>&1 &&
+  grep -qF -- '--tail 2000 -f' "$CALL_LOG" &&
+  grep -qF '| lnav' "$CALL_LOG"; then
+  pass_msg
+else
+  fail "live logs did not follow the stream: $(tr '\n' ' ' <"$CALL_LOG")"
+fi
+
+: >"$CALL_LOG"
+it "container podman start, stop and restart reach podman"
+if bash "$SCRIPT" container podman stop web1 >/dev/null 2>&1 &&
+  bash "$SCRIPT" container podman start web1 >/dev/null 2>&1 &&
+  bash "$SCRIPT" container podman restart web1 >/dev/null 2>&1 &&
+  grep -qF 'podman stop web1' "$CALL_LOG" &&
+  grep -qF 'podman start web1' "$CALL_LOG" &&
+  grep -qF 'podman restart web1' "$CALL_LOG"; then
+  pass_msg
+else
+  fail "podman actions did not reach it: $(tr '\n' ' ' <"$CALL_LOG")"
+fi
+
+: >"$CALL_LOG"
+it "container podman logs uses podman and its own capture file"
+if bash "$SCRIPT" container podman logs web1 >/dev/null 2>&1 &&
+  grep -qF 'podman logs --tail 2000 web1' "$CALL_LOG" &&
+  grep -qF "$log_dir/podman-web1.log" "$CALL_LOG"; then
+  pass_msg
+else
+  fail "podman logs went elsewhere: $(tr '\n' ' ' <"$CALL_LOG")"
+fi
+
+# Added here rather than beside the other stubs: earlier checks must see the
+# systemctl the host really has, not one that answers for every unit.
+cat >"$WORK/bin/systemctl" <<'EOS'
+#!/usr/bin/env bash
+printf 'systemctl %s\n' "$*" >>"$CALL_LOG"
+exit 0
+EOS
+chmod +x "$WORK/bin/systemctl"
+
+: >"$CALL_LOG"
+it "container-engine stops docker through its unit"
+if bash "$SCRIPT" container-engine docker off >/dev/null 2>&1 &&
+  grep -qF 'systemctl --user stop docker' "$CALL_LOG"; then
+  pass_msg
+else
+  fail "docker was not stopped: $(tr '\n' ' ' <"$CALL_LOG")"
+fi
+
+: >"$CALL_LOG"
+it "container-engine starts podman through its socket unit"
+if bash "$SCRIPT" container-engine podman on >/dev/null 2>&1 &&
+  grep -qF 'systemctl --user start podman.socket' "$CALL_LOG"; then
+  pass_msg
+else
+  fail "podman.socket was not started: $(tr '\n' ' ' <"$CALL_LOG")"
 fi
 
 # ------------------------------------------------------------------ panel --

@@ -26,6 +26,11 @@
 #   bt-power on|off                 Bluetooth adapter power
 #   bt-scan                         discover for a few seconds
 #   bt connect|disconnect|pair MAC  manage one bluetooth device
+#   container docker|podman start|stop|restart|logs|shell NAME
+#                                   manage one container; logs open in a
+#                                   searchable viewer (a trailing `live`
+#                                   follows the stream), shell in a terminal
+#   container-engine on|off         start or stop the docker/podman daemon
 #   tailscale-list-terminals        list installed terminal emulators
 #   tailscale-list-keys             list discovered SSH private keys in ~/.ssh
 #   tailscale-ssh-test ...          test SSH connection to a host
@@ -46,6 +51,7 @@
 #   TSPEER   <name> <ip> <online 0|1> <os> <self 0|1>
 #   TS-EXIT  <name> <ip> <selected 0|1>
 #   BOX      <kind> <name> <state> <status> <runtime>
+#   BOXENGINE <kind> <running 0|1>       daemon answers, not just installed
 #   BOXSTAT  <kind> <name> <cpu> <mem>
 #   WIFI     <ssid> <signal> <security> <in-use 0|1>
 #   WIFI-ON  <0|1>
@@ -74,6 +80,9 @@ have() { command -v "$1" >/dev/null 2>&1; }
 
 # Drop characters that would break the tab separated record format.
 san() { printf '%s' "${1:-}" | tr '\t\n\r' '   '; }
+
+# Single-quote a value for the shell command string handed to the terminal.
+shell_quote() { printf "'%s'" "${1//\'/\'\\\'\'}"; }
 
 note() { printf 'NOTE\t%s\n' "$(san "$1")"; }
 err() { printf 'ERR\t%s\n' "$(san "$1")"; }
@@ -500,6 +509,13 @@ snapshot_containers() {
   local kind name state status runtime cpu mem
   for kind in docker podman; do
     have "$kind" || continue
+    # `info` is the only call that answers only while the daemon runs, so the
+    # tab's power switch reflects the engine rather than the binary.
+    if timeout 3 "$kind" info >/dev/null 2>&1; then
+      printf 'BOXENGINE\t%s\t1\n' "$kind"
+    else
+      printf 'BOXENGINE\t%s\t0\n' "$kind"
+    fi
     timeout 4 "$kind" ps -a --format '{{.Names}}|{{.State}}|{{.Status}}' 2>/dev/null |
       while IFS='|' read -r name state status; do
         [[ -z ${name:-} ]] && continue
@@ -709,6 +725,74 @@ list_installed_terminals() {
   done
 
   printf '%s\n' "${discovered[@]}"
+}
+
+# Open a command string in the preferred terminal. LaunchTerminal.sh builds the
+# per-terminal -e/-- form, so container logs and shells open the same way the
+# Tailscale SSH connection does.
+launch_in_terminal() {
+  local term_cmd="${1:-}" payload="${2:-}"
+  [[ -n $payload ]] || return 2
+  local launch_script="$script_dir/LaunchTerminal.sh"
+  if [[ ! -x $launch_script && -f $launch_script ]]; then
+    launch_script="$script_dir/LaunchTerminal.sh"
+  fi
+  [[ -n $term_cmd ]] || term_cmd="${TERMINAL:-kitty}"
+  if [[ -x $launch_script ]]; then
+    "$launch_script" "$term_cmd" "$payload"
+    return
+  fi
+  have "$term_cmd" || term_cmd=kitty
+  "$term_cmd" -e sh -c "$payload" >/dev/null 2>&1 &
+}
+
+# The viewer chain for container logs: lnav knows the format and can search
+# and filter it, the rest open the file as text. $EDITOR comes second so the
+# user's own choice wins over the built-in fallbacks.
+log_viewer_command() {
+  local file="$1" editor_cmd="${EDITOR:-}" editor_bin="" q_file candidate
+  q_file="$(shell_quote "$file")"
+
+  if have lnav; then
+    printf 'lnav %s' "$q_file"
+    return 0
+  fi
+
+  if [[ -n $editor_cmd ]]; then
+    editor_bin="${editor_cmd%% *}"
+    editor_bin="${editor_bin#\"}"
+    editor_bin="${editor_bin%\"}"
+    editor_bin="${editor_bin#\'}"
+    editor_bin="${editor_bin%\'}"
+    if [[ -n $editor_bin ]] && have "$editor_bin"; then
+      printf '%s %s' "$editor_cmd" "$q_file"
+      return 0
+    fi
+  fi
+
+  for candidate in emacs hx nano more; do
+    have "$candidate" || continue
+    if [[ $candidate == emacs ]]; then
+      # -nw keeps it inside the terminal the payload was launched in.
+      printf 'emacs -nw %s' "$q_file"
+    else
+      printf '%s %s' "$candidate" "$q_file"
+    fi
+    return 0
+  done
+
+  # Last resort: the window reports that `more` is missing rather than the
+  # click doing nothing at all.
+  printf 'more %s' "$q_file"
+}
+
+# One log file per container under the runtime directory, so a second click
+# rewrites the same path instead of leaving copies behind.
+container_log_file() {
+  local kind="$1" name="$2" dir
+  dir="${XDG_RUNTIME_DIR:-/tmp}/quickshell-network-widget"
+  mkdir -p "$dir" 2>/dev/null || dir="${TMPDIR:-/tmp}"
+  printf '%s/%s-%s.log' "$dir" "$kind" "${name//[^A-Za-z0-9_.-]/_}"
 }
 
 list_ssh_keys() {
@@ -1262,15 +1346,68 @@ case "${1:-snapshot}" in
   container)
     case "${2:-}" in
       docker | podman) ;;
-      *) printf 'usage: %s container docker|podman start|stop|restart NAME\n' "$0" >&2; exit 2 ;;
+      *) printf 'usage: %s container docker|podman start|stop|restart|logs|shell NAME\n' "$0" >&2; exit 2 ;;
     esac
     case "${3:-}" in
-      start | stop | restart) ;;
-      *) printf 'usage: %s container docker|podman start|stop|restart NAME\n' "$0" >&2; exit 2 ;;
+      start | stop | restart | logs | shell) ;;
+      *) printf 'usage: %s container docker|podman start|stop|restart|logs|shell NAME\n' "$0" >&2; exit 2 ;;
     esac
-    [[ -n ${4:-} ]] || { printf 'usage: %s container docker|podman start|stop|restart NAME\n' "$0" >&2; exit 2; }
+    [[ -n ${4:-} ]] || { printf 'usage: %s container docker|podman start|stop|restart|logs|shell NAME\n' "$0" >&2; exit 2; }
     have "$2" || { printf '%s is not installed\n' "$2" >&2; exit 1; }
-    timeout 60 "$2" "$3" "$4"
+    case "$3" in
+      start | stop | restart) timeout 60 "$2" "$3" "$4" ;;
+      # Logs are captured to a file first: a viewer can search and filter it,
+      # a bare stream cannot. The shell stays interactive.
+      logs)
+        log_file="$(container_log_file "$2" "$4")"
+        tail_lines="${QS_CONTAINER_LOG_LINES:-2000}"
+        if [[ ${5:-} == live ]]; then
+          # Live mode follows the stream instead of a snapshot. lnav reads the
+          # pipe, so quitting it ends the engine's stream with it.
+          if have lnav; then
+            launch_in_terminal "" "$2 logs --tail $tail_lines -f $(shell_quote "$4") | lnav"
+          else
+            launch_in_terminal "" "$2 logs --tail $tail_lines -f $(shell_quote "$4")"
+          fi
+        else
+          timeout 60 "$2" logs --tail "$tail_lines" "$4" >"$log_file" 2>&1
+          launch_in_terminal "" "$(log_viewer_command "$log_file")"
+        fi
+        ;;
+      # bash where the image has it, sh otherwise: slim images ship only sh,
+      # and a plain `exec bash` would leave the window on a not-found error.
+      shell)
+        shell_cmd='exec bash 2>/dev/null || exec sh'
+        launch_in_terminal "${5:-}" "$2 exec -it $(shell_quote "$4") sh -c $(shell_quote "$shell_cmd")"
+        ;;
+    esac
+    ;;
+  container-engine)
+    case "${2:-}" in
+      docker | podman) ;;
+      *) printf 'usage: %s container-engine docker|podman on|off\n' "$0" >&2; exit 2 ;;
+    esac
+    case "${3:-}" in
+      on | off) ;;
+      *) printf 'usage: %s container-engine docker|podman on|off\n' "$0" >&2; exit 2 ;;
+    esac
+    have "$2" || { printf '%s is not installed\n' "$2" >&2; exit 1; }
+    engine_unit=$2
+    [[ $2 == podman ]] && engine_unit=podman.socket
+    engine_verb=start
+    [[ $3 == off ]] && engine_verb=stop
+    # Rootless engines are user units; a root daemon needs root. Try the user
+    # unit first so a rootless install never prompts for a password.
+    if systemctl --user "$engine_verb" "$engine_unit" >/dev/null 2>&1; then
+      :
+    elif have pkexec; then
+      pkexec systemctl "$engine_verb" "$engine_unit"
+    elif sudo -n true 2>/dev/null; then
+      sudo -n systemctl "$engine_verb" "$engine_unit"
+    else
+      printf 'root privileges are required to %s %s\n' "$engine_verb" "$engine_unit" >&2
+      exit 1
+    fi
     ;;
   tailscale)
     have tailscale || { printf 'tailscale is not installed\n' >&2; exit 1; }
@@ -1413,7 +1550,7 @@ case "${1:-snapshot}" in
     esac
     ;;
   *)
-    printf 'usage: %s [snapshot|status|toggle|open|close|wifi|scan-wifi|connect-wifi|disconnect-wifi|connect-device|disconnect-device|bt-power|bt-scan|bt|container|tailscale|tailscale-list-terminals|tailscale-list-keys|tailscale-ssh-test|tailscale-ssh-connect|tailscale-save-host|tailscale-export|tailscale-import|tailscale-logs|tailscale-log-save|tailscale-open-url]\n' "$0" >&2
+    printf 'usage: %s [snapshot|status|toggle|open|close|wifi|scan-wifi|connect-wifi|disconnect-wifi|connect-device|disconnect-device|bt-power|bt-scan|bt|container|container-engine|tailscale|tailscale-list-terminals|tailscale-list-keys|tailscale-ssh-test|tailscale-ssh-connect|tailscale-save-host|tailscale-export|tailscale-import|tailscale-logs|tailscale-log-save|tailscale-open-url]\n' "$0" >&2
     exit 2
     ;;
 esac

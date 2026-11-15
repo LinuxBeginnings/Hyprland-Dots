@@ -5,6 +5,9 @@
 
 import QtQuick
 import QtQuick.Layouts
+// Aliased: the widget has its own Switch, and a plain import would sit next to
+// it at the same name.
+import QtQuick.Controls as Controls
 
 ColumnLayout {
     id: root
@@ -22,9 +25,12 @@ ColumnLayout {
     property string title: ""
     property string subtitle: ""
     property string hint: "No links"
-    // Tailscale only: the on/off switch in the heading.
+    // Tailscale and Docker/Podman: the on/off switch in the heading. It
+    // controls the tunnel or the container engine's daemon.
     property bool showPower: false
     property bool powered: false
+    // Tailscale only: the Export/Import/Logs row under the heading.
+    property bool showActions: false
     // Docker/Podman: show stopped containers as well as running ones.
     property bool showStopped: false
 
@@ -66,6 +72,13 @@ ColumnLayout {
         if (container.mem !== "") usage.push(container.mem);
         if (usage.length > 0) parts.push(usage.join(" "));
         return parts.join(" · ");
+    }
+
+    // docker and podman report the state lower case.
+    function containerStateLabel(container) {
+        var state = String(container.state);
+        if (state === "") return "";
+        return state.charAt(0).toUpperCase() + state.slice(1);
     }
 
     function containerSubtitle() {
@@ -122,19 +135,14 @@ ColumnLayout {
             elide: Text.ElideRight
         }
 
+        // Engine state beside the switch, so an off switch reads as a stopped
+        // daemon rather than a container filter.
         Text {
-            visible: root.containerKind !== ""
-            text: "Stopped"
+            visible: root.showPower
+            text: root.powered ? "Running" : "Stopped"
             font.family: root.theme.fontFamily
             font.pixelSize: 9
-            color: root.theme.muted
-        }
-
-        Switch {
-            theme: root.theme
-            visible: root.containerKind !== ""
-            checked: root.showStopped
-            onToggled: root.showStopped = !root.showStopped
+            color: root.powered ? root.theme.good : root.theme.muted
         }
 
         Switch {
@@ -151,7 +159,7 @@ ColumnLayout {
         Layout.topMargin: 2
         Layout.bottomMargin: 2
         spacing: 6
-        visible: root.showPower
+        visible: root.showActions
 
         Rectangle {
             implicitHeight: 26
@@ -548,31 +556,154 @@ ColumnLayout {
                 }
             }
 
-            Text {
+            RowLayout {
                 Layout.fillWidth: true
                 Layout.leftMargin: 10
+                Layout.rightMargin: 8
                 Layout.topMargin: 4
-                visible: root.containerKind !== "" && root.shownContainers.length > 0
-                text: "Containers"
-                font.family: root.theme.fontFamily
-                font.pixelSize: 9
-                color: root.theme.muted
+                // Stays visible while the list is empty, so the filter can be
+                // turned back off once every container is stopped.
+                visible: root.containerKind !== ""
+                spacing: 6
+
+                Text {
+                    Layout.fillWidth: true
+                    text: "Containers"
+                    font.family: root.theme.fontFamily
+                    font.pixelSize: 9
+                    color: root.theme.muted
+                }
+
+                // Reads as a filter, not a state: off means only running
+                // containers are listed.
+                Text {
+                    text: "Show stopped"
+                    font.family: root.theme.fontFamily
+                    font.pixelSize: 9
+                    color: root.theme.muted
+                }
+
+                Switch {
+                    theme: root.theme
+                    checked: root.showStopped
+                    onToggled: root.showStopped = !root.showStopped
+                }
             }
 
             Repeater {
                 model: root.shownContainers
 
-                delegate: RowItem {
+                delegate: Rectangle {
+                    id: containerRow
                     required property var modelData
-                    theme: root.theme
                     Layout.fillWidth: true
-                    icon: "󰏗"
-                    label: modelData.name
-                    detail: root.containerDetail(modelData)
-                    trailing: modelData.runtime
-                    highlighted: modelData.state === "running"
-                    dimmed: modelData.state !== "running"
-                    onActivated: root.toggleContainer(modelData)
+                    implicitHeight: 46
+                    radius: 8
+                    readonly property bool isRunning: modelData.state === "running"
+                    color: containerRow.isRunning
+                        ? Qt.rgba(root.theme.accent.r, root.theme.accent.g,
+                                  root.theme.accent.b, 0.22)
+                        : (containerHover.hovered ? root.theme.hover : "transparent")
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 10
+                        anchors.rightMargin: 6
+                        spacing: 6
+
+                        Text {
+                            text: "󰏗"
+                            font.family: root.theme.iconFont
+                            font.pixelSize: 16
+                            color: containerRow.isRunning ? root.theme.accent : root.theme.muted
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 0
+
+                            Text {
+                                text: containerRow.modelData.name
+                                color: root.theme.text
+                                font.family: root.theme.fontFamily
+                                font.pixelSize: 12
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+
+                            Text {
+                                text: root.containerDetail(containerRow.modelData)
+                                visible: text !== ""
+                                color: root.theme.muted
+                                font.family: root.theme.fontFamily
+                                font.pixelSize: 10
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+                        }
+
+                        Text {
+                            text: root.containerStateLabel(containerRow.modelData)
+                            color: containerRow.isRunning ? root.theme.good : root.theme.muted
+                            font.family: root.theme.fontFamily
+                            font.pixelSize: 10
+                            font.bold: containerRow.isRunning
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        // Start/stop toggle, then restart, logs and a shell.
+                        IconButton {
+                            theme: root.theme
+                            glyph: containerRow.isRunning ? "󰓛" : "󰐊"
+                            glyphColor: containerRow.isRunning ? root.theme.bad : root.theme.good
+                            onClicked: root.toggleContainer(containerRow.modelData)
+                        }
+
+                        IconButton {
+                            theme: root.theme
+                            glyph: "󰜉"
+                            enabled: containerRow.isRunning
+                            onClicked: root.backend.restartContainer(
+                                root.containerKind, containerRow.modelData.name)
+                        }
+
+                        IconButton {
+                            id: logsButton
+                            theme: root.theme
+                            glyph: "󰈙"
+                            // Plain click opens the captured file in a viewer;
+                            // shift-click follows the stream instead.
+                            onClicked: function (mouse) {
+                                root.backend.containerLogs(
+                                    root.containerKind,
+                                    containerRow.modelData.name,
+                                    mouse ? (mouse.modifiers & Qt.ShiftModifier) !== 0 : false);
+                            }
+
+                            Controls.ToolTip.delay: 500
+                            Controls.ToolTip.visible: logsHover.hovered
+                            Controls.ToolTip.text: "Logs · shift-click to follow live\n"
+                                + root.backend.containerLogPath(
+                                    root.containerKind, containerRow.modelData.name)
+
+                            HoverHandler {
+                                id: logsHover
+                            }
+                        }
+
+                        IconButton {
+                            theme: root.theme
+                            glyph: "󰆍"
+                            enabled: containerRow.isRunning
+                            onClicked: root.backend.containerShell(
+                                root.containerKind, containerRow.modelData.name)
+                        }
+                    }
+
+                    HoverHandler {
+                        id: containerHover
+                    }
                 }
             }
 

@@ -9,12 +9,15 @@ Rectangle {
     property string glyph: ""
     property color glyphColor: theme ? theme.muted : "transparent"
 
-    signal clicked()
+    // Carries the click's modifiers, so a caller can give shift-click its own
+    // meaning. Handlers that ignore the argument are unchanged.
+    signal clicked(var mouse)
 
     implicitWidth: 24
     implicitHeight: 24
     radius: 6
-    color: hover.hovered ? theme.surfaceAlt : "transparent"
+    color: hover.hovered && button.enabled ? theme.surfaceAlt : "transparent"
+    opacity: button.enabled ? 1.0 : 0.35
 
     Text {
         anchors.centerIn: parent
@@ -30,7 +33,8 @@ Rectangle {
 
     MouseArea {
         anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        onClicked: button.clicked()
+        enabled: button.enabled
+        cursorShape: button.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+        onClicked: button.clicked(mouse)
     }
 }

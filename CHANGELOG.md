@@ -287,8 +287,22 @@
     - The `resolvectl` answer replaces the list whenever it has one
   - The README covers the fallback, the unmanaged case and a NIC migration recipe
 
+- The Docker tab's switch showed off while the daemon was running
+  - That switch was the `Stopped` filter, which hid stopped containers
+  - The tab reads the daemon with `docker info`; the switch starts/stops it
+  - The stopped-container filter moved beside `Containers`, as `Show stopped`
+  - Podman behaves the same way through `podman info`
+
 ## Added:
 
+- Network widget Docker and Podman tabs list each container's state and actions
+  - Every container shows its state, then start/stop, restart and logs buttons
+  - The terminal button opens `bash` in the container, `sh` where it has none
+  - Logs are captured to a file and opened in `lnav`, so they can be searched
+  - Otherwise `$EDITOR`, then `emacs`, `hx`, `nano`, `more`
+  - Shift-click the logs button to follow the stream live through `lnav`
+  - Hovering it shows the captured log file's path
+  - Restart and terminal are dimmed while the container is not running
 - Tailscale host SSH management, testing and config sync in network widget
   - Connect button left of status launches SSH session in configured terminal
   - Connect button is disabled and dimmed when the peer host is offline

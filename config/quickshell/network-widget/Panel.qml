@@ -294,6 +294,7 @@ PanelWindow {
                     subtitle: panel.backend.tailscaleState !== ""
                         ? panel.backend.tailscaleState : "No tailnet status"
                     showPower: true
+                    showActions: true
                     powered: panel.backend.tailscaleRunning
                     onPowerToggled: panel.backend.setTailscale(!panel.backend.tailscaleRunning)
                     hint: "Tailscale is not running"
@@ -322,6 +323,9 @@ PanelWindow {
                     icon: ""
                     title: "Docker"
                     hint: "No Docker bridge"
+                    showPower: true
+                    powered: panel.backend.dockerRunning
+                    onPowerToggled: panel.backend.setContainerEngine("docker", !panel.backend.dockerRunning)
                 }
 
                 VirtualNetTab {
@@ -336,6 +340,9 @@ PanelWindow {
                     icon: ""
                     title: "Podman"
                     hint: "No Podman bridge"
+                    showPower: true
+                    powered: panel.backend.podmanRunning
+                    onPowerToggled: panel.backend.setContainerEngine("podman", !panel.backend.podmanRunning)
                 }
             }
 
