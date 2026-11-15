@@ -6,9 +6,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-// Aliased: the widget has its own Switch, and a plain import would sit next to
-// it at the same name.
-import QtQuick.Controls as Controls
 
 ColumnLayout {
     id: root
@@ -34,6 +31,9 @@ ColumnLayout {
     property bool showActions: false
     // Docker/Podman: show stopped containers as well as running ones.
     property bool showStopped: false
+    // What the pointer is over, for the panel footer. A ToolTip popup does not
+    // show on this layer-shell surface, so the hint goes where it is seen.
+    property string hoverHint: ""
 
     signal powerToggled()
     signal openHostSettings(var peer)
@@ -97,8 +97,9 @@ ColumnLayout {
         var rowsHeight = root.shownContainers.length * step - 4;
         var above = content.implicitHeight - rowsHeight;
         var room = scroll.height - above;
+        // Rounded up: a row only needs to be partly on screen to be seen.
         return Math.max(0, Math.min(root.shownContainers.length,
-                                    Math.floor(room / step)));
+                                    Math.ceil(room / step)));
     }
 
     function containerSubtitle() {
@@ -760,15 +761,13 @@ ColumnLayout {
                                     (mods & Qt.ShiftModifier) !== 0);
                             }
 
-                            Controls.ToolTip.delay: 500
-                            Controls.ToolTip.visible: logsHover.hovered
-                            Controls.ToolTip.text: "Logs · shift-click follows live"
-                                + " · ctrl-click copies the path\n"
-                                + root.backend.containerLogPath(
-                                    root.containerKind, containerRow.modelData.name)
-
                             HoverHandler {
                                 id: logsHover
+                                onHoveredChanged: root.hoverHint = hovered
+                                    ? "Logs · shift-click follows live · ctrl-click copies"
+                                        + " · " + root.backend.containerLogPath(
+                                            root.containerKind, containerRow.modelData.name)
+                                    : ""
                             }
                         }
 

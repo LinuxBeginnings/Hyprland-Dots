@@ -306,7 +306,7 @@
   - Otherwise `$EDITOR`, then `emacs`, `hx`, `nano`, `more`
   - Shift-click the logs button to follow the stream live through `lnav`
   - Ctrl-click copies the captured log file's path
-  - Hovering the button shows that path
+  - Hovering the button shows that path in the panel footer
   - `Restart all` and `Stop all` beside `Containers` act on running ones
   - The `Containers` heading says `3 of 5` when the list scrolls
   - Restart and terminal are dimmed while the container is not running

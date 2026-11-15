@@ -140,6 +140,15 @@ PanelWindow {
         if (backend.error !== "") return backend.error;
         if (!backend.loaded) return "Loading…";
         if (backend.busy) return "Working…";
+        // What the pointer is over explains a button better than the default
+        // hint. A ToolTip popup does not render on this layer-shell surface,
+        // so the tab reports its hint and the footer shows it.
+        var hoveredHint = ""
+        switch (panel.tab) {
+        case "docker": hoveredHint = dockerTab.hoverHint; break;
+        case "podman": hoveredHint = podmanTab.hoverHint; break;
+        }
+        if (hoveredHint !== "") return hoveredHint;
         // A tagged note belongs to one tab only: the Bluetooth adapter being
         // absent says nothing about the Docker tab.
         if (backend.note !== ""
