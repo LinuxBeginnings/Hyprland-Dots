@@ -27,6 +27,8 @@ Item {
     property string tailscaleAuthUrl: ""
     property var containers: []     // { kind, name, state, status, runtime, cpu, mem }
     property var containerEngines: ({}) // { docker: true, podman: false }
+    // Which viewer container logs open in: "lnav" or "editor".
+    property string logViewer: "lnav"
     property var networks: []       // { ssid, signal, security, inUse }
     property var btDevices: []      // { address, name, connected, paired, battery, icon }
     property bool wifiEnabled: false
@@ -146,6 +148,7 @@ Item {
         var containers = [];
         var containerStats = [];
         var containerEngines = {};
+        var logViewer = "lnav";
         var networks = [];
         var btDevices = [];
         var wifiEnabled = false;
@@ -239,6 +242,10 @@ Item {
             case "BOXENGINE":
                 containerEngines[field(parts, 1, "")] = field(parts, 2, "0") === "1";
                 break;
+            case "SETTING":
+                if (field(parts, 1, "") === "logViewer")
+                    logViewer = field(parts, 2, "lnav") === "editor" ? "editor" : "lnav";
+                break;
             case "BOXSTAT":
                 containerStats.push({
                     kind: field(parts, 1, ""),
@@ -323,6 +330,7 @@ Item {
         backend.tailscaleAuthUrl = tailscaleAuthUrl;
         backend.containers = containers;
         backend.containerEngines = containerEngines;
+        backend.logViewer = logViewer;
         backend.networks = networks;
         backend.btDevices = btDevices;
         backend.wifiEnabled = wifiEnabled;
@@ -434,6 +442,13 @@ Item {
     // Opens an interactive shell inside the container.
     function containerShell(kind, name) {
         containerAction(kind, "shell", name);
+    }
+
+    // Persisted in UserConfigs by the script, then read back from the next
+    // snapshot.
+    function setLogViewer(value) {
+        logViewer = value === "editor" ? "editor" : "lnav";
+        run(["set-log-viewer", logViewer]);
     }
 
     function setContainerEngine(kind, enabled) {

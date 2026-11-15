@@ -34,8 +34,16 @@ ColumnLayout {
     // What the pointer is over, for the panel footer. A ToolTip popup does not
     // show on this layer-shell surface, so the hint goes where it is seen.
     property string hoverHint: ""
+    // The viewer container logs open in, owned by the panel and the script.
+    property string logViewer: "lnav"
+    // Docker/Podman: the viewer preference row, toggled by the gear.
+    property bool settingsOpen: false
 
     signal powerToggled()
+    // Not logViewerChanged: that name is the property's own change signal.
+    signal logViewerPicked(string value)
+    // A window was launched, so the panel has to step out of its way.
+    signal windowLaunched()
     signal openHostSettings(var peer)
     signal openConfigModal(string mode)
     signal openLogModal()
@@ -667,6 +675,66 @@ ColumnLayout {
                     checked: root.showStopped
                     onToggled: root.showStopped = !root.showStopped
                 }
+
+                IconButton {
+                    theme: root.theme
+                    glyph: "󰒓"
+                    onClicked: root.settingsOpen = !root.settingsOpen
+                }
+            }
+
+            // Log viewer preference, behind the gear in the heading.
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 8
+                visible: root.containerKind !== "" && root.settingsOpen
+                spacing: 6
+
+                Text {
+                    text: "Log viewer"
+                    font.family: root.theme.fontFamily
+                    font.pixelSize: 9
+                    color: root.theme.muted
+                }
+
+                Repeater {
+                    model: [
+                        { key: "lnav", label: "lnav" },
+                        { key: "editor", label: "$EDITOR" }
+                    ]
+
+                    delegate: Rectangle {
+                        required property var modelData
+                        implicitHeight: 20
+                        implicitWidth: viewerChipText.implicitWidth + 16
+                        radius: 5
+                        color: root.logViewer === modelData.key
+                            ? root.theme.accent : root.theme.surfaceAlt
+                        border.width: 1
+                        border.color: root.theme.border
+
+                        Text {
+                            id: viewerChipText
+                            anchors.centerIn: parent
+                            text: modelData.label
+                            font.family: root.theme.fontFamily
+                            font.pixelSize: 9
+                            color: root.logViewer === modelData.key
+                                ? root.theme.accentInk : root.theme.text
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.logViewerPicked(modelData.key)
+                        }
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
             }
 
             Repeater {
@@ -765,6 +833,7 @@ ColumnLayout {
                                 }
                                 root.backend.containerLogs(root.containerKind, name,
                                     (mods & Qt.ShiftModifier) !== 0);
+                                root.windowLaunched();
                             }
 
                             HoverHandler {
@@ -781,8 +850,11 @@ ColumnLayout {
                             theme: root.theme
                             glyph: "󰆍"
                             enabled: containerRow.isRunning
-                            onClicked: root.backend.containerShell(
-                                root.containerKind, containerRow.modelData.name)
+                            onClicked: {
+                                root.backend.containerShell(
+                                    root.containerKind, containerRow.modelData.name);
+                                root.windowLaunched();
+                            }
                         }
                     }
 

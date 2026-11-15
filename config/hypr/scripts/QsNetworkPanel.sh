@@ -30,6 +30,7 @@
 #                                   manage one container; logs open in a
 #                                   searchable viewer (a trailing `live`
 #                                   follows the stream), shell in a terminal
+#   set-log-viewer lnav|editor      viewer for container logs
 #   container-engine on|off         start or stop the docker/podman daemon
 #   tailscale-list-terminals        list installed terminal emulators
 #   tailscale-list-keys             list discovered SSH private keys in ~/.ssh
@@ -588,6 +589,10 @@ snapshot_extras() {
   have docker && printf 'FEATURE\tdocker\n'
   have podman && printf 'FEATURE\tpodman\n'
 
+  # The log viewer preference lives in UserConfigs, so the panel can show the
+  # current choice without reading the file itself.
+  printf 'SETTING\tlogViewer\t%s\n' "$(viewer_pref)"
+
   snapshot_tailscale
   snapshot_containers
 
@@ -729,6 +734,18 @@ list_installed_terminals() {
   printf '%s\n' "${discovered[@]}"
 }
 
+# The logs and shell windows get their own class, so user_window_rules.lua can
+# float and centre them instead of tiling them behind the panel.
+viewer_terminal() {
+  local term="${1:-${TERMINAL:-kitty}}" bin
+  bin="${term%% *}"
+  bin="${bin##*/}"
+  case "$bin" in
+    kitty | ghostty | alacritty) printf '%s --class qs-network-viewer' "$term" ;;
+    *) printf '%s' "$term" ;;
+  esac
+}
+
 # Open a command string in the preferred terminal. LaunchTerminal.sh builds the
 # per-terminal -e/-- form, so container logs and shells open the same way the
 # Tailscale SSH connection does.
@@ -748,14 +765,49 @@ launch_in_terminal() {
   "$term_cmd" -e sh -c "$payload" >/dev/null 2>&1 &
 }
 
-# The viewer chain for container logs: lnav knows the format and can search
-# and filter it, the rest open the file as text. $EDITOR comes second so the
-# user's own choice wins over the built-in fallbacks.
-log_viewer_command() {
-  local file="$1" editor_cmd="${EDITOR:-}" editor_bin="" q_file candidate
-  q_file="$(shell_quote "$file")"
+widget_settings_file() {
+  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  printf '%s' "$cfg_home/hypr/UserConfigs/network-widget.conf"
+}
 
-  if have lnav; then
+# Which viewer container logs open in: `lnav`, or the editor chain. Defaults to
+# lnav, which is what the panel shows before anything is chosen.
+viewer_pref() {
+  local file value=""
+  file=$(widget_settings_file)
+  [[ -r $file ]] && value=$(sed -n 's/^log_viewer=//p' "$file" 2>/dev/null | tail -n1)
+  case "$value" in
+    lnav | editor) printf '%s' "$value" ;;
+    *) printf 'lnav' ;;
+  esac
+}
+
+set_viewer_pref() {
+  local file
+  file=$(widget_settings_file)
+  mkdir -p "$(dirname "$file")" 2>/dev/null || true
+  printf 'log_viewer=%s\n' "$1" >"$file"
+}
+
+# A configured viewer that is not installed should say so: the window would
+# otherwise open in a fallback with no explanation.
+notify_viewer_missing() {
+  local what="${1:-$EDITOR}"
+  printf 'viewer app not found: %s\n' "$what" >&2
+  if have notify-send; then
+    notify-send -u normal "Network widget" "viewer app not found: $what"
+  fi
+}
+
+# The viewer chain for container logs: lnav knows the format and can search
+# and filter it, the rest open the file as text. $EDITOR is honoured unless the
+# preference is the built-in fallbacks only.
+log_viewer_command() {
+  local file="$1" pref editor_cmd="${EDITOR:-}" editor_bin="" q_file candidate
+  q_file="$(shell_quote "$file")"
+  pref="$(viewer_pref)"
+
+  if [[ $pref == lnav ]] && have lnav; then
     printf 'lnav %s' "$q_file"
     return 0
   fi
@@ -770,6 +822,10 @@ log_viewer_command() {
       printf '%s %s' "$editor_cmd" "$q_file"
       return 0
     fi
+    # Configured but missing: report it, then keep going down the chain.
+    notify_viewer_missing "${editor_bin:-$editor_cmd}"
+  elif [[ $pref == editor ]]; then
+    notify_viewer_missing '$EDITOR'
   fi
 
   for candidate in emacs hx nano more; do
@@ -1364,23 +1420,23 @@ case "${1:-snapshot}" in
         log_file="$(container_log_file "$2" "$4")"
         tail_lines="${QS_CONTAINER_LOG_LINES:-2000}"
         if [[ ${5:-} == live ]]; then
-          # Live mode follows the stream instead of a snapshot. lnav reads the
-          # pipe, so quitting it ends the engine's stream with it.
-          if have lnav; then
-            launch_in_terminal "" "$2 logs --tail $tail_lines -f $(shell_quote "$4") | lnav"
+          # Live mode follows the stream instead of a snapshot. Only lnav can
+          # follow one, so the editor preference uses a plain stream here.
+          if [[ "$(viewer_pref)" == lnav ]] && have lnav; then
+            launch_in_terminal "$(viewer_terminal "")" "$2 logs --tail $tail_lines -f $(shell_quote "$4") | lnav"
           else
-            launch_in_terminal "" "$2 logs --tail $tail_lines -f $(shell_quote "$4")"
+            launch_in_terminal "$(viewer_terminal "")" "$2 logs --tail $tail_lines -f $(shell_quote "$4")"
           fi
         else
           timeout 60 "$2" logs --tail "$tail_lines" "$4" >"$log_file" 2>&1
-          launch_in_terminal "" "$(log_viewer_command "$log_file")"
+          launch_in_terminal "$(viewer_terminal "")" "$(log_viewer_command "$log_file")"
         fi
         ;;
       # bash where the image has it, sh otherwise: slim images ship only sh,
       # and a plain `exec bash` would leave the window on a not-found error.
       shell)
         shell_cmd='exec bash 2>/dev/null || exec sh'
-        launch_in_terminal "${5:-}" "$2 exec -it $(shell_quote "$4") sh -c $(shell_quote "$shell_cmd")"
+        launch_in_terminal "$(viewer_terminal "${5:-}")" "$2 exec -it $(shell_quote "$4") sh -c $(shell_quote "$shell_cmd")"
         ;;
     esac
     ;;
@@ -1410,6 +1466,13 @@ case "${1:-snapshot}" in
       printf 'root privileges are required to %s %s\n' "$engine_verb" "$engine_unit" >&2
       exit 1
     fi
+    ;;
+  set-log-viewer)
+    case "${2:-}" in
+      lnav | editor) ;;
+      *) printf 'usage: %s set-log-viewer lnav|editor\n' "$0" >&2; exit 2 ;;
+    esac
+    set_viewer_pref "$2"
     ;;
   tailscale)
     have tailscale || { printf 'tailscale is not installed\n' >&2; exit 1; }

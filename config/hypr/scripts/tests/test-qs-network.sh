@@ -342,6 +342,61 @@ else
   fail "podman logs went elsewhere: $(tr '\n' ' ' <"$CALL_LOG")"
 fi
 
+# ------------------------------------------------------- viewer setting --
+: >"$CALL_LOG"
+it "the snapshot reports the log viewer preference"
+# snapshot is captured first: the suite runs with pipefail, and a probe that
+# exits non-zero would fail the pipeline even when the record is there.
+snap_text="$(bash "$SCRIPT" snapshot 2>/dev/null || true)"
+if printf '%s' "$snap_text" | grep -qF "$(printf 'SETTING\tlogViewer\tlnav')"; then
+  pass_msg
+else
+  fail "no SETTING record in the snapshot"
+fi
+
+: >"$CALL_LOG"
+it "set-log-viewer editor is honoured for container logs"
+bash "$SCRIPT" set-log-viewer editor >/dev/null 2>&1
+snap_text="$(bash "$SCRIPT" snapshot 2>/dev/null || true)"
+if printf '%s' "$snap_text" | grep -qF "$(printf 'SETTING\tlogViewer\teditor')" &&
+  EDITOR=myedit bash "$SCRIPT" container docker logs odysseus-ntfy-1 >/dev/null 2>&1 &&
+  grep -qF 'myedit ' "$CALL_LOG" &&
+  ! grep -qF 'lnav ' "$CALL_LOG"; then
+  pass_msg
+else
+  fail "the editor preference was ignored: $(tr '\n' ' ' <"$CALL_LOG")"
+fi
+
+: >"$CALL_LOG"
+it "set-log-viewer rejects an unknown value"
+if bash "$SCRIPT" set-log-viewer vim >/dev/null 2>&1; then
+  fail "an unknown viewer was accepted"
+elif printf '%s' "$(bash "$SCRIPT" snapshot 2>/dev/null || true)" | grep -qF "$(printf 'SETTING\tlogViewer\teditor')"; then
+  pass_msg
+else
+  fail "a rejected value still changed the preference"
+fi
+
+: >"$CALL_LOG"
+it "a missing editor viewer is reported"
+if bash "$SCRIPT" set-log-viewer editor >/dev/null 2>&1 &&
+  EDITOR=ghost-editor bash "$SCRIPT" container docker logs odysseus-ntfy-1 >/dev/null 2>&1 &&
+  grep -qF 'viewer app not found' "$CALL_LOG"; then
+  pass_msg
+else
+  fail "a missing editor was not reported: $(tr '\n' ' ' <"$CALL_LOG")"
+fi
+
+: >"$CALL_LOG"
+it "the logs window carries its own class"
+if bash "$SCRIPT" set-log-viewer lnav >/dev/null 2>&1 &&
+  bash "$SCRIPT" container docker logs odysseus-ntfy-1 >/dev/null 2>&1 &&
+  grep -qF -- '--class qs-network-viewer' "$CALL_LOG"; then
+  pass_msg
+else
+  fail "no viewer class in the launch: $(tr '\n' ' ' <"$CALL_LOG")"
+fi
+
 # Added here rather than beside the other stubs: earlier checks must see the
 # systemctl the host really has, not one that answers for every unit.
 cat >"$WORK/bin/systemctl" <<'EOS'

@@ -139,3 +139,14 @@ local apply_window_rule = user_window_rules_helper.apply_window_rule
 --   float = true,
 --   center = true,
 -- })
+
+-- Container logs and shells from the network widget's Docker/Podman tabs: the
+-- panel is an overlay surface, so the window is floated and centred and the
+-- panel closes before it opens.
+apply_window_rule({
+  name = "user-float-center-network-widget-viewer",
+  match = { class = "^(qs-network-viewer)$" },
+  float = true,
+  center = true,
+  size = "(monitor_w*0.72) (monitor_h*0.72)",
+})

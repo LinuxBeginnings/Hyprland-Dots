@@ -338,7 +338,10 @@ PanelWindow {
                     hint: "No Docker bridge"
                     showPower: true
                     powered: panel.backend.dockerRunning
+                    logViewer: panel.backend.logViewer
                     onPowerToggled: panel.backend.setContainerEngine("docker", !panel.backend.dockerRunning)
+                    onLogViewerPicked: function (value) { panel.backend.setLogViewer(value) }
+                    onWindowLaunched: panel.shown = false
                 }
 
                 VirtualNetTab {
@@ -355,7 +358,10 @@ PanelWindow {
                     hint: "No Podman bridge"
                     showPower: true
                     powered: panel.backend.podmanRunning
+                    logViewer: panel.backend.logViewer
                     onPowerToggled: panel.backend.setContainerEngine("podman", !panel.backend.podmanRunning)
+                    onLogViewerPicked: function (value) { panel.backend.setLogViewer(value) }
+                    onWindowLaunched: panel.shown = false
                 }
             }
 

@@ -297,6 +297,10 @@
   - `NOTE` now carries the tab it belongs to
   - The footer only shows a tagged note while that tab is the open one
 
+- The container log viewer opened behind the network panel
+  - The panel is an overlay surface, so it covered the window it launched
+  - It closes first now, and the window floats centred under its own class
+
 ## Added:
 
 - Network widget Docker and Podman tabs list each container's state and actions
@@ -309,6 +313,8 @@
   - Hovering the button shows that path in the panel footer
   - `Restart N` and `Stop N` beside `Containers` act on the running ones
   - The `Containers` heading says `3 of 5` when the list scrolls
+  - A gear beside `Show stopped` picks the log viewer: `lnav` or `$EDITOR`
+  - A missing `$EDITOR` reports `viewer app not found` in a notification
   - Restart and terminal are dimmed while the container is not running
 - Tailscale host SSH management, testing and config sync in network widget
   - Connect button left of status launches SSH session in configured terminal
