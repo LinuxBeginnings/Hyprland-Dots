@@ -140,7 +140,11 @@ PanelWindow {
         if (backend.error !== "") return backend.error;
         if (!backend.loaded) return "Loading…";
         if (backend.busy) return "Working…";
-        if (backend.note !== "") return backend.note;
+        // A tagged note belongs to one tab only: the Bluetooth adapter being
+        // absent says nothing about the Docker tab.
+        if (backend.note !== ""
+                && (backend.noteScope === "" || backend.noteScope === panel.tab))
+            return backend.note;
         return "Click a network or device to connect or disconnect";
     }
 

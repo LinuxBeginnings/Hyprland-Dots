@@ -34,6 +34,8 @@ Item {
     property bool btScanning: false
     property string controller: ""
     property string note: ""
+    // The tab that note belongs to; empty means it applies anywhere.
+    property string noteScope: ""
     // A note that reports something broken (no NetworkManager, for example)
     // rather than a normal hint, so the panel can colour it as an error.
     property bool noteIsError: false
@@ -151,6 +153,7 @@ Item {
         var btScanning = false;
         var controller = "";
         var notes = [];
+        var noteScope = "";
         var noteIsError = false;
 
         var lines = String(text).split("\n");
@@ -275,7 +278,8 @@ Item {
                 });
                 break;
             case "NOTE":
-                notes.push(field(parts, 1, ""));
+                noteScope = field(parts, 1, "");
+                notes.push(field(parts, 2, ""));
                 break;
             case "ERR":
                 notes.push(field(parts, 1, ""));
@@ -326,6 +330,7 @@ Item {
         backend.btScanning = btScanning;
         backend.controller = controller;
         backend.note = notes.join(" · ");
+        backend.noteScope = noteScope;
         backend.noteIsError = noteIsError;
         backend.loaded = true;
     }

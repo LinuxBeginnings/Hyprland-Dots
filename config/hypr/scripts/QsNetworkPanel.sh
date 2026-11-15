@@ -59,7 +59,7 @@
 #   BT-SCAN  <0|1>
 #   BT-CTL   <alias> <address>
 #   BTDEV    <address> <name> <connected 0|1> <paired 0|1> <battery|-> <icon>
-#   NOTE     <message>
+#   NOTE     <tab> <message>             hint for that tab, empty tab for any
 #   ERR      <message>                     shown in the panel footer as an error
 #
 # Output is read by QML and by Waybar, so it must stay silent on success and
@@ -84,7 +84,9 @@ san() { printf '%s' "${1:-}" | tr '\t\n\r' '   '; }
 # Single-quote a value for the shell command string handed to the terminal.
 shell_quote() { printf "'%s'" "${1//\'/\'\\\'\'}"; }
 
-note() { printf 'NOTE\t%s\n' "$(san "$1")"; }
+# The tag names the tab a hint belongs to, so the panel can keep a Bluetooth
+# note out of the footer while another tab is open.
+note() { printf 'NOTE\t%s\t%s\n' "$(san "${2:-}")" "$(san "$1")"; }
 err() { printf 'ERR\t%s\n' "$(san "$1")"; }
 
 # Incremented by emit_device so snapshot_network can tell whether nmcli gave it
@@ -397,7 +399,7 @@ snapshot_network() {
 snapshot_bluetooth() {
   if ! have bluetoothctl; then
     printf 'BT-ON\t0\nBT-SCAN\t0\nBT-CTL\t\t\n'
-    note "bluetoothctl (bluez) is not installed"
+    note "bluetoothctl (bluez) is not installed" bluetooth
     return 0
   fi
 
@@ -405,7 +407,7 @@ snapshot_bluetooth() {
   show=$(bt show)
   if [[ -z $show ]]; then
     printf 'BT-ON\t0\nBT-SCAN\t0\nBT-CTL\t\t\n'
-    note "No Bluetooth adapter found"
+    note "No Bluetooth adapter found" bluetooth
     return 0
   fi
 

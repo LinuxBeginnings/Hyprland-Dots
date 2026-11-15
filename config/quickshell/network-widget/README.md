@@ -128,8 +128,10 @@ long list.
   in `lnav`, falling back to `$EDITOR`, `emacs`, `hx`, `nano`, `more`, so they
   can be searched and filtered; the shell opens in the preferred terminal,
   running `bash` in the container and falling back to `sh`. Shift-click on
-  the logs button follows the stream live through `lnav`, and hovering it
-  shows the captured file's path.
+  the logs button follows the stream live through `lnav`, ctrl-click copies
+  the captured file's path, and hovering it shows that path. `Restart all`
+  and `Stop all` beside `Containers` act on the running ones, and the heading
+  reads `3 of 5` when the list scrolls.
   Running containers are shown; the "Show stopped" switch beside the
   `Containers` heading also lists stopped ones.
 - **Podman** - the same for `podman`, the `podman*`/`cni-podman*` bridges,

@@ -293,6 +293,10 @@
   - The stopped-container filter moved beside `Containers`, as `Show stopped`
   - Podman behaves the same way through `podman info`
 
+- The panel footer showed a Bluetooth note with another tab open
+  - `NOTE` now carries the tab it belongs to
+  - The footer only shows a tagged note while that tab is the open one
+
 ## Added:
 
 - Network widget Docker and Podman tabs list each container's state and actions
@@ -301,7 +305,10 @@
   - Logs are captured to a file and opened in `lnav`, so they can be searched
   - Otherwise `$EDITOR`, then `emacs`, `hx`, `nano`, `more`
   - Shift-click the logs button to follow the stream live through `lnav`
-  - Hovering it shows the captured log file's path
+  - Ctrl-click copies the captured log file's path
+  - Hovering the button shows that path
+  - `Restart all` and `Stop all` beside `Containers` act on running ones
+  - The `Containers` heading says `3 of 5` when the list scrolls
   - Restart and terminal are dimmed while the container is not running
 - Tailscale host SSH management, testing and config sync in network widget
   - Connect button left of status launches SSH session in configured terminal

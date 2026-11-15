@@ -5,6 +5,7 @@
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 // Aliased: the widget has its own Switch, and a plain import would sit next to
 // it at the same name.
 import QtQuick.Controls as Controls
@@ -81,17 +82,45 @@ ColumnLayout {
         return state.charAt(0).toUpperCase() + state.slice(1);
     }
 
+    readonly property int runningCount: {
+        var count = 0;
+        for (var i = 0; i < root.containers.length; i++)
+            if (root.containers[i].state === "running") count++;
+        return count;
+    }
+
+    // Container rows that fit in the scroll window, so the heading can say
+    // when the rest are out of sight.
+    readonly property int visibleRows: {
+        if (root.containerKind === "" || root.shownContainers.length === 0) return 0;
+        var step = 50; // 46px row plus its 4px spacer
+        var rowsHeight = root.shownContainers.length * step - 4;
+        var above = content.implicitHeight - rowsHeight;
+        var room = scroll.height - above;
+        return Math.max(0, Math.min(root.shownContainers.length,
+                                    Math.floor(room / step)));
+    }
+
     function containerSubtitle() {
         if (root.containerKind === "") return "";
-        var running = 0;
-        var stopped = 0;
-        for (var i = 0; i < root.containers.length; i++) {
-            if (root.containers[i].state === "running") running++;
-            else stopped++;
-        }
+        var stopped = root.containers.length - root.runningCount;
         return root.showStopped
-            ? running + " running · " + stopped + " stopped"
-            : running + " running";
+            ? root.runningCount + " running · " + stopped + " stopped"
+            : root.runningCount + " running";
+    }
+
+    // Bulk actions from the heading. They act on running containers only, so
+    // "Stop all" cannot trip over something already stopped.
+    function stopAllContainers() {
+        for (var i = 0; i < root.containers.length; i++)
+            if (root.containers[i].state === "running")
+                root.backend.stopContainer(root.containerKind, root.containers[i].name);
+    }
+
+    function restartAllContainers() {
+        for (var i = 0; i < root.containers.length; i++)
+            if (root.containers[i].state === "running")
+                root.backend.restartContainer(root.containerKind, root.containers[i].name);
     }
 
     function toggleContainer(container) {
@@ -272,17 +301,22 @@ ColumnLayout {
     }
 
     // -------------------------------------------------------------- content
-    Flickable {
+    Item {
+        id: scrollArea
         Layout.fillWidth: true
         Layout.preferredHeight: Math.min(content.implicitHeight, 340)
-        contentHeight: content.implicitHeight
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
 
-        ColumnLayout {
-            id: content
-            width: parent.width
-            spacing: 4
+        Flickable {
+            id: scroll
+            anchors.fill: parent
+            contentHeight: content.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+
+            ColumnLayout {
+                id: content
+                width: parent.width
+                spacing: 4
 
             // Tailscale Authentication Banner if web login required
             Rectangle {
@@ -568,10 +602,48 @@ ColumnLayout {
 
                 Text {
                     Layout.fillWidth: true
-                    text: "Containers"
+                    elide: Text.ElideRight
+                    // "3 of 5" once the scroll window hides some rows.
+                    text: root.shownContainers.length > root.visibleRows
+                        ? "Containers · " + root.visibleRows + " of "
+                            + root.shownContainers.length
+                        : "Containers"
                     font.family: root.theme.fontFamily
                     font.pixelSize: 9
                     color: root.theme.muted
+                }
+
+                // Bulk actions, shown only while something is running.
+                Text {
+                    visible: root.runningCount > 0
+                    text: "Restart all"
+                    font.family: root.theme.fontFamily
+                    font.pixelSize: 9
+                    color: restartAllMouse.containsMouse ? root.theme.accent : root.theme.muted
+
+                    MouseArea {
+                        id: restartAllMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.restartAllContainers()
+                    }
+                }
+
+                Text {
+                    visible: root.runningCount > 0
+                    text: "Stop all"
+                    font.family: root.theme.fontFamily
+                    font.pixelSize: 9
+                    color: stopAllMouse.containsMouse ? root.theme.bad : root.theme.muted
+
+                    MouseArea {
+                        id: stopAllMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.stopAllContainers()
+                    }
                 }
 
                 // Reads as a filter, not a state: off means only running
@@ -608,7 +680,8 @@ ColumnLayout {
                     RowLayout {
                         anchors.fill: parent
                         anchors.leftMargin: 10
-                        anchors.rightMargin: 6
+                        // Clears the scroll bar on the right edge.
+                        anchors.rightMargin: 12
                         spacing: 6
 
                         Text {
@@ -672,18 +745,25 @@ ColumnLayout {
                             id: logsButton
                             theme: root.theme
                             glyph: "󰈙"
-                            // Plain click opens the captured file in a viewer;
-                            // shift-click follows the stream instead.
+                            // Plain click opens the captured file in a viewer,
+                            // shift-click follows the stream, ctrl-click copies
+                            // the file's path.
                             onClicked: function (mouse) {
-                                root.backend.containerLogs(
-                                    root.containerKind,
-                                    containerRow.modelData.name,
-                                    mouse ? (mouse.modifiers & Qt.ShiftModifier) !== 0 : false);
+                                var mods = mouse ? mouse.modifiers : 0;
+                                var name = containerRow.modelData.name;
+                                if (mods & Qt.ControlModifier) {
+                                    Quickshell.clipboardText =
+                                        root.backend.containerLogPath(root.containerKind, name);
+                                    return;
+                                }
+                                root.backend.containerLogs(root.containerKind, name,
+                                    (mods & Qt.ShiftModifier) !== 0);
                             }
 
                             Controls.ToolTip.delay: 500
                             Controls.ToolTip.visible: logsHover.hovered
-                            Controls.ToolTip.text: "Logs · shift-click to follow live\n"
+                            Controls.ToolTip.text: "Logs · shift-click follows live"
+                                + " · ctrl-click copies the path\n"
                                 + root.backend.containerLogPath(
                                     root.containerKind, containerRow.modelData.name)
 
@@ -718,16 +798,32 @@ ColumnLayout {
                 color: root.theme.muted
             }
 
-            Text {
-                Layout.fillWidth: true
-                Layout.leftMargin: 4
-                Layout.topMargin: 2
-                visible: root.links.length === 0
-                text: root.hint
-                font.family: root.theme.fontFamily
-                font.pixelSize: 11
-                color: root.theme.muted
+                Text {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 4
+                    Layout.topMargin: 2
+                    visible: root.links.length === 0
+                    text: root.hint
+                    font.family: root.theme.fontFamily
+                    font.pixelSize: 11
+                    color: root.theme.muted
+                }
             }
+        }
+
+        // The bridges and the container list share one window, so with a few
+        // containers the last rows sit out of sight. The bar says so. Drawn by
+        // hand: a ScrollBar attached to a plain Flickable stays invisible, and
+        // one with a policy only appears while it is being dragged.
+        Rectangle {
+            visible: scroll.contentHeight > scroll.height
+            anchors.right: parent.right
+            width: 4
+            radius: 2
+            color: root.theme.muted
+            opacity: 0.45
+            y: scroll.height * scroll.visibleArea.yPosition
+            height: Math.max(24, scroll.height * scroll.visibleArea.heightRatio)
         }
     }
 }
