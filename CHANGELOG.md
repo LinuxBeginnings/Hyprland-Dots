@@ -313,7 +313,8 @@
   - Hovering the button shows that path in the panel footer
   - `Restart N` and `Stop N` beside `Containers` act on the running ones
   - The `Containers` heading says `3 of 5` when the list scrolls
-  - A gear beside `Show stopped` picks the log viewer: `lnav` or `$EDITOR`
+  - A gear beside `Show stopped` opens an editable viewer field, default `$EDITOR`
+  - Long container lists page with `‹ Prev` / `Next ›` under the list
   - A missing `$EDITOR` reports `viewer app not found` in a notification
   - Restart and terminal are dimmed while the container is not running
 - Tailscale host SSH management, testing and config sync in network widget

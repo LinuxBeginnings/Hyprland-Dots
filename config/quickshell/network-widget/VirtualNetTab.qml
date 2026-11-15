@@ -35,7 +35,9 @@ ColumnLayout {
     // show on this layer-shell surface, so the hint goes where it is seen.
     property string hoverHint: ""
     // The viewer container logs open in, owned by the panel and the script.
-    property string logViewer: "lnav"
+    property string logViewer: "$EDITOR"
+    // Container list pagination.
+    property int page: 0
     // Docker/Podman: the viewer preference row, toggled by the gear.
     property bool settingsOpen: false
 
@@ -97,18 +99,18 @@ ColumnLayout {
         return count;
     }
 
-    // Container rows that fit in the scroll window, so the heading can say
-    // when the rest are out of sight.
-    readonly property int visibleRows: {
-        if (root.containerKind === "" || root.shownContainers.length === 0) return 0;
-        var step = 50; // 46px row plus its 4px spacer
-        var rowsHeight = root.shownContainers.length * step - 4;
-        var above = content.implicitHeight - rowsHeight;
-        var room = scroll.height - above;
-        // Rounded up: a row only needs to be partly on screen to be seen.
-        return Math.max(0, Math.min(root.shownContainers.length,
-                                    Math.ceil(room / step)));
-    }
+    // Rows per page. Fixed on purpose: measuring the content height would
+    // depend on the page this decides, which is a binding loop.
+    readonly property int pageSize: 3
+
+    readonly property int pageCount: Math.max(1,
+        Math.ceil(root.shownContainers.length / Math.max(1, root.pageSize)))
+
+    readonly property var pagedContainers:
+        root.shownContainers.slice(root.page * root.pageSize,
+                                   root.page * root.pageSize + root.pageSize)
+
+    onPageCountChanged: if (root.page >= root.pageCount) root.page = root.pageCount - 1
 
     function containerSubtitle() {
         if (root.containerKind === "") return "";
@@ -312,10 +314,126 @@ ColumnLayout {
     }
 
     // -------------------------------------------------------------- content
+    // Container heading: filter, bulk actions and the viewer setting gear.
+    RowLayout {
+        Layout.fillWidth: true
+        Layout.leftMargin: 10
+        Layout.rightMargin: 8
+        visible: root.containerKind !== ""
+        spacing: 6
+
+        Text {
+            Layout.fillWidth: true
+            elide: Text.ElideRight
+            text: "Containers"
+            font.family: root.theme.fontFamily
+            font.pixelSize: 9
+            color: root.theme.muted
+        }
+
+        Text {
+            visible: root.runningCount > 0
+            text: "Restart " + root.runningCount
+            font.family: root.theme.fontFamily
+            font.pixelSize: 9
+            color: restartAllMouse.containsMouse ? root.theme.accent : root.theme.muted
+
+            MouseArea {
+                id: restartAllMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.restartAllContainers()
+            }
+        }
+
+        Text {
+            visible: root.runningCount > 0
+            text: "Stop " + root.runningCount
+            font.family: root.theme.fontFamily
+            font.pixelSize: 9
+            color: stopAllMouse.containsMouse ? root.theme.bad : root.theme.muted
+
+            MouseArea {
+                id: stopAllMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.stopAllContainers()
+            }
+        }
+
+        Text {
+            Layout.leftMargin: 8
+            text: "Show stopped"
+            font.family: root.theme.fontFamily
+            font.pixelSize: 9
+            color: root.theme.muted
+        }
+
+        Switch {
+            theme: root.theme
+            checked: root.showStopped
+            onToggled: root.showStopped = !root.showStopped
+        }
+
+        IconButton {
+            theme: root.theme
+            glyph: ""
+            onClicked: root.settingsOpen = !root.settingsOpen
+        }
+    }
+
+    // Editable viewer command: `$EDITOR` means the environment's editor, a
+    // command such as `lnav` is run as given.
+    RowLayout {
+        Layout.fillWidth: true
+        Layout.leftMargin: 10
+        Layout.rightMargin: 8
+        visible: root.containerKind !== "" && root.settingsOpen
+        spacing: 6
+
+        Text {
+            text: "Log viewer"
+            font.family: root.theme.fontFamily
+            font.pixelSize: 9
+            color: root.theme.muted
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 24
+            radius: 5
+            color: root.theme.surfaceAlt
+            border.width: 1
+            border.color: viewerField.activeFocus ? root.theme.accent : root.theme.border
+
+            TextInput {
+                id: viewerField
+                anchors.fill: parent
+                anchors.leftMargin: 8
+                anchors.rightMargin: 8
+                verticalAlignment: TextInput.AlignVCenter
+                text: root.logViewer
+                color: root.theme.text
+                font.family: root.theme.fontFamily
+                font.pixelSize: 10
+                selectByMouse: true
+                clip: true
+                onEditingFinished: root.logViewerPicked(text)
+                Keys.onReturnPressed: root.logViewerPicked(text)
+                Keys.onEscapePressed: {
+                    text = root.logViewer;
+                    focus = false;
+                }
+            }
+        }
+    }
+
     Item {
         id: scrollArea
         Layout.fillWidth: true
-        Layout.preferredHeight: Math.min(content.implicitHeight, 340)
+        Layout.preferredHeight: Math.min(content.implicitHeight, 380)
 
         Flickable {
             id: scroll
@@ -601,144 +719,9 @@ ColumnLayout {
                 }
             }
 
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.leftMargin: 10
-                Layout.rightMargin: 8
-                Layout.topMargin: 4
-                // Stays visible while the list is empty, so the filter can be
-                // turned back off once every container is stopped.
-                visible: root.containerKind !== ""
-                spacing: 6
-
-                Text {
-                    Layout.fillWidth: true
-                    elide: Text.ElideRight
-                    // "3 of 5" once the scroll window hides some rows.
-                    text: root.shownContainers.length > root.visibleRows
-                        ? "Containers · " + root.visibleRows + " of "
-                            + root.shownContainers.length
-                        : "Containers"
-                    font.family: root.theme.fontFamily
-                    font.pixelSize: 9
-                    color: root.theme.muted
-                }
-
-                // Bulk actions, shown only while something is running. The
-                // count is in the label: "all" promised stopped containers too.
-                Text {
-                    visible: root.runningCount > 0
-                    text: "Restart " + root.runningCount
-                    font.family: root.theme.fontFamily
-                    font.pixelSize: 9
-                    color: restartAllMouse.containsMouse ? root.theme.accent : root.theme.muted
-
-                    MouseArea {
-                        id: restartAllMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.restartAllContainers()
-                    }
-                }
-
-                Text {
-                    visible: root.runningCount > 0
-                    text: "Stop " + root.runningCount
-                    font.family: root.theme.fontFamily
-                    font.pixelSize: 9
-                    color: stopAllMouse.containsMouse ? root.theme.bad : root.theme.muted
-
-                    MouseArea {
-                        id: stopAllMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.stopAllContainers()
-                    }
-                }
-
-                // Reads as a filter, not a state: off means only running
-                // containers are listed.
-                Text {
-                    // Separated from the actions, so "Stop 5 Show stopped"
-                    // does not read as one instruction.
-                    Layout.leftMargin: 8
-                    text: "Show stopped"
-                    font.family: root.theme.fontFamily
-                    font.pixelSize: 9
-                    color: root.theme.muted
-                }
-
-                Switch {
-                    theme: root.theme
-                    checked: root.showStopped
-                    onToggled: root.showStopped = !root.showStopped
-                }
-
-                IconButton {
-                    theme: root.theme
-                    glyph: "󰒓"
-                    onClicked: root.settingsOpen = !root.settingsOpen
-                }
-            }
-
-            // Log viewer preference, behind the gear in the heading.
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.leftMargin: 10
-                Layout.rightMargin: 8
-                visible: root.containerKind !== "" && root.settingsOpen
-                spacing: 6
-
-                Text {
-                    text: "Log viewer"
-                    font.family: root.theme.fontFamily
-                    font.pixelSize: 9
-                    color: root.theme.muted
-                }
-
-                Repeater {
-                    model: [
-                        { key: "lnav", label: "lnav" },
-                        { key: "editor", label: "$EDITOR" }
-                    ]
-
-                    delegate: Rectangle {
-                        required property var modelData
-                        implicitHeight: 20
-                        implicitWidth: viewerChipText.implicitWidth + 16
-                        radius: 5
-                        color: root.logViewer === modelData.key
-                            ? root.theme.accent : root.theme.surfaceAlt
-                        border.width: 1
-                        border.color: root.theme.border
-
-                        Text {
-                            id: viewerChipText
-                            anchors.centerIn: parent
-                            text: modelData.label
-                            font.family: root.theme.fontFamily
-                            font.pixelSize: 9
-                            color: root.logViewer === modelData.key
-                                ? root.theme.accentInk : root.theme.text
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.logViewerPicked(modelData.key)
-                        }
-                    }
-                }
-
-                Item {
-                    Layout.fillWidth: true
-                }
-            }
 
             Repeater {
-                model: root.shownContainers
+                model: root.pagedContainers
 
                 delegate: Rectangle {
                     id: containerRow
@@ -903,4 +886,53 @@ ColumnLayout {
             height: Math.max(24, scroll.height * scroll.visibleArea.heightRatio)
         }
     }
+
+    // Page links, only while the containers need more than one page.
+    RowLayout {
+        Layout.fillWidth: true
+        Layout.leftMargin: 10
+        Layout.rightMargin: 8
+        visible: root.containerKind !== "" && root.pageCount > 1
+        spacing: 8
+
+        Text {
+            text: "‹ Prev"
+            font.family: root.theme.fontFamily
+            font.pixelSize: 9
+            color: root.page > 0 ? root.theme.accent : root.theme.muted
+            opacity: root.page > 0 ? 1.0 : 0.4
+
+            MouseArea {
+                anchors.fill: parent
+                enabled: root.page > 0
+                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onClicked: root.page = Math.max(0, root.page - 1)
+            }
+        }
+
+        Text {
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+            text: (root.page + 1) + " / " + root.pageCount
+            font.family: root.theme.fontFamily
+            font.pixelSize: 9
+            color: root.theme.muted
+        }
+
+        Text {
+            text: "Next ›"
+            font.family: root.theme.fontFamily
+            font.pixelSize: 9
+            color: root.page < root.pageCount - 1 ? root.theme.accent : root.theme.muted
+            opacity: root.page < root.pageCount - 1 ? 1.0 : 0.4
+
+            MouseArea {
+                anchors.fill: parent
+                enabled: root.page < root.pageCount - 1
+                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onClicked: root.page = Math.min(root.pageCount - 1, root.page + 1)
+            }
+        }
+    }
+
 }

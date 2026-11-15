@@ -30,7 +30,7 @@
 #                                   manage one container; logs open in a
 #                                   searchable viewer (a trailing `live`
 #                                   follows the stream), shell in a terminal
-#   set-log-viewer lnav|editor      viewer for container logs
+#   set-log-viewer COMMAND          container log viewer, default $EDITOR
 #   container-engine on|off         start or stop the docker/podman daemon
 #   tailscale-list-terminals        list installed terminal emulators
 #   tailscale-list-keys             list discovered SSH private keys in ~/.ssh
@@ -770,16 +770,26 @@ widget_settings_file() {
   printf '%s' "$cfg_home/hypr/UserConfigs/network-widget.conf"
 }
 
-# Which viewer container logs open in: `lnav`, or the editor chain. Defaults to
-# lnav, which is what the panel shows before anything is chosen.
+# The viewer container logs open in. `$EDITOR` means the editor the environment
+# names; anything else is a command, `lnav`, `less`, `bat`, `my-own-script`.
 viewer_pref() {
   local file value=""
   file=$(widget_settings_file)
   [[ -r $file ]] && value=$(sed -n 's/^log_viewer=//p' "$file" 2>/dev/null | tail -n1)
-  case "$value" in
-    lnav | editor) printf '%s' "$value" ;;
-    *) printf 'lnav' ;;
-  esac
+  # The first release stored `editor` as a keyword; it meant $EDITOR.
+  [[ $value == editor ]] && value='$EDITOR'
+  printf '%s' "${value:-\$EDITOR}"
+}
+
+# Live following needs lnav, so the stream is only piped when the chosen viewer
+# is lnav itself or $EDITOR resolving to it.
+viewer_is_lnav() {
+  local pref viewer
+  pref=$(viewer_pref)
+  viewer="${pref%% *}"
+  [[ $pref == '$EDITOR' ]] && viewer="${EDITOR:-}"
+  viewer="${viewer%% *}"
+  [[ ${viewer##*/} == lnav ]]
 }
 
 set_viewer_pref() {
@@ -803,29 +813,34 @@ notify_viewer_missing() {
 # and filter it, the rest open the file as text. $EDITOR is honoured unless the
 # preference is the built-in fallbacks only.
 log_viewer_command() {
-  local file="$1" pref editor_cmd="${EDITOR:-}" editor_bin="" q_file candidate
+  local file="$1" pref editor_cmd editor_bin="" q_file candidate viewer
   q_file="$(shell_quote "$file")"
   pref="$(viewer_pref)"
 
-  if [[ $pref == lnav ]] && have lnav; then
-    printf 'lnav %s' "$q_file"
-    return 0
-  fi
-
-  if [[ -n $editor_cmd ]]; then
-    editor_bin="${editor_cmd%% *}"
-    editor_bin="${editor_bin#\"}"
-    editor_bin="${editor_bin%\"}"
-    editor_bin="${editor_bin#\'}"
-    editor_bin="${editor_bin%\'}"
-    if [[ -n $editor_bin ]] && have "$editor_bin"; then
-      printf '%s %s' "$editor_cmd" "$q_file"
+  if [[ $pref == '$EDITOR' ]]; then
+    editor_cmd="${EDITOR:-}"
+    if [[ -n $editor_cmd ]]; then
+      editor_bin="${editor_cmd%% *}"
+      editor_bin="${editor_bin#\"}"
+      editor_bin="${editor_bin%\"}"
+      editor_bin="${editor_bin#\'}"
+      editor_bin="${editor_bin%\'}"
+      if [[ -n $editor_bin ]] && have "$editor_bin"; then
+        printf '%s %s' "$editor_cmd" "$q_file"
+        return 0
+      fi
+      # Configured but missing: report it, then keep going down the chain.
+      notify_viewer_missing "${editor_bin:-$editor_cmd}"
+    else
+      notify_viewer_missing '$EDITOR'
+    fi
+  else
+    viewer="${pref%% *}"
+    if [[ -n $viewer ]] && have "$viewer"; then
+      printf '%s %s' "$pref" "$q_file"
       return 0
     fi
-    # Configured but missing: report it, then keep going down the chain.
-    notify_viewer_missing "${editor_bin:-$editor_cmd}"
-  elif [[ $pref == editor ]]; then
-    notify_viewer_missing '$EDITOR'
+    notify_viewer_missing "${viewer:-$pref}"
   fi
 
   for candidate in emacs hx nano more; do
@@ -1422,7 +1437,7 @@ case "${1:-snapshot}" in
         if [[ ${5:-} == live ]]; then
           # Live mode follows the stream instead of a snapshot. Only lnav can
           # follow one, so the editor preference uses a plain stream here.
-          if [[ "$(viewer_pref)" == lnav ]] && have lnav; then
+          if viewer_is_lnav && have lnav; then
             launch_in_terminal "$(viewer_terminal "")" "$2 logs --tail $tail_lines -f $(shell_quote "$4") | lnav"
           else
             launch_in_terminal "$(viewer_terminal "")" "$2 logs --tail $tail_lines -f $(shell_quote "$4")"
@@ -1468,11 +1483,14 @@ case "${1:-snapshot}" in
     fi
     ;;
   set-log-viewer)
-    case "${2:-}" in
-      lnav | editor) ;;
-      *) printf 'usage: %s set-log-viewer lnav|editor\n' "$0" >&2; exit 2 ;;
-    esac
-    set_viewer_pref "$2"
+    viewer_value="${2:-}"
+    viewer_value="${viewer_value#"${viewer_value%%[![:space:]]*}"}"
+    viewer_value="${viewer_value%"${viewer_value##*[![:space:]]}"}"
+    if [[ -z $viewer_value || $viewer_value == *$'\t'* || $viewer_value == *$'\n'* ]]; then
+      printf 'usage: %s set-log-viewer COMMAND\n' "$0" >&2
+      exit 2
+    fi
+    set_viewer_pref "$viewer_value"
     ;;
   tailscale)
     have tailscale || { printf 'tailscale is not installed\n' >&2; exit 1; }

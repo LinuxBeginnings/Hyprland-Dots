@@ -132,11 +132,13 @@ long list.
   the captured file's path, and hovering it shows that path in the footer.
   `Restart N`
   and `Stop N` beside `Containers` act on the running ones, where N is how many
-  are running, and the heading reads `3 of 5` when the list scrolls. The gear
-  next to `Show stopped` opens the viewer preference (`lnav` or `$EDITOR`),
-  stored in `UserConfigs/network-widget.conf`. Logs and shells open in a
-  window with its own class, so Hyprland floats and centres it, and the panel
-  closes first rather than covering it.
+  are running. The list is paged: whatever does not fit gets `‹ Prev` /
+  `Next ›` links with the page number underneath. The gear next to
+  `Show stopped` opens an editable viewer field holding `$EDITOR` by default;
+  any command (`lnav`, `less`, `bat`) is run as given and kept in
+  `UserConfigs/network-widget.conf`. Logs and shells open in a window with its
+  own class, so Hyprland floats and centres it, and the panel closes first
+  rather than covering it.
   Running containers are shown; the "Show stopped" switch beside the
   `Containers` heading also lists stopped ones.
 - **Podman** - the same for `podman`, the `podman*`/`cni-podman*` bridges,

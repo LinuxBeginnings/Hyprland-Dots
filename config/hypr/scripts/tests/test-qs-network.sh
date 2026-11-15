@@ -271,6 +271,7 @@ fi
 : >"$CALL_LOG"
 log_dir="$WORK/run/quickshell-network-widget"
 rm -rf "$log_dir"
+bash "$SCRIPT" set-log-viewer lnav >/dev/null 2>&1
 it "container logs are written to a file and opened in lnav"
 if bash "$SCRIPT" container docker logs odysseus-ntfy-1 >/dev/null 2>&1 &&
   grep -qF 'docker logs --tail 2000 odysseus-ntfy-1' "$CALL_LOG" &&
@@ -289,7 +290,8 @@ mkdir -p "$WORK/nolnav"
 ln -sf /usr/bin/* "$WORK/nolnav/" 2>/dev/null
 rm -f "$WORK/nolnav/lnav" "$WORK/nolnav/docker" "$WORK/nolnav/kitty" "$WORK/nolnav/myedit"
 ln -sf "$WORK/bin/docker" "$WORK/bin/kitty" "$WORK/bin/myedit" "$WORK/bin/notify-send" "$WORK/nolnav/"
-it "container logs fall back to \$EDITOR when lnav is missing"
+it "container logs use \$EDITOR when it is the chosen viewer"
+bash "$SCRIPT" set-log-viewer '$EDITOR' >/dev/null 2>&1
 if PATH="$WORK/nolnav" EDITOR=myedit bash "$SCRIPT" container docker logs odysseus-ntfy-1 >/dev/null 2>&1 &&
   grep -qF 'myedit ' "$CALL_LOG"; then
   pass_msg
@@ -310,6 +312,7 @@ else
 fi
 
 : >"$CALL_LOG"
+bash "$SCRIPT" set-log-viewer lnav >/dev/null 2>&1
 it "container logs live follows the stream through lnav"
 if bash "$SCRIPT" container docker logs odysseus-ntfy-1 live >/dev/null 2>&1 &&
   grep -qF -- '--tail 2000 -f' "$CALL_LOG" &&
@@ -343,48 +346,47 @@ else
 fi
 
 # ------------------------------------------------------- viewer setting --
-: >"$CALL_LOG"
-it "the snapshot reports the log viewer preference"
-# snapshot is captured first: the suite runs with pipefail, and a probe that
-# exits non-zero would fail the pipeline even when the record is there.
+# The preference is a command: $EDITOR by default, or a binary such as lnav.
+# snapshot is captured first, because the suite runs with pipefail and a probe
+# that exits non-zero would fail the pipeline even when the record is there.
+rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/network-widget.conf"
+it "the snapshot reports \$EDITOR as the default viewer"
 snap_text="$(bash "$SCRIPT" snapshot 2>/dev/null || true)"
-if printf '%s' "$snap_text" | grep -qF "$(printf 'SETTING\tlogViewer\tlnav')"; then
+if printf '%s' "$snap_text" | grep -qF "$(printf 'SETTING\tlogViewer\t$EDITOR')"; then
   pass_msg
 else
-  fail "no SETTING record in the snapshot"
+  fail "default viewer is not \$EDITOR: $(printf '%s' "$snap_text" | grep SETTING)"
 fi
 
 : >"$CALL_LOG"
-it "set-log-viewer editor is honoured for container logs"
-bash "$SCRIPT" set-log-viewer editor >/dev/null 2>&1
-snap_text="$(bash "$SCRIPT" snapshot 2>/dev/null || true)"
-if printf '%s' "$snap_text" | grep -qF "$(printf 'SETTING\tlogViewer\teditor')" &&
-  EDITOR=myedit bash "$SCRIPT" container docker logs odysseus-ntfy-1 >/dev/null 2>&1 &&
+it "a viewer command is used as given"
+if bash "$SCRIPT" set-log-viewer myedit >/dev/null 2>&1 &&
+  bash "$SCRIPT" container docker logs odysseus-ntfy-1 >/dev/null 2>&1 &&
   grep -qF 'myedit ' "$CALL_LOG" &&
   ! grep -qF 'lnav ' "$CALL_LOG"; then
   pass_msg
 else
-  fail "the editor preference was ignored: $(tr '\n' ' ' <"$CALL_LOG")"
+  fail "the viewer command was ignored: $(tr '\n' ' ' <"$CALL_LOG")"
 fi
 
 : >"$CALL_LOG"
-it "set-log-viewer rejects an unknown value"
-if bash "$SCRIPT" set-log-viewer vim >/dev/null 2>&1; then
-  fail "an unknown viewer was accepted"
-elif printf '%s' "$(bash "$SCRIPT" snapshot 2>/dev/null || true)" | grep -qF "$(printf 'SETTING\tlogViewer\teditor')"; then
+it "an empty viewer command is rejected"
+if bash "$SCRIPT" set-log-viewer "  " >/dev/null 2>&1; then
+  fail "an empty viewer command was accepted"
+elif printf '%s' "$(bash "$SCRIPT" snapshot 2>/dev/null || true)" | grep -qF "$(printf 'SETTING\tlogViewer\tmyedit')"; then
   pass_msg
 else
   fail "a rejected value still changed the preference"
 fi
 
 : >"$CALL_LOG"
-it "a missing editor viewer is reported"
-if bash "$SCRIPT" set-log-viewer editor >/dev/null 2>&1 &&
-  EDITOR=ghost-editor bash "$SCRIPT" container docker logs odysseus-ntfy-1 >/dev/null 2>&1 &&
-  grep -qF 'viewer app not found' "$CALL_LOG"; then
+it "a viewer command that is not installed is reported"
+if bash "$SCRIPT" set-log-viewer ghost-viewer >/dev/null 2>&1 &&
+  bash "$SCRIPT" container docker logs odysseus-ntfy-1 >/dev/null 2>&1 &&
+  grep -qF 'viewer app not found: ghost-viewer' "$CALL_LOG"; then
   pass_msg
 else
-  fail "a missing editor was not reported: $(tr '\n' ' ' <"$CALL_LOG")"
+  fail "a missing viewer was not reported: $(tr '\n' ' ' <"$CALL_LOG")"
 fi
 
 : >"$CALL_LOG"

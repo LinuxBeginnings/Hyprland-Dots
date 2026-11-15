@@ -27,8 +27,9 @@ Item {
     property string tailscaleAuthUrl: ""
     property var containers: []     // { kind, name, state, status, runtime, cpu, mem }
     property var containerEngines: ({}) // { docker: true, podman: false }
-    // Which viewer container logs open in: "lnav" or "editor".
-    property string logViewer: "lnav"
+    // The command container logs open in. "$EDITOR" means the environment's
+    // editor; anything else is run as given.
+    property string logViewer: "$EDITOR"
     property var networks: []       // { ssid, signal, security, inUse }
     property var btDevices: []      // { address, name, connected, paired, battery, icon }
     property bool wifiEnabled: false
@@ -148,7 +149,7 @@ Item {
         var containers = [];
         var containerStats = [];
         var containerEngines = {};
-        var logViewer = "lnav";
+        var logViewer = "$EDITOR";
         var networks = [];
         var btDevices = [];
         var wifiEnabled = false;
@@ -243,8 +244,12 @@ Item {
                 containerEngines[field(parts, 1, "")] = field(parts, 2, "0") === "1";
                 break;
             case "SETTING":
-                if (field(parts, 1, "") === "logViewer")
-                    logViewer = field(parts, 2, "lnav") === "editor" ? "editor" : "lnav";
+                if (field(parts, 1, "") === "logViewer") {
+                    var viewerValue = field(parts, 2, "$EDITOR");
+                    // The first release stored `editor` as a keyword.
+                    if (viewerValue === "editor") viewerValue = "$EDITOR";
+                    logViewer = viewerValue !== "" ? viewerValue : "$EDITOR";
+                }
                 break;
             case "BOXSTAT":
                 containerStats.push({
@@ -447,7 +452,8 @@ Item {
     // Persisted in UserConfigs by the script, then read back from the next
     // snapshot.
     function setLogViewer(value) {
-        logViewer = value === "editor" ? "editor" : "lnav";
+        var trimmed = String(value).trim();
+        logViewer = trimmed !== "" ? trimmed : "$EDITOR";
         run(["set-log-viewer", logViewer]);
     }
 
