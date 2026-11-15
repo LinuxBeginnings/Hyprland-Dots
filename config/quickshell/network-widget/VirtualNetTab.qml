@@ -105,6 +105,8 @@ ColumnLayout {
     function containerSubtitle() {
         if (root.containerKind === "") return "";
         var stopped = root.containers.length - root.runningCount;
+        // "0 running" beside a stopped daemon reads as a contradiction.
+        if (root.showPower && !root.powered) return "daemon stopped";
         return root.showStopped
             ? root.runningCount + " running · " + stopped + " stopped"
             : root.runningCount + " running";
@@ -614,10 +616,11 @@ ColumnLayout {
                     color: root.theme.muted
                 }
 
-                // Bulk actions, shown only while something is running.
+                // Bulk actions, shown only while something is running. The
+                // count is in the label: "all" promised stopped containers too.
                 Text {
                     visible: root.runningCount > 0
-                    text: "Restart all"
+                    text: "Restart " + root.runningCount
                     font.family: root.theme.fontFamily
                     font.pixelSize: 9
                     color: restartAllMouse.containsMouse ? root.theme.accent : root.theme.muted
@@ -633,7 +636,7 @@ ColumnLayout {
 
                 Text {
                     visible: root.runningCount > 0
-                    text: "Stop all"
+                    text: "Stop " + root.runningCount
                     font.family: root.theme.fontFamily
                     font.pixelSize: 9
                     color: stopAllMouse.containsMouse ? root.theme.bad : root.theme.muted
@@ -650,6 +653,9 @@ ColumnLayout {
                 // Reads as a filter, not a state: off means only running
                 // containers are listed.
                 Text {
+                    // Separated from the actions, so "Stop 5 Show stopped"
+                    // does not read as one instruction.
+                    Layout.leftMargin: 8
                     text: "Show stopped"
                     font.family: root.theme.fontFamily
                     font.pixelSize: 9

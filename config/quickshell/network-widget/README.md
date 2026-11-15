@@ -130,9 +130,9 @@ long list.
   running `bash` in the container and falling back to `sh`. Shift-click on
   the logs button follows the stream live through `lnav`, ctrl-click copies
   the captured file's path, and hovering it shows that path in the footer.
-  `Restart all`
-  and `Stop all` beside `Containers` act on the running ones, and the heading
-  reads `3 of 5` when the list scrolls.
+  `Restart N`
+  and `Stop N` beside `Containers` act on the running ones, where N is how many
+  are running, and the heading reads `3 of 5` when the list scrolls.
   Running containers are shown; the "Show stopped" switch beside the
   `Containers` heading also lists stopped ones.
 - **Podman** - the same for `podman`, the `podman*`/`cni-podman*` bridges,
