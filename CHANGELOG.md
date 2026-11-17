@@ -309,6 +309,7 @@
   - Upgrades and express upgrades leave the service as it is
   - Without it the tracker still starts on the first per-window toggle
   - Adapted from [tak0-layout](https://github.com/tak0dan/QoL-Script-For-Hyprland-By-Tak00/tree/main/layout-tracker)
+  - PR: [#172](https://github.com/LinuxBeginnings/Hyprland-Dots/pull/172)
 
 - Per-window keyboard layout learns which layout each app uses
   - `Tak0-Layout-Tracker.py` counts focus time per layout, per app
