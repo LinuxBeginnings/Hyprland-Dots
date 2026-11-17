@@ -312,6 +312,7 @@
   - `Tak0-Per-Window-Switch.sh` starts it on the first toggle
   - Without `python3` the previous listener is used as before
   - Adapted from [tak0-layout](https://github.com/tak0dan/QoL-Script-For-Hyprland-By-Tak00/tree/main/layout-tracker)
+  - PR: [#171](https://github.com/LinuxBeginnings/Hyprland-Dots/pull/171)
 
 - Network widget Docker and Podman tabs list each container's state and actions
   - Every container shows its state, then start/stop, restart and logs buttons
