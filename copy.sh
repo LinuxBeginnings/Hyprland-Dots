@@ -550,11 +550,12 @@ prepare_fresh_install_hypr() {
 }
 print_usage() {
   cat <<'EOF'
-Usage: copy.sh [--upgrade] [--express-upgrade] [--help]
+Usage: copy.sh [--upgrade] [--express-upgrade] [--layout-tracker] [--help]
 
 Options:
   --upgrade           Run the script in upgrade mode (can still prompt for express).
   --express-upgrade   Upgrade with express behavior (no restore prompts, trims backups).
+  --layout-tracker    Enable the per-window layout tracker as a user service (asked about on install).
   --tty               Force basic TTY prompts (no whiptail menu).
   -h, --help          Show this help message and exit.
 EOF
@@ -563,6 +564,7 @@ EOF
 UPGRADE_MODE=0
 EXPRESS_MODE=0
 MIGRATE_HYPR_TO_LUA=0
+LAYOUT_TRACKER=0
 RUN_MODE=""
 
 while [[ $# -gt 0 ]]; do
@@ -575,6 +577,9 @@ while [[ $# -gt 0 ]]; do
     UPGRADE_MODE=1
     EXPRESS_MODE=1
     RUN_MODE="express"
+    ;;
+  --layout-tracker)
+    LAYOUT_TRACKER=1
     ;;
   --tty)
     COPY_TUI_BACKEND="basic"
@@ -1192,6 +1197,9 @@ if command -v systemctl >/dev/null 2>&1; then
     systemctl --user stop waybar.service 2>&1 | tee -a "$LOG" || true
   fi
 fi
+
+# Optional layout tracker service (the unit was copied above, it is only enabled on request)
+prompt_layout_tracker "$LOG"
 
 chassis_type=$(detect_waybar_config)
 if [ "$chassis_type" = "desktop" ]; then

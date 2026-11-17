@@ -303,6 +303,13 @@
 
 ## Added:
 
+- The layout tracker can run as a user service, enabled from `copy.sh`
+  - `copy.sh` asks once on install, and `--layout-tracker` answers yes
+  - `config/systemd/user/tak0-layout-tracker.service` is copied with the rest
+  - Upgrades and express upgrades leave the service as it is
+  - Without it the tracker still starts on the first per-window toggle
+  - Adapted from [tak0-layout](https://github.com/tak0dan/QoL-Script-For-Hyprland-By-Tak00/tree/main/layout-tracker)
+
 - Per-window keyboard layout learns which layout each app uses
   - `Tak0-Layout-Tracker.py` counts focus time per layout, per app
   - A new window opens in that app's most used layout

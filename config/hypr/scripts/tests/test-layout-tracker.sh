@@ -112,4 +112,34 @@ bash -n "$HERE/../Tak0-Per-Window-Switch.sh" \
   && assert_contains "$HERE/../Tak0-Per-Window-Switch.sh" 'forget)' \
   && pass_msg || fail "Tak0-Per-Window-Switch.sh is broken"
 
+# --- optional service, as offered by copy.sh -------------------------------
+UNIT="$HERE/../../../systemd/user/tak0-layout-tracker.service"
+it "service unit points at a script that ships"
+assert_contains "$UNIT" 'ExecStart=/usr/bin/env python3 %E/hypr/scripts/Tak0-Layout-Tracker.py daemon' \
+  && [[ -f "$TRACKER" ]] && pass_msg || fail "unit and script do not match"
+
+# prompt_layout_tracker against a stub systemctl and a sandbox config dir
+mkdir -p "$WORK/bin" "$WORK/cfg/systemd/user"
+printf '#!/bin/sh\necho "$*" >> "%s/calls"\n' "$WORK" >"$WORK/bin/systemctl"
+chmod +x "$WORK/bin/systemctl"
+cp "$UNIT" "$WORK/cfg/systemd/user/"
+# shellcheck source=../../../../scripts/lib_prompts.sh
+source "$HERE/../../../../scripts/lib_prompts.sh"
+
+svc() { : >"$WORK/calls"; PATH="$WORK/bin:$PATH" XDG_CONFIG_HOME="$WORK/cfg" "$@" 2>/dev/null; }
+
+it "service: --layout-tracker enables it"
+LAYOUT_TRACKER=1 EXPRESS_MODE=0 RUN_MODE="" svc prompt_layout_tracker "$WORK/log"
+assert_contains "$WORK/calls" 'enable --now tak0-layout-tracker.service' && pass_msg
+
+it "service: express and upgrade modes leave it alone"
+LAYOUT_TRACKER=0 EXPRESS_MODE=1 RUN_MODE="express" svc prompt_layout_tracker "$WORK/log"
+[[ ! -s "$WORK/calls" ]] && pass_msg || fail "express mode touched systemd"
+LAYOUT_TRACKER=0 EXPRESS_MODE=0 RUN_MODE="upgrade" svc prompt_layout_tracker "$WORK/log"
+[[ ! -s "$WORK/calls" ]] && pass_msg || fail "upgrade mode touched systemd"
+
+it "service: no terminal to ask on means no service"
+LAYOUT_TRACKER=0 EXPRESS_MODE=0 RUN_MODE="" svc prompt_layout_tracker "$WORK/log" </dev/null
+[[ ! -s "$WORK/calls" ]] && pass_msg || fail "enabled without an answer"
+
 summary "test-layout-tracker"
