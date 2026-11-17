@@ -202,4 +202,4 @@ Source: `config/hypr/UserConfigs/user_keybinds.lua`, not the system file
 
 ## Keyboard Layout Switching
 - `ALT + SHIFT` (`ALT + Shift_L / Shift_R`) — Switch keyboard layout globally (`KeyboardLayout.sh switch`)
-- `SHIFT + ALT` (`SHIFT + Alt_L / Alt_R`) — Switch keyboard layout per-window (`Tak0-Per-Window-Switch.sh`)
+- `SHIFT + ALT` (`SHIFT + Alt_L / Alt_R`) — Switch keyboard layout per-window (`Tak0-Per-Window-Switch.sh`). Each window keeps its own layout, and new windows open in the layout you use most in that app (`Tak0-Layout-Tracker.py`; `Tak0-Layout-Tracker.py stats` shows the numbers)

@@ -303,6 +303,16 @@
 
 ## Added:
 
+- Per-window keyboard layout learns which layout each app uses
+  - `Tak0-Layout-Tracker.py` counts focus time per layout, per app
+  - A new window opens in that app's most used layout
+  - Counts fade with a 14-day half-life, so recent habits count most
+  - Layouts removed from `kb_layout` keep their history
+  - The data file is compacted on every write and stays small
+  - `Tak0-Per-Window-Switch.sh` starts it on the first toggle
+  - Without `python3` the previous listener is used as before
+  - Adapted from [tak0-layout](https://github.com/tak0dan/QoL-Script-For-Hyprland-By-Tak00/tree/main/layout-tracker)
+
 - Network widget Docker and Podman tabs list each container's state and actions
   - Every container shows its state, then start/stop, restart and logs buttons
   - The terminal button opens `bash` in the container, `sh` where it has none

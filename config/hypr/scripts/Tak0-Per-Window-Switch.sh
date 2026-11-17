@@ -199,6 +199,35 @@ subscribe() {
   done
 }
 
+# Tak0-Layout-Tracker.py (adapted from tak0-layout, the original project:
+# https://github.com/tak0dan/QoL-Script-For-Hyprland-By-Tak00/tree/main/layout-tracker)
+# keeps a layout per window like the listener below, and also learns how long
+# each layout is used per app, so a new window opens in the layout you most
+# likely want. It is used when python3 is available; without it the listener
+# below keeps working as before.
+TRACKER="$(dirname "$SCRIPT_PATH")/Tak0-Layout-Tracker.py"
+
+tracker_available() {
+  [[ -x "$TRACKER" ]] && command -v python3 >/dev/null 2>&1
+}
+
+tracker_toggle() {
+  # The tracker takes a lock and exits at once if one already runs
+  "$TRACKER" daemon >/dev/null 2>&1 &
+  hyprctl switchxkblayout all next >/dev/null 2>&1 || true
+
+  local name
+  name=$(hyprctl -j devices 2>/dev/null | jq -r '[.keyboards[] | select(.main)][0].active_keymap // empty')
+  if command -v notify-send >/dev/null 2>&1 && [[ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]]; then
+    notify-send -e \
+      -h string:x-canonical-private-synchronous:kb_layout_notif \
+      -h boolean:SWAYNC_BYPASS_DND:true \
+      -u low \
+      -i "$ICON" \
+      " Keyboard Layout (Per-Window)" " ${name}" 2>/dev/null || true
+  fi
+}
+
 # CLI
 case "${1:-toggle}" in
   --listener)
@@ -209,6 +238,10 @@ case "${1:-toggle}" in
     load_map "$W"
     ;;
   toggle|"")
+    if tracker_available; then
+      tracker_toggle
+      exit 0
+    fi
     # The listener takes an flock and exits at once if one already runs
     if command -v flock >/dev/null 2>&1 || ! pgrep -f "$SCRIPT_NAME.*--listener" >/dev/null 2>&1; then
       "$SCRIPT_PATH" --listener >/dev/null 2>&1 &
