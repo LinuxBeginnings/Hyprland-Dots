@@ -474,8 +474,9 @@ prompt_layout_tracker() {
   else
     while true; do
       echo "${NOTE:-[NOTE]} The layout tracker keeps a keyboard layout per window and opens new windows in the layout you use most in that app."
-      if ! read -r -p "${CAT:-[ACTION]} Run it as a service from login? (y/N): " choice </dev/tty; then
+      if ! read -r -p "${CAT:-[ACTION]} Run it as a service from login? (y/N): " choice; then
         choice="n"
+        break
       fi
       case "$choice" in
         [Yy] | [Nn] | "") break ;;
@@ -486,6 +487,8 @@ prompt_layout_tracker() {
 
   case "$choice" in
     [Yy])
+      pkill -f "Tak0-Layout-Tracker\.py daemon" 2>/dev/null || true
+      pkill -f "Tak0-Per-Window-Switch\.sh.*--listener" 2>/dev/null || true
       systemctl --user daemon-reload 2>&1 | tee -a "$log" || true
       if systemctl --user enable --now tak0-layout-tracker.service 2>&1 | tee -a "$log"; then
         echo "${OK:-[OK]} Layout tracker service enabled." 2>&1 | tee -a "$log"

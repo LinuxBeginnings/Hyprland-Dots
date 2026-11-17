@@ -120,7 +120,7 @@ assert_contains "$UNIT" 'ExecStart=/usr/bin/env python3 %E/hypr/scripts/Tak0-Lay
 
 # prompt_layout_tracker against a stub systemctl and a sandbox config dir
 mkdir -p "$WORK/bin" "$WORK/cfg/systemd/user"
-printf '#!/bin/sh\necho "$*" >> "%s/calls"\n' "$WORK" >"$WORK/bin/systemctl"
+printf '#!/usr/bin/env bash\necho "$*" >> "%s/calls"\n' "$WORK" >"$WORK/bin/systemctl"
 chmod +x "$WORK/bin/systemctl"
 cp "$UNIT" "$WORK/cfg/systemd/user/"
 # shellcheck source=../../../../scripts/lib_prompts.sh
@@ -141,5 +141,13 @@ LAYOUT_TRACKER=0 EXPRESS_MODE=0 RUN_MODE="upgrade" svc prompt_layout_tracker "$W
 it "service: no terminal to ask on means no service"
 LAYOUT_TRACKER=0 EXPRESS_MODE=0 RUN_MODE="" svc prompt_layout_tracker "$WORK/log" </dev/null
 [[ ! -s "$WORK/calls" ]] && pass_msg || fail "enabled without an answer"
+
+it "service: answering y to the prompt enables it"
+LAYOUT_TRACKER=0 EXPRESS_MODE=0 RUN_MODE="" svc prompt_layout_tracker "$WORK/log" <<< "y"
+assert_contains "$WORK/calls" 'enable --now tak0-layout-tracker.service' && pass_msg
+
+it "service: answering n to the prompt skips it"
+LAYOUT_TRACKER=0 EXPRESS_MODE=0 RUN_MODE="" svc prompt_layout_tracker "$WORK/log" <<< "n"
+[[ ! -s "$WORK/calls" ]] && pass_msg || fail "answered n but touched systemd"
 
 summary "test-layout-tracker"

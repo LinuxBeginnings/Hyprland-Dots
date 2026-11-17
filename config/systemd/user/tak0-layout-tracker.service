@@ -5,6 +5,7 @@
 # https://github.com/tak0dan/QoL-Script-For-Hyprland-By-Tak00/tree/main/layout-tracker
 [Unit]
 Description=Per-window keyboard layouts for Hyprland that learn your habits
+After=graphical-session.target
 
 [Service]
 Type=simple
