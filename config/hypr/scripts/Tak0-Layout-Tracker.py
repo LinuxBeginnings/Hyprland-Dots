@@ -222,7 +222,11 @@ class Hypr:
         devs = (self.json("devices") or {}).get("keyboards", [])
         if not devs:
             return [], None
-        kb = next((k for k in devs if k.get("main")), devs[0])
+        kb = next((k for k in devs if k.get("main") and len([c for c in k.get("layout", "").split(",") if c.strip()]) > 1), None)
+        if not kb:
+            kb = next((k for k in devs if len([c for c in k.get("layout", "").split(",") if c.strip()]) > 1), None)
+        if not kb:
+            kb = next((k for k in devs if k.get("main")), devs[0])
         codes = [c.strip() for c in kb.get("layout", "").split(",") if c.strip()]
         return codes, kb.get("active_keymap")
 
@@ -381,7 +385,7 @@ class Daemon:
                         line, buf = buf.split(b"\n", 1)
                         name, _, data = line.decode("utf-8", "replace").partition(">>")
                         self.on_event(name, data)
-                else:
+                if time.time() - self.last_tick >= TICK:
                     self.tick()
                 self.maybe_flush()
         finally:
@@ -399,6 +403,9 @@ def run_daemon():
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
         return
+    lock.truncate(0)
+    lock.write(f"{os.getpid()}\n")
+    lock.flush()
     stats = Stats()
     stop = []
 
@@ -406,8 +413,12 @@ def run_daemon():
         stop.append(1)
         raise SystemExit(0)
 
+    def reload_stats(*_):
+        stats.load()
+
     signal.signal(signal.SIGTERM, bye)
     signal.signal(signal.SIGINT, bye)
+    signal.signal(signal.SIGHUP, reload_stats)
     print("tak0-layout: waiting for Hyprland", flush=True)
     while not stop:
         sig = find_signature()
@@ -442,7 +453,7 @@ def fmt_time(sec):
 def cmd_stats(app):
     stats = Stats()
     if not stats.data["global"]:
-        print("No statistics yet. Start the daemon: systemctl --user start tak0-layout")
+        print("No statistics yet. Start the daemon: systemctl --user start tak0-layout-tracker (or run Tak0-Per-Window-Switch.sh)")
         return 1
     sig = find_signature()
     active = set(Hypr(sig).keyboard()[0]) if sig else set()
@@ -473,7 +484,23 @@ def cmd_toggle():
     h = Hypr(sig)
     h.run("switchxkblayout", "all", "next")
     _, name = h.keyboard()
-    subprocess.run(["notify-send", "-u", "low", "-t", "800", f"Layout: {name}"], check=False)
+    cfg = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    icon = None
+    for p in [cfg / "swaync/icons/keyboard.png", cfg / "swaync/images/ja.png", cfg / "swaync/images/note.png"]:
+        if p.exists():
+            icon = p
+            break
+    cmd = [
+        "notify-send", "-e",
+        "-h", "string:x-canonical-private-synchronous:kb_layout_notif",
+        "-h", "boolean:SWAYNC_BYPASS_DND:true",
+        "-u", "low",
+        "-t", "800",
+    ]
+    if icon:
+        cmd.extend(["-i", str(icon)])
+    cmd.extend([" Keyboard Layout (Per-Window)", f" {name or ''}"])
+    subprocess.run(cmd, check=False)
     return 0
 
 
@@ -492,7 +519,14 @@ def cmd_forget(app):
     stats.data["apps"].pop(app, None)
     stats.dirty = True
     stats.save()
-    print(f"forgot {app}. Restart the daemon so it reloads the file: systemctl --user restart tak0-layout")
+    lock_path = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "tak0-layout.lock"
+    if lock_path.exists():
+        try:
+            pid = int(lock_path.read_text().strip())
+            os.kill(pid, signal.SIGHUP)
+        except (ValueError, ProcessLookupError, PermissionError):
+            pass
+    print(f"forgot {app}.")
     return 0
 
 

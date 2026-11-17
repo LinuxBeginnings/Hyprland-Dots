@@ -76,7 +76,7 @@ if [[ -z "$raw_layouts" ]]; then
     exit 1
 fi
 
-kb_layouts=($raw_layouts)
+read -r -a kb_layouts <<< "$raw_layouts"
 count=${#kb_layouts[@]}
 
 # Get current active window ID/address
@@ -212,12 +212,21 @@ tracker_available() {
 }
 
 tracker_toggle() {
-  # The tracker takes a lock and exits at once if one already runs
-  "$TRACKER" daemon >/dev/null 2>&1 &
+  # If the legacy shell listener was running, stop it so the two don't fight
+  pkill -f "$SCRIPT_NAME.*--listener" 2>/dev/null || true
+
+  # Start the tracker daemon in the background if not already running
+  if ! pgrep -f "Tak0-Layout-Tracker\.py daemon" >/dev/null 2>&1; then
+    "$TRACKER" daemon >/dev/null 2>&1 &
+  fi
   hyprctl switchxkblayout all next >/dev/null 2>&1 || true
 
   local name
-  name=$(hyprctl -j devices 2>/dev/null | jq -r '[.keyboards[] | select(.main)][0].active_keymap // empty')
+  name=$(hyprctl -j devices 2>/dev/null | jq -r '
+    ([.keyboards[] | select(.main and (.layout | split(",") | length > 1))][0] //
+     [.keyboards[] | select(.layout | split(",") | length > 1)][0] //
+     [.keyboards[] | select(.main)][0] //
+     .keyboards[0]).active_keymap // empty')
   if command -v notify-send >/dev/null 2>&1 && [[ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]]; then
     notify-send -e \
       -h string:x-canonical-private-synchronous:kb_layout_notif \
@@ -234,8 +243,30 @@ case "${1:-toggle}" in
     subscribe
     ;;
   status)
+    if tracker_available; then
+      "$TRACKER" status
+      exit $?
+    fi
     W=$(get_win)
     load_map "$W"
+    ;;
+  stats)
+    if tracker_available; then
+      shift
+      "$TRACKER" stats "$@"
+      exit $?
+    fi
+    echo "Stats requires Tak0-Layout-Tracker.py and python3." >&2
+    exit 1
+    ;;
+  forget)
+    if tracker_available; then
+      shift
+      "$TRACKER" forget "$@"
+      exit $?
+    fi
+    echo "Forget requires Tak0-Layout-Tracker.py and python3." >&2
+    exit 1
     ;;
   toggle|"")
     if tracker_available; then
@@ -249,7 +280,7 @@ case "${1:-toggle}" in
     cmd_toggle
     ;;
   *)
-    echo "Usage: $SCRIPT_NAME [toggle|status]" >&2
+    echo "Usage: $SCRIPT_NAME [toggle|status|stats|forget]" >&2
     exit 1
     ;;
 esac

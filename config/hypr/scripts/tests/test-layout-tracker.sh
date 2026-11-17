@@ -108,6 +108,8 @@ done
 it "wrapper still parses and keeps the listener fallback"
 bash -n "$HERE/../Tak0-Per-Window-Switch.sh" \
   && assert_contains "$HERE/../Tak0-Per-Window-Switch.sh" 'subscribe()' \
+  && assert_contains "$HERE/../Tak0-Per-Window-Switch.sh" 'stats)' \
+  && assert_contains "$HERE/../Tak0-Per-Window-Switch.sh" 'forget)' \
   && pass_msg || fail "Tak0-Per-Window-Switch.sh is broken"
 
 summary "test-layout-tracker"
