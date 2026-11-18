@@ -557,8 +557,11 @@ ds_store_label() {
 #   monitor=<name>,disable              (separate line)
 #
 # <name> is `desc:<hyprctl .description>` (with '#' doubled) or a port name.
-# Extras after the scale (mirror, bitdepth, cm, vrr, ...) have no place in a
-# layout and are refused rather than dropped - see the note in the function.
+# Extras after the scale (mirror, bitdepth, cm, enabled VRR, ...) have no place
+# in a layout and are refused rather than dropped - see the note in the function.
+# nwg-displays v0.5.0+ unconditionally appends ",vrr,0" (or ",vrr,1") to every
+# monitor line. Disabled VRR (vrr,0) is Hyprland's default state and carries no
+# un-storable non-default setting, so it is ignored.
 ds_from_nwg_conf() {
   local conf=$1 norm=$2 raw extras
   # Parse the nwg lines into one JSON object per monitor name.
@@ -603,7 +606,17 @@ ds_from_nwg_conf() {
       name = join_fields(a, 1, mi - 1); gsub(/##/, "#", name)
       if (name == "") next
       mode[name] = a[mi]; pos[name] = a[mi+1]; scale[name] = a[mi+2]
-      for (i = mi + 3; i <= n; i++) extras[name] = extras[name] (extras[name] == "" ? "" : ",") a[i]
+      for (i = mi + 3; i <= n; i++) {
+        f = a[i]; gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
+        if (f == "vrr" && i < n) {
+          next_f = a[i+1]; gsub(/^[[:space:]]+|[[:space:]]+$/, "", next_f)
+          if (next_f == "0") {
+            i++
+            continue
+          }
+        }
+        extras[name] = extras[name] (extras[name] == "" ? "" : ",") a[i]
+      }
       remember(name)
     }
     END {

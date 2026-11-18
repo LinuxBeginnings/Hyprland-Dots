@@ -80,7 +80,7 @@ kdu_distro_from_osrelease() {
 kdu_distro_detect() {
   local file="${1:-/etc/os-release}" key
   key="$(kdu_distro_from_osrelease "$file")"
-  if [ "$key" = "unknown" ]; then
+  if [ "$key" = "unknown" ] && [ "$file" = "/etc/os-release" ] && [ -z "${KOOLDOTS_OS_RELEASE:-}" ]; then
     if command -v pacman >/dev/null 2>&1; then
       key="arch"
     elif command -v dnf >/dev/null 2>&1; then

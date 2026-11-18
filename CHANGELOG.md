@@ -4,6 +4,21 @@
 
 ## Fixed:
 
+- `nwg-displays` arrangement import no longer fails on v0.5.0+
+  - `nwg-displays` v0.5.0 unconditionally appends `,vrr,0` to monitor lines
+  - `ds_from_nwg_conf` treated that as an unsupported extra setting
+  - The arrangement import was refused and monitors reset to default state
+  - Disabled VRR (`vrr,0`) is now ignored as it matches the default state
+  - Active extras like `mirror`, `bitdepth` and `vrr,1` are still refused
+  - Distros with older versions of `nwg-displays` remain fully supported
+  - Issue: [#170](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/170)
+
+- Dotfiles upgrade detects unrecognized distros correctly on Arch hosts
+  - `kdu_distro_detect` fell back to host package managers on `unknown`
+  - On an Arch host, testing non-Arch fixtures like Alpine matched `pacman`
+  - Probing now only runs when checking `/etc/os-release` without overrides
+  - An unrecognized distro fixture now keeps its check-only notice
+
 - `SUPER + ALT + C` opens the Qalculate! window instead of a rofi prompt
   - The bind ran `RofiCalc.sh`, a rofi dmenu backed by the `qalc` CLI
   - It now launches `qalculate-gtk` directly, and `docs/Keybinds.md` says so
