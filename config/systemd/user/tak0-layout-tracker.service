@@ -1,0 +1,17 @@
+# Optional user service for Tak0-Layout-Tracker.py. Copied by copy.sh but only
+# enabled when you answer yes to the layout tracker question (or pass
+# --layout-tracker). Without it the tracker starts on the first per-window toggle.
+# Adapted from tak0-layout, the original project:
+# https://github.com/tak0dan/QoL-Script-For-Hyprland-By-Tak00/tree/main/layout-tracker
+[Unit]
+Description=Per-window keyboard layouts for Hyprland that learn your habits
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env python3 %E/hypr/scripts/Tak0-Layout-Tracker.py daemon
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

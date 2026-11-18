@@ -451,3 +451,53 @@ prompt_express_upgrade() {
     fi
   fi
 }
+
+# Optional: run the layout tracker as a user service from login, instead of
+# from the first per-window toggle. Off unless asked for, because it makes every
+# window keep its own layout, including after the global ALT + SHIFT switch.
+# Adapted from tak0-layout, the original project:
+# https://github.com/tak0dan/QoL-Script-For-Hyprland-By-Tak00/tree/main/layout-tracker
+prompt_layout_tracker() {
+  local log="$1"
+  local unit="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/tak0-layout-tracker.service"
+  local choice=""
+
+  command -v systemctl >/dev/null 2>&1 || return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+  [ -f "$unit" ] || return 0
+
+  if [ "${LAYOUT_TRACKER:-0}" -eq 1 ]; then
+    choice="y"
+  elif [ "${EXPRESS_MODE:-0}" -eq 1 ] || [ "${RUN_MODE:-}" = "upgrade" ]; then
+    echo "${NOTE:-[NOTE]} Keeping the layout tracker service as it is (pass --layout-tracker to enable it)." 2>&1 | tee -a "$log"
+    return 0
+  else
+    while true; do
+      echo "${NOTE:-[NOTE]} The layout tracker keeps a keyboard layout per window and opens new windows in the layout you use most in that app."
+      if ! read -r -p "${CAT:-[ACTION]} Run it as a service from login? (y/N): " choice; then
+        choice="n"
+        break
+      fi
+      case "$choice" in
+        [Yy] | [Nn] | "") break ;;
+        *) echo "${WARN:-[WARN]} Please answer y or n." ;;
+      esac
+    done
+  fi
+
+  case "$choice" in
+    [Yy])
+      pkill -f "Tak0-Layout-Tracker\.py daemon" 2>/dev/null || true
+      pkill -f "Tak0-Per-Window-Switch\.sh.*--listener" 2>/dev/null || true
+      systemctl --user daemon-reload 2>&1 | tee -a "$log" || true
+      if systemctl --user enable --now tak0-layout-tracker.service 2>&1 | tee -a "$log"; then
+        echo "${OK:-[OK]} Layout tracker service enabled." 2>&1 | tee -a "$log"
+      else
+        echo "${WARN:-[WARN]} Could not enable the layout tracker service; it still starts on the first per-window toggle." 2>&1 | tee -a "$log"
+      fi
+      ;;
+    *)
+      echo "${NOTE:-[NOTE]} Skipping the layout tracker service. It still starts on the first per-window toggle." 2>&1 | tee -a "$log"
+      ;;
+  esac
+}
