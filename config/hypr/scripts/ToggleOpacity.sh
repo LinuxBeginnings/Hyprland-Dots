@@ -6,7 +6,7 @@
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
 # Toggle or incrementally adjust active window opacity with desktop notifications.
-# Supports cycling preset levels (100% -> 85% -> 70% -> 50% -> 100%),
+# Supports cycling opacity levels (100% on first toggle, stepping down 5% to 5%, then 100%),
 # stepping up/down (--inc / --dec), or setting explicit values.
 # Uses flock to prevent double-execution from dual-config (.conf + .lua) loading.
 
@@ -14,7 +14,7 @@ set -uo pipefail
 
 LOCK="/tmp/.hypr_toggle_opacity_${HYPRLAND_INSTANCE_SIGNATURE:-default}.lock"
 STEP=0.05
-MIN_OPACITY=0.20
+MIN_OPACITY=0.05
 MAX_OPACITY=1.00
 
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
@@ -37,8 +37,12 @@ fi
   # Get active window info
   ACTIVE_JSON=$(hyprctl activewindow -j 2>/dev/null || true)
   ACTIVE_CLASS=""
+  IS_TOGGLED="false"
   if [[ -n "$ACTIVE_JSON" ]]; then
     ACTIVE_CLASS=$(echo "$ACTIVE_JSON" | jq -r '.class // empty' 2>/dev/null || true)
+    if echo "$ACTIVE_JSON" | jq -e '.tags // [] | index("opacity_toggled")' >/dev/null 2>&1; then
+      IS_TOGGLED="true"
+    fi
   fi
 
   CURRENT_PROP=$(hyprctl getprop active opacity 2>/dev/null || true)
@@ -82,13 +86,28 @@ fi
       }')
       ;;
     --toggle|toggle|"")
-      # Cycle through predefined incremental levels: 1.00 -> 0.85 -> 0.70 -> 0.50 -> 1.00
-      TARGET_NUM=$(awk -v c="$CURRENT_NUM" 'BEGIN {
-        if (c >= 0.98)      printf "0.85";
-        else if (c >= 0.80) printf "0.70";
-        else if (c >= 0.65) printf "0.50";
-        else                printf "1.00";
-      }')
+      # Cycle: 100% on first toggle, then decrease 5% for each subsequent toggle down to 5%, then 100% and repeat
+      if [[ "$IS_TOGGLED" != "true" && "${CURRENT_OPAQUE:-false}" != "true" ]]; then
+        TARGET_NUM="1.00"
+      else
+        TARGET_NUM=$(awk -v c="$CURRENT_NUM" 'BEGIN {
+          pct = int((c * 100) + 0.5);
+          if (pct >= 98) {
+            target = 95;
+          } else if (pct <= 5) {
+            target = 100;
+          } else {
+            rem = pct % 5;
+            if (rem == 0) {
+              target = pct - 5;
+            } else {
+              target = pct - rem;
+            }
+            if (target < 5) target = 100;
+          }
+          printf "%.2f", target / 100.0;
+        }')
+      fi
       ;;
     *)
       # Parse explicit number / percentage, e.g. 0.85 or 85 or 85%
@@ -118,6 +137,8 @@ fi
   # Set window-level property so it affects the active window even when windowrules are active
   hyprctl eval "return hl.dispatch(hl.dsp.window.set_prop({ prop = 'opacity', value = '${TARGET_PROP}' }))" >/dev/null 2>&1 || true
   hyprctl eval "return hl.dispatch(hl.dsp.window.set_prop({ prop = 'opaque', value = '${OPAQUE_ACTION}' }))" >/dev/null 2>&1 || true
+  # Tag window so subsequent toggles know it has entered the cycle
+  hyprctl eval "return hl.dispatch(hl.dsp.window.tag({ tag = 'opacity_toggled' }))" >/dev/null 2>&1 || true
   # Also update global active_opacity config
   hyprctl eval "hl.config({ decoration = { active_opacity = ${TARGET_NUM} } })" >/dev/null 2>&1 || true
 

@@ -4,6 +4,13 @@
 
 ## Fixed:
 
+- `ToggleOpacity.sh` starts at 100% opacity and steps down to 5%
+  - Toggling previously decreased opacity to 85% with 100% at the end
+  - First toggle now sets full 100% opacity on the active window
+  - Subsequent toggles step opacity down by 5% increments to 5%
+  - At 5% the toggle wraps back to 100% to repeat the cycle
+  - Minimum opacity bound is updated from 20% to 5%
+
 - `nwg-displays` arrangement import no longer fails on v0.5.0+
   - `nwg-displays` v0.5.0 unconditionally appends `,vrr,0` to monitor lines
   - `ds_from_nwg_conf` treated that as an unsupported extra setting
