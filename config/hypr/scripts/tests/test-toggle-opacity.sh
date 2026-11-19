@@ -8,9 +8,9 @@
 # Purpose:
 #   Verifies ToggleOpacity.sh opacity cycle logic:
 #   - 100% on first toggle
-#   - 5% decrement per subsequent toggle down to 5%
+#   - Decrements by STEP per subsequent toggle down to MIN_OPACITY
 #   - Wraps back to 100% and repeats cycle
-#   - Stepping up/down (--inc / --dec) respecting bounds [0.05, 1.00]
+#   - Stepping up/down (--inc / --dec) respecting bounds [MIN_OPACITY, MAX_OPACITY]
 
 set -uo pipefail
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -90,7 +90,7 @@ if [[ ${1:-} == "eval" ]]; then
     printf '%s\n' "${BASH_REMATCH[1]}" > "$MOCK_PROP_OPAQUE"
   fi
   # Emulate window tag
-  if [[ "$lua_expr" =~ tag[[:space:]]*=[[:space:]]*\'([^\']+)\' ]]; then
+  if [[ "$lua_expr" =~ tag[[:space:]]*=[[[:space:]]*\'([^\']+)\' ]]; then
     tag="${BASH_REMATCH[1]}"
     tag="${tag#+}"
     if [[ -f "${MOCK_WINDOW_JSON:-}" ]]; then
@@ -149,45 +149,45 @@ assert_eq "first toggle sets active_opacity config to 1.00" "1.00" "$(cat "$MOCK
 assert_contains "$MOCK_WINDOW_JSON" "opacity_toggled" "first toggle tags the window"
 
 # ---------------------------------------------------------------------------
-# Test 2: Subsequent toggle from 100% should step down 5% to 95%
+# Test 2: Subsequent toggle from 100% should step down by STEP (0.10) to 90%
 # ---------------------------------------------------------------------------
 bash "$SCRIPT" --toggle
 
-assert_eq "subsequent toggle from 100% steps to 0.95" "0.95 0.95" "$(cat "$MOCK_PROP_OPACITY")"
+assert_eq "subsequent toggle from 100% steps to 0.90" "0.90 0.90" "$(cat "$MOCK_PROP_OPACITY")"
 assert_eq "subsequent toggle sets opaque to false" "false" "$(cat "$MOCK_PROP_OPAQUE")"
-assert_eq "subsequent toggle sets active_opacity config to 0.95" "0.95" "$(cat "$MOCK_ACTIVE_OPACITY")"
+assert_eq "subsequent toggle sets active_opacity config to 0.90" "0.90" "$(cat "$MOCK_ACTIVE_OPACITY")"
 
 # ---------------------------------------------------------------------------
-# Test 3: Subsequent toggle from 95% should step down to 90%
+# Test 3: Subsequent toggle from 90% should step down to 80%
 # ---------------------------------------------------------------------------
 bash "$SCRIPT" --toggle
 
-assert_eq "subsequent toggle from 95% steps to 0.90" "0.90 0.90" "$(cat "$MOCK_PROP_OPACITY")"
+assert_eq "subsequent toggle from 90% steps to 0.80" "0.80 0.80" "$(cat "$MOCK_PROP_OPACITY")"
 
 # ---------------------------------------------------------------------------
-# Test 4: Full cycle down to 5% (0.05)
+# Test 4: Cycle down to MIN_OPACITY (0.40)
 # ---------------------------------------------------------------------------
-# Currently at 0.90. Step down remaining steps to 0.05:
-# 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5
-for expected in 0.85 0.80 0.75 0.70 0.65 0.60 0.55 0.50 0.45 0.40 0.35 0.30 0.25 0.20 0.15 0.10 0.05; do
+# Currently at 0.80. Step down remaining steps to 0.40:
+# 70, 60, 50, 40
+for expected in 0.70 0.60 0.50 0.40; do
   bash "$SCRIPT" --toggle
   assert_eq "cycle steps down to $expected" "$expected $expected" "$(cat "$MOCK_PROP_OPACITY")"
 done
 
 # ---------------------------------------------------------------------------
-# Test 5: From 5%, toggle wraps back to 100% (1.00, opaque true)
+# Test 5: From MIN_OPACITY (0.40), toggle wraps back to 100% (1.00, opaque true)
 # ---------------------------------------------------------------------------
 bash "$SCRIPT" --toggle
 
-assert_eq "toggle wraps from 5% back to 100%" "1.00 1.00" "$(cat "$MOCK_PROP_OPACITY")"
+assert_eq "toggle wraps from 0.40 back to 1.00" "1.00 1.00" "$(cat "$MOCK_PROP_OPACITY")"
 assert_eq "wrap to 100% sets opaque to true" "true" "$(cat "$MOCK_PROP_OPAQUE")"
 
 # ---------------------------------------------------------------------------
-# Test 6: From wrapped 100%, next toggle steps down to 95%
+# Test 6: From wrapped 100%, next toggle steps down to 90%
 # ---------------------------------------------------------------------------
 bash "$SCRIPT" --toggle
 
-assert_eq "repeat cycle steps from wrapped 100% to 95%" "0.95 0.95" "$(cat "$MOCK_PROP_OPACITY")"
+assert_eq "repeat cycle steps from wrapped 100% to 0.90" "0.90 0.90" "$(cat "$MOCK_PROP_OPACITY")"
 assert_eq "repeat cycle sets opaque to false" "false" "$(cat "$MOCK_PROP_OPAQUE")"
 
 # ---------------------------------------------------------------------------
@@ -205,20 +205,20 @@ assert_eq "untouched chrome first toggle sets 1.00" "1.00 1.00" "$(cat "$MOCK_PR
 assert_eq "untouched chrome first toggle sets opaque true" "true" "$(cat "$MOCK_PROP_OPAQUE")"
 
 bash "$SCRIPT" --toggle
-assert_eq "subsequent toggle on chrome steps to 0.95" "0.95 0.95" "$(cat "$MOCK_PROP_OPACITY")"
+assert_eq "subsequent toggle on chrome steps to 0.90" "0.90 0.90" "$(cat "$MOCK_PROP_OPACITY")"
 
 # ---------------------------------------------------------------------------
-# Test 8: --dec can step down to 0.05
+# Test 8: --dec clamps at MIN_OPACITY (0.40)
 # ---------------------------------------------------------------------------
-printf '0.10\n' > "$MOCK_PROP_OPACITY"
+printf '0.45\n' > "$MOCK_PROP_OPACITY"
 printf 'false\n' > "$MOCK_PROP_OPAQUE"
-printf '0.10\n' > "$MOCK_ACTIVE_OPACITY"
+printf '0.45\n' > "$MOCK_ACTIVE_OPACITY"
 
 bash "$SCRIPT" --dec
-assert_eq "--dec from 0.10 reaches 0.05" "0.05 0.05" "$(cat "$MOCK_PROP_OPACITY")"
+assert_eq "--dec from 0.45 reaches MIN_OPACITY 0.40" "0.40 0.40" "$(cat "$MOCK_PROP_OPACITY")"
 
 bash "$SCRIPT" --dec
-assert_eq "--dec is clamped at MIN_OPACITY 0.05" "0.05 0.05" "$(cat "$MOCK_PROP_OPACITY")"
+assert_eq "--dec is clamped at MIN_OPACITY 0.40" "0.40 0.40" "$(cat "$MOCK_PROP_OPACITY")"
 
 # ---------------------------------------------------------------------------
 # Test 9: --inc can step up to 1.00
