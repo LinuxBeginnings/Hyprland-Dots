@@ -138,7 +138,9 @@ fi
   hyprctl eval "return hl.dispatch(hl.dsp.window.set_prop({ prop = 'opacity', value = '${TARGET_PROP}' }))" >/dev/null 2>&1 || true
   hyprctl eval "return hl.dispatch(hl.dsp.window.set_prop({ prop = 'opaque', value = '${OPAQUE_ACTION}' }))" >/dev/null 2>&1 || true
   # Tag window so subsequent toggles know it has entered the cycle
-  hyprctl eval "return hl.dispatch(hl.dsp.window.tag({ tag = 'opacity_toggled' }))" >/dev/null 2>&1 || true
+  if [[ "$IS_TOGGLED" != "true" ]]; then
+    hyprctl eval "return hl.dispatch(hl.dsp.window.tag({ tag = '+opacity_toggled' }))" >/dev/null 2>&1 || true
+  fi
   # Also update global active_opacity config
   hyprctl eval "hl.config({ decoration = { active_opacity = ${TARGET_NUM} } })" >/dev/null 2>&1 || true
 

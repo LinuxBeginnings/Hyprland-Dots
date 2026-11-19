@@ -90,8 +90,9 @@ if [[ ${1:-} == "eval" ]]; then
     printf '%s\n' "${BASH_REMATCH[1]}" > "$MOCK_PROP_OPAQUE"
   fi
   # Emulate window tag
-  if [[ "$lua_expr" =~ tag[[:space:]]*=[[[:space:]]*\'([^\']+)\' ]]; then
+  if [[ "$lua_expr" =~ tag[[:space:]]*=[[:space:]]*\'([^\']+)\' ]]; then
     tag="${BASH_REMATCH[1]}"
+    tag="${tag#+}"
     if [[ -f "${MOCK_WINDOW_JSON:-}" ]]; then
       jq --arg t "$tag" '.tags = ((.tags // []) + [$t] | unique)' "$MOCK_WINDOW_JSON" > "$MOCK_WINDOW_JSON.tmp" && mv "$MOCK_WINDOW_JSON.tmp" "$MOCK_WINDOW_JSON"
     fi
