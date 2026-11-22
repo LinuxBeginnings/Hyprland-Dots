@@ -59,9 +59,16 @@ function send_notification() {
         return 0
     fi
 
-    local message=$([ $CLIPBOARD -eq 1 ] && \
-        echo "Image copied to the clipboard" || \
-        echo "Image saved in <i>${1}</i> and copied to the clipboard.")
+    local message
+    if [ "$COPY_OK" -eq 1 ]; then
+        message=$([ $CLIPBOARD -eq 1 ] && \
+            echo "Image copied to the clipboard" || \
+            echo "Image saved in <i>${1}</i> and copied to the clipboard.")
+    else
+        message=$([ $CLIPBOARD -eq 1 ] && \
+            echo "Image NOT copied to the clipboard" || \
+            echo "Image saved in <i>${1}</i>, but copying it failed.")
+    fi
     notify-send "Screenshot saved" \
                 "${message}" \
                 -t "$NOTIF_TIMEOUT" -i "${1}" -a Hyprshot
@@ -111,6 +118,19 @@ function trim() {
     echo ${cropped}
 }
 
+# grim has already written the file by the time the copy runs, so a silent
+# wl-copy failure looked exactly like a successful screenshot. Report it.
+function copy_to_clipboard() {
+    local source="${1}" rc=0
+    wl-copy --type image/png < "$source" || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        COPY_OK=0
+        Print "wl-copy failed with status %s\n" "$rc"
+        echo "hyprshot: wl-copy failed with status ${rc}" >&2
+    fi
+    return 0
+}
+
 function save_geometry() {
     local geometry="${1}"
     local output=""
@@ -124,12 +144,16 @@ function save_geometry() {
         mkdir -p "$SAVEDIR"
         grim -g "${geometry}" "$SAVE_FULLPATH"
         output="$SAVE_FULLPATH"
-        wl-copy --type image/png < "$output"
+        copy_to_clipboard "$output"
         [ -z "$COMMAND" ] || {
             "$COMMAND" "$output"
         }
     else
-        wl-copy --type image/png < <(grim -g "${geometry}" -)
+        local tmpfile
+        tmpfile="$(mktemp --suffix=.png)"
+        grim -g "${geometry}" "$tmpfile"
+        copy_to_clipboard "$tmpfile"
+        rm -f "$tmpfile"
     fi
 
     send_notification $output
@@ -315,6 +339,7 @@ CLIPBOARD=0
 DEBUG=0
 SILENT=0
 RAW=0
+COPY_OK=1
 NOTIF_TIMEOUT=5000
 CURRENT=0
 FREEZE=0

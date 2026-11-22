@@ -16,6 +16,10 @@
   - A process group reaped on exit could leave the image saved but uncopied
   - It now waits for `grim` and `wl-copy`, and no longer spins on `pgrep`
 
+- `hyprshot.sh` reports a failed `wl-copy` instead of swallowing it
+  - The image is written before the copy, so a saved file looked like success
+  - The notification now says the copy failed, and stderr carries the status
+
 - `HyprModSync.sh` fails loudly when `hyprland_config` is missing
   - Each sync command still exited 0 and printed "already up to date"
   - The parse step had bailed out, so nothing was ever synchronized
