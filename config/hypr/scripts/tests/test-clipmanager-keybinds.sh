@@ -9,12 +9,14 @@
 #   Tests for the rofi keybindings in ClipManager.sh.
 #
 #   The bug guarded against here is that rofi built against libxkbcommon 1.8+
-#   reports Meta as held together with Alt (rofi issue #2095). A wipe bound to
-#   plain `Alt-Delete` then never matches, the keystroke lands in the search box,
-#   and ALT DEL silently does nothing. The binding now carries both spellings, so
-#   a build that needs `Alt-Meta-Delete` and a build that needs `Alt-Delete` both
-#   wipe. This test fails if either spelling is dropped, or if the exit codes
-#   stop calling cliphist the way they did before the binding was widened.
+#   reports Meta as held together with Alt (rofi issue #2095), so a wipe bound
+#   to plain `Alt+Delete` never matches and the key lands in the search box.
+#   `Meta` cannot be named in a rofi binding, though: rofi has no Meta modifier
+#   token and refuses the whole `-kb-custom-2` value with "Syntax error in
+#   binding", the error dialog seen when the menu starts. Wipe is therefore
+#   `Alt+Delete` plus `Control+Shift+Delete`, which uses only tokens every rofi
+#   build parses. This test fails if either binding is dropped, if Meta comes
+#   back, or if the exit codes stop calling cliphist as they did before.
 # No `set -e`: the assertion helpers return non-zero on failure.
 set -uo pipefail
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -81,18 +83,23 @@ run_manager() {
     bash "$SCRIPT"
 }
 
-it "rofi is asked for both Alt spellings, so a Meta-carrying build still wipes"
+it "rofi is asked for both Alt and Control+Shift, so a Meta-carrying build wipes"
 if run_manager 11; then
   if assert_contains "$CALL_LOG" \
-    '-kb-custom-2 Alt-Delete,Alt-Meta-Delete' \
-    'the wipe binding must list Alt-Delete and Alt-Meta-Delete'; then pass_msg; fi
+    '-kb-custom-2 Alt+Delete,Control+Shift+Delete' \
+    'the wipe binding must list Alt+Delete and Control+Shift+Delete'; then pass_msg; fi
 else
   fail "ClipManager.sh exited non-zero on the wipe path"
 fi
 
-it "CTRL DEL is still bound to Control-Delete alone"
-if assert_contains "$CALL_LOG" '-kb-custom-1 Control-Delete' \
+it "CTRL DEL is still bound to Control+Delete alone"
+if assert_contains "$CALL_LOG" '-kb-custom-1 Control+Delete' \
   'the single-entry binding changed'; then pass_msg; fi
+
+it "no binding names Meta, which rofi rejects as a syntax error"
+if grep -Eq -- '-kb-custom-[0-9]+ "[^"]*Meta' "$SCRIPT"; then
+  fail "rofi has no Meta modifier token; naming it disables the whole binding"
+else pass_msg; fi
 
 it "a single-entry delete still asks cliphist to delete that entry"
 if run_manager 10; then

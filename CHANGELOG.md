@@ -7,7 +7,9 @@
 - `ALT + DEL` wipes history again on rofi `libxkbcommon` 1.8 builds
   - Those builds report `Meta` with `Alt`, so `Alt-Delete` never matched
   - The key was typed into the search box as if no binding existed
-  - Wipe is bound as `Alt-Delete,Alt-Meta-Delete`, matching both builds
+  - `Meta` is not a rofi modifier token, so naming it failed to parse
+  - `Alt-Meta-Delete` made rofi reject `kb-custom-2` with a startup error
+  - Wipe is `Alt+Delete,Control+Shift+Delete`, which both builds parse
   - `CTRL + DEL` was unaffected and still deletes a single entry
   - `tests/test-clipmanager-keybinds.sh` guards both bindings and exit codes
 

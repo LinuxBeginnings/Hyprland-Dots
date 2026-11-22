@@ -17,7 +17,7 @@ set -uo pipefail
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
 scripts_dir="$config_dir/hypr/scripts"
 rofi_theme="$config_dir/hypr/rofi/config-clipboard.rasi"
-msg='👀 **note**  CTRL DEL = cliphist del (entry)   or   ALT DEL - cliphist wipe (all)'
+msg='👀 **note**  CTRL DEL = cliphist del (entry)   or   ALT DEL / CTRL SHIFT DEL - cliphist wipe (all)'
 
 notify() {
     command -v notify-send >/dev/null 2>&1 && notify-send -a Clipboard "$*"
@@ -71,15 +71,18 @@ copy_entry() {
     fi
 }
 
-# Wipe is bound twice for the same keystroke: against libxkbcommon 1.8+ rofi is
-# told Meta is held together with Alt, so a plain Alt-Delete never matches and
-# the key is typed into the search box instead (rofi issue #2095).
+# Wipe is bound twice: against libxkbcommon 1.8+ rofi is told Meta is held
+# together with Alt, so a plain Alt+Delete never matches and the key is typed
+# into the search box instead (rofi issue #2095). Meta cannot be named in the
+# binding: rofi has no Meta modifier token, and `Alt+Meta+Delete` makes it reject
+# the whole kb-custom-2 value with "Syntax error in binding". The second binding
+# uses only tokens every rofi build knows.
 while true; do
     result=$(
         rofi -i -dmenu \
             -no-custom \
-            -kb-custom-1 "Control-Delete" \
-            -kb-custom-2 "Alt-Delete,Alt-Meta-Delete" \
+            -kb-custom-1 "Control+Delete" \
+            -kb-custom-2 "Alt+Delete,Control+Shift+Delete" \
             -config "$rofi_theme" \
             -mesg "$msg" < <(cliphist list)
     )
