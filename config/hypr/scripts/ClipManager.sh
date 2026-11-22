@@ -71,12 +71,15 @@ copy_entry() {
     fi
 }
 
+# Wipe is bound twice for the same keystroke: against libxkbcommon 1.8+ rofi is
+# told Meta is held together with Alt, so a plain Alt-Delete never matches and
+# the key is typed into the search box instead (rofi issue #2095).
 while true; do
     result=$(
         rofi -i -dmenu \
             -no-custom \
             -kb-custom-1 "Control-Delete" \
-            -kb-custom-2 "Alt-Delete" \
+            -kb-custom-2 "Alt-Delete,Alt-Meta-Delete" \
             -config "$rofi_theme" \
             -mesg "$msg" < <(cliphist list)
     )

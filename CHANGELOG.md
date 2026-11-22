@@ -4,6 +4,12 @@
 
 ## Fixed:
 
+- `ALT + DEL` wipes history again on rofi `libxkbcommon` 1.8 builds
+  - Those builds report `Meta` with `Alt`, so `Alt-Delete` never matched
+  - The key was typed into the search box as if no binding existed
+  - Wipe is bound as `Alt-Delete,Alt-Meta-Delete`, matching both builds
+  - `CTRL + DEL` was unaffected and still deletes a single entry
+
 - Clipboard history stores images and screenshots again
   - `SUPER + ALT + V` listed text only, while a screenshot still pasted fine
   - `wl-paste` in `ClipboardWatcher.sh` inherited the startup `.log` as stdout
