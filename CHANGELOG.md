@@ -9,6 +9,7 @@
   - The key was typed into the search box as if no binding existed
   - Wipe is bound as `Alt-Delete,Alt-Meta-Delete`, matching both builds
   - `CTRL + DEL` was unaffected and still deletes a single entry
+  - `tests/test-clipmanager-keybinds.sh` guards both bindings and exit codes
 
 - Clipboard history stores images and screenshots again
   - `SUPER + ALT + V` listed text only, while a screenshot still pasted fine
