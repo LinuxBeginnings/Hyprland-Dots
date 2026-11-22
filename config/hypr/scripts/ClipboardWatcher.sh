@@ -63,8 +63,24 @@ export WAYLAND_DISPLAY="$wayland_display"
 
 log "watching the clipboard on display '$WAYLAND_DISPLAY'."
 
+# Start the watcher. No --type, on purpose: with none, wl-paste accepts every
+# type the clipboard offers, which is what keeps text, images and uri-lists in
+# one history instead of needing a watcher per type.
+#
+# It must not inherit this script's stdout either. With no --type, wl-paste
+# infers the wanted MIME type from the name of its own stdout - that is what
+# makes `wl-paste > picture.png` ask for image/png. Startup runs this script
+# with stdout on /tmp/hypr-lua-startup-*.log (lua/user_startup_helper.lua), so
+# an inherited stdout meant a `.log`-inferred text type: image-only offers were
+# skipped silently and cliphist was left with text alone (#174). /dev/null
+# infers nothing; wl-paste's diagnostics go to stderr, so the startup log still
+# receives them.
+watch_clipboard() {
+    wl-paste --watch cliphist store >/dev/null
+}
+
 while :; do
-    wl-paste --watch cliphist store
+    watch_clipboard
     status=$?
     if ! resolve_wayland_socket >/dev/null; then
         log "Wayland socket '$WAYLAND_DISPLAY' is gone; stopping."

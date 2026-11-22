@@ -4,6 +4,15 @@
 
 ## Fixed:
 
+- Clipboard history stores images and screenshots again
+  - `SUPER + ALT + V` listed text only, while a screenshot still pasted fine
+  - `wl-paste` in `ClipboardWatcher.sh` inherited the startup `.log` as stdout
+  - With no `--type`, it infers one from that name, so only text types matched
+  - Image-only offers were skipped silently, leaving cliphist with text alone
+  - It now writes to `/dev/null`; diagnostics still reach the startup log
+  - `tests/test-clipboard-watcher.sh` guards that redirect from being dropped
+  - Issue: [#174](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/174)
+
 - `ToggleOpacity.sh` starts at 100% opacity and steps down to minimum
   - Toggling previously decreased opacity to 85% with 100% at the end
   - First toggle now sets full 100% opacity on the active window
