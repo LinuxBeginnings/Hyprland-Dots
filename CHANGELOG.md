@@ -11,6 +11,11 @@
   - `CTRL + DEL` was unaffected and still deletes a single entry
   - `tests/test-clipmanager-keybinds.sh` guards both bindings and exit codes
 
+- `HyprModSync.sh` fails loudly when `hyprland_config` is missing
+  - Each sync command still exited 0 and printed "already up to date"
+  - The parse step had bailed out, so nothing was ever synchronized
+  - It now exits 1 with an install hint, and `status` reports the module
+
 - Clipboard history stores images and screenshots again
   - `SUPER + ALT + V` listed text only, while a screenshot still pasted fine
   - `wl-paste` in `ClipboardWatcher.sh` inherited the startup `.log` as stdout

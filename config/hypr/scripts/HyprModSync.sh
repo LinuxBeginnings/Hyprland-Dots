@@ -385,6 +385,8 @@ def trigger_hyprland_reload(entrypoint: Path, verbose: bool = False):
 
 def show_status(managed_file: Path, base_dir: Path, targets: Dict[str, str], config_path: Optional[Path]):
     print("=== HyprModSync Status ===")
+    parser_state = "available" if HAVE_HYPRLAND_CONFIG else "MISSING (sync commands will fail)"
+    print(f"Parser Module:    hyprland_config {parser_state}")
     print(f"Base Directory:   {base_dir}")
     print(f"Config File:      {config_path if config_path and config_path.is_file() else 'None (using defaults)'}")
     print(f"Managed File:     {managed_file} ({'exists' if managed_file.is_file() else 'missing'})")
@@ -485,6 +487,14 @@ def main():
     managed_file = resolve_managed_path(base_dir, Path(args.managed_file) if args.managed_file else None)
 
     cmd = args.command
+
+    # Every parser-backed command reports "already up to date" when the module is
+    # missing, because the parse step bails out silently. Say so and fail instead:
+    # a caller or a test must not read that as a successful sync.
+    if cmd != "status" and not HAVE_HYPRLAND_CONFIG:
+        sys.stderr.write("Error: hyprland_config Python module is required for config parsing.\n")
+        sys.stderr.write("Install it, then run this command again.\n")
+        sys.exit(1)
 
     if cmd == "status":
         show_status(managed_file, base_dir, targets, config_path)
