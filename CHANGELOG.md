@@ -13,6 +13,10 @@
   - `tests/test-clipboard-watcher.sh` guards that redirect from being dropped
   - Issue: [#174](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/174)
 
+- Screenshots are copied as `image/png` explicitly
+  - `ScreenShot.sh` and `screenshot-region.lua` relied on `wl-copy` sniffing
+  - `grim` output is always PNG, so all seven `wl-copy` calls now name the type
+
 - `ToggleOpacity.sh` starts at 100% opacity and steps down to minimum
   - Toggling previously decreased opacity to 85% with 100% at the end
   - First toggle now sets full 100% opacity on the active window
