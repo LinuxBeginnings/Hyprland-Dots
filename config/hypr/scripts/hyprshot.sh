@@ -136,12 +136,19 @@ function save_geometry() {
 }
 
 function checkRunning() {
+    local grab_pid=$1
     sleep 1
     while [[ 1 == 1 ]]; do
         if [[ $(pgrep slurp | wc -m) == 0 ]]; then
-            pkill hyprpicker
-            exit
+            pkill hyprpicker || true
+            # The grab runs in the background: grim writes the file and wl-copy then
+            # publishes it. Exiting first let a reaper cut that short, which saved
+            # the image but left the clipboard empty.
+            wait "$grab_pid" 2>/dev/null || true
+            exit 0
         fi
+        # Not a hot loop: this used to spawn pgrep as fast as the CPU allowed.
+        sleep 0.1
     done
 }
 
@@ -319,4 +326,5 @@ args $0 "$@"
 
 SAVE_FULLPATH="$SAVEDIR/$FILENAME"
 [ $CLIPBOARD -eq 0 ] && Print "Saving in: %s\n" "$SAVE_FULLPATH"
-begin_grab $OPTION & checkRunning
+begin_grab $OPTION &
+checkRunning $!

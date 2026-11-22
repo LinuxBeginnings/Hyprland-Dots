@@ -11,6 +11,11 @@
   - `CTRL + DEL` was unaffected and still deletes a single entry
   - `tests/test-clipmanager-keybinds.sh` guards both bindings and exit codes
 
+- `hyprshot.sh` finishes the clipboard copy before it exits
+  - The grab ran in the background while the script exited after one second
+  - A process group reaped on exit could leave the image saved but uncopied
+  - It now waits for `grim` and `wl-copy`, and no longer spins on `pgrep`
+
 - `HyprModSync.sh` fails loudly when `hyprland_config` is missing
   - Each sync command still exited 0 and printed "already up to date"
   - The parse step had bailed out, so nothing was ever synchronized
