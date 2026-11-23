@@ -4,6 +4,10 @@
 
 ## Fixed:
 
+- The keybinds panel no longer takes over the screen
+  - Its card is capped at 1100x720, down from 1426x989
+  - The second column and a dozen rows still fit before a scroll
+
 - The blueman-applet and nm-applet tray icons are no longer started
   - `custom/qs-network` already covers Wi-Fi, ethernet and bluetooth
   - `enable_blueman()` no longer uncomments the shipped entry at install

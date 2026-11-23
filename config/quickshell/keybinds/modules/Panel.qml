@@ -233,11 +233,12 @@ PanelWindow {
         id: card
 
         anchors.centerIn: parent
-        // 15% up on the single-column frame, and as much of that as the monitor
-        // allows: the width is what buys the second column, the height a longer
-        // run of binds before a scroll.
-        width: Math.min(1426, panel.width - 60)
-        height: Math.max(260, Math.min(989, panel.height - 40))
+        // Capped so it reads as a panel rather than a second desktop, and
+        // sized from the monitor so a small screen does not get a card that
+        // fills it: the width still buys the second column, the height a dozen
+        // rows before a scroll.
+        width: Math.min(1100, Math.max(760, Math.round(panel.width * 0.78)))
+        height: Math.max(260, Math.min(720, Math.round(panel.height * 0.82)))
         visible: panel.shown
         radius: 16
         color: panel.cardColor
