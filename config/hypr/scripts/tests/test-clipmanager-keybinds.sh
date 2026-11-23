@@ -49,7 +49,10 @@ EOS
 cat >"$BIN/cliphist" <<'EOS'
 #!/usr/bin/env bash
 printf 'cliphist %s\n' "$*" >> "$FAKE_LOG"
-if [[ ${1:-} == "list" ]]; then printf 'first\nsecond entry\n'; exit 0; fi
+if [[ ${1:-} == "list" ]]; then
+  [[ -n ${FAKE_CLIPHIST_EMPTY:-} ]] && exit 0
+  printf 'first\nsecond entry\n'; exit 0
+fi
 cat >/dev/null
 exit 0
 EOS
@@ -74,12 +77,14 @@ exit 0
 EOS
 chmod +x "$BIN"/*
 
-# run_manager <rofi-exit-code> — one script run against fresh fakes.
+# run_manager <rofi-exit-code> [empty] — one script run against fresh fakes.
+# The second argument makes `cliphist list` answer with nothing.
 run_manager() {
   : >"$CALL_LOG"
   rm -f "$COUNTER"
   env PATH="$BIN:$PATH" XDG_CONFIG_HOME="$WORK/cfg" \
     FAKE_LOG="$CALL_LOG" FAKE_COUNTER="$COUNTER" FAKE_ROFI_FIRST="$1" \
+    FAKE_CLIPHIST_EMPTY="${2:-}" \
     bash "$SCRIPT"
 }
 
@@ -121,6 +126,18 @@ it "the menu is reopened after a wipe, so the history is shown empty"
 count="$(grep -c '^rofi ' "$CALL_LOG" || true)"
 if [[ "$count" == "2" ]]; then pass_msg
 else fail "expected the list to reopen once after the wipe, saw $count rofi calls"; fi
+
+it "an empty history notifies instead of opening an empty menu"
+if run_manager 0 empty; then
+  if grep -q '^rofi ' "$CALL_LOG"; then
+    fail "rofi was launched while the history was empty"
+  elif assert_contains "$CALL_LOG" 'Clipboard history is empty' \
+    'the empty history must be reported to the user'; then
+    pass_msg
+  fi
+else
+  fail "ClipManager.sh exited non-zero when the history was empty"
+fi
 
 it "ClipManager.sh is still valid bash"
 if bash -n "$SCRIPT" 2>/dev/null; then pass_msg

@@ -9,6 +9,7 @@
 # Actions:
 # CTRL Del to delete an entry
 # ALT Del to wipe clipboard contents
+# An empty history is reported with a notification, not an empty menu.
 
 # Deliberately not `set -e`: rofi exits non-zero for cancel/delete/wipe.
 set -uo pipefail
@@ -77,14 +78,24 @@ copy_entry() {
 # binding: rofi has no Meta modifier token, and `Alt+Meta+Delete` makes it reject
 # the whole kb-custom-2 value with "Syntax error in binding". The second binding
 # uses only tokens every rofi build knows.
+# A history with no entries is reported instead of opened: rofi is given no
+# lines, exits without a window, and the shortcut looks broken (reported on
+# Ubuntu with an empty history). Checked each pass of the loop, so wiping the
+# last entry ends in the notification too.
 while true; do
+    history="$(cliphist list)"
+    if [ -z "$history" ]; then
+        notify "Clipboard history is empty. Copy something, then try again."
+        exit 0
+    fi
+
     result=$(
         rofi -i -dmenu \
             -no-custom \
             -kb-custom-1 "Control+Delete" \
             -kb-custom-2 "Alt+Delete,Control+Shift+Delete" \
             -config "$rofi_theme" \
-            -mesg "$msg" < <(cliphist list)
+            -mesg "$msg" <<<"$history"
     )
     rofi_status=$?
 

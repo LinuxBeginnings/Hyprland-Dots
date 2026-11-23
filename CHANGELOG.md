@@ -4,6 +4,12 @@
 
 ## Fixed:
 
+- The clipboard manager says so when the history is empty
+  - rofi was handed no entries, so it exited without opening a window
+  - The shortcut looked broken instead of reporting an empty history
+  - `ClipManager.sh` now notifies `Clipboard history is empty`
+  - Wiping the last entry ends in the same notification
+
 - `ALT + DEL` wipes history again on rofi `libxkbcommon` 1.8 builds
   - Those builds report `Meta` with `Alt`, so `Alt-Delete` never matched
   - The key was typed into the search box as if no binding existed
