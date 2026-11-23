@@ -64,7 +64,7 @@ tooltip {
     padding-right: 12px;
     margin-right: 4px;
     animation: ws_active 2s ease-in-out 1;
-    transition: background-color 0.4s cubic-bezier(.55,-0.68,.48,1.682);
+    transition: background-color 0.4s cubic-bezier(.55,-0.68,.48,1.682), color 0.4s cubic-bezier(.55,-0.68,.48,1.682);
 }
 
 #taskbar button:hover,
@@ -72,7 +72,7 @@ tooltip {
     background: @wb-hvr-bg;
     color: @wb-hvr-fg;
     animation: ws_hover 20s ease-in-out 1;
-    transition: background-color 0.3s cubic-bezier(.55,-0.68,.48,1.682);
+    transition: background-color 0.3s cubic-bezier(.55,-0.68,.48,1.682), color 0.3s cubic-bezier(.55,-0.68,.48,1.682);
 }
 
 #tray menu * {

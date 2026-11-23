@@ -21,7 +21,9 @@ widget {
 }
 
 .overview-search-box {
-  transition: 300ms cubic-bezier(0, 0.55, 0.45, 1);
+  transition: min-width 300ms cubic-bezier(0, 0.55, 0.45, 1),
+              background-color 300ms cubic-bezier(0, 0.55, 0.45, 1),
+              color 300ms cubic-bezier(0, 0.55, 0.45, 1);
   border-radius: 1.705rem;
   -gtk-outline-radius: 1.705rem;
   border-top: 4px solid @border-color;
@@ -154,7 +156,8 @@ widget {
 .overview-tasks-window {
   border-radius: 1.159rem;
   -gtk-outline-radius: 1.159rem;
-  transition: 300ms cubic-bezier(0.1, 1, 0, 1);
+  transition: background-color 300ms cubic-bezier(0.1, 1, 0, 1),
+              opacity 300ms cubic-bezier(0.1, 1, 0, 1);
   background-color: alpha(@color3, .7);
   /* background-color: @color_a3; */
   /* background-color: rgba(46, 40, 50, 0.8); */
@@ -180,11 +183,11 @@ widget {
 }
 
 .growingRadial {
-  transition: 300ms cubic-bezier(0.2, 0, 0, 1);
+  transition: opacity 300ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .fadingRadial {
-  transition: 50ms cubic-bezier(0.2, 0, 0, 1);
+  transition: opacity 50ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .sidebar-pinned {

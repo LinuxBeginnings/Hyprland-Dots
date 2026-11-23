@@ -68,7 +68,7 @@ tooltip label {
   padding-left: 4px;
   padding-right: 4px;
   animation: gradient_f 20s ease-in infinite;
-  transition: background-color 0.5s cubic-bezier(0.55, -0.68, 0.48, 1.682);
+  transition: background-color 0.5s cubic-bezier(0.55, -0.68, 0.48, 1.682), color 0.5s cubic-bezier(0.55, -0.68, 0.48, 1.682);
 }
 
 #workspaces button.active {
@@ -78,7 +78,7 @@ tooltip label {
   padding-left: 8px;
   padding-right: 8px;
   animation: gradient_f 20s ease-in infinite;
-  transition: background-color 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682);
+  transition: background-color 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682), color 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682);
 }
 
 #workspaces button:hover {
@@ -87,7 +87,7 @@ tooltip label {
   padding-left: 2px;
   padding-right: 2px;
   animation: gradient_f 20s ease-in infinite;
-  transition: background-color 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682);
+  transition: background-color 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682), color 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682);
 }
 
 #workspaces button.urgent {

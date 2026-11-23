@@ -4,6 +4,22 @@
 
 ## Fixed:
 
+- AGS overview transitions name their properties instead of `all`
+  - `style.css` had four bare `<duration> cubic-bezier()` transitions
+  - A missing property means `all`, so size and border were animated too
+  - The search box names `min-width`, so it still grows smoothly
+  - Task windows animate `background-color` and `opacity`
+  - The unused radial helpers are now restricted to `opacity`
+
+- Waybar workspace buttons animate only paint, never size
+  - `transition: all` also animated `padding` and `border`, forcing relayout
+  - The 47 themes that animate buttons now name `background-color` and `color`
+  - Timing and easing are unchanged in every theme
+  - Active and urgent labels fade instead of snapping from cyan to black
+  - `color` is paint-only, so the no-relayout guarantee still holds
+  - Aims at the freeze and GTK drawing failures in Waybar issue 4998
+  - PR: [#175](https://github.com/LinuxBeginnings/Hyprland-Dots/pull/175)
+
 - The clipboard manager says so when the history is empty
   - rofi was handed no entries, so it exited without opening a window
   - The shortcut looked broken instead of reporting an empty history
@@ -45,12 +61,6 @@
 - Screenshots are copied as `image/png` explicitly
   - `ScreenShot.sh` and `screenshot-region.lua` relied on `wl-copy` sniffing
   - `grim` output is always PNG, so all seven `wl-copy` calls now name the type
-
-- Waybar workspace buttons only animate `background-color`
-  - `transition: all` also animated `padding` and `border`, forcing relayout
-  - 45 more themes now name the property; timing and easing unchanged
-  - Aims at the freeze and GTK drawing failures in Waybar issue 4998
-  - PR: [#175](https://github.com/LinuxBeginnings/Hyprland-Dots/pull/175)
 
 - `ToggleOpacity.sh` starts at 100% opacity and steps down to minimum
   - Toggling previously decreased opacity to 85% with 100% at the end

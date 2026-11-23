@@ -59,7 +59,7 @@ window#waybar {
     border-radius: 12px;
     border: 0px;
     color: @textcolor3;
-    transition: background-color 0.3s ease-in-out;
+    transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
 }
 
 #taskbar button.active,
@@ -68,7 +68,7 @@ window#waybar {
     background: @workspacesbackground2;
     border-radius: 8px;
     min-width: 40px;
-    transition: background-color 0.3s ease-in-out;
+    transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
 }
 
 #workspaces button:hover {

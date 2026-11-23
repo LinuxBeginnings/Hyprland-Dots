@@ -64,7 +64,7 @@ color: @fg-alt;
 border-radius: 6px;
 margin: 0 2px;
 padding: 0 8px;
-transition: background-color 0.2s ease;
+transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 #workspaces button:hover {
