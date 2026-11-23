@@ -46,6 +46,12 @@
   - `ScreenShot.sh` and `screenshot-region.lua` relied on `wl-copy` sniffing
   - `grim` output is always PNG, so all seven `wl-copy` calls now name the type
 
+- Waybar workspace buttons only animate `background-color`
+  - `transition: all` also animated `padding` and `border`, forcing relayout
+  - 45 more themes now name the property; timing and easing unchanged
+  - Aims at the freeze and GTK drawing failures in Waybar issue 4998
+  - PR: [#175](https://github.com/LinuxBeginnings/Hyprland-Dots/pull/175)
+
 - `ToggleOpacity.sh` starts at 100% opacity and steps down to minimum
   - Toggling previously decreased opacity to 85% with 100% at the end
   - First toggle now sets full 100% opacity on the active window

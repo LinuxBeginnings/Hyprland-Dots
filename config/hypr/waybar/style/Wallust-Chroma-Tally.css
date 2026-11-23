@@ -40,7 +40,7 @@ window#waybar {
   color: #0f1419;
   background: linear-gradient(45deg, #95e6cb, #59c2ff, #d2a6ff);
   opacity: 0.5;
-  transition: all 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682);
+  transition: background-color 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682);
 }
 
 #taskbar button.active,
@@ -52,7 +52,7 @@ window#waybar {
   background: linear-gradient(45deg, #59c2ff, #d2a6ff);
   opacity: 1;
   min-width: 40px;
-  transition: all 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682);
+  transition: background-color 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682);
 }
 
 #workspaces button:hover {
@@ -60,7 +60,7 @@ window#waybar {
   color: #0f1419;
   background: linear-gradient(45deg, #59c2ff, #d2a6ff);
   opacity: 0.8;
-  transition: all 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682);
+  transition: background-color 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.682);
 }
 
 tooltip {

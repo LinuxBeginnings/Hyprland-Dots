@@ -99,7 +99,7 @@ window#waybar.empty #window {
   padding-left: 10px;
   padding-right: 10px;
   animation: gradient_f 20s ease-in infinite;
-  transition: all 0.1s linear;
+  transition: background-color 0.1s linear;
 }
 
 #workspaces button.persistent {

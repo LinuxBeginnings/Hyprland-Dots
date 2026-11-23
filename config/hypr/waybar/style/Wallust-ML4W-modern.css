@@ -52,7 +52,7 @@ border-bottom: 0px solid @foreground;
     border-radius: 3px 3px 3px 3px;
     color: @textcolor1;
     background-color: @workspacesbackground1;
-    transition: all 0.1s linear;
+    transition: background-color 0.1s linear;
 }
 
 #workspaces button.active {
@@ -60,7 +60,7 @@ border-bottom: 0px solid @foreground;
     background: @workspacesbackground2;
     border-radius: 3px 3px 3px 3px;
     min-width: 30px;
-    transition: all 0.1s linear;
+    transition: background-color 0.1s linear;
 }
 
 #workspaces button:hover {

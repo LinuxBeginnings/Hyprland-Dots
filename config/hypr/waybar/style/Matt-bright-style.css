@@ -47,7 +47,7 @@ button {
 border: none;
 border-radius: 0;
 padding: 0 5px;
-transition: all 0.2s ease;
+transition: background-color 0.2s ease;
 }
 
 #workspaces {
@@ -64,7 +64,7 @@ color: @fg-alt;
 border-radius: 6px;
 margin: 0 2px;
 padding: 0 8px;
-transition: all 0.2s ease;
+transition: background-color 0.2s ease;
 }
 
 #workspaces button:hover {
