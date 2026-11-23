@@ -83,7 +83,7 @@ tooltip label {
     background: transparent;
     font-weight: bolder;
     box-shadow: inset 0 -3px transparent;
-    transition: all 0.25s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transition: background-color 0.25s cubic-bezier(0.165, 0.84, 0.44, 1);
     padding: 2px 5px;
 }
 
