@@ -9,7 +9,7 @@
 
 # --- UserConfigs/user_startup.lua -------------------------------------------
 #
-# The three helpers below add one command each to user_startup.lua. They used to
+# The two helpers below add one command each to user_startup.lua. They used to
 # insert it with
 #
 #   sed '/local startup_commands = {/a \  "ags",'
@@ -76,27 +76,6 @@ enable_asusctl() {
     local target="$cfg_home/hypr/UserConfigs/user_startup.lua"
     if [ -f "$target" ] && ! startup_entry_present "$target" "rog-control-center"; then
       startup_add "$target" "rog-control-center" "$log"
-    fi
-  fi
-}
-
-enable_blueman() {
-  local log="$1"
-  local cfg_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-  if command -v blueman-applet >/dev/null 2>&1; then
-    local target="$cfg_home/hypr/UserConfigs/user_startup.lua"
-    if [ -f "$target" ] && ! startup_entry_present "$target" "blueman-applet"; then
-      # The shipped table carries the entry commented out, so uncomment that one
-      # rather than adding a second. Only an entry inside a LIVE table counts:
-      # one inside the commented template block would become the same orphan the
-      # old installer produced.
-      if sed -nE "/$KOOLDOTS_LIVE_STARTUP_TABLE/,/^[[:space:]]*}/p" "$target" |
-        grep -q '^[[:space:]]*--[[:space:]]*"blueman-applet",'; then
-        sed -i -E 's/^([[:space:]]*)--[[:space:]]*("blueman-applet",)/\1\2/' "$target"
-        echo "${INFO:-[INFO]} Enabled blueman-applet in user_startup.lua" 2>&1 | tee -a "$log"
-      else
-        startup_add "$target" "blueman-applet" "$log"
-      fi
     fi
   fi
 }

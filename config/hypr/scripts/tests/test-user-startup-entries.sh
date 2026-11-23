@@ -6,7 +6,7 @@
 #  SPDX-License-Identifier: GPL-3.0-or-later
 # ==================================================
 # Purpose:
-#   The three app helpers in scripts/lib_apps.sh add one command each to
+#   The app helpers in scripts/lib_apps.sh add one command each to
 #   UserConfigs/user_startup.lua. They used to insert it with an UNANCHORED
 #
 #     sed '/local startup_commands = {/a \  "ags",'
@@ -49,12 +49,12 @@ fi
 # shellcheck source=../../../scripts/lib_apps.sh
 source "$REPO_SCRIPTS/lib_apps.sh"
 
-# The helpers gate on `command -v`, so the three applications are faked onto
+# The helpers gate on `command -v`, so the two applications are faked onto
 # PATH. enable_ags() also seds the Refresh scripts under $DOTFILES_DIR, which is
 # pointed at a throwaway tree so a test run cannot touch the repo.
 BIN="$WORK/bin"
 mkdir -p "$BIN"
-for cmd in ags asusctl blueman-applet; do
+for cmd in ags asusctl; do
   printf '#!/usr/bin/env bash\nexit 0\n' >"$BIN/$cmd"
 done
 chmod +x "$BIN"/*
@@ -173,14 +173,6 @@ before="$(cat "$TARGET")"
 enable_ags "$LOG" >/dev/null 2>&1
 assert_eq "byte-identical after a second run" "$before" "$(cat "$TARGET")"
 
-it "enable_blueman uncomments the shipped entry instead of adding a second"
-enable_blueman "$LOG"
-assert_count 1 "$TARGET" '"blueman-applet",' && pass_msg
-it "the uncommented entry is a live one, inside the table"
-entry_inside_table "$TARGET" '"blueman-applet",' && pass_msg || fail "the entry is not inside the table"
-it "the file still parses after enable_blueman"
-if parses "$TARGET" && no_orphan "$TARGET"; then pass_msg; else fail "enable_blueman broke the file"; fi
-
 # --- the helpers on the old, commented template -----------------------------
 # This is the case the bug was reported on: the table is commented out, so an
 # insert after that line lands outside any table.
@@ -206,12 +198,6 @@ enable_asusctl "$LOG" >/dev/null 2>&1
 if parses "$TARGET" && no_orphan "$TARGET" &&
   grep -qF 'exec_once("rog-control-center")' "$TARGET"; then pass_msg
 else fail "enable_asusctl did not add a valid live entry"; fi
-
-it "enable_blueman on the commented template does not uncomment the example"
-seed_old_template
-enable_blueman "$LOG" >/dev/null 2>&1
-if parses "$TARGET" && no_orphan "$TARGET"; then pass_msg
-else fail "enable_blueman produced an orphan on the commented template"; fi
 
 # --- the repair patch -------------------------------------------------------
 it "the old installer's insert really does break the file"

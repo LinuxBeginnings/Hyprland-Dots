@@ -790,7 +790,6 @@ model=$(prompt_detect_model)
 prompt_keyboard_layout "$layout" "$variant" "$model" "$LOG"
 
 enable_asusctl "$LOG"
-enable_blueman "$LOG"
 enable_ags "$LOG"
 enable_quickshell "$LOG"
 ensure_keybinds_init "$LOG"

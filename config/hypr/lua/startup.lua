@@ -43,7 +43,7 @@ local startup_commands = {
   "dbus-update-activation-environment --systemd WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE XDG_CURRENT_DESKTOP WEATHER_UNITS KITTY_CONFIG_DIRECTORY",
   "systemctl --user import-environment WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE XDG_CURRENT_DESKTOP WEATHER_UNITS KITTY_CONFIG_DIRECTORY",
   scriptsDir .. "/Polkit.sh",
-  "nm-applet",
+  -- "nm-applet",
   -- nm-tray now optional for ubuntu
   -- "nm-tray",
   "systemctl --user start swaync.service || swaync",

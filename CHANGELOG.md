@@ -4,6 +4,12 @@
 
 ## Fixed:
 
+- The blueman-applet and nm-applet tray icons are no longer started
+  - `custom/qs-network` already covers Wi-Fi, ethernet and bluetooth
+  - `enable_blueman()` no longer uncomments the shipped entry at install
+  - `patches/93-network-applets-off.sh` comments a live entry on old installs
+  - It stops a running applet too, so the icon goes without a relogin
+
 - AGS overview transitions name their properties instead of `all`
   - `style.css` had four bare `<duration> cubic-bezier()` transitions
   - A missing property means `all`, so size and border were animated too
