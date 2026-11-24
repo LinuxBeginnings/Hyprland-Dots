@@ -4,6 +4,13 @@
 
 ## Fixed:
 
+- `copy.sh` preserves custom Waybar configurations and styles on updates
+  - Waybar upgrades previously wiped `~/.config/hypr/waybar` and restored files
+  - User-added configs, styles or custom modules could be lost or overwritten
+  - `copy_waybar` now merges configurations using `rsync` without deletion
+  - Custom files in `configs/`, `style/`, `styles/` and `UserModules` are kept
+  - Legacy path references are repaired in place without destructive restores
+
 - The keybinds panel no longer takes over the screen
   - Its card is capped at 1100x720, down from 1426x989
   - The second column and a dozen rows still fit before a scroll

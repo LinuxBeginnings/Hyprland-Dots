@@ -180,6 +180,14 @@ _restore_waybar_customizations() {
       fi
     fi
   done || true
+  if [ -d "$backup_dir/styles" ]; then
+    mkdir -p "$new_dir/styles"
+    for file in "$backup_dir/styles"/*; do
+      [ -e "$file" ] || continue
+      target_file="$new_dir/styles/$(basename "$file")"
+      [ ! -e "$target_file" ] && cp -r "$file" "$target_file"
+    done
+  fi
   BACKUP_FILEw="$backup_dir/UserModules"
   [ -f "$BACKUP_FILEw" ] && cp -f "$BACKUP_FILEw" "$new_dir/UserModules"
 
@@ -230,6 +238,100 @@ _waybar_dir_has_stale_paths() {
   return 1
 }
 
+# Repair legacy ~/.config/waybar/ path references in-place without deleting files
+_repair_waybar_stale_paths() {
+  local dir="$1"
+  local log="${2:-/dev/null}"
+  [ -d "$dir" ] || return 0
+
+  # Replace pre-migration path strings ($HOME/.config/waybar/ and ~/.config/waybar/)
+  while IFS= read -r -d '' f; do
+    [ -f "$f" ] || continue
+    sed -i 's#\$HOME/\.config/waybar/#$HOME/.config/hypr/waybar/#g; s#~/\.config/waybar/#~/.config/hypr/waybar/#g' "$f" 2>/dev/null || true
+  done < <(grep -r -l -Z '\.config/waybar/' "$dir" 2>/dev/null || true)
+
+  # Repair Wallust CSS imports in style/styles directories and top-level style.css
+  local css_dirs=()
+  [ -d "$dir/style" ] && css_dirs+=("$dir/style")
+  [ -d "$dir/styles" ] && css_dirs+=("$dir/styles")
+  if [ "${#css_dirs[@]}" -gt 0 ]; then
+    while IFS= read -r -d '' css; do
+      [ -f "$css" ] || continue
+      sed -i -E 's#(@import[[:space:]]*[\"'\''])\.\./\.\./\.config/waybar/wallust/colors-waybar\.css([\"'\''])#\1../../../.config/hypr/waybar/wallust/colors-waybar.css\2#g; s#\.config/waybar/#.config/hypr/waybar/#g' "$css" 2>/dev/null || true
+    done < <(grep -r -l -Z '\.config/waybar/' "${css_dirs[@]}" 2>/dev/null || true)
+  fi
+  if [ -f "$dir/style.css" ] && [ ! -L "$dir/style.css" ]; then
+    sed -i -E 's#(@import[[:space:]]*[\"'\''])\.\./\.\./\.config/waybar/wallust/colors-waybar\.css([\"'\''])#\1../../../.config/hypr/waybar/wallust/colors-waybar.css\2#g; s#\.config/waybar/#.config/hypr/waybar/#g' "$dir/style.css" 2>/dev/null || true
+  fi
+}
+
+# Ensure config and style.css exist and are valid symlinks; if broken or missing, point to defaults
+_ensure_waybar_symlinks() {
+  local dir="$1"
+  local log="${2:-/dev/null}"
+
+  # Fix config symlink if pointing to legacy path or broken
+  if [ -L "$dir/config" ]; then
+    local tgt
+    tgt="$(readlink "$dir/config" 2>/dev/null || true)"
+    if [[ "$tgt" == *".config/waybar"* ]] || [ ! -e "$dir/config" ]; then
+      local base_name
+      base_name="$(basename "$tgt" 2>/dev/null || true)"
+      case "$base_name" in
+        "[TOP] Default"|"[TOP] Default Laptop"|"[TOP] Default (old v"*)
+          base_name="${base_name//\[TOP\] /TOP-}"
+          base_name="${base_name// Laptop/-Laptop}"
+          base_name="${base_name// (old v/-old-v}"
+          base_name="${base_name//)/}"
+          ;;
+        "[BOT] Default"|"[BOT] Default Laptop")
+          base_name="${base_name//\[BOT\] /BOT-}"
+          base_name="${base_name// Laptop/-Laptop}"
+          ;;
+      esac
+      rm -f "$dir/config"
+      if [ -n "$base_name" ] && [ -f "$dir/configs/$base_name" ]; then
+        ln -sf "$dir/configs/$base_name" "$dir/config"
+      fi
+    fi
+  fi
+
+  if [ ! -e "$dir/config" ]; then
+    local chassis
+    chassis="$(detect_waybar_config 2>/dev/null || echo "desktop")"
+    local d_cfg="$dir/configs/TOP-Default"
+    [ "$chassis" = "laptop" ] && d_cfg="$dir/configs/TOP-Default-Laptop"
+    if [ -f "$d_cfg" ]; then
+      rm -f "$dir/config"
+      ln -sf "$d_cfg" "$dir/config"
+      echo -e "${OK:-[OK]} - Initialized default waybar config link." 2>&1 | tee -a "$log"
+    fi
+  fi
+
+  # Fix style.css symlink if pointing to legacy path or broken
+  if [ -L "$dir/style.css" ]; then
+    local tgt
+    tgt="$(readlink "$dir/style.css" 2>/dev/null || true)"
+    if [[ "$tgt" == *".config/waybar"* ]] || [ ! -e "$dir/style.css" ]; then
+      local base_name
+      base_name="$(basename "$tgt" 2>/dev/null || true)"
+      rm -f "$dir/style.css"
+      if [ -n "$base_name" ] && [ -f "$dir/style/$base_name" ]; then
+        ln -sf "$dir/style/$base_name" "$dir/style.css"
+      fi
+    fi
+  fi
+
+  if [ ! -e "$dir/style.css" ]; then
+    local d_stl="$dir/style/Extra-Prismatic-Glow.css"
+    if [ -f "$d_stl" ]; then
+      rm -f "$dir/style.css"
+      ln -sf "$d_stl" "$dir/style.css"
+      echo -e "${OK:-[OK]} - Initialized default waybar style link." 2>&1 | tee -a "$log"
+    fi
+  fi
+}
+
 # Sync repo-managed Waybar files into an already-installed waybar directory
 # without clobbering user-created files. Files shipped by the repo (Modules,
 # Modules*, configs/, style/) are refreshed, but anything that only exists in
@@ -251,6 +353,53 @@ _rsync_waybar_system_files() {
     --exclude='/config' \
     --exclude='/style.css' \
     "$source_dir/" "$target_dir/" >>"$log" 2>&1
+}
+
+# Sync repo-managed Waybar files into an installed waybar directory
+# using rsync without deleting user-created content. Repo files
+# (Modules*, configs/, style/) are merged/updated in place.
+# User-owned files (UserModules, config, style.css) and generated
+# runtime files (wallust/) are preserved so user layouts, styles,
+# and custom modules are never wiped or reset.
+sync_waybar_config() {
+  local log="${1:-/dev/null}"
+  local base="${DOTFILES_DIR:-.}"
+  local src_dir="$base/config/hypr/waybar"
+  local dest_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar"
+
+  [ -d "$src_dir" ] || return 1
+  mkdir -p "$dest_dir"
+
+  # Non-destructive safety copy so nothing is ever unrecoverable
+  local BACKUP_DIR
+  BACKUP_DIR=$(get_backup_dirname)
+  if [ -n "$(ls -A "$dest_dir" 2>/dev/null)" ] && [ ! -d "${dest_dir}-backup-$BACKUP_DIR" ]; then
+    cp -r "$dest_dir" "${dest_dir}-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
+    echo -e "${NOTE:-[NOTE]} - Backed up waybar to ${dest_dir}-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
+  fi
+
+  if _rsync_waybar_system_files "$dest_dir" "$src_dir" "$log"; then
+    echo -e "${OK:-[OK]} - Merged ${YELLOW:-}waybar${RESET:-} files (user configs and styles preserved)." 2>&1 | tee -a "$log"
+  else
+    echo -e "${ERROR:-[ERROR]} - Failed to sync ${YELLOW:-}waybar${RESET:-} config." 2>&1 | tee -a "$log"
+    return 1
+  fi
+
+  # Install UserModules template only if missing
+  if [ ! -f "$dest_dir/UserModules" ] && [ -f "$src_dir/UserModules" ]; then
+    cp -f "$src_dir/UserModules" "$dest_dir/UserModules" 2>&1 | tee -a "$log"
+  fi
+
+  # Repair legacy paths in place if detected
+  if _waybar_dir_has_stale_paths "$dest_dir"; then
+    echo -e "${NOTE:-[NOTE]} - Repairing legacy path references in ${YELLOW:-}$dest_dir${RESET:-} in-place..." 2>&1 | tee -a "$log"
+    _repair_waybar_stale_paths "$dest_dir" "$log"
+  fi
+
+  # Ensure default config and style.css exist and are valid symlinks
+  _ensure_waybar_symlinks "$dest_dir" "$log"
+
+  return 0
 }
 
 copy_waybar() {
@@ -275,54 +424,38 @@ copy_waybar() {
     BACKUP_DIR=$(get_backup_dirname)
     cp -r "$OLD_DIRPATHw" "$OLD_DIRPATHw-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
     echo -e "${NOTE:-[NOTE]} - Backed up $DIRW to $OLD_DIRPATHw-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
-    rm -rf "$OLD_DIRPATHw"
     cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
     _restore_waybar_customizations "$DIRPATHw" "$OLD_DIRPATHw-backup-$BACKUP_DIR"
+    _repair_waybar_stale_paths "$DIRPATHw" "$log"
+    rm -rf "$OLD_DIRPATHw"
     echo -e "${OK:-[OK]} - Migrated ${YELLOW:-}$DIRW${RESET:-} config to ${YELLOW:-}$DIRPATHw${RESET:-}." 2>&1 | tee -a "$log"
     return 0
   fi
 
   if [ -d "$DIRPATHw" ]; then
-    # Stale check runs first and bypasses both the express "keep existing"
-    # shortcut and the interactive y/n prompt below: a directory with broken
-    # path references (e.g. left behind by an earlier/interrupted copy of
-    # this dotfiles version) is not something either mode should preserve.
+    # If broken legacy path references are present, repair in place via rsync merge
     if _waybar_dir_has_stale_paths "$DIRPATHw"; then
-      echo -e "${WARN:-[WARN]} - ${YELLOW:-}$DIRPATHw${RESET:-} still contains pre-migration path references (\$HOME/.config/waybar/...) from an earlier/interrupted copy; module includes and CSS imports are broken as a result. Repairing automatically." 2>&1 | tee -a "$log"
-      BACKUP_DIR=$(get_backup_dirname)
-      cp -r "$DIRPATHw" "$DIRPATHw-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
-      echo -e "${NOTE:-[NOTE]} - Backed up $DIRW to $DIRPATHw-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
-      rm -rf "$DIRPATHw" && cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
-      _restore_waybar_customizations "$DIRPATHw" "$DIRPATHw-backup-$BACKUP_DIR"
-      echo -e "${OK:-[OK]} - Repaired stale ${YELLOW:-}$DIRW${RESET:-} config at ${YELLOW:-}$DIRPATHw${RESET:-} (runs regardless of express/upgrade mode since the old content was broken, not a preference)." 2>&1 | tee -a "$log"
+      echo -e "${WARN:-[WARN]} - ${YELLOW:-}$DIRPATHw${RESET:-} contains pre-migration path references (\$HOME/.config/waybar/...); merging updates and repairing in-place." 2>&1 | tee -a "$log"
+      sync_waybar_config "$log"
       return 0
     fi
 
     if [ "$run_mode" = "express" ]; then
-      # Express keeps the user's layout/style choice, but still refreshes the
-      # repo-managed Waybar files so dotfiles updates (e.g. new modules) apply.
-      echo -e "${NOTE:-[NOTE]} - Express mode: syncing system ${YELLOW:-}$DIRW${RESET:-} files (user-created files preserved)." 2>&1 | tee -a "$log"
-      if _rsync_waybar_system_files "$DIRPATHw" "$base/config/hypr/$DIRW" "$log"; then
-        echo -e "${OK:-[OK]} - Synced system ${YELLOW:-}$DIRW${RESET:-} files into ${YELLOW:-}$DIRPATHw${RESET:-}." 2>&1 | tee -a "$log"
-      else
-        echo -e "${WARN:-[WARN]} - ${YELLOW:-}$DIRW${RESET:-} system sync skipped (missing source or target)." 2>&1 | tee -a "$log"
-      fi
+      echo -e "${NOTE:-[NOTE]} - Express mode: merging ${YELLOW:-}$DIRW${RESET:-} files via rsync (user configs and styles preserved)." 2>&1 | tee -a "$log"
+      sync_waybar_config "$log"
       return 0
     fi
+
     while true; do
-      echo -n "${CAT:-[ACTION]} Do you want to replace ${YELLOW:-}$DIRW${RESET:-} config? (y/n): "
+      echo -n "${CAT:-[ACTION]} Do you want to update ${YELLOW:-}$DIRW${RESET:-} config? (y/n): "
       read DIR1_CHOICE
       case "$DIR1_CHOICE" in
       [Yy]*)
-        BACKUP_DIR=$(get_backup_dirname)
-        cp -r "$DIRPATHw" "$DIRPATHw-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
-        echo -e "${NOTE:-[NOTE]} - Backed up $DIRW to $DIRPATHw-backup-$BACKUP_DIR." 2>&1 | tee -a "$log"
-        rm -rf "$DIRPATHw" && cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
-        _restore_waybar_customizations "$DIRPATHw" "$DIRPATHw-backup-$BACKUP_DIR"
+        sync_waybar_config "$log"
         break
         ;;
       [Nn]*)
-        echo -e "${NOTE:-[NOTE]} - Skipping ${YELLOW:-}$DIRW${RESET:-} config replacement." 2>&1 | tee -a "$log"
+        echo -e "${NOTE:-[NOTE]} - Skipping ${YELLOW:-}$DIRW${RESET:-} config update." 2>&1 | tee -a "$log"
         break
         ;;
       *) echo -e "${WARN:-[WARN]} - Invalid choice. Please enter Y or N." ;;
@@ -330,6 +463,7 @@ copy_waybar() {
     done
   else
     cp -r "$base/config/hypr/$DIRW" "$DIRPATHw" 2>&1 | tee -a "$log"
+    _ensure_waybar_symlinks "$DIRPATHw" "$log"
     echo -e "${OK:-[OK]} - Copy completed for ${YELLOW:-}$DIRW${RESET:-}" 2>&1 | tee -a "$log"
   fi
 }
@@ -360,7 +494,11 @@ copy_phase2() {
       mv "$DIRPATH" "$DIRPATH-backup-$BACKUP_DIR" 2>&1 | tee -a "$log"
     fi
     if [ -d "$base/config/$DIR_NAME" ]; then
-      cp -r "$base/config/$DIR_NAME/" "${XDG_CONFIG_HOME:-$HOME/.config}/$DIR_NAME" 2>&1 | tee -a "$log"
+      if [ "$DIR_NAME" = "hypr" ]; then
+        rsync -a --exclude='/waybar' "$base/config/$DIR_NAME/" "${XDG_CONFIG_HOME:-$HOME/.config}/$DIR_NAME/" 2>&1 | tee -a "$log"
+      else
+        cp -r "$base/config/$DIR_NAME/" "${XDG_CONFIG_HOME:-$HOME/.config}/$DIR_NAME" 2>&1 | tee -a "$log"
+      fi
       if [ "$DIR_NAME" = "gtk-3.0" ] && [ -n "$BACKUP_DIR" ] && [ -f "$DIRPATH-backup-$BACKUP_DIR/settings.ini" ]; then
         cp -n "$DIRPATH-backup-$BACKUP_DIR/settings.ini" "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/settings.ini" 2>/dev/null || true
       fi
