@@ -4,8 +4,6 @@
 * {
   font-family:
     "JetBrainsMono Nerd Font", FontAwesome, Roboto, Helvetica, Arial, sans-serif;
-  /* NOTE: Waybar v14+ ignores % font-size values */
-  font-size: 99%;
   font-weight: bold;
 }
 

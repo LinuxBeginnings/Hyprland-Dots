@@ -4,6 +4,11 @@
 
 ## Fixed:
 
+- Waybar styles no longer carry unsupported percentage font sizes
+  - Modern Waybar builds ignore percentage values on root and module rules
+  - Removed unsupported `font-size: <percentage>` rules across 50 stylesheets
+  - Bar dimensions now depend cleanly on module and window pixel declarations
+
 - `copy.sh` preserves custom Waybar configurations and styles on updates
   - Waybar upgrades previously wiped `~/.config/hypr/waybar` and restored files
   - User-added configs, styles or custom modules could be lost or overwritten
