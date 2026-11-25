@@ -12,3 +12,5 @@
 -- hl.env("GDK_SCALE", "1")
 -- hl.env("QT_SCALE_FACTOR", "1")
 -- hl.env("WEATHER_UNITS", "metric")
+-- hl.env("WAYBAR_FONT", "JetBrainsMono Nerd Font")
+-- hl.env("WAYBAR_FONT_SIZE", "14")

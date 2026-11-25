@@ -602,6 +602,16 @@ apply_window_rule({
 })
 
 apply_window_rule({
+  name = "float-center-waybar-font-selector",
+  match = {
+    title = "^(Waybar Font Settings)$",
+  },
+  float = true,
+  center = true,
+  size = "(monitor_w*0.45) (monitor_h*0.45)",
+})
+
+apply_window_rule({
   name = "center-rog-control",
   match = {
     title = "^(ROG Control)$",

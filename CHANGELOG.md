@@ -405,6 +405,16 @@
 
 ## Added:
 
+- Global Waybar font family and font size modifier with Quickshell applet
+  - `WaybarFont.sh` modifies font-family and font-size across all 52 styles
+  - Reads and writes `WAYBAR_FONT` and `WAYBAR_FONT_SIZE` in `user_env.lua`
+  - `quickshell/waybar-font` provides floating centered GUI at 45% screen
+  - Real-time searchable font list, size presets, live preview and restore
+  - Apply restarts Waybar while keeping window open for visual verification
+  - `patches/45-waybar-font.sh` preserves overrides across `copy.sh` updates
+  - Added to Quick Settings menu under `Waybar Font & Scaling Settings`
+  - `tests/test-waybar-font.sh` validates engine, overrides, and update patch
+
 - The layout tracker can run as a user service, enabled from `copy.sh`
   - `copy.sh` asks once on install, and `--layout-tracker` answers yes
   - `config/systemd/user/tak0-layout-tracker.service` is copied with the rest

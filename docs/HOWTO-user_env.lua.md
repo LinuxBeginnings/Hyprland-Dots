@@ -116,6 +116,14 @@ hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
 hl.env("WEATHER_UNITS", "metric")
 ```
 
+### Example F: Waybar Font Family & Font Size Scaling
+
+```lua
+-- Override Waybar typography and scaling globally across all styles
+hl.env("WAYBAR_FONT", "JetBrainsMono Nerd Font")
+hl.env("WAYBAR_FONT_SIZE", "16")
+```
+
 ---
 
 ## 4. Troubleshooting & Verification

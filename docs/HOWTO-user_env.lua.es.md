@@ -116,6 +116,14 @@ hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
 hl.env("WEATHER_UNITS", "metric")
 ```
 
+### Ejemplo F: Tipografía y escala de fuente de Waybar
+
+```lua
+-- Modificar globalmente la fuente y el tamaño de Waybar en todos los estilos
+hl.env("WAYBAR_FONT", "JetBrainsMono Nerd Font")
+hl.env("WAYBAR_FONT_SIZE", "16")
+```
+
 ---
 
 ## 4. Solución de problemas y verificación
