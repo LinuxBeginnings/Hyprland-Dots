@@ -1,49 +1,82 @@
 #!/usr/bin/env bash
-
+# ==================================================
 # create-project-tag.sh
 # Generic helper to create an annotated Git tag and (optionally) a GitHub/GitLab Release
+#
 # Usage:
-#   create-project-tag.sh [--dry-run] [--no-release] \
+#   create-project-tag.sh [--dry-run] [--no-release] [--provider <github|gitlab>] \
 #     --project <path> [--branch <branch>] --tag <tag> --notes <file> [--title <title>]
-# Short flags: -p, -b, -t, -n
+# ==================================================
 
 set -euo pipefail
 
-# Colors and icons for nice output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-SUCCESS_ICON="✅"
-ERROR_ICON="❌"
-WARNING_ICON="⚠️"
-INFO_ICON="ℹ️"
+# ------------------------------------------------------------------------------
+# Output Styling, Colors & Icons (TTY and NO_COLOR aware)
+# ------------------------------------------------------------------------------
+setup_colors() {
+  if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != "dumb" ]]; then
+    C_RED=$'\e[0;31m'
+    C_GREEN=$'\e[0;32m'
+    C_YELLOW=$'\e[1;33m'
+    C_BLUE=$'\e[0;34m'
+    C_CYAN=$'\e[0;36m'
+    C_BOLD=$'\e[1m'
+    C_DIM=$'\e[2m'
+    C_RESET=$'\e[0m'
+    ICON_SUCCESS="✅"
+    ICON_ERROR="❌"
+    ICON_WARN="⚠️ "
+    ICON_INFO="ℹ️ "
+    ICON_TAG="🏷️ "
+  else
+    C_RED=''
+    C_GREEN=''
+    C_YELLOW=''
+    C_BLUE=''
+    C_CYAN=''
+    C_BOLD=''
+    C_DIM=''
+    C_RESET=''
+    ICON_SUCCESS="[OK]"
+    ICON_ERROR="[ERROR]"
+    ICON_WARN="[WARN]"
+    ICON_INFO="[INFO]"
+    ICON_TAG="[TAG]"
+  fi
+}
+setup_colors
 
-print_success() { echo -e "${GREEN}${SUCCESS_ICON} $1${NC}"; }
-print_error()   { echo -e "${RED}${ERROR_ICON} $1${NC}"; }
-print_warning() { echo -e "${YELLOW}${WARNING_ICON} $1${NC}"; }
-print_info()    { echo -e "${BLUE}${INFO_ICON} $1${NC}"; }
+log_info()    { printf "%b %s\n" "${C_BLUE}${ICON_INFO}${C_RESET}" "$*"; }
+log_success() { printf "%b %s\n" "${C_GREEN}${ICON_SUCCESS}${C_RESET}" "$*"; }
+log_warn()    { printf "%b %s\n" "${C_YELLOW}${ICON_WARN}${C_RESET}" "$*"; }
+log_error()   { printf "%b %s\n" "${C_RED}${ICON_ERROR}${C_RESET}" "$*" >&2; }
+log_step()    { printf "%b %s\n" "${C_CYAN}${ICON_TAG}${C_RESET}" "$*"; }
 
+# ------------------------------------------------------------------------------
+# Help & Usage
+# ------------------------------------------------------------------------------
 usage() {
   cat <<EOF
-Usage: $0 [--dry-run] [--no-release] [--provider <github|gitlab>] [--gitlab] \
-  --project <path> [--branch <branch>] --tag <tag> --notes <file> [--title <title>]
+${C_BOLD}Usage:${C_RESET}
+  $0 [options] --tag <tag> --notes <file>
 
-Options:
-  -p, --project     Path to the git repository (defaults to current directory if omitted)
-  -b, --branch      Branch name to tag (default: current HEAD)
-  -t, --tag         Tag name to create (e.g., v1.2.3)
-  -n, --notes       Path to a text file with release/tag notes
-      --title       Optional Release title (defaults to tag or first line of notes)
-      --dry-run     Preview actions without making changes
-      --no-release  Skip creating a Release (only create and push tag)
-      --provider    Release provider: 'github' (default) or 'gitlab'
-      --gitlab      Shortcut for --provider gitlab
-  -h, --help        Show this help
+${C_BOLD}Options:${C_RESET}
+  -p, --project <dir>    Path to repository (default: current directory)
+  -b, --branch <branch>  Branch or ref to tag (default: current HEAD)
+  -t, --tag <tag>        Tag name to create (e.g. v1.2.3) [Required]
+  -n, --notes <file>     Path to text/markdown release notes [Required]
+      --title <title>    Release title (default: extracted from notes or tag)
+      --dry-run          Preview actions without committing or pushing
+      --no-release       Skip GitHub/GitLab release creation (tag only)
+      --provider <name>  Release forge: 'github' (default) or 'gitlab'
+      --gitlab           Shortcut for --provider gitlab
+  -h, --help             Show this help message
 EOF
 }
 
+# ------------------------------------------------------------------------------
+# Argument Parsing
+# ------------------------------------------------------------------------------
 PROJECT_DIR=""
 BRANCH_NAME=""
 TAG_NAME=""
@@ -52,28 +85,26 @@ RELEASE_TITLE=""
 DRY_RUN=false
 CREATE_RELEASE=true
 PROVIDER="github"
-TARGET_COMMIT=""
 
-# Parse args
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -p|--project)
-      if [[ -z "${2-}" || "${2-}" == -* ]]; then print_error "Option $1 requires a value"; usage; exit 1; fi
+      [[ -z "${2-}" || "${2-}" == -* ]] && { log_error "Option $1 requires a path"; usage; exit 1; }
       PROJECT_DIR="$2"; shift 2;;
     -b|--branch)
-      if [[ -z "${2-}" || "${2-}" == -* ]]; then print_error "Option $1 requires a value"; usage; exit 1; fi
+      [[ -z "${2-}" || "${2-}" == -* ]] && { log_error "Option $1 requires a branch name"; usage; exit 1; }
       BRANCH_NAME="$2"; shift 2;;
     -t|--tag)
-      if [[ -z "${2-}" || "${2-}" == -* ]]; then print_error "Option $1 requires a value"; usage; exit 1; fi
+      [[ -z "${2-}" || "${2-}" == -* ]] && { log_error "Option $1 requires a tag name"; usage; exit 1; }
       TAG_NAME="$2"; shift 2;;
     -n|--notes)
-      if [[ -z "${2-}" || "${2-}" == -* ]]; then print_error "Option $1 requires a value"; usage; exit 1; fi
+      [[ -z "${2-}" || "${2-}" == -* ]] && { log_error "Option $1 requires a file path"; usage; exit 1; }
       NOTES_FILE="$2"; shift 2;;
     --title)
-      if [[ -z "${2-}" || "${2-}" == -* ]]; then print_error "Option $1 requires a value"; usage; exit 1; fi
+      [[ -z "${2-}" || "${2-}" == -* ]] && { log_error "Option $1 requires a title"; usage; exit 1; }
       RELEASE_TITLE="$2"; shift 2;;
     --provider)
-      if [[ -z "${2-}" || "${2-}" == -* ]]; then print_error "Option $1 requires a value"; usage; exit 1; fi
+      [[ -z "${2-}" || "${2-}" == -* ]] && { log_error "Option $1 requires a provider ('github' or 'gitlab')"; usage; exit 1; }
       PROVIDER="$2"; shift 2;;
     --gitlab)
       PROVIDER="gitlab"; shift;;
@@ -84,87 +115,100 @@ while [[ $# -gt 0 ]]; do
     -h|--help)
       usage; exit 0;;
     *)
-      print_error "Unknown argument: $1"; usage; exit 1;;
+      log_error "Unknown argument: $1"; usage; exit 1;;
   esac
 done
 
-# Normalise provider
 case "${PROVIDER}" in
   github|gitlab) ;;
-  *) print_error "Invalid provider '${PROVIDER}'. Use 'github' or 'gitlab'."; exit 1;;
+  *) log_error "Invalid provider '${PROVIDER}'. Allowed: 'github', 'gitlab'"; exit 1;;
 esac
 
-# Defaults
-if [[ -z "${PROJECT_DIR}" ]]; then
-  PROJECT_DIR="$(pwd)"
-fi
-
-# Validate required
+# ------------------------------------------------------------------------------
+# Path Normalization & Pre-flight Checks (BEFORE cd)
+# ------------------------------------------------------------------------------
 if [[ -z "${TAG_NAME}" || -z "${NOTES_FILE}" ]]; then
-  print_error "Missing required options."
+  log_error "Missing required options: --tag and --notes are required."
   usage
   exit 1
 fi
 
-print_info "Project: ${PROJECT_DIR}"
-print_info "Tag: ${TAG_NAME}"
-print_info "Notes file: ${NOTES_FILE}"
-print_info "Release provider: ${PROVIDER}"
-print_info "Release: $([[ "$CREATE_RELEASE" == true ]] && echo "enabled" || echo "disabled")"
-$DRY_RUN && print_warning "DRY RUN MODE: No changes will be made"
-
-# Check directory exists and is a git repo
-if [[ ! -d "${PROJECT_DIR}" ]]; then
-  print_error "Project directory '${PROJECT_DIR}' does not exist!"; exit 1
+# Resolve NOTES_FILE to absolute path before changing directory
+if [[ ! -f "${NOTES_FILE}" ]]; then
+  log_error "Notes file '${NOTES_FILE}' does not exist!"
+  exit 1
+fi
+if [[ ! -r "${NOTES_FILE}" ]]; then
+  log_error "Notes file '${NOTES_FILE}' is not readable!"
+  exit 1
+fi
+if [[ ! -s "${NOTES_FILE}" ]]; then
+  log_error "Notes file '${NOTES_FILE}' is empty!"
+  exit 1
 fi
 
-cd "${PROJECT_DIR}" || { print_error "Failed to enter '${PROJECT_DIR}'"; exit 1; }
-
-if [[ ! -d .git ]]; then
-  print_error "'${PROJECT_DIR}' is not a git repository!"; exit 1
-fi
-
-# Ensure remote 'origin' exists
-if ! git remote get-url origin >/dev/null 2>&1; then
-  print_error "No 'origin' remote configured for this repo."; exit 1
-fi
-
-# Determine owner/repo from origin URL (works for SSH and HTTPS)
-ORIGIN_URL="$(git remote get-url origin)"
-REMOTE_HOST=""
-REMOTE_PATH=""
-if [[ "$ORIGIN_URL" =~ ^git@([^:]+):(.+)$ ]]; then
-  REMOTE_HOST="${BASH_REMATCH[1]}"
-  REMOTE_PATH="${BASH_REMATCH[2]}"
-elif [[ "$ORIGIN_URL" =~ ^https?://([^/]+)/(.+)$ ]]; then
-  REMOTE_HOST="${BASH_REMATCH[1]}"
-  REMOTE_PATH="${BASH_REMATCH[2]}"
+if command -v realpath >/dev/null 2>&1; then
+  NOTES_FILE="$(realpath "${NOTES_FILE}")"
 else
-  print_warning "Could not parse remote URL: ${ORIGIN_URL}"
+  NOTES_FILE="$(cd "$(dirname "${NOTES_FILE}")" && pwd)/$(basename "${NOTES_FILE}")"
 fi
-OWNER_REPO="${REMOTE_PATH%.git}"
 
-# Resolve target commit from branch (if provided) or use HEAD
+# Resolve project directory
+PROJECT_DIR="${PROJECT_DIR:-$(pwd)}"
+if [[ ! -d "${PROJECT_DIR}" ]]; then
+  log_error "Project directory '${PROJECT_DIR}' does not exist!"
+  exit 1
+fi
+
+cd "${PROJECT_DIR}" || { log_error "Failed to enter '${PROJECT_DIR}'"; exit 1; }
+
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  log_error "'${PROJECT_DIR}' is not a valid Git repository worktree!"
+  exit 1
+fi
+
+# ------------------------------------------------------------------------------
+# Git Context & Remote Resolution
+# ------------------------------------------------------------------------------
+if ! git remote get-url origin >/dev/null 2>&1; then
+  log_error "No 'origin' remote configured in this repository."
+  exit 1
+fi
+
+ORIGIN_URL="$(git remote get-url origin)"
+OWNER_REPO=""
+
+# Robust URL parsing: handles git@, ssh://git@, and https://
+if [[ "$ORIGIN_URL" =~ ^(https?|ssh)://([^@]+@)?([^/:]+)(:[0-9]+)?/(.+)$ ]]; then
+  REMOTE_PATH="${BASH_REMATCH[5]}"
+  OWNER_REPO="${REMOTE_PATH%.git}"
+elif [[ "$ORIGIN_URL" =~ ^git@([^:]+):(.+)$ ]]; then
+  REMOTE_PATH="${BASH_REMATCH[2]}"
+  OWNER_REPO="${REMOTE_PATH%.git}"
+fi
+# Strip any trailing slashes
+OWNER_REPO="${OWNER_REPO%/}"
+
+# Target commit resolution
 TARGET_COMMIT="HEAD"
 TARGET_DESC="HEAD"
+
 if [[ -n "${BRANCH_NAME}" ]]; then
   if git show-ref --verify --quiet "refs/heads/${BRANCH_NAME}"; then
     TARGET_COMMIT="$(git rev-parse "${BRANCH_NAME}")"
-    TARGET_DESC="branch ${BRANCH_NAME}"
+    TARGET_DESC="local branch '${BRANCH_NAME}'"
   elif git show-ref --verify --quiet "refs/remotes/origin/${BRANCH_NAME}"; then
     TARGET_COMMIT="$(git rev-parse "origin/${BRANCH_NAME}")"
     TARGET_DESC="origin/${BRANCH_NAME}"
   else
-    print_info "Fetching branch '${BRANCH_NAME}' from origin (if it exists)..."
-    if git fetch --quiet origin "${BRANCH_NAME}" 2>/dev/null; then
-      if git show-ref --verify --quiet "refs/remotes/origin/${BRANCH_NAME}"; then
-        TARGET_COMMIT="$(git rev-parse "origin/${BRANCH_NAME}")"
-        TARGET_DESC="origin/${BRANCH_NAME}"
-      else
-        print_error "Branch '${BRANCH_NAME}' not found locally or on origin"; exit 1
-      fi
+    log_info "Branch '${BRANCH_NAME}' not local; fetching from origin..."
+    if git fetch --quiet origin "${BRANCH_NAME}" 2>/dev/null && \
+       git show-ref --verify --quiet "refs/remotes/origin/${BRANCH_NAME}"; then
+      TARGET_COMMIT="$(git rev-parse "origin/${BRANCH_NAME}")"
+      TARGET_DESC="origin/${BRANCH_NAME}"
     else
-      print_error "Failed to fetch branch '${BRANCH_NAME}' from origin"; exit 1
+      log_error "Branch '${BRANCH_NAME}' not found locally or on origin."
+      exit 1
     fi
   fi
 else
@@ -173,154 +217,160 @@ else
   if [[ "${CURRENT_BRANCH}" == "HEAD" || "${CURRENT_BRANCH}" == "detached" ]]; then
     TARGET_DESC="detached HEAD"
   else
-    TARGET_DESC="branch ${CURRENT_BRANCH}"
+    TARGET_DESC="branch '${CURRENT_BRANCH}'"
   fi
 fi
 
-print_info "Target: ${TARGET_DESC} @ $(git rev-parse --short "${TARGET_COMMIT}")"
+TARGET_SHORT="$(git rev-parse --short "${TARGET_COMMIT}")"
 
-# Notes file checks
-if [[ ! -f "${NOTES_FILE}" ]]; then
-  print_error "Notes file '${NOTES_FILE}' does not exist!"; exit 1
-fi
-if [[ ! -r "${NOTES_FILE}" ]]; then
-  print_error "Notes file '${NOTES_FILE}' is not readable!"; exit 1
-fi
-if [[ ! -s "${NOTES_FILE}" ]]; then
-  print_error "Notes file '${NOTES_FILE}' is empty!"; exit 1
+# Derive release title if omitted (strip markdown headers like '#')
+if [[ -z "${RELEASE_TITLE}" ]]; then
+  FIRST_NON_EMPTY="$(grep -v '^[[:space:]]*$' "${NOTES_FILE}" | head -n1 | tr -d '\r' || true)"
+  # Clean leading markdown headers (#, ##), bullets, and spaces
+  CLEAN_TITLE="$(printf '%s' "${FIRST_NON_EMPTY}" | sed -E 's/^[#* -]+//; s/[[:space:]]+$//')"
+  RELEASE_TITLE="${CLEAN_TITLE:-$TAG_NAME}"
 fi
 
-# Try to ensure it's text
-if command -v file >/dev/null 2>&1; then
-  if ! file "${NOTES_FILE}" | grep -qi "text"; then
-    print_warning "Notes file does not appear to be text; continuing anyway."
-  fi
+# ------------------------------------------------------------------------------
+# Banner & Pre-Flight Information
+# ------------------------------------------------------------------------------
+printf "\n%b%s%b\n" "${C_BOLD}" "── Release & Tag Workflow ──" "${C_RESET}"
+log_info "Repository:    ${C_BOLD}${PROJECT_DIR}${C_RESET} (${OWNER_REPO:-unparsed})"
+log_info "Target Ref:    ${TARGET_DESC} @ ${C_CYAN}${TARGET_SHORT}${C_RESET}"
+log_info "Tag Name:      ${C_BOLD}${TAG_NAME}${C_RESET}"
+log_info "Release Title: ${RELEASE_TITLE}"
+log_info "Forge Release: $([[ "$CREATE_RELEASE" == true ]] && printf '%s (%s)' 'enabled' "$PROVIDER" || printf '%s' 'disabled')"
+
+if [[ "$DRY_RUN" == true ]]; then
+  log_warn "DRY RUN MODE ENABLED: No tags will be created or pushed."
 fi
 
-# Clean working tree check (warn if dirty)
+# Warn on uncommitted changes
 if ! git diff-index --quiet HEAD --; then
-  print_warning "Working tree has uncommitted changes. Tagging selected commit anyway."
+  log_warn "Working tree has uncommitted modifications. Tagging commit ${TARGET_SHORT} anyway."
 fi
 
-# Check tag existence locally and remotely (do not exit; make idempotent)
+# ------------------------------------------------------------------------------
+# Tag Existence Checks (Fast remote probe)
+# ------------------------------------------------------------------------------
 TAG_EXISTS_LOCAL=false
 TAG_EXISTS_REMOTE=false
+
 if git rev-parse -q --verify "refs/tags/${TAG_NAME}" >/dev/null; then
   TAG_EXISTS_LOCAL=true
+  log_warn "Tag '${TAG_NAME}' already exists locally."
 fi
-if git ls-remote --tags origin | grep -q "refs/tags/${TAG_NAME}$"; then
+
+# Fast exact remote lookup without fetching all refs
+if git ls-remote --exit-code origin "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
   TAG_EXISTS_REMOTE=true
+  log_warn "Tag '${TAG_NAME}' already exists on remote 'origin'."
 fi
 
-if [[ "${TAG_EXISTS_LOCAL}" == true ]]; then
-  print_warning "Tag '${TAG_NAME}' already exists locally; will not re-create."
-fi
-if [[ "${TAG_EXISTS_REMOTE}" == true ]]; then
-  print_warning "Tag '${TAG_NAME}' already exists on remote; will not push."
-fi
-
-# Determine default title
-if [[ -z "${RELEASE_TITLE}" ]]; then
-  RELEASE_TITLE="${TAG_NAME}"
-  # If notes first line is non-empty, use it
-  FIRST_LINE="$(head -n1 "${NOTES_FILE}" | tr -d '\r')"
-  if [[ -n "${FIRST_LINE}" ]]; then
-    RELEASE_TITLE="${FIRST_LINE}"
-  fi
-fi
-
-# Show preview of notes in dry-run
+# Show notes preview in dry-run
 if [[ "${DRY_RUN}" == true ]]; then
-  print_info "Notes preview:"
-  echo -e "${BLUE}┌─────────────────────────────────────────────────────────────${NC}"
-  while IFS= read -r line; do
-    echo -e "${BLUE}│${NC} $line"
-  done < "${NOTES_FILE}"
-  echo -e "${BLUE}└─────────────────────────────────────────────────────────────${NC}"
+  printf "\n%b%s%b\n" "${C_DIM}" "── Notes Preview ──" "${C_RESET}"
+  sed "s/^/${C_BLUE}│${C_RESET} /" "${NOTES_FILE}"
+  printf "%b%s%b\n\n" "${C_DIM}" "───────────────────" "${C_RESET}"
 fi
 
+# ------------------------------------------------------------------------------
+# Tag Execution & Push
+# ------------------------------------------------------------------------------
 if [[ "${DRY_RUN}" == true ]]; then
   if [[ "${TAG_EXISTS_LOCAL}" == false ]]; then
-    print_warning "DRY RUN: Would run -> git tag -a '${TAG_NAME}' '${TARGET_COMMIT}' -F '${NOTES_FILE}'"
-  else
-    print_info "Skipping tag creation (exists locally)"
+    log_info "Would run: git tag -a '${TAG_NAME}' '${TARGET_COMMIT}' -F '${NOTES_FILE}'"
   fi
   if [[ "${TAG_EXISTS_REMOTE}" == false ]]; then
-    print_warning "DRY RUN: Would run -> git push origin 'refs/tags/${TAG_NAME}'"
-  else
-    print_info "Skipping push (exists on remote)"
+    log_info "Would run: git push origin 'refs/tags/${TAG_NAME}'"
   fi
 else
+  # Create local tag
   if [[ "${TAG_EXISTS_LOCAL}" == false ]]; then
-    print_info "Creating annotated tag '${TAG_NAME}' on $(git rev-parse --short "${TARGET_COMMIT}")"
+    log_step "Creating annotated tag '${TAG_NAME}' on ${TARGET_SHORT}..."
     if git tag -a "${TAG_NAME}" "${TARGET_COMMIT}" -F "${NOTES_FILE}"; then
-      print_success "Created tag '${TAG_NAME}'"
+      log_success "Created local tag '${TAG_NAME}'"
     else
-      print_error "Failed to create tag '${TAG_NAME}'"; exit 1
+      log_error "Failed to create annotated tag '${TAG_NAME}'"
+      exit 1
     fi
   else
-    print_info "Tag exists locally; skipping creation"
+    log_info "Tag exists locally; skipping tag creation."
   fi
 
+  # Push tag
   if [[ "${TAG_EXISTS_REMOTE}" == false ]]; then
+    log_step "Pushing tag '${TAG_NAME}' to remote 'origin'..."
     if git push origin "refs/tags/${TAG_NAME}"; then
-      print_success "Pushed tag '${TAG_NAME}' to origin"
+      log_success "Pushed tag '${TAG_NAME}' to origin"
     else
-      print_error "Failed to push tag '${TAG_NAME}' to origin"; exit 1
+      log_error "Failed to push tag '${TAG_NAME}' to origin"
+      exit 1
     fi
   else
-    print_info "Tag exists on origin; skipping push"
+    log_info "Tag exists on origin; skipping push."
   fi
 fi
 
-# Create Release (optional)
+# ------------------------------------------------------------------------------
+# Release Creation (GitHub / GitLab)
+# ------------------------------------------------------------------------------
+RELEASE_URL=""
+
 if [[ "${CREATE_RELEASE}" == true ]]; then
   case "${PROVIDER}" in
     github)
       if ! command -v gh >/dev/null 2>&1; then
-        print_warning "'gh' CLI not found; skipping GitHub Release."
-        exit 0
-      fi
-      if ! gh auth status >/dev/null 2>&1; then
-        print_warning "'gh' not authenticated; run 'gh auth login' and create the release manually or re-run."
-        exit 0
-      fi
-print_info "Creating GitHub Release '${TAG_NAME}' (title: '${RELEASE_TITLE}')"
-      if [[ "${DRY_RUN}" == true ]]; then
-        print_warning "DRY RUN: Would run -> gh release create '${TAG_NAME}' -F '${NOTES_FILE}' --title '${RELEASE_TITLE}' --verify-tag -R '${OWNER_REPO}'"
+        log_warn "'gh' CLI is not installed. Skipped GitHub Release creation."
+      elif ! gh auth status >/dev/null 2>&1; then
+        log_warn "'gh' is not authenticated. Run 'gh auth login' to create release."
       else
-        if gh release create "${TAG_NAME}" -F "${NOTES_FILE}" --title "${RELEASE_TITLE}" --verify-tag -R "${OWNER_REPO}"; then
-          print_success "GitHub Release '${TAG_NAME}' created"
+        GH_ARGS=("${TAG_NAME}" -F "${NOTES_FILE}" --title "${RELEASE_TITLE}" --verify-tag)
+        [[ -n "${OWNER_REPO}" ]] && GH_ARGS+=(-R "${OWNER_REPO}")
+
+        if [[ "${DRY_RUN}" == true ]]; then
+          log_info "Would run: gh release create ${GH_ARGS[*]}"
         else
-          print_warning "Failed to create GitHub Release. The tag was pushed successfully; create the release manually if needed."
+          log_step "Creating GitHub release '${TAG_NAME}'..."
+          if RELEASE_URL=$(gh release create "${GH_ARGS[@]}"); then
+            log_success "GitHub Release created successfully!"
+          else
+            log_warn "Failed to create GitHub Release. Tag was pushed successfully."
+          fi
         fi
       fi
       ;;
+
     gitlab)
       if ! command -v glab >/dev/null 2>&1; then
-        print_warning "'glab' CLI not found; skipping GitLab Release."
-        exit 0
-      fi
-      if ! glab auth status >/dev/null 2>&1; then
-        print_warning "'glab' not authenticated; run 'glab auth login' and create the release manually or re-run."
-        exit 0
-      fi
-print_info "Creating GitLab Release '${TAG_NAME}' (title: '${RELEASE_TITLE}')"
-      if [[ "${DRY_RUN}" == true ]]; then
-        print_warning "DRY RUN: Would run -> glab release create '${TAG_NAME}' --notes-file '${NOTES_FILE}' --name '${RELEASE_TITLE}' -R '${OWNER_REPO}'"
+        log_warn "'glab' CLI is not installed. Skipped GitLab Release creation."
+      elif ! glab auth status >/dev/null 2>&1; then
+        log_warn "'glab' is not authenticated. Run 'glab auth login' to create release."
       else
-        if glab release create "${TAG_NAME}" --notes-file "${NOTES_FILE}" --name "${RELEASE_TITLE}" -R "${OWNER_REPO}"; then
-          print_success "GitLab Release '${TAG_NAME}' created"
+        GLAB_ARGS=("${TAG_NAME}" --notes-file "${NOTES_FILE}" --name "${RELEASE_TITLE}")
+        [[ -n "${OWNER_REPO}" ]] && GLAB_ARGS+=(-R "${OWNER_REPO}")
+
+        if [[ "${DRY_RUN}" == true ]]; then
+          log_info "Would run: glab release create ${GLAB_ARGS[*]}"
         else
-          print_warning "Failed to create GitLab Release. The tag was pushed successfully; create the release manually if needed."
+          log_step "Creating GitLab release '${TAG_NAME}'..."
+          if RELEASE_URL=$(glab release create "${GLAB_ARGS[@]}"); then
+            log_success "GitLab Release created successfully!"
+          else
+            log_warn "Failed to create GitLab Release. Tag was pushed successfully."
+          fi
         fi
       fi
       ;;
-    *)
-      print_error "Unknown provider '${PROVIDER}'"; exit 1;;
   esac
-else
-  print_info "Skipping Release creation (per --no-release)"
 fi
 
-print_success "Done."
+# ------------------------------------------------------------------------------
+# Summary Output
+# ------------------------------------------------------------------------------
+printf "\n%b%s%b\n" "${C_GREEN}${C_BOLD}" "🎉 Release Workflow Complete" "${C_RESET}"
+printf "  • Tag:     %b%s%b (%s)\n" "${C_BOLD}" "${TAG_NAME}" "${C_RESET}" "${TARGET_SHORT}"
+if [[ -n "${RELEASE_URL}" ]]; then
+  printf "  • Release: %b%s%b\n" "${C_CYAN}" "${RELEASE_URL}" "${C_RESET}"
+fi
+printf "\n"
