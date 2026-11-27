@@ -172,34 +172,12 @@ chmod +x copy.sh
   already loads, so it survives a reload and a restart.
 - Full description, usage and architecture: [`README-display-layouts.md`](./README-display-layouts.md)
 
-### 🎛️ HyprMod GUI & Configuration Sync
+### 🎛️ KoolDots Control Center
 
-- [HyprMod](https://github.com/BlueManCZ/hyprmod) is a native GTK4/libadwaita settings app for Hyprland that manages options, keybinds, monitors, animations, and window rules.
-- HyprMod edits a single unified file (`~/.config/hypr/hyprland-gui.lua`), while KoolDots organizes user customizations across modular files in `~/.config/hypr/UserConfigs/` (`monitors.lua`, `user_keybinds.lua`, `user_window_rules.lua`, `user_animations.lua`, `user_decorations.lua`, `user_settings.lua`).
-- `config/hypr/scripts/HyprModSync.sh` synchronizes between HyprMod's managed file and the `UserConfigs/` split files using the mappings defined in `UserConfigs/hyprmod.toml`:
-  - **Export GUI edits to split files**: `~/.config/hypr/scripts/HyprModSync.sh to-split` propagates changes saved in HyprMod into marked managed blocks inside each target file, keeping custom code and helpers intact.
-  - **Import split configs into HyprMod**: `~/.config/hypr/scripts/HyprModSync.sh to-managed` compiles your `UserConfigs/` overrides into `hyprland-gui.lua` so HyprMod recognizes them as owned, editable settings.
-  - **Automatic sync**: `~/.config/hypr/scripts/HyprModSync.sh` (or `sync`) checks file timestamps and automatically synchronizes in the direction of the newest changes.
-  - **Live watch mode**: `~/.config/hypr/scripts/HyprModSync.sh watch` runs in the background and continuously synchronizes whenever either surface is saved.
-  - **Check sync status**: `~/.config/hypr/scripts/HyprModSync.sh status` reports active paths, target mappings, and current sync state.
-- **Why are 99 window management keybinds marked `(read-only)` under "Other" in HyprMod?**:
-  - In KoolDots, compositor management shortcuts (`SUPER + Q` close window, `SUPER + SHIFT + F` fullscreen, `SUPER + SPACE` toggle float, workspace navigation, directional focus) are implemented as high-performance **in-process Lua closures** rather than external shell commands.
-  - HyprMod cannot decompile or round-trip custom compiled Lua bytecode through its GUI dropdowns, so it intentionally quarantines them under **Other** as `(read-only)` with a lock icon to prevent breaking them.
-  - Application shortcuts (the 94 binds under **Applications & Commands**) remain fully editable in HyprMod via the pencil override button.
-  - To customize or rebind any of the in-process shortcuts, edit `~/.config/hypr/UserConfigs/user_keybinds.lua` directly:
-    ```lua
-    -- Rebind Close Window from SUPER+Q to SUPER+X
-    unbind("SUPER", "Q")
-    bind("SUPER", "X", dispatch("killactive"), { description = "Close active window" })
-
-    -- Rebind Fullscreen from SUPER+SHIFT+F to SUPER+F
-    unbind("SUPER SHIFT", "F")
-    bind("SUPER", "F", dispatch("fullscreen", "0"), { description = "Toggle fullscreen" })
-
-    -- Rebind Float from SUPER+SPACE to SUPER+V
-    unbind("SUPER", "SPACE")
-    bind("SUPER", "V", dispatch("togglefloating"), { description = "Float current window" })
-    ```
+- **KoolDots Control Center** (`SUPER + SHIFT + E`) is a native Quickshell GUI settings suite for managing personal desktop configurations.
+- Directly organizes and edits modular user configuration files in `~/.config/hypr/UserConfigs/` (`user_keybinds.lua`, `user_window_rules.lua`, `user_startup.lua`, `user_settings.lua`, `monitors.lua`, `user_env.lua`).
+- **Safety & Resilience**: Automatically validates Lua syntax (`luac -p`) and duplicate key combinations before saving. Features automatic backups in `~/.local/state/hypr/backups/`, one-click revert, and error logging with a **"Copy Error for AI"** button.
+- See [`docs/KoolDots-Control-Center.md`](./docs/KoolDots-Control-Center.md) for full architecture and documentation.
 
 ### 🌦️ Quickshell Weather Applet & Waybar Widget
 

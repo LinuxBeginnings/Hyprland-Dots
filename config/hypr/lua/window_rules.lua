@@ -1073,19 +1073,6 @@ apply_window_rule({
 })
 
 apply_window_rule({
-  name = "HyprMod GUI",
-  match = {
-    class = "^(io\\.github\\.bluemancz\\.hyprmod|com\\.github\\.hyprmod)$",
-    title = "^(HyprMod)$",
-    initial_class = "^(io\\.github\\.bluemancz\\.hyprmod|com\\.github\\.hyprmod)$",
-    initial_title = "^(HyprMod)$",
-  },
-  float = true,
-  center = true,
-  size = "(monitor_w*0.75) (monitor_h*0.75)",
-})
-
-apply_window_rule({
   name = "EasyEffects",
   match = {
     class = "^(com.github.wwmm.easyeffects)$",

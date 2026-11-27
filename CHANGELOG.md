@@ -2,6 +2,13 @@
 
 ## v3.0.0
 
+## Removed:
+
+- `hyprmod` integration, sync script and window rule removed
+  - Superseded by the native Quickshell KoolDots Control Center
+  - Removed `HyprModSync.sh`, `test-hyprmod-sync.sh`, and `hyprmod.toml`
+  - Removed `hyprland-gui.lua` loading hooks and external sync workarounds
+
 ## Fixed:
 
 - Waybar styles no longer carry unsupported percentage font sizes
@@ -66,11 +73,6 @@
   - The image is written before the copy, so a saved file looked like success
   - The notification now says the copy failed, and stderr carries the status
 
-- `HyprModSync.sh` fails loudly when `hyprland_config` is missing
-  - Each sync command still exited 0 and printed "already up to date"
-  - The parse step had bailed out, so nothing was ever synchronized
-  - It now exits 1 with an install hint, and `status` reports the module
-
 - Clipboard history stores images and screenshots again
   - `SUPER + ALT + V` listed text only, while a screenshot still pasted fine
   - `wl-paste` in `ClipboardWatcher.sh` inherited the startup `.log` as stdout
@@ -126,11 +128,6 @@
   - The `pgrep` check raced when two binds fired close together
   - The listener now takes an `flock` and exits if one already runs
   - Issue: [#168](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/168)
-
-- HyprMod window rule floats and centers at 75% screen size
-  - Upstream HyprMod changed its application ID to `io.github.bluemancz.hyprmod`
-  - `lua/window_rules.lua` now matches both modern and legacy window classes
-  - Window rule sets floating, centered, and 75% monitor width and height
 
 - `quirks:skip_non_kms_dmabuf_formats` no longer errors on Hyprland 0.56
   - It is a 0.57 option, and `lua/settings.lua` wrote it on every build
@@ -508,15 +505,6 @@
   - The block is written only when `hl.get_config` answers for the option
   - 0.56 has no such option, and writing it is a config error on every reload
   - `decoration:wobble` is gated by the same test, for the same reason
-
-- HyprMod can synchronize with `UserConfigs` overrides
-  - `scripts/HyprModSync.sh` bridges HyprMod's managed file and split configs
-  - `UserConfigs/hyprmod.toml` maps each section to its target override file
-  - Monitors, keybinds, window rules, animations, decorations and settings
-  - Bidirectional sync with automatic mtime detection and watch mode
-  - `user_overrides.lua` loads `hyprland-gui.lua` directly when present
-  - `copy.sh` preserves `UserConfigs/hyprland-gui.lua` and links it in root
-  - Docs cover why in-process Lua binds are read-only and how to rebind them
 
 - A search bar floats under the wallpaper carousel's deck
   - Wider than a card, so a long file name stays readable
