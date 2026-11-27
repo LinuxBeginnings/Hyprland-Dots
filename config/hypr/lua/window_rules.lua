@@ -612,6 +612,16 @@ apply_window_rule({
 })
 
 apply_window_rule({
+  name = "float-center-kooldots-control-center",
+  match = {
+    title = "^(KoolDots Control Center)$",
+  },
+  float = true,
+  center = true,
+  size = "(monitor_w*0.75) (monitor_h*0.75)",
+})
+
+apply_window_rule({
   name = "center-rog-control",
   match = {
     title = "^(ROG Control)$",

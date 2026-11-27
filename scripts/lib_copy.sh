@@ -596,7 +596,7 @@ sync_quickshell_config() {
 
   # Ensure bundled quickshell subdirectories exist if missing.
   local sub
-  for sub in overview qs-hyprview network-widget keybinds wallpaper weather waybar-font; do
+  for sub in overview qs-hyprview network-widget keybinds wallpaper weather waybar-font control-center; do
     if [ ! -d "$dest_dir/$sub" ] && [ -d "$src_dir/$sub" ]; then
       echo "${INFO:-[INFO]} - Copying quickshell $sub config..." 2>&1 | tee -a "$log"
       cp -r "$src_dir/$sub" "$dest_dir/" 2>&1 | tee -a "$log"

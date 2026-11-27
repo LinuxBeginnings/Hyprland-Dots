@@ -477,7 +477,8 @@ bind(
 )
 bind("SUPER", "H", exec_cmd("$HOME/.config/hypr/scripts/KeyHints.sh"), { description = "help / cheat sheet" })
 bind("SUPER ALT", "R", exec_cmd("$HOME/.config/hypr/scripts/Refresh.sh"), { description = "refresh waybar and menus" })
-bind("SUPER ALT", "E", exec_cmd("$HOME/.config/hypr/scripts/RofiEmoji.sh"), { description = "emoji menu" })
+bind("SUPER ALT", "E", exec_cmd("$HOME/.config/hypr/scripts/Kool_Quick_Settings.sh"), { description = "Quick settings menu (legacy)" })
+bind("SUPER CTRL", "E", exec_cmd("$HOME/.config/hypr/scripts/RofiEmoji.sh"), { description = "emoji menu" })
 bind("SUPER", "S", exec_cmd("$HOME/.config/hypr/scripts/RofiSearch.sh"), { description = "web search" })
 bind(
   "SUPER CTRL",
@@ -710,8 +711,8 @@ bind("SUPER SHIFT", "N", exec_cmd("swaync-client -t -sw"), { description = "noti
 bind(
   "SUPER SHIFT",
   "E",
-  exec_cmd("$HOME/.config/hypr/scripts/Kool_Quick_Settings.sh"),
-  { description = "Quick settings menu" }
+  exec_cmd("$HOME/.config/hypr/scripts/KoolControlCenter.sh"),
+  { description = "KoolDots Control Center" }
 )
 bind("SUPER CTRL", "D", dispatch("layoutmsg", "removemaster"), { description = "remove master" })
 bind("SUPER", "I", dispatch("layoutmsg", "addmaster"), { description = "add master" })

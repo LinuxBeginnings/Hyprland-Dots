@@ -405,6 +405,17 @@
 
 ## Added:
 
+- KoolDots Control Center native Quickshell GUI settings application
+  - `KoolControlCenter.sh` launches unified GUI on `SUPER + SHIFT + E`
+  - Legacy quick settings sits on `SUPER + ALT + E`; emoji menu on `SUPER + CTRL + E`
+  - Horizontal tabs: Home, Keybinds, Settings, Rules, Startup, Toggles, Monitors
+  - Pre-flight syntax validation and duplicate check via `KoolSettingsEngine.sh`
+  - Automated timestamped backups in `backups/` and one-click revert
+  - In-app diagnostic error modal with `Copy Error for AI` button
+  - Centralized `HelpService.qml` with page summaries and section help drawers
+  - `docs/KoolDots-Control-Center.md` documents architecture and next steps
+  - `tests/test-control-center-engine.sh` validates engine and error logging
+
 - Global Waybar font family and font size modifier with Quickshell applet
   - `WaybarFont.sh` modifies font-family and font-size across all 52 styles
   - Reads and writes `WAYBAR_FONT` and `WAYBAR_FONT_SIZE` in `user_env.lua`

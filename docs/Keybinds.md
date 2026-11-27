@@ -52,7 +52,9 @@ is active rather than what this file says.
 ## Panels / Menus / Bar
 - `SUPER + A` — Desktop overview (`OverviewToggle.sh`)
 - `SUPER + CTRL + A` — Ags overview (`ags -t 'overview'`)
-- `SUPER + SHIFT + E` — Quick settings menu (`Kool_Quick_Settings.sh`)
+- `SUPER + SHIFT + E` — KoolDots Control Center (`KoolControlCenter.sh`)
+- `SUPER + ALT + E` — Quick settings menu (`Kool_Quick_Settings.sh`)
+- `SUPER + CTRL + E` — Emoji menu (`RofiEmoji.sh`)
 - `SUPER + SHIFT + N` — Notification panel (`swaync-client -t -sw`)
 - `CTRL + ALT + D` — Toggle dock (`Dock.sh`)
 - `SUPER + CTRL + ALT + B` — Toggle Waybar on/off (`pkill -SIGUSR1 waybar`)
