@@ -17,7 +17,7 @@ It provides a unified, structured interface for managing all modular configurati
   - `[ 🚀 Startup ]` — Autostart commands and system daemons manager.
   - `[ 🎚 Toggles ]` — Quick switchboard for weather units, clock format, game mode, and window wobble.
   - `[ 🖥 Monitors ]` — Display layout profiles, multi-monitor visualizer, and resolution overview.
-  - `[ 📊 Waybar Editor ]` — Phase 2 roadmap placeholder with direct link to Waybar Font Settings.
+  - `[ 📊 Waybar Editor ]` — Phase 2 visual 3-column Waybar module arranger with bar preview, clone incrementing, and syntax checks.
 
 - **Vertical Subcategory Sidebar**:
   - Contextual sidebar for major tabs (e.g. Settings: Keyboard, Touchpad, Decorations, Wobble, Defaults).
@@ -73,14 +73,40 @@ The Control Center directly manages all configuration files in `~/.config/hypr/U
 
 ---
 
-## Next Steps & Phase 2 Roadmap
+## Phase 2: Waybar Visual Editor
 
-1. **Phase 2 Waybar Editor**:
-   - Interactive visual bar layout builder.
-   - Module drag-and-drop arranger across left, center, and right blocks.
-   - Live CSS stylesheet editor with theme preview.
+The **Waybar Visual Editor** (`WaybarView.qml`) allows full visual customization and rearrangement of Waybar status bars:
 
-2. **Testing on Remote Hosts**:
+1. **Active Configuration Banner & Discovery**:
+   - Displays `Current cfg: <filename>` showing the resolved target of `~/.config/hypr/waybar/config`.
+   - Lists all layout configurations from `~/.config/hypr/waybar/configs/` with custom clones sorted to the top.
+
+2. **Automated Cloned Presets (`[Custom-#]`)**:
+   - Default system configurations are protected against accidental overwrites.
+   - Editing or clicking **Clone Config** automatically clones the layout to `[Custom-#]-<source_name>`.
+   - Cloning an existing clone increments the counter (e.g. `[Custom-1]` -> `[Custom-2]`).
+   - The `[Custom-#]` prefix ensures user configurations naturally sort together at the top of configuration menus.
+   - File names remain editable with an inline dialog.
+
+3. **3-Column Module Arranger & Bar Preview**:
+   - Horizontal live visual preview banner displaying Left, Center, and Right module pills in real time.
+   - Three distinct management columns matching the bar structure: **Start** (`modules-left`), **Center** (`modules-center`), and **End** (`modules-right`).
+   - Each module row includes:
+     - Drag/order indicator (`≡`) and contextual icon.
+     - Reorder buttons (`▲`/`▼`) to shift ordering within the column.
+     - Move buttons (`←`/`→`) and right-click context menu to migrate modules across columns.
+     - Edit button (``) to open the module's definition file directly in your default editor (`$EDITOR`).
+     - Delete button (`✕`) to remove modules.
+   - `+ Add Module` dialog supporting search across all 48+ core and custom Waybar modules.
+   - Reset button per column to undo unsaved rearrangements.
+
+4. **Pre-flight Syntax Validation & Instant Apply**:
+   - Modifications are validated for clean JSONC syntax before saving.
+   - Applying switches the `~/.config/hypr/waybar/config` symlink and seamlessly restarts Waybar.
+
+---
+
+## Next Steps Roadmap
    - Verify Quickshell UI behavior across different screen sizes and display scalings.
    - Validate live `hyprctl reload` response times when writing multiple `UserConfigs` tables simultaneously.
    - Test keybind remapping against non-US keyboard layouts.

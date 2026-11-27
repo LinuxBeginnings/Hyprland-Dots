@@ -53,10 +53,10 @@ Item {
             "description": "KoolDots identifies monitors by hardware device and vendor rather than port order, ensuring layouts survive reboots and docking stations.\n\n• DisplayProfile: Save current screen arrangement into named profiles (e.g. Work, Mobile, Home).\n• Clamshell mode: Automatically switches off internal laptop screen when external displays are active."
         },
         "waybar": {
-            "title": "Waybar Editor",
-            "file": "~/.config/hypr/waybar/",
-            "summary": "Visual bar layout and theme editor (Phase 2).",
-            "description": "The Waybar Visual Editor is scheduled for Phase 2.\n\nIn the meantime, you can customize your Waybar typography and scaling using the newly added Waybar Font & Size Settings applet, or choose themes via WaybarStyles.sh."
+            "title": "Waybar Visual Layout Editor",
+            "file": "~/.config/hypr/waybar/configs/ (Active Config)",
+            "summary": "Visual 3-column arranger for Waybar modules with live layout preview and syntax checks.",
+            "description": "Customize your Waybar status bar visually across Start (Left), Center, and End (Right) positions:\n\n• Protected System Presets: Default system configurations are protected from unintended overwrites. Editing a system preset automatically clones it.\n• Clone Numbering: Cloned configurations are named '[Custom-#]-<source_name>'. The '[Custom-#]' prefix ensures all your customized layouts are sorted together at the top of the menu. Re-cloning automatically increments the clone counter.\n• Module Reordering: Move modules within a column (▲/▼) or shift them across columns (←/→) to balance your bar.\n• Direct Editing in Default Editor: Click the edit icon () on any module row to open its definition in your default editor ($EDITOR), or click 'Open File in Editor' to open the entire layout file.\n• Pre-flight Syntax Check: Every layout modification is validated before applying to ensure Waybar restarts cleanly without compositor glitches."
         }
     })
 

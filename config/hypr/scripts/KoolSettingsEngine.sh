@@ -18,6 +18,8 @@ STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 HYPR_DIR="${KOOLDOTS_HYPR_DIR:-$CONFIG_HOME/hypr}"
 USER_CONFIGS="${KOOLDOTS_USER_CONFIGS:-$HYPR_DIR/UserConfigs}"
 SYSTEM_CONFIGS="${KOOLDOTS_SYSTEM_CONFIGS:-$HYPR_DIR/configs}"
+WAYBAR_DIR="${KOOLDOTS_WAYBAR_DIR:-$HYPR_DIR/waybar}"
+WAYBAR_CONFIGS="${KOOLDOTS_WAYBAR_CONFIGS:-$WAYBAR_DIR/configs}"
 
 # Fallback to repo directories if running uninstalled from a repository checkout
 if [[ ! -d "$USER_CONFIGS" && -d "$SCRIPT_DIR/../UserConfigs" ]]; then
@@ -25,6 +27,12 @@ if [[ ! -d "$USER_CONFIGS" && -d "$SCRIPT_DIR/../UserConfigs" ]]; then
 fi
 if [[ ! -d "$SYSTEM_CONFIGS" && -d "$SCRIPT_DIR/../configs" ]]; then
   SYSTEM_CONFIGS="$(cd "$SCRIPT_DIR/../configs" && pwd)"
+fi
+if [[ ! -d "$WAYBAR_CONFIGS" && -d "$SCRIPT_DIR/../waybar/configs" ]]; then
+  WAYBAR_CONFIGS="$(cd "$SCRIPT_DIR/../waybar/configs" && pwd)"
+fi
+if [[ ! -d "$WAYBAR_DIR" && -d "$SCRIPT_DIR/../waybar" ]]; then
+  WAYBAR_DIR="$(cd "$SCRIPT_DIR/../waybar" && pwd)"
 fi
 if [[ ! -d "$HYPR_DIR" && -d "$SCRIPT_DIR/.." ]]; then
   HYPR_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -788,6 +796,375 @@ edit_file() {
 }
 
 # ------------------------------------------------------------------------------
+# Waybar Phase 2 Visual Editor Engine
+# ------------------------------------------------------------------------------
+restart_waybar() {
+  if [[ -x "$SCRIPTS_DIR/WaybarStartup.sh" ]]; then
+    "$SCRIPTS_DIR/WaybarStartup.sh" >/dev/null 2>&1 &
+  elif [[ -x "$SCRIPTS_DIR/Refresh.sh" ]]; then
+    "$SCRIPTS_DIR/Refresh.sh" >/dev/null 2>&1 &
+  fi
+}
+
+validate_waybar_syntax() {
+  local target_file="${1:-}"
+  if [[ -z "$target_file" || ! -f "$target_file" ]]; then
+    printf '{"valid": false, "error": "File does not exist"}\n'
+    return 1
+  fi
+
+  local err_out=""
+  if err_out=$(python3 - "$target_file" 2>&1 << 'EOF'
+import sys, json, re
+
+with open(sys.argv[1], "r", encoding="utf-8", errors="ignore") as f:
+    raw = f.read()
+
+content = re.sub(r'//.*?\n|/\*.*?\*/', '\n', raw, flags=re.S)
+content = re.sub(r',(\s*[}\]])', r'\1', content)
+content = re.sub(r',\s*$', '', content.strip())
+
+data = json.loads(content)
+if not isinstance(data, (dict, list)):
+    raise ValueError("Root element must be object or array")
+EOF
+); then
+    printf '{"valid": true}\n'
+    return 0
+  else
+    log_error "$target_file" "waybar_syntax" "$err_out"
+    python3 -c "import json, sys; print(json.dumps({'valid': False, 'error': sys.argv[1].strip()}))" "$err_out"
+    return 1
+  fi
+}
+
+list_waybar_configs() {
+  local current_symlink="$WAYBAR_DIR/config"
+  local active_name=""
+  if [[ -L "$current_symlink" || -f "$current_symlink" ]]; then
+    active_name=$(basename "$(readlink -f "$current_symlink" 2>/dev/null || echo "$current_symlink")")
+  fi
+  [[ -z "$active_name" ]] && active_name="TOP-Default"
+
+  python3 - "$WAYBAR_CONFIGS" "$active_name" << 'EOF'
+import sys, os, json, re
+
+configs_dir = sys.argv[1]
+active_cfg = sys.argv[2]
+
+if not os.path.isdir(configs_dir):
+    print(json.dumps({"active_config": active_cfg, "configs": []}))
+    sys.exit(0)
+
+files = [f for f in os.listdir(configs_dir) if os.path.isfile(os.path.join(configs_dir, f))]
+
+custom_files = []
+system_files = []
+
+for f in files:
+    is_custom = bool(re.match(r'^\[Custom-\d+\]-', f))
+    entry = {
+        "name": f,
+        "is_active": (f == active_cfg),
+        "is_custom": is_custom,
+        "path": os.path.join(configs_dir, f)
+    }
+    if is_custom:
+        custom_files.append(entry)
+    else:
+        system_files.append(entry)
+
+def custom_sort_key(item):
+    m = re.match(r'^\[Custom-(\d+)\]-(.*)$', item["name"])
+    if m:
+        return (int(m.group(1)), m.group(2).lower())
+    return (999999, item["name"].lower())
+
+custom_files.sort(key=custom_sort_key)
+system_files.sort(key=lambda x: x["name"].lower())
+
+all_configs = custom_files + system_files
+print(json.dumps({
+    "active_config": active_cfg,
+    "configs": all_configs
+}))
+EOF
+}
+
+get_waybar_layout() {
+  local target_name="${1:-}"
+  local target_path=""
+
+  if [[ -z "$target_name" ]]; then
+    local current_symlink="$WAYBAR_DIR/config"
+    if [[ -L "$current_symlink" || -f "$current_symlink" ]]; then
+      target_path="$(readlink -f "$current_symlink" 2>/dev/null || echo "$current_symlink")"
+      target_name="$(basename "$target_path")"
+    else
+      target_name="TOP-Default"
+      target_path="$WAYBAR_CONFIGS/TOP-Default"
+    fi
+  elif [[ -f "$target_name" ]]; then
+    target_path="$target_name"
+    target_name="$(basename "$target_path")"
+  else
+    target_path="$WAYBAR_CONFIGS/$target_name"
+  fi
+
+  if [[ ! -f "$target_path" ]]; then
+    printf '{"error": "Config file not found: %s"}\n' "$target_name"
+    return 1
+  fi
+
+  python3 - "$target_path" "$target_name" "$WAYBAR_DIR" << 'EOF'
+import sys, os, json, re
+
+target_path = sys.argv[1]
+target_name = sys.argv[2]
+waybar_dir = sys.argv[3]
+
+with open(target_path, "r", encoding="utf-8", errors="ignore") as f:
+    raw = f.read()
+
+content = re.sub(r'//.*?\n|/\*.*?\*/', '\n', raw, flags=re.S)
+content = re.sub(r',(\s*[}\]])', r'\1', content)
+content = re.sub(r',\s*$', '', content.strip())
+
+data = json.loads(content)
+bar = data[0] if isinstance(data, list) else data
+
+def_files = ["UserModules", "ModulesCustom", "ModulesWorkspaces", "ModulesGroups", "Modules"]
+available_modules = set()
+for fname in def_files:
+    p = os.path.join(waybar_dir, fname)
+    if os.path.isfile(p):
+        try:
+            with open(p, "r", encoding="utf-8", errors="ignore") as f:
+                c = re.sub(r'//.*?\n|/\*.*?\*/', '\n', f.read(), flags=re.S)
+                c = re.sub(r',(\s*[}\]])', r'\1', c)
+                c = re.sub(r',\s*$', '', c.strip())
+                m_data = json.loads(c)
+                for k in m_data.keys():
+                    if k not in ("include", "modules-left", "modules-center", "modules-right"):
+                        available_modules.add(k)
+        except Exception:
+            pass
+
+core_modules = [
+    "clock", "battery", "cpu", "memory", "disk", "temperature",
+    "backlight", "network", "pulseaudio", "tray", "idle_inhibitor",
+    "hyprland/workspaces", "hyprland/window", "hyprland/submap", "hyprland/language",
+    "mpris", "bluetooth", "power-profiles-daemon", "custom/separator#blank",
+    "custom/separator#dot-line", "custom/qs-weather", "custom/qs-network",
+    "group/audio", "group/notify", "group/status", "group/app_drawer"
+]
+for cm in core_modules:
+    available_modules.add(cm)
+
+left = bar.get("modules-left", [])
+center = bar.get("modules-center", [])
+right = bar.get("modules-right", [])
+
+is_custom = bool(re.match(r'^\[Custom-\d+\]-', target_name))
+
+base_name = re.sub(r'^\[Custom-\d+\]-', '', target_name)
+configs_dir = os.path.dirname(target_path)
+max_clone = 0
+for f in os.listdir(configs_dir):
+    m = re.match(r'^\[Custom-(\d+)\]-' + re.escape(base_name) + r'$', f)
+    if m:
+        num = int(m.group(1))
+        if num > max_clone:
+            max_clone = num
+suggested_clone = f"[Custom-{max_clone + 1}]-{base_name}"
+
+result = {
+    "name": target_name,
+    "path": target_path,
+    "is_custom": is_custom,
+    "suggested_clone": suggested_clone,
+    "layer": bar.get("layer", "top"),
+    "position": bar.get("position", "top"),
+    "modules_left": left,
+    "modules_center": center,
+    "modules_right": right,
+    "available_modules": sorted(list(available_modules))
+}
+print(json.dumps(result))
+EOF
+}
+
+clone_waybar_config() {
+  local source_name="${1:-}"
+  local custom_name="${2:-}"
+
+  if [[ -z "$source_name" ]]; then
+    printf '{"cloned": false, "error": "No source config specified"}\n'
+    return 1
+  fi
+
+  local source_path="$WAYBAR_CONFIGS/$source_name"
+  if [[ ! -f "$source_path" ]]; then
+    printf '{"cloned": false, "error": "Source config not found: %s"}\n' "$source_name"
+    return 1
+  fi
+
+  local clone_name="$custom_name"
+  if [[ -z "$clone_name" ]]; then
+    local base_name
+    base_name=$(python3 -c "import re, sys; print(re.sub(r'^\[Custom-\d+\]-', '', sys.argv[1]))" "$source_name")
+    local next_num
+    next_num=$(python3 - "$WAYBAR_CONFIGS" "$base_name" << 'EOF'
+import sys, os, re
+configs_dir = sys.argv[1]
+base = sys.argv[2]
+max_num = 0
+for f in os.listdir(configs_dir):
+    m = re.match(r'^\[Custom-(\d+)\]-' + re.escape(base) + r'$', f)
+    if m:
+        num = int(m.group(1))
+        if num > max_num:
+            max_num = num
+print(max_num + 1)
+EOF
+)
+    clone_name="[Custom-${next_num}]-${base_name}"
+  fi
+
+  local target_path="$WAYBAR_CONFIGS/$clone_name"
+  cp -f "$source_path" "$target_path"
+  create_backup "$target_path"
+
+  printf '{"cloned": true, "name": "%s", "path": "%s", "source": "%s"}\n' "$clone_name" "$target_path" "$source_name"
+}
+
+save_waybar_layout() {
+  local config_name="${1:-}"
+  local left_json="${2:-[]}"
+  local center_json="${3:-[]}"
+  local right_json="${4:-[]}"
+  local activate="${5:-true}"
+
+  if [[ -z "$config_name" ]]; then
+    printf '{"saved": false, "error": "No config name specified"}\n'
+    return 1
+  fi
+
+  local config_path="$WAYBAR_CONFIGS/$config_name"
+  create_backup "$config_path"
+
+  local save_err=""
+  if ! save_err=$(python3 - "$config_path" "$left_json" "$center_json" "$right_json" << 'EOF'
+import sys, os, json, re
+
+config_path = sys.argv[1]
+left = json.loads(sys.argv[2])
+center = json.loads(sys.argv[3])
+right = json.loads(sys.argv[4])
+
+if os.path.isfile(config_path):
+    with open(config_path, "r", encoding="utf-8", errors="ignore") as f:
+        raw = f.read()
+    content = re.sub(r'//.*?\n|/\*.*?\*/', '\n', raw, flags=re.S)
+    content = re.sub(r',(\s*[}\]])', r'\1', content)
+    content = re.sub(r',\s*$', '', content.strip())
+    try:
+        data = json.loads(content)
+    except Exception:
+        data = {}
+else:
+    data = {}
+
+if isinstance(data, list):
+    if not data:
+        data = [{}]
+    data[0]["modules-left"] = left
+    data[0]["modules-center"] = center
+    data[0]["modules-right"] = right
+else:
+    if "include" not in data:
+        data["include"] = [
+            "$HOME/.config/hypr/waybar/Modules",
+            "$HOME/.config/hypr/waybar/ModulesWorkspaces",
+            "$HOME/.config/hypr/waybar/ModulesCustom",
+            "$HOME/.config/hypr/waybar/ModulesGroups",
+            "$HOME/.config/hypr/waybar/UserModules"
+        ]
+    data["modules-left"] = left
+    data["modules-center"] = center
+    data["modules-right"] = right
+
+with open(config_path, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+    f.write("\n")
+EOF
+  2>&1); then
+    log_error "$config_path" "save_waybar" "$save_err"
+    printf '{"saved": false, "error": "Failed to serialize JSON: %s"}\n' "$save_err"
+    return 1
+  fi
+
+  if ! validate_waybar_syntax "$config_path" >/dev/null 2>&1; then
+    revert_file "$config_path"
+    printf '{"saved": false, "error": "Syntax validation failed"}\n'
+    return 1
+  fi
+
+  if [[ "$activate" == "true" ]]; then
+    ln -sf "$config_path" "$WAYBAR_DIR/config"
+    restart_waybar
+  fi
+
+  printf '{"saved": true, "name": "%s", "path": "%s", "activated": %s}\n' "$config_name" "$config_path" "$activate"
+}
+
+find_waybar_module_source() {
+  local module_name="${1:-}"
+  if [[ -z "$module_name" ]]; then
+    printf '{"found": false, "error": "No module specified"}\n'
+    return 1
+  fi
+
+  python3 - "$module_name" "$WAYBAR_DIR" << 'EOF'
+import sys, os, json, re
+
+mod_name = sys.argv[1]
+waybar_dir = sys.argv[2]
+
+candidates = [mod_name]
+if "#" in mod_name:
+    candidates.append(mod_name.split("#")[0])
+
+def_files = ["UserModules", "ModulesCustom", "ModulesWorkspaces", "ModulesGroups", "Modules"]
+found_path = ""
+
+for cand in candidates:
+    for fname in def_files:
+        p = os.path.join(waybar_dir, fname)
+        if os.path.isfile(p):
+            try:
+                with open(p, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
+                if re.search(r'["\']' + re.escape(cand) + r'["\']\s*:', content):
+                    found_path = p
+                    break
+            except Exception:
+                pass
+    if found_path:
+        break
+
+if not found_path:
+    found_path = os.path.join(waybar_dir, "Modules")
+
+print(json.dumps({
+    "module": mod_name,
+    "file": found_path,
+    "found": bool(found_path and os.path.isfile(found_path))
+}))
+EOF
+}
+
+# ------------------------------------------------------------------------------
 # CLI Router
 # ------------------------------------------------------------------------------
 main() {
@@ -822,6 +1199,24 @@ main() {
     set-toggle)
       set_toggle "$@"
       ;;
+    list-waybar|list-waybar-configs)
+      list_waybar_configs
+      ;;
+    get-waybar|get-waybar-layout)
+      get_waybar_layout "${1:-}"
+      ;;
+    clone-waybar|clone-waybar-config)
+      clone_waybar_config "$@"
+      ;;
+    save-waybar|save-waybar-layout)
+      save_waybar_layout "$@"
+      ;;
+    validate-waybar|validate-waybar-syntax)
+      validate_waybar_syntax "${1:-}"
+      ;;
+    find-module|find-waybar-module)
+      find_waybar_module_source "${1:-}"
+      ;;
     edit|edit-file)
       edit_file "$@"
       ;;
@@ -838,7 +1233,7 @@ main() {
       reload_hyprland
       ;;
     *)
-      echo "Usage: $(basename "$0") <info|list-keybinds|validate-keybinds|apply-keybind|list-rules|apply-rule|list-startup|get-toggles|set-toggle|revert|copy-error|validate|reload|edit-file>" >&2
+      echo "Usage: $(basename "$0") <info|list-keybinds|validate-keybinds|apply-keybind|list-rules|apply-rule|list-startup|get-toggles|set-toggle|list-waybar|get-waybar|clone-waybar|save-waybar|validate-waybar|find-module|revert|copy-error|validate|reload|edit-file>" >&2
       exit 1
       ;;
   esac

@@ -18,7 +18,7 @@ Item {
         { "id": "startup", "title": "Startup", "icon": "󰐥" },
         { "id": "toggles", "title": "Toggles", "icon": "󰔡" },
         { "id": "monitors", "title": "Monitors", "icon": "󰍹" },
-        { "id": "waybar", "title": "Waybar Editor", "icon": "󰹯", "badge": "Phase 2" }
+        { "id": "waybar", "title": "Waybar Editor", "icon": "󰹯" }
     ]
 
     implicitHeight: 46

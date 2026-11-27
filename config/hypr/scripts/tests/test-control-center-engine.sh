@@ -28,7 +28,19 @@ STATE="$WORK/state"
 
 seed_test_env() {
   rm -rf "$INST"
-  mkdir -p "$UC" "$SYS" "$STATE/hypr"
+  mkdir -p "$UC" "$SYS" "$HYPR/waybar/configs" "$STATE/hypr"
+
+  # Seed waybar config and configs dir
+  cat >"$HYPR/waybar/configs/TOP-Default" <<'JSONC'
+{
+  "layer": "top",
+  "position": "top",
+  "modules-left": ["hyprland/window"],
+  "modules-center": ["clock"],
+  "modules-right": ["tray", "pulseaudio"]
+}
+JSONC
+  ln -sf "$HYPR/waybar/configs/TOP-Default" "$HYPR/waybar/config"
 
   # Seed user_keybinds.lua
   cat >"$UC/user_keybinds.lua" <<'LUA'
@@ -159,5 +171,46 @@ it "launches edit-file command with valid json output"
 edit_out=$(run_engine edit-file "$UC/user_keybinds.lua")
 assert_contains "$edit_out" '"edited": true' "edit-file failed"
 assert_contains "$edit_out" '"file":' "file missing in edit-file output" && pass_msg
+
+# --- 9. Waybar Visual Editor Backend ------------------------------------------
+seed_test_env
+
+it "lists waybar configs with active config identification"
+wb_configs=$(run_engine list-waybar-configs)
+assert_contains "$wb_configs" '"active_config": "TOP-Default"' "active config missing"
+assert_contains "$wb_configs" '"name": "TOP-Default"' "TOP-Default missing from configs list" && pass_msg
+
+it "parses waybar layout into left, center, right modules"
+wb_layout=$(run_engine get-waybar-layout "TOP-Default")
+assert_contains "$wb_layout" '"modules_left": ["hyprland/window"]' "left module missing"
+assert_contains "$wb_layout" '"modules_center": ["clock"]' "center module missing"
+assert_contains "$wb_layout" '"modules_right": ["tray", "pulseaudio"]' "right module missing"
+assert_contains "$wb_layout" '"suggested_clone": "[Custom-1]-TOP-Default"' "suggested clone wrong" && pass_msg
+
+it "clones waybar configs and increments custom clone number"
+clone1=$(run_engine clone-waybar-config "TOP-Default")
+assert_contains "$clone1" '"cloned": true' "clone 1 failed"
+assert_contains "$clone1" '"name": "[Custom-1]-TOP-Default"' "clone 1 name incorrect"
+
+clone2=$(run_engine clone-waybar-config "TOP-Default")
+assert_contains "$clone2" '"name": "[Custom-2]-TOP-Default"' "clone 2 increment failed"
+
+clone_from_clone=$(run_engine clone-waybar-config "[Custom-1]-TOP-Default")
+assert_contains "$clone_from_clone" '"name": "[Custom-3]-TOP-Default"' "cloning from clone failed to increment" && pass_msg
+
+it "saves waybar layout, validates syntax, and updates symlink"
+save_out=$(run_engine save-waybar-layout "[Custom-1]-TOP-Default" '["custom/menu"]' '["clock"]' '["tray"]')
+assert_contains "$save_out" '"saved": true' "save layout failed"
+assert_contains "$save_out" '"activated": true' "activation failed"
+assert_eq "symlink points to newly saved layout" "$HYPR/waybar/configs/[Custom-1]-TOP-Default" "$(readlink -f "$HYPR/waybar/config")" && pass_msg
+
+it "validates waybar syntax and catches invalid JSONC"
+clean_check=$(run_engine validate-waybar-syntax "$HYPR/waybar/configs/TOP-Default")
+assert_contains "$clean_check" '"valid": true' "clean config should be valid"
+
+bad_cfg="$HYPR/waybar/configs/broken-cfg"
+echo "{ broken: json," > "$bad_cfg"
+bad_check=$(run_engine validate-waybar-syntax "$bad_cfg" || true)
+assert_contains "$bad_check" '"valid": false' "invalid syntax should be rejected" && pass_msg
 
 summary "test-control-center-engine"

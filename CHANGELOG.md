@@ -395,6 +395,17 @@
 
 ## Added:
 
+- Phase 2 Waybar visual layout arranger and module editor in Control Center
+  - Visual 3-column arranger for Start (left), Center, and End (right) modules
+  - Real-time layout preview bar reflecting module positions and ordering
+  - Reorder modules with move up/down and cross-column migration buttons
+  - Direct editor button on each module opens definition in default editor
+  - Displays current active config filename with `Current cfg: <name>`
+  - Auto-clones system presets to `[Custom-#]-<name>` to protect defaults
+  - Automatically increments clone number when cloning existing custom files
+  - Pre-flight JSONC syntax validation and instant Waybar restart on apply
+  - Searchable Add Module modal covering 48+ core and custom Waybar modules
+
 - Option to edit focused UserConfigs file in default editor from Control Center
   - Adds direct editor launcher for active configuration files
   - Supports both GUI and terminal-based editors via `LaunchTerminal.sh`

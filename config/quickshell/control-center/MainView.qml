@@ -101,16 +101,24 @@ Item {
                     helpService: mainView.helpService
                 }
 
+                WaybarView {
+                    anchors.fill: parent
+                    visible: mainView.currentTab === "waybar"
+                    theme: mainView.theme
+                    backend: mainView.backend
+                    helpService: mainView.helpService
+                }
+
                 UnderConstructionView {
                     anchors.fill: parent
-                    visible: mainView.currentTab === "waybar" ||
-                             (mainView.currentTab !== "home" &&
+                    visible: (mainView.currentTab !== "home" &&
                               mainView.currentTab !== "keybinds" &&
                               mainView.currentTab !== "settings" &&
                               mainView.currentTab !== "rules" &&
                               mainView.currentTab !== "startup" &&
                               mainView.currentTab !== "toggles" &&
-                              mainView.currentTab !== "monitors")
+                              mainView.currentTab !== "monitors" &&
+                              mainView.currentTab !== "waybar")
                     theme: mainView.theme
                     backend: mainView.backend
                     helpService: mainView.helpService
