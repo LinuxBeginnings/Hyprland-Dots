@@ -3,6 +3,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import Quickshell.Io
 import "../components"
 
 Item {
@@ -70,6 +71,8 @@ Item {
         HelpDrawer {
             Layout.fillWidth: true
             theme: rulesView.theme
+            backend: rulesView.backend
+            targetFile: backend ? backend.configHome + "/hypr/UserConfigs/user_window_rules.lua" : ""
             helpData: rulesView.helpService ? rulesView.helpService.getHelp("window_rules") : null
         }
 

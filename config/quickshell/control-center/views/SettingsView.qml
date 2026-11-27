@@ -14,6 +14,17 @@ Item {
 
     property string activeSubcategory: "input"
 
+    readonly property string focusedConfigFile: {
+        if (!backend) return "";
+        var f = "user_settings.lua";
+        if (activeSubcategory === "decorations" || activeSubcategory === "wobble") {
+            f = "user_decorations.lua";
+        } else if (activeSubcategory === "defaults") {
+            f = "user_defaults.lua";
+        }
+        return backend.configHome + "/hypr/UserConfigs/" + f;
+    }
+
     // Form states
     property string kbLayout: "us"
     property string kbVariant: ""
@@ -57,7 +68,9 @@ Item {
         HelpDrawer {
             Layout.fillWidth: true
             theme: settingsView.theme
-            helpData: settingsView.helpService ? settingsView.helpService.getHelp("settings") : null
+            backend: settingsView.backend
+            targetFile: settingsView.focusedConfigFile
+            helpData: settingsView.helpService ? settingsView.helpService.getHelp("settings", settingsView.activeSubcategory) : null
         }
 
         // Body: Subcategory Sidebar + Form Area
@@ -316,7 +329,7 @@ Item {
             Layout.fillWidth: true
             theme: settingsView.theme
             backend: settingsView.backend
-            targetFile: backend ? backend.configHome + "/hypr/UserConfigs/user_settings.lua" : ""
+            targetFile: settingsView.focusedConfigFile
             onApplyClicked: {
                 if (backend) {
                     backend.statusMessage = "Settings saved & Hyprland reloaded!";

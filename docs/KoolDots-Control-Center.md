@@ -1,6 +1,6 @@
 # KoolDots Control Center
 
-The **KoolDots Control Center** is a native Quickshell GUI settings application designed to replace external tools like HyprMod and enhance the traditional Rofi Quick Settings menu (`Kool_Quick_Settings.sh`).
+The **KoolDots Control Center** is a native Quickshell GUI settings application designed to provide a unified graphical control center and enhance the traditional Rofi Quick Settings menu (`Kool_Quick_Settings.sh`).
 
 It provides a unified, structured interface for managing all modular configuration files in `~/.config/hypr/UserConfigs/` with pre-flight syntax validation, duplicate keybinding checks, automated backups, instant revert capabilities, and AI-assisted error diagnostics.
 
@@ -67,6 +67,9 @@ The Control Center directly manages all configuration files in `~/.config/hypr/U
 - `SUPER + SHIFT + E` — Opens KoolDots Control Center (`KoolControlCenter.sh`)
 - `SUPER + ALT + E` — Opens Classic Quick Settings menu (`Kool_Quick_Settings.sh`)
 - `SUPER + CTRL + E` — Opens Rofi Emoji selector (`RofiEmoji.sh`)
+- **CLI / Manual Testing**:
+  - Script: `~/.config/hypr/scripts/KoolControlCenter.sh`
+  - Quickshell direct: `qs -p ~/.config/quickshell/control-center` (or `qs -p control-center` from `~/.config/quickshell`)
 
 ---
 

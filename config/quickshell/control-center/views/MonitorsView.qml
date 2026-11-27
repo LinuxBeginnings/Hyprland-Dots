@@ -2,6 +2,7 @@
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Io
 import "../components"
 
 Item {
@@ -20,6 +21,8 @@ Item {
         HelpDrawer {
             Layout.fillWidth: true
             theme: monitorsView.theme
+            backend: monitorsView.backend
+            targetFile: backend ? backend.configHome + "/hypr/UserConfigs/monitors.lua" : ""
             helpData: monitorsView.helpService ? monitorsView.helpService.getHelp("monitors") : null
         }
 
@@ -128,8 +131,36 @@ Item {
         }
 
         Item { Layout.fillHeight: true }
+
+        // Bottom Action Bar
+        ActionButtons {
+            Layout.fillWidth: true
+            theme: monitorsView.theme
+            backend: monitorsView.backend
+            targetFile: backend ? backend.configHome + "/hypr/UserConfigs/monitors.lua" : ""
+            canApply: false
+            canRevert: true
+            canEdit: true
+            onValidateClicked: {
+                if (backend) {
+                    validateMonitorsProcess.command = [backend.script, "validate", backend.configHome + "/hypr/UserConfigs/monitors.lua"];
+                    validateMonitorsProcess.running = true;
+                }
+            }
+        }
     }
 
     Process { id: launchProfileProcess }
     Process { id: launchNwgProcess }
+    Process {
+        id: validateMonitorsProcess
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (backend) {
+                    backend.statusMessage = "monitors.lua syntax check passed!";
+                    backend.statusType = "success";
+                }
+            }
+        }
+    }
 }

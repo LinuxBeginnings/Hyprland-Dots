@@ -86,6 +86,12 @@ Item {
         copyErrorProcess.running = true;
     }
 
+    function editFile(targetFile) {
+        if (!targetFile) return;
+        editFileProcess.command = [backend.script, "edit-file", targetFile];
+        editFileProcess.running = true;
+    }
+
     // Processes
     Process {
         id: fetchInfoProcess
@@ -238,6 +244,25 @@ Item {
             onStreamFinished: {
                 backend.statusMessage = "Error details copied to clipboard!";
                 backend.statusType = "normal";
+            }
+        }
+    }
+
+    Process {
+        id: editFileProcess
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var res = JSON.parse(text);
+                    if (res.edited) {
+                        var fname = res.file.split('/').pop();
+                        backend.statusMessage = "Opened in editor: " + fname;
+                        backend.statusType = "success";
+                    } else if (res.error) {
+                        backend.statusMessage = "Failed to open editor: " + res.error;
+                        backend.statusType = "error";
+                    }
+                } catch (e) {}
             }
         }
     }

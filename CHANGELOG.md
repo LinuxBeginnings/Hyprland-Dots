@@ -2,13 +2,6 @@
 
 ## v3.0.0
 
-## Removed:
-
-- `hyprmod` integration, sync script and window rule removed
-  - Superseded by the native Quickshell KoolDots Control Center
-  - Removed `HyprModSync.sh`, `test-hyprmod-sync.sh`, and `hyprmod.toml`
-  - Removed `hyprland-gui.lua` loading hooks and external sync workarounds
-
 ## Fixed:
 
 - Waybar styles no longer carry unsupported percentage font sizes
@@ -402,6 +395,11 @@
 
 ## Added:
 
+- Option to edit focused UserConfigs file in default editor from Control Center
+  - Adds direct editor launcher for active configuration files
+  - Supports both GUI and terminal-based editors via `LaunchTerminal.sh`
+  - Action button in bottom bar dynamically targets whichever file is in focus
+  - Clickable file badge in contextual help drawers opens file in editor
 - KoolDots Control Center native Quickshell GUI settings application
   - `KoolControlCenter.sh` launches unified GUI on `SUPER + SHIFT + E`
   - Legacy quick settings sits on `SUPER + ALT + E`; emoji menu on `SUPER + CTRL + E`
@@ -760,6 +758,10 @@
 
 ## Removed:
 
+- `hyprmod` integration, sync script and window rule removed
+  - Superseded by the native Quickshell KoolDots Control Center
+  - Removed `HyprModSync.sh`, `test-hyprmod-sync.sh`, and `hyprmod.toml`
+  - Removed `hyprland-gui.lua` loading hooks and external sync workarounds
 - Hard coded keybard `pc105` from `config/hypr/lua/settings.lua`
 - Deprecated `dwindle.special_scale_factor` setting
   - `hyprctl deprecated-config` flags it on Hyprland 0.57

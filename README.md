@@ -176,7 +176,7 @@ chmod +x copy.sh
 
 - **KoolDots Control Center** (`SUPER + SHIFT + E`) is a native Quickshell GUI settings suite for managing personal desktop configurations.
 - Directly organizes and edits modular user configuration files in `~/.config/hypr/UserConfigs/` (`user_keybinds.lua`, `user_window_rules.lua`, `user_startup.lua`, `user_settings.lua`, `monitors.lua`, `user_env.lua`).
-- **Safety & Resilience**: Automatically validates Lua syntax (`luac -p`) and duplicate key combinations before saving. Features automatic backups in `~/.local/state/hypr/backups/`, one-click revert, and error logging with a **"Copy Error for AI"** button.
+- **Safety & Resilience**: Automatically validates Lua syntax (`luac -p`) and duplicate key combinations before saving. Features automatic backups in `~/.local/state/hypr/backups/`, one-click revert, direct editing in your default editor, and error logging with a **"Copy Error for AI"** button.
 - See [`docs/KoolDots-Control-Center.md`](./docs/KoolDots-Control-Center.md) for full architecture and documentation.
 
 ### 🌦️ Quickshell Weather Applet & Waybar Widget

@@ -60,7 +60,21 @@ Item {
         }
     })
 
-    function getHelp(topicKey) {
+    function getHelp(topicKey, subtopicKey) {
+        if (topicKey === "settings" && subtopicKey) {
+            var sHelp = Object.assign({}, helpService.topics["settings"]);
+            if (subtopicKey === "decorations" || subtopicKey === "wobble") {
+                sHelp.file = "~/.config/hypr/UserConfigs/user_decorations.lua";
+                sHelp.title = (subtopicKey === "wobble") ? "Window Wobble Physics" : "Appearance & Blur Engine";
+            } else if (subtopicKey === "defaults") {
+                sHelp.file = "~/.config/hypr/UserConfigs/user_defaults.lua";
+                sHelp.title = "Default Applications";
+            } else {
+                sHelp.file = "~/.config/hypr/UserConfigs/user_settings.lua";
+                sHelp.title = (subtopicKey === "touchpad") ? "Touchpad & Mouse Behavior" : "Keyboard Layouts & Input";
+            }
+            return sHelp;
+        }
         if (helpService.topics.hasOwnProperty(topicKey)) {
             return helpService.topics[topicKey];
         }

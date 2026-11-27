@@ -11,10 +11,12 @@ Item {
     property string targetFile: ""
     property bool canApply: true
     property bool canRevert: true
+    property bool canEdit: true
 
     signal applyClicked()
     signal validateClicked()
     signal revertClicked()
+    signal editClicked()
     signal closeClicked()
 
     implicitHeight: 44
@@ -72,6 +74,54 @@ Item {
                             backend.revertFile(actionsBar.targetFile);
                         }
                         actionsBar.revertClicked();
+                    }
+                }
+            }
+
+            // Edit in Default Editor Button
+            Rectangle {
+                visible: actionsBar.canEdit && actionsBar.targetFile.length > 0
+                implicitWidth: editContent.implicitWidth + 20
+                implicitHeight: 30
+                radius: 6
+                color: editMouse.containsMouse ? (theme ? theme.hover : "#2f2f35") : "transparent"
+                border.width: 1
+                border.color: theme ? theme.accent : "#cba6f7"
+
+                RowLayout {
+                    id: editContent
+                    anchors.centerIn: parent
+                    spacing: 6
+
+                    Text {
+                        text: ""
+                        font.family: theme ? theme.iconFont : "sans-serif"
+                        font.pixelSize: 11
+                        color: theme ? theme.accent : "#cba6f7"
+                    }
+
+                    Text {
+                        text: {
+                            var fname = actionsBar.targetFile ? actionsBar.targetFile.split('/').pop() : "";
+                            return fname ? ("Edit " + fname) : "Edit File";
+                        }
+                        font.family: theme ? theme.fontFamily : "sans-serif"
+                        font.pixelSize: 11
+                        font.bold: true
+                        color: theme ? theme.accent : "#cba6f7"
+                    }
+                }
+
+                MouseArea {
+                    id: editMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (actionsBar.targetFile && backend) {
+                            backend.editFile(actionsBar.targetFile);
+                        }
+                        actionsBar.editClicked();
                     }
                 }
             }

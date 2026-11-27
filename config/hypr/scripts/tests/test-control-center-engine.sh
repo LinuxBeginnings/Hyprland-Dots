@@ -154,4 +154,10 @@ log_file="$STATE/hypr/kooldots-settings-errors.log"
 assert_contains "$log_file" 'syntax' "syntax step not logged in error log"
 assert_contains "$log_file" 'ENVIRONMENT: KoolDots' "environment context missing from error log" && pass_msg
 
+# --- 8. Edit File in Default Editor -------------------------------------------
+it "launches edit-file command with valid json output"
+edit_out=$(run_engine edit-file "$UC/user_keybinds.lua")
+assert_contains "$edit_out" '"edited": true' "edit-file failed"
+assert_contains "$edit_out" '"file":' "file missing in edit-file output" && pass_msg
+
 summary "test-control-center-engine"

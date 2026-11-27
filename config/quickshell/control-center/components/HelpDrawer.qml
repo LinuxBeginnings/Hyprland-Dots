@@ -7,7 +7,9 @@ Item {
     id: helpDrawer
 
     property var theme: null
+    property var backend: null
     property var helpData: null
+    property string targetFile: ""
     property bool expanded: false
 
     implicitHeight: expanded ? helpCard.implicitHeight : 38
@@ -61,20 +63,56 @@ Item {
                 // File location badge
                 Rectangle {
                     visible: !!(helpDrawer.helpData && helpDrawer.helpData.file)
-                    implicitWidth: fileText.implicitWidth + 8
-                    implicitHeight: 18
+                    implicitWidth: fileRow.implicitWidth + 12
+                    implicitHeight: 20
                     radius: 4
-                    color: theme ? theme.surface : "#1a1a1e"
+                    color: fileBadgeMouse.containsMouse ? (theme ? theme.hover : "#2a2a32") : (theme ? theme.surface : "#1a1a1e")
                     border.width: 1
-                    border.color: theme ? theme.border : "#35353d"
+                    border.color: fileBadgeMouse.containsMouse ? (theme ? theme.accent : "#cba6f7") : (theme ? theme.border : "#35353d")
 
-                    Text {
-                        id: fileText
+                    RowLayout {
+                        id: fileRow
                         anchors.centerIn: parent
-                        text: helpDrawer.helpData ? helpDrawer.helpData.file : ""
-                        font.family: theme ? theme.fontFamily : "monospace"
-                        font.pixelSize: 10
-                        color: theme ? theme.accent : "#cba6f7"
+                        spacing: 4
+
+                        Text {
+                            visible: !!helpDrawer.targetFile || (helpDrawer.helpData && helpDrawer.helpData.file.indexOf(".lua") !== -1)
+                            text: ""
+                            font.family: theme ? theme.iconFont : "sans-serif"
+                            font.pixelSize: 9
+                            color: theme ? theme.accent : "#cba6f7"
+                        }
+
+                        Text {
+                            id: fileText
+                            text: helpDrawer.helpData ? helpDrawer.helpData.file : ""
+                            font.family: theme ? theme.fontFamily : "monospace"
+                            font.pixelSize: 10
+                            color: theme ? theme.accent : "#cba6f7"
+                        }
+                    }
+
+                    MouseArea {
+                        id: fileBadgeMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            var tFile = helpDrawer.targetFile;
+                            if (!tFile && helpDrawer.helpData && helpDrawer.helpData.file) {
+                                var f = helpDrawer.helpData.file;
+                                if (f.indexOf(".lua") !== -1 || f.indexOf(".json") !== -1 || f.indexOf(".conf") !== -1) {
+                                    if (f.startsWith("~")) {
+                                        tFile = (backend ? backend.configHome : "") + f.substring(f.indexOf("/hypr"));
+                                    } else {
+                                        tFile = f;
+                                    }
+                                }
+                            }
+                            if (tFile && backend) {
+                                backend.editFile(tFile);
+                            }
+                        }
                     }
                 }
 

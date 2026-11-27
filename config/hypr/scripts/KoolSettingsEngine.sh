@@ -655,6 +655,139 @@ set_toggle() {
 }
 
 # ------------------------------------------------------------------------------
+# Command: edit-file
+# ------------------------------------------------------------------------------
+edit_file() {
+  local target_file="${1:-}"
+  if [[ -z "$target_file" ]]; then
+    printf '{"edited": false, "error": "No file specified"}\n'
+    return 1
+  fi
+
+  if [[ "$target_file" == "~"* ]]; then
+    target_file="${HOME}${target_file#\~}"
+  fi
+
+  if [[ ! -f "$target_file" ]]; then
+    mkdir -p "$(dirname "$target_file")"
+    touch "$target_file" || true
+  fi
+
+  local term="kitty"
+  local edit="nvim"
+  local visual=""
+  local visual_explicit=0
+
+  local lua_defaults="$USER_CONFIGS/user_defaults.lua"
+  local sys_defaults="$HYPR_DIR/lua/user_defaults.lua"
+  local user_env="$USER_CONFIGS/user_env.lua"
+  local sys_env="$HYPR_DIR/configs/system_env.lua"
+
+  if [[ -f "$lua_defaults" ]]; then
+    local lt le lv
+    lt=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.term[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults" | tail -n1 || true)
+    le=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.edit[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults" | tail -n1 || true)
+    lv=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.visual[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$lua_defaults" | tail -n1 || true)
+    [[ -n "$lt" ]] && term="$lt"
+    [[ -n "$le" ]] && edit="$le"
+    if [[ -n "$lv" ]]; then
+      visual="$lv"
+      visual_explicit=1
+    fi
+  fi
+
+  for env_file in "$user_env" "$sys_env"; do
+    if [[ -f "$env_file" ]]; then
+      local ee ev
+      ee=$(sed -n 's/^[[:space:]]*hl\.env([[:space:]]*["\x27]EDITOR["\x27][[:space:]]*,[[:space:]]*["\x27]\([^"\x27]*\)["\x27].*$/\1/p' "$env_file" | tail -n1 || true)
+      ev=$(sed -n 's/^[[:space:]]*hl\.env([[:space:]]*["\x27]VISUAL["\x27][[:space:]]*,[[:space:]]*["\x27]\([^"\x27]*\)["\x27].*$/\1/p' "$env_file" | tail -n1 || true)
+      [[ -n "$ee" ]] && edit="$ee"
+      if [[ -n "$ev" ]]; then
+        visual="$ev"
+        visual_explicit=1
+      fi
+    fi
+  done
+
+  if [[ -z "${edit:-}" && -f "$sys_defaults" ]]; then
+    local se
+    se=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.edit[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$sys_defaults" | tail -n1 || true)
+    [[ -n "$se" ]] && edit="$se"
+  fi
+  if [[ -z "${term:-}" && -f "$sys_defaults" ]]; then
+    local st
+    st=$(sed -n 's/^[[:space:]]*KOOLDOTS_DEFAULTS\.term[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$sys_defaults" | tail -n1 || true)
+    [[ -n "$st" ]] && term="$st"
+  fi
+
+  if [[ -z "${edit:-}" ]]; then
+    edit="${EDITOR:-}"
+  fi
+  if [[ -z "${edit:-}" ]]; then
+    if command -v nvim >/dev/null 2>&1; then
+      edit="nvim"
+    elif command -v vim >/dev/null 2>&1; then
+      edit="vim"
+    else
+      edit="nano"
+    fi
+  fi
+
+  local -a edit_cmd visual_cmd selected_cmd
+  read -r -a edit_cmd <<<"$edit"
+  selected_cmd=("${edit_cmd[@]}")
+
+  if [[ $visual_explicit -eq 1 && -n "$visual" ]]; then
+    read -r -a visual_cmd <<<"$visual"
+    local vbin
+    vbin="$(basename "${visual_cmd[0]}")"
+    case "$vbin" in
+      vi|vim|nvim|nano|hx|helix|kak|micro|emacs-nox|ttt) ;;
+      *)
+        selected_cmd=("${visual_cmd[@]}")
+        ;;
+    esac
+  fi
+
+  local sbin
+  sbin="$(basename "${selected_cmd[0]}")"
+  local is_tui=0
+  case "$sbin" in
+    vi|vim|nvim|nano|hx|helix|kak|micro|emacs-nox|ttt)
+      is_tui=1
+      ;;
+    emacs|emacsclient)
+      for arg in "${selected_cmd[@]:1}"; do
+        case "$arg" in
+          -nw|--no-window-system|-t|--tty)
+            is_tui=1
+            break
+            ;;
+        esac
+      done
+      ;;
+  esac
+
+  if [[ $is_tui -eq 1 ]]; then
+    if [[ -x "$SCRIPTS_DIR/LaunchTerminal.sh" ]]; then
+      "$SCRIPTS_DIR/LaunchTerminal.sh" "$term" "${selected_cmd[*]} '$target_file'" >/dev/null 2>&1 &
+    elif command -v kitty >/dev/null 2>&1; then
+      kitty "${selected_cmd[@]}" "$target_file" >/dev/null 2>&1 &
+    elif command -v ghostty >/dev/null 2>&1; then
+      ghostty -e "${selected_cmd[@]}" "$target_file" >/dev/null 2>&1 &
+    elif command -v alacritty >/dev/null 2>&1; then
+      alacritty -e "${selected_cmd[@]}" "$target_file" >/dev/null 2>&1 &
+    else
+      "${selected_cmd[@]}" "$target_file" >/dev/null 2>&1 &
+    fi
+  else
+    "${selected_cmd[@]}" "$target_file" >/dev/null 2>&1 &
+  fi
+
+  printf '{"edited": true, "file": "%s", "editor": "%s"}\n' "$target_file" "$sbin"
+}
+
+# ------------------------------------------------------------------------------
 # CLI Router
 # ------------------------------------------------------------------------------
 main() {
@@ -689,6 +822,9 @@ main() {
     set-toggle)
       set_toggle "$@"
       ;;
+    edit|edit-file)
+      edit_file "$@"
+      ;;
     revert)
       revert_file "$1"
       ;;
@@ -702,7 +838,7 @@ main() {
       reload_hyprland
       ;;
     *)
-      echo "Usage: $(basename "$0") <info|list-keybinds|validate-keybinds|apply-keybind|list-rules|apply-rule|list-startup|get-toggles|set-toggle|revert|copy-error|validate|reload>" >&2
+      echo "Usage: $(basename "$0") <info|list-keybinds|validate-keybinds|apply-keybind|list-rules|apply-rule|list-startup|get-toggles|set-toggle|revert|copy-error|validate|reload|edit-file>" >&2
       exit 1
       ;;
   esac

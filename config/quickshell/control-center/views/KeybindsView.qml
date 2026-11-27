@@ -3,6 +3,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import Quickshell.Io
 import "../components"
 
 Item {
@@ -68,6 +69,8 @@ Item {
         HelpDrawer {
             Layout.fillWidth: true
             theme: kbView.theme
+            backend: kbView.backend
+            targetFile: backend ? backend.configHome + "/hypr/UserConfigs/user_keybinds.lua" : ""
             helpData: kbView.helpService ? kbView.helpService.getHelp("keybinds") : null
         }
 

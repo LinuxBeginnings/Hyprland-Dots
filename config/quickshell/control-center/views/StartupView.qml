@@ -23,6 +23,8 @@ Item {
         HelpDrawer {
             Layout.fillWidth: true
             theme: startupView.theme
+            backend: startupView.backend
+            targetFile: backend ? backend.configHome + "/hypr/UserConfigs/user_startup.lua" : ""
             helpData: startupView.helpService ? startupView.helpService.getHelp("startup") : null
         }
 
